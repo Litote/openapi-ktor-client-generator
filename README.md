@@ -1,6 +1,7 @@
 # OpenAPI Ktor Client Generator
 
-A powerful Gradle plugin that transforms OpenAPI v3 specifications into production-ready Kotlin Ktor client code. With extensive configuration options, you can customize the generated clients and models to match your project's specific needs.
+A powerful Gradle plugin that transforms OpenAPI v3 specifications into production-ready Kotlin Ktor client code. 
+You can customize the generated clients and models to match your project's specific needs.
 
 ## Prerequisites
 
