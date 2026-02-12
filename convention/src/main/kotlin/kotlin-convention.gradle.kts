@@ -5,6 +5,7 @@ import org.jetbrains.kotlin.gradle.dsl.JvmTarget
 plugins {
     id("project-convention")
     kotlin("jvm")
+    id("signing")
 }
 
 plugin("vanniktech.maven.publish")
@@ -38,3 +39,9 @@ tasks.test {
     useJUnitPlatform()
     failOnNoDiscoveredTests = false
 }
+
+signing {
+    useGpgCmd()
+}
+
+
