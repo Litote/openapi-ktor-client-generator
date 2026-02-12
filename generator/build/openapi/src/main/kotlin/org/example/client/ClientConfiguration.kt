@@ -15,7 +15,9 @@ import kotlinx.serialization.json.Json
 public class ClientConfiguration(
   public val baseUrl: String = "http://localhost:8080",
   public val engine: HttpClientEngineFactory<*> = CIO,
-  public val json: Json = Json { ignoreUnknownKeys = true },
+  public val json: Json = Json { 
+      ignoreUnknownKeys = true
+       },
   public val httpClientConfig: HttpClientConfig<*>.() -> Unit = defaultHttpClientConfig(json),
   public val client: HttpClient = HttpClient(engine) { httpClientConfig() },
   public val exceptionLogger: Throwable.() -> Unit = { printStackTrace() },

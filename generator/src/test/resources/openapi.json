@@ -5,9 +5,29 @@
     "version": "1.0.0"
   },
   "paths": {
-    "/test": {
+    "/test/{testId}": {
       "post": {
         "summary": "Create a test",
+        "parameters": [
+          {
+            "in": "path",
+            "name": "testId",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "format": "uuid"
+            }
+          },
+          {
+            "in": "query",
+            "name": "skip",
+            "required": false,
+            "schema": {
+              "type": "integer",
+              "format": "int32"
+            }
+          }
+        ],
         "requestBody": {
           "required": true,
           "content": {
@@ -42,7 +62,9 @@
             "type": "string"
           }
         },
-        "required": ["name"]
+        "required": [
+          "name"
+        ]
       },
       "TestResponse": {
         "type": "object",
@@ -55,7 +77,10 @@
             "type": "string"
           }
         },
-        "required": ["id", "name"]
+        "required": [
+          "id",
+          "name"
+        ]
       }
     }
   }

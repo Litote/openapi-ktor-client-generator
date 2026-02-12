@@ -126,7 +126,7 @@ public class ApiModel private constructor(
             .orEmpty()
 
     internal fun isEnum(property: ApiClassProperty): Boolean =
-        !property.asSchema?.enum.isNullOrEmpty() || property.asReference?.let { schemas[it]?.enum.isNullOrEmpty() } == true
+        (!property.asSchema?.enum.isNullOrEmpty()) || property.asReference?.let { !schemas[getRefClassName(it)]?.enum.isNullOrEmpty() } == true
 
     private fun addChildren(set: MutableSet<String>, name: String) {
         val existingSet = schemaParentMap[name] ?: return
@@ -168,8 +168,9 @@ public class ApiModel private constructor(
                     ?: emptyList()) +
                 ((items as? OpenAPIV3Schema)?.allReferences() ?: emptyList())
 
+    private fun getRefClassName(refValue: String): String = refValue.substringAfterLast("/")
 
-    private fun getRefClassName(ref: OpenAPIV3Reference): String = ref.ref.value.substringAfterLast("/")
+    private fun getRefClassName(ref: OpenAPIV3Reference): String = getRefClassName(ref.ref.value)
 
     private fun resolveParameter(parameterOrReference: OpenAPIV3ParameterOrReference): OpenAPIV3Parameter? =
         when (parameterOrReference) {
@@ -192,8 +193,9 @@ public class ApiModel private constructor(
                 val resolved = components?.parameters?.get(refName) ?: return null
                 resolveParameter(resolved)
             }
-
-            else -> null
+            is OpenAPIV3Parameter -> {
+                parameterOrReference
+            }
         }
 
     public fun getClassName(name: String, schemaOrReference: OpenAPIV3SchemaOrReference): TypeName =

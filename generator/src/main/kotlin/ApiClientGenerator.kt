@@ -10,9 +10,9 @@ import com.squareup.kotlinpoet.KModifier
 import com.squareup.kotlinpoet.MemberName
 import com.squareup.kotlinpoet.ParameterSpec
 import com.squareup.kotlinpoet.PropertySpec
+import com.squareup.kotlinpoet.STRING
 import com.squareup.kotlinpoet.TypeName
 import com.squareup.kotlinpoet.TypeSpec
-import com.squareup.kotlinpoet.asTypeName
 import community.flock.kotlinx.openapi.bindings.OpenAPIV3Operation
 import community.flock.kotlinx.openapi.bindings.OpenAPIV3ParameterLocation
 import community.flock.kotlinx.openapi.bindings.OpenAPIV3RequestBody
@@ -157,7 +157,7 @@ public class ApiClientGenerator internal constructor(public val apiModel: ApiMod
             .map { parameter ->
                 val parameterTypeName = parameter.schema?.let { schema ->
                     apiModel.getClassName(parameterTypeBaseName(parameter.name), schema)
-                } ?: String::class.asTypeName()
+                } ?: STRING
                 val defaultLiteral = parameterDefaultLiteral(parameter.schema, parameterTypeName)
                 val isOptional = parameter.required != true && defaultLiteral == null
                 val parameterType =
@@ -179,6 +179,58 @@ public class ApiClientGenerator internal constructor(public val apiModel: ApiMod
             }
             .toList()
 
+    private fun getPathParameters(operation: OpenAPIV3Operation): List<PathParameter> =
+        operation
+            .parameters
+            .orEmpty()
+            .asSequence()
+            .mapNotNull { apiModel.getComponentParameter(it) }
+            .filter { it.`in` == OpenAPIV3ParameterLocation.PATH }
+            .distinctBy { it.name }
+            .map { parameter ->
+                val parameterTypeName = parameter.schema?.let { schema ->
+                    apiModel.getClassName(parameterTypeBaseName(parameter.name), schema)
+                } ?: STRING
+                val defaultLiteral = parameterDefaultLiteral(parameter.schema, parameterTypeName)
+                val isOptional = parameter.required != true && defaultLiteral == null
+                val parameterType =
+                    if (isOptional) parameterTypeName.copy(nullable = true) else parameterTypeName
+                val parameterName = parameterVariableName(parameter.name)
+                PathParameter(
+                    parameterName,
+                    parameterType,
+                    parameter.name,
+                    isOptional
+                )
+            }
+            .toList()
+
+    private fun getQueryParameters(operation: OpenAPIV3Operation): List<QueryParameter> =
+        operation
+            .parameters
+            .orEmpty()
+            .asSequence()
+            .mapNotNull { apiModel.getComponentParameter(it) }
+            .filter { it.`in` == OpenAPIV3ParameterLocation.QUERY }
+            .distinctBy { it.name }
+            .map { parameter ->
+                val parameterTypeName = parameter.schema?.let { schema ->
+                    apiModel.getClassName(parameterTypeBaseName(parameter.name), schema)
+                } ?: STRING
+                val defaultLiteral = parameterDefaultLiteral(parameter.schema, parameterTypeName)
+                val isOptional = parameter.required != true && defaultLiteral == null
+                val parameterType =
+                    if (isOptional) parameterTypeName.copy(nullable = true) else parameterTypeName
+                val parameterName = parameterVariableName(parameter.name)
+                QueryParameter(
+                    parameterName,
+                    parameterType,
+                    parameter.name,
+                    isOptional
+                )
+            }
+            .toList()
+
     private fun buildOperation(
         context: ClientGenerationContext,
         operationInfo: ApiOperation,
@@ -186,7 +238,8 @@ public class ApiClientGenerator internal constructor(public val apiModel: ApiMod
         clientName: String
     ) {
         val operation = operationInfo.operation
-        val operationId = operation.operationId ?: "${operationInfo.method}_${operationInfo.path.replace("/", "_")}"
+        val operationId = operation.operationId
+            ?: "${operationInfo.method}_${operationInfo.path.replace("/", "_").replace("{", "With_").replace("}", "")}"
         val responseBaseName = operationId.replace("-", "_").snakeToCamelCase().capitalize()
         val functionName = responseBaseName.uncapitalize()
 
@@ -233,6 +286,32 @@ public class ApiClientGenerator internal constructor(public val apiModel: ApiMod
             funBuilder.addParameter("request", type)
         }
 
+        val pathParameters = getPathParameters(operation)
+        if (!context.hasPathComponents && pathParameters.isNotEmpty()) {
+            context.hasPathComponents = true
+        }
+        pathParameters.forEach { pathParameter ->
+            val pathBuilder = ParameterSpec.builder(
+                pathParameter.parameterName,
+                pathParameter.parameterType
+            )
+            if (pathParameter.isOptional) {
+                pathBuilder.defaultValue("null")
+            }
+            funBuilder.addParameter(pathBuilder.build())
+        }
+
+        val queryParameters = getQueryParameters(operation)
+        queryParameters.forEach { queryParameter ->
+            val queryBuilder = ParameterSpec.builder(
+                queryParameter.parameterName,
+                queryParameter.parameterType
+            )
+            if (queryParameter.isOptional) {
+                queryBuilder.defaultValue("null")
+            }
+            funBuilder.addParameter(queryBuilder.build())
+        }
 
         val headerParameters = getHeaderParameters(operation)
         if (!context.hasHeaders && headerParameters.isNotEmpty()) {
@@ -262,11 +341,21 @@ public class ApiClientGenerator internal constructor(public val apiModel: ApiMod
 
         val hasJsonContentType =
             requestContentTypes?.any { it.equals("application/json", ignoreCase = true) } == true
-        val trimmedPath = operationInfo.path.trimStart('/')
+        val trimmedPath = operationInfo.path.trimStart('/').run {
+            var s = "\"$this\""
+            pathParameters.forEach { pathParameter ->
+                if (pathParameter.isOptional) {
+                    s += ".replace(\"/{${pathParameter.pathName}}\", if(${pathParameter.parameterName} == null) \"\" else \"/\${${pathParameter.parameterName}.encodeURLPathPart()}\")"
+                } else {
+                    s += ".replace(\"/{${pathParameter.pathName}}\", \"/\${${pathParameter.parameterName}.encodeURLPathPart()}\")"
+                }
+            }
+            s
+        }
         funBuilder.addCode(
             CodeBlock.builder()
                 .beginControlFlow("try")
-                .beginControlFlow("val response = configuration.client.%M(%S)", methodMember, trimmedPath)
+                .beginControlFlow("val response = configuration.client.%M(%L)", methodMember, trimmedPath)
                 .apply {
                     headerParameters.forEach { headerParameter ->
                         if (headerParameter.isOptional) {
@@ -287,6 +376,29 @@ public class ApiClientGenerator internal constructor(public val apiModel: ApiMod
                             )
                         }
                     }
+                    if (queryParameters.isNotEmpty()) {
+                        beginControlFlow("url")
+                        queryParameters.forEach { queryParameter ->
+                            if (queryParameter.isOptional) {
+                                beginControlFlow("if (%N != null)", queryParameter.parameterName)
+                                addStatement(
+                                    "parameters.append(%S, %N.toString())",
+                                    queryParameter.queryKey,
+                                    queryParameter.parameterName
+                                )
+                                endControlFlow()
+                            } else {
+                                addStatement(
+                                    "parameters.append(%S, %N.toString())",
+                                    queryParameter.queryKey,
+                                    queryParameter.parameterName
+                                )
+                            }
+                        }
+
+                        endControlFlow()
+                    }
+
                     if (requestType != null) {
                         addStatement("%M(%N)", setBodyMember, "request")
                         if (hasJsonContentType) {
@@ -375,6 +487,9 @@ public class ApiClientGenerator internal constructor(public val apiModel: ApiMod
                 if (context.hasHeaders) {
                     addAliasedImport(headerMember, ALIAS_HEADER)
                 }
+                if (context.hasPathComponents) {
+                    addImport("io.ktor.http", "encodeURLPathPart")
+                }
             }
             .addType(context.clientClass)
             .build()
@@ -404,10 +519,25 @@ private data class HeaderParameter(
     val isOptional: Boolean
 )
 
+private data class PathParameter(
+    val parameterName: String,
+    val parameterType: TypeName,
+    val pathName: String,
+    val isOptional: Boolean
+)
+
+private data class QueryParameter(
+    val parameterName: String,
+    val parameterType: TypeName,
+    val queryKey: String,
+    val isOptional: Boolean
+)
+
 internal data class ClientGenerationContext private constructor(
     val name: String,
     val operations: List<ApiOperation>,
-    var hasHeaders: Boolean = false
+    var hasHeaders: Boolean = false,
+    var hasPathComponents: Boolean = false,
 ) {
     constructor(name: String, operations: List<ApiOperation>) : this(
         name,
@@ -420,6 +550,7 @@ internal data class ClientFileContext private constructor(
     val name: String,
     val operations: List<ApiOperation>,
     val hasHeaders: Boolean,
+    val hasPathComponents: Boolean,
     val clientClass: TypeSpec,
 ) {
     constructor(generationContext: ClientGenerationContext, clientClass: TypeSpec) :
@@ -427,6 +558,7 @@ internal data class ClientFileContext private constructor(
                 generationContext.name,
                 generationContext.operations,
                 generationContext.hasHeaders,
+                generationContext.hasPathComponents,
                 clientClass
             )
 }
