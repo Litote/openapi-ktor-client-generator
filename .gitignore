@@ -1,0 +1,18 @@
+# Gradle build output
+.gradle/
+build/
+
+# Keep generated OpenAPI files
+!generator/build/openapi/**
+!e2e/build/generated/**
+
+# IntelliJ IDEA
+.idea/
+!.idea/runConfigurations/*
+*.iml
+*.ipr
+*.iws
+out/
+
+# Kotlin
+.kotlin

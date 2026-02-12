@@ -1,0 +1,11 @@
+<component name="ProjectRunConfigurationManager">
+  <configuration default="false" name="ApiGenerator" type="JetRunConfigurationType">
+    <option name="MAIN_CLASS_NAME" value="org.litote.openapi.ktor.client.generator.ApiGeneratorKt" />
+    <module name="openapi-ktor-client-generator.generator.main" />
+    <option name="PROGRAM_PARAMETERS" value="generator/src/test/resources/openapi.json generator/build/openapi " />
+    <shortenClasspath name="NONE" />
+    <method v="2">
+      <option name="Make" enabled="true" />
+    </method>
+  </configuration>
+</component>
