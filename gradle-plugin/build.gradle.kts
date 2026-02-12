@@ -23,6 +23,8 @@ gradlePlugin {
             implementationClass = "org.litote.openapi.ktor.client.generator.plugin.GeneratorPlugin"
             displayName = "Gradle OpenAPI ktor client generator plugin"
             description = pluginDescription
+            website = "https://github.com/Litote/openapi-ktor-client-generator"
+            vcsUrl = "https://github.com/Litote/openapi-ktor-client-generator.git"
             tags.set(listOf("openapi", "ktor", "client", "generator"))
         }
     }
