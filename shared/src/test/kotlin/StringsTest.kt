@@ -201,4 +201,100 @@ class StringsTest {
         // Then
         assertEquals("A", result)
     }
+
+    @Test
+    fun `GIVEN string with colon WHEN hasIllegalIdentifierChars THEN returns true`() {
+        // Given
+        val input = "planetiler:buildtime"
+
+        // When
+        val result = input.hasIllegalIdentifierChars()
+
+        // Then
+        assertTrue(result)
+    }
+
+    @Test
+    fun `GIVEN string with dash WHEN hasIllegalIdentifierChars THEN returns true`() {
+        // Given
+        val input = "some-property"
+
+        // When
+        val result = input.hasIllegalIdentifierChars()
+
+        // Then
+        assertTrue(result)
+    }
+
+    @Test
+    fun `GIVEN valid identifier WHEN hasIllegalIdentifierChars THEN returns false`() {
+        // Given
+        val input = "validIdentifier123"
+
+        // When
+        val result = input.hasIllegalIdentifierChars()
+
+        // Then
+        assertFalse(result)
+    }
+
+    @Test
+    fun `GIVEN string with underscore WHEN hasIllegalIdentifierChars THEN returns false`() {
+        // Given
+        val input = "snake_case"
+
+        // When
+        val result = input.hasIllegalIdentifierChars()
+
+        // Then
+        assertFalse(result)
+    }
+
+    @Test
+    fun `GIVEN string with colon WHEN sanitizeToIdentifier THEN converts to camelCase`() {
+        // Given
+        val input = "planetiler:buildtime"
+
+        // When
+        val result = input.sanitizeToIdentifier()
+
+        // Then
+        assertEquals("planetilerBuildtime", result)
+    }
+
+    @Test
+    fun `GIVEN string with dash WHEN sanitizeToIdentifier THEN converts to camelCase`() {
+        // Given
+        val input = "some-property"
+
+        // When
+        val result = input.sanitizeToIdentifier()
+
+        // Then
+        assertEquals("someProperty", result)
+    }
+
+    @Test
+    fun `GIVEN string with multiple special chars WHEN sanitizeToIdentifier THEN converts all`() {
+        // Given
+        val input = "osm:replication-time"
+
+        // When
+        val result = input.sanitizeToIdentifier()
+
+        // Then
+        assertEquals("osmReplicationTime", result)
+    }
+
+    @Test
+    fun `GIVEN valid identifier WHEN sanitizeToIdentifier THEN returns unchanged`() {
+        // Given
+        val input = "validIdentifier"
+
+        // When
+        val result = input.sanitizeToIdentifier()
+
+        // Then
+        assertEquals("validIdentifier", result)
+    }
 }

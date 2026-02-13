@@ -1,13 +1,16 @@
 package org.litote.openapi.ktor.client.generator
 
+import org.litote.openapi.ktor.client.generator.client.ClientGenerationContext
+
 internal class ClientGenerator(
     val apiModel: ApiModel,
 ) {
-    fun generate() {
+    fun generate(): Int {
         generateClientConfiguration()
         apiModel.pathsByTags.forEach { (name, schema) ->
             generateClient(name, schema)
         }
+        return apiModel.pathsByTags.size
     }
 
     private fun generateClientConfiguration() {

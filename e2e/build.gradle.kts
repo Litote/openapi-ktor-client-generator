@@ -8,15 +8,7 @@ plugins {
 dependencies {
     implementation(e2e.serialization)
     implementation(e2e.coroutines)
-    implementation(e2e.ktor.core)
-    implementation(e2e.ktor.cio)
-    implementation(e2e.ktor.contentnegotiation)
-    implementation(e2e.ktor.json)
-    implementation(e2e.ktor.log)
-
-    //testImplementation(libs.coroutines.test)
-
-    //testImplementation(kotlin("test"))
+    implementation(e2e.bundles.ktor)
 }
 
 group = providers.gradleProperty("GROUP").orNull ?: error("Missing gradle.properties 'group'")

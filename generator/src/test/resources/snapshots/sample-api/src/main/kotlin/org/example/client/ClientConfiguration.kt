@@ -14,28 +14,35 @@ import kotlin.Unit
 import kotlinx.serialization.json.Json
 
 public class ClientConfiguration(
-  public val baseUrl: String = "http://localhost:8080/",
+  public val baseUrl: String = "http://petstore.swagger.io/v2/",
+  public val apiKeyHeader: String? = null,
+  public val apiKeyQueryParam: String? = null,
   public val engine: HttpClientEngineFactory<*> = CIO,
   public val json: Json = Json { 
       ignoreUnknownKeys = true
-      coerceInputValues = true
        },
   public val httpClientConfig:
-      HttpClientConfig<*>.() -> Unit = defaultHttpClientConfig(baseUrl, json),
+      HttpClientConfig<*>.() -> Unit = defaultHttpClientConfig(baseUrl, json, apiKeyHeader, apiKeyQueryParam),
   public val client: HttpClient = HttpClient(engine) { httpClientConfig() },
-  public val exceptionLogger:
-      Throwable.() -> Unit = { org.slf4j.LoggerFactory.getLogger(ClientConfiguration::class.java).error("error", this) },
+  public val exceptionLogger: Throwable.() -> Unit = { printStackTrace() },
 ) {
   public companion object {
     public val defaultClientConfiguration: ClientConfiguration by lazy { ClientConfiguration() }
 
-    public fun defaultHttpClientConfig(baseUrl: String, json: Json): HttpClientConfig<*>.() -> Unit = {
+    public fun defaultHttpClientConfig(
+      baseUrl: String,
+      json: Json,
+      apiKeyHeader: String?,
+      apiKeyQueryParam: String?,
+    ): HttpClientConfig<*>.() -> Unit = {
       install(Logging)
       install(ContentNegotiation) {
         json(json)
       }
       defaultRequest {
         url(baseUrl)
+        apiKeyHeader?.let { header("X-Api-Key", it) }
+        apiKeyQueryParam?.let { url.parameters.append("api_key", it) }
       }
     }
 

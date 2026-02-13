@@ -13,7 +13,6 @@ import com.squareup.kotlinpoet.ParameterizedTypeName.Companion.parameterizedBy
 import com.squareup.kotlinpoet.PropertySpec
 import com.squareup.kotlinpoet.STAR
 import com.squareup.kotlinpoet.TypeSpec
-import com.squareup.kotlinpoet.TypeVariableName
 import com.squareup.kotlinpoet.UNIT
 import com.squareup.kotlinpoet.asTypeName
 import io.github.oshai.kotlinlogging.KotlinLogging
@@ -41,7 +40,21 @@ public class ApiClientConfigurationGenerator internal constructor(
             ClassName("io.ktor.client.plugins.contentnegotiation", "ContentNegotiation")
         val jsonMember: MemberName = MemberName("io.ktor.serialization.kotlinx.json", "json")
         val cioMember: MemberName = MemberName("io.ktor.client.engine.cio", "CIO")
-        val defaultConfigLambda: CodeBlock =
+        val exceptionLoggerType: LambdaTypeName =
+            LambdaTypeName.get(
+                receiver = Throwable::class.asTypeName(),
+                returnType = UNIT,
+            )
+    }
+
+    private val hasApiKeys: Boolean = apiModel.apiKeySecuritySchemes.isNotEmpty()
+    private val headerApiKeys: List<ApiSecurityScheme> =
+        apiModel.apiKeySecuritySchemes.filter { it.location == ApiSecurityScheme.ApiKeyLocation.HEADER }
+    private val queryApiKeys: List<ApiSecurityScheme> =
+        apiModel.apiKeySecuritySchemes.filter { it.location == ApiSecurityScheme.ApiKeyLocation.QUERY }
+
+    private fun buildDefaultConfigLambda(): CodeBlock {
+        val builder =
             CodeBlock
                 .builder()
                 .beginControlFlow("{")
@@ -51,23 +64,62 @@ public class ApiClientConfigurationGenerator internal constructor(
                 .endControlFlow()
                 .beginControlFlow("%M", MemberName("io.ktor.client.plugins", "defaultRequest"))
                 .addStatement("url(%N)", "baseUrl")
-                .endControlFlow()
-                .endControlFlow()
-                .build()
-        val defaultHttpClientConfig: FunSpec =
+
+        // Add header API keys
+        headerApiKeys.forEach { apiKey ->
+            val paramName = apiKeyParamName(apiKey)
+            builder.addStatement(
+                "%N?.let { header(%S, it) }",
+                paramName,
+                apiKey.keyName,
+            )
+        }
+
+        // Add query API keys
+        queryApiKeys.forEach { apiKey ->
+            val paramName = apiKeyParamName(apiKey)
+            builder.addStatement(
+                "%N?.let { url.parameters.append(%S, it) }",
+                paramName,
+                apiKey.keyName,
+            )
+        }
+
+        builder
+            .endControlFlow()
+            .endControlFlow()
+
+        return builder.build()
+    }
+
+    private fun buildDefaultHttpClientConfig(): FunSpec {
+        val funBuilder =
             FunSpec
                 .builder("defaultHttpClientConfig")
                 .addParameter("baseUrl", String::class)
                 .addParameter("json", Json::class)
-                .returns(httpClientConfigType)
-                .addStatement("return %L", defaultConfigLambda)
-                .build()
-        val exceptionLoggerType: LambdaTypeName =
-            LambdaTypeName.get(
-                receiver = Throwable::class.asTypeName(),
-                returnType = UNIT,
+
+        // Add API key parameters
+        apiModel.apiKeySecuritySchemes.forEach { apiKey ->
+            funBuilder.addParameter(
+                ParameterSpec
+                    .builder(apiKeyParamName(apiKey), String::class.asTypeName().copy(nullable = true))
+                    .build(),
             )
+        }
+
+        return funBuilder
+            .returns(httpClientConfigType)
+            .addStatement("return %L", buildDefaultConfigLambda())
+            .build()
     }
+
+    private fun apiKeyParamName(apiKey: ApiSecurityScheme): String =
+        apiKey.name
+            .replace("_", " ")
+            .split(" ")
+            .mapIndexed { index, word -> if (index == 0) word.lowercase() else word.replaceFirstChar { it.uppercase() } }
+            .joinToString("")
 
     // mutable properties for modules
     public val jsonDefaultValueProperties: MutableMap<String, String> = mutableMapOf("ignoreUnknownKeys" to "true")
@@ -91,15 +143,29 @@ public class ApiClientConfigurationGenerator internal constructor(
                     Json::class,
                 ).build()
 
-    internal fun buildConstructor(): FunSpec =
-        FunSpec
-            .constructorBuilder()
-            .addParameter(
+    internal fun buildConstructor(): FunSpec {
+        val builder =
+            FunSpec
+                .constructorBuilder()
+                .addParameter(
+                    ParameterSpec
+                        .builder("baseUrl", String::class)
+                        .defaultValue("%S", apiModel.serverUrl)
+                        .build(),
+                )
+
+        // Add API key parameters
+        apiModel.apiKeySecuritySchemes.forEach { apiKey ->
+            builder.addParameter(
                 ParameterSpec
-                    .builder("baseUrl", String::class)
-                    .defaultValue("%S", apiModel.serverUrl)
+                    .builder(apiKeyParamName(apiKey), String::class.asTypeName().copy(nullable = true))
+                    .defaultValue("null")
                     .build(),
-            ).addParameter(
+            )
+        }
+
+        builder
+            .addParameter(
                 ParameterSpec
                     .builder("engine", engineFactoryType)
                     .defaultValue("%M", cioMember)
@@ -109,10 +175,22 @@ public class ApiClientConfigurationGenerator internal constructor(
                     .builder("json", Json::class)
                     .defaultValue(jsonDefaultValue)
                     .build(),
-            ).addParameter(
+            )
+
+        // Build httpClientConfig default value with API keys
+        val httpClientConfigDefaultValue =
+            if (hasApiKeys) {
+                val apiKeyParams = apiModel.apiKeySecuritySchemes.joinToString(", ") { apiKeyParamName(it) }
+                CodeBlock.of("%N(%N, %N, $apiKeyParams)", "defaultHttpClientConfig", "baseUrl", "json")
+            } else {
+                CodeBlock.of("%N(%N, %N)", "defaultHttpClientConfig", "baseUrl", "json")
+            }
+
+        builder
+            .addParameter(
                 ParameterSpec
                     .builder("httpClientConfig", httpClientConfigType)
-                    .defaultValue("%N(%N, %N)", "defaultHttpClientConfig", "baseUrl", "json")
+                    .defaultValue(httpClientConfigDefaultValue)
                     .build(),
             ).addParameter(
                 ParameterSpec
@@ -124,7 +202,10 @@ public class ApiClientConfigurationGenerator internal constructor(
                     .builder("exceptionLogger", exceptionLoggerType)
                     .defaultValue(exceptionLoggingDefaultValue)
                     .build(),
-            ).build()
+            )
+
+        return builder.build()
+    }
 
     internal fun buildCompanion(): TypeSpec {
         val parameterDefinitions = apiModel.componentParameters
@@ -133,8 +214,7 @@ public class ApiClientConfigurationGenerator internal constructor(
         companionBuilder.addProperty(
             PropertySpec
                 .builder("defaultClientConfiguration", ClassName("", "ClientConfiguration"))
-                .mutable(true)
-                .initializer("%L()", "ClientConfiguration")
+                .delegate("lazy { %L() }", "ClientConfiguration")
                 .build(),
         )
 
@@ -163,23 +243,38 @@ public class ApiClientConfigurationGenerator internal constructor(
                 )
             }
         }
-        companionBuilder.addFunction(defaultHttpClientConfig)
+        companionBuilder.addFunction(buildDefaultHttpClientConfig())
         return companionBuilder.build()
     }
 
     internal fun buildClientConfiguration(
         constructor: FunSpec,
         companion: TypeSpec,
-    ): TypeSpec =
-        TypeSpec
-            .classBuilder("ClientConfiguration")
-            .primaryConstructor(constructor)
-            .addProperty(
+    ): TypeSpec {
+        val builder =
+            TypeSpec
+                .classBuilder("ClientConfiguration")
+                .primaryConstructor(constructor)
+                .addProperty(
+                    PropertySpec
+                        .builder("baseUrl", String::class)
+                        .initializer("baseUrl")
+                        .build(),
+                )
+
+        // Add API key properties
+        apiModel.apiKeySecuritySchemes.forEach { apiKey ->
+            val paramName = apiKeyParamName(apiKey)
+            builder.addProperty(
                 PropertySpec
-                    .builder("baseUrl", String::class)
-                    .initializer("baseUrl")
+                    .builder(paramName, String::class.asTypeName().copy(nullable = true))
+                    .initializer(paramName)
                     .build(),
-            ).addProperty(
+            )
+        }
+
+        builder
+            .addProperty(
                 PropertySpec
                     .builder("engine", engineFactoryType)
                     .initializer("engine")
@@ -205,7 +300,9 @@ public class ApiClientConfigurationGenerator internal constructor(
                     .initializer("exceptionLogger")
                     .build(),
             ).addType(companion)
-            .build()
+
+        return builder.build()
+    }
 
     internal fun writeFile(clientConfiguration: TypeSpec) {
         val fileSpec =

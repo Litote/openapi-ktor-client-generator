@@ -53,7 +53,7 @@ public class ApiModelGenerator internal constructor(
             if (schema.enum.isNullOrEmpty()) {
                 TypeSpec
                     .objectBuilder(name)
-                    .addAnnotation(AnnotationSpec.builder(kotlinx.serialization.Serializable::class).build())
+                    .addAnnotation(AnnotationSpec.builder(Serializable::class).build())
                     .build()
             } else {
                 TypeSpec
@@ -139,7 +139,7 @@ public class ApiModelGenerator internal constructor(
                                 .builder(property.camelCaseName, property.type)
                                 .initializer(property.camelCaseName)
                                 .apply {
-                                    if (property.isSnakeCase) {
+                                    if (property.needsSerialName) {
                                         addAnnotation(
                                             AnnotationSpec
                                                 .builder(SerialName::class)

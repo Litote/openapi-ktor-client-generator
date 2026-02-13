@@ -20,25 +20,77 @@ public fun main(vararg args: String) {
 }
 
 /**
+ * Result of the API generation process.
+ */
+public sealed class GenerationResult {
+    /**
+     * Successful generation.
+     * @param clientsGenerated Number of client files generated
+     * @param modelsGenerated Number of model files generated
+     */
+    public data class Success(
+        val clientsGenerated: Int,
+        val modelsGenerated: Int,
+    ) : GenerationResult()
+
+    /**
+     * Failed generation.
+     * @param error The exception that caused the failure
+     * @param message A descriptive error message
+     */
+    public data class Failure(
+        val error: Throwable,
+        val message: String,
+    ) : GenerationResult()
+
+    /**
+     * Returns true if the generation was successful.
+     */
+    public val isSuccess: Boolean get() = this is Success
+
+    /**
+     * Returns true if the generation failed.
+     */
+    public val isFailure: Boolean get() = this is Failure
+
+    /**
+     * Returns the success result or null if failed.
+     */
+    public fun getOrNull(): Success? = this as? Success
+
+    /**
+     * Returns the success result or throws the error if failed.
+     */
+    public fun getOrThrow(): Success =
+        when (this) {
+            is Success -> this
+            is Failure -> throw error
+        }
+}
+
+/**
  * Executes the generation of API client and data models based on an OpenAPI specification.
  *
  * Loads the OpenAPI file, generates the HTTP client using Ktor, and creates data model classes.
- * Any exceptions are caught and printed to the console.
  *
  * @param configuration Custom generator configuration settings
+ * @return [GenerationResult] indicating success with statistics or failure with error details
  */
-public fun generate(configuration: ApiGeneratorConfiguration) {
+public fun generate(configuration: ApiGeneratorConfiguration): GenerationResult =
     try {
         logger.debug { "Generating API for $configuration" }
 
         val fileContent = ApiModel.parseOpenApiFile(configuration)
         val clientGenerator = ClientGenerator(fileContent)
         val modelGenerator = ModelGenerator(fileContent)
-        clientGenerator.generate()
-        modelGenerator.generate()
+        val clientsGenerated = clientGenerator.generate()
+        val modelsGenerated = modelGenerator.generate()
+
+        logger.info { "Generation completed: $clientsGenerated clients, $modelsGenerated models" }
+        GenerationResult.Success(clientsGenerated, modelsGenerated)
     } catch (e: Throwable) {
         logger.error(e) { "Error while generating API for $configuration" }
+        GenerationResult.Failure(e, "Failed to generate API for ${configuration.openApiFile}: ${e.message}")
     }
-}
 
 private val logger = KotlinLogging.logger {}

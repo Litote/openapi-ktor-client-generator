@@ -25,6 +25,8 @@ import community.flock.kotlinx.openapi.bindings.OpenAPIV3RequestBody
 import community.flock.kotlinx.openapi.bindings.OpenAPIV3Response
 import community.flock.kotlinx.openapi.bindings.OpenAPIV3Schema
 import community.flock.kotlinx.openapi.bindings.OpenAPIV3SchemaOrReference
+import community.flock.kotlinx.openapi.bindings.OpenAPIV3SecurityScheme
+import community.flock.kotlinx.openapi.bindings.OpenAPIV3SecuritySchemeType
 import community.flock.kotlinx.openapi.bindings.OpenAPIV3Type
 import io.github.oshai.kotlinlogging.KotlinLogging
 import kotlinx.serialization.json.Json
@@ -131,6 +133,28 @@ public class ApiModel private constructor(
             ?.values
             ?.mapNotNull { resolveParameter(it) }
             .orEmpty()
+
+    /**
+     * Extracts API Key security schemes from the OpenAPI specification.
+     * These are used to generate authentication configuration in the client.
+     */
+    public val apiKeySecuritySchemes: List<ApiSecurityScheme> =
+        components
+            ?.securitySchemes
+            ?.entries
+            ?.mapNotNull { (schemeName, scheme) ->
+                val securityScheme = scheme as? OpenAPIV3SecurityScheme ?: return@mapNotNull null
+                if (securityScheme.type != OpenAPIV3SecuritySchemeType.API_KEY) return@mapNotNull null
+                val keyName = securityScheme.name ?: return@mapNotNull null
+                val inValue = securityScheme.`in` ?: return@mapNotNull null
+                val location =
+                    when (inValue) {
+                        "header" -> ApiSecurityScheme.ApiKeyLocation.HEADER
+                        "query" -> ApiSecurityScheme.ApiKeyLocation.QUERY
+                        else -> return@mapNotNull null
+                    }
+                ApiSecurityScheme(schemeName, keyName, location)
+            }.orEmpty()
 
     internal fun isEnum(property: ApiClassProperty): Boolean =
         (!property.asSchema?.enum.isNullOrEmpty()) ||

@@ -24,6 +24,22 @@ public fun String.snakeToCamelCase(): String =
     replace(snakeToCamelCaseRegex) { it.value.last().uppercase() }
         .replace("_", "")
 
+private val illegalIdentifierCharRegex = "[^a-zA-Z0-9_]".toRegex()
+private val sanitizeToCamelCaseRegex = "[^a-zA-Z0-9][a-z]".toRegex()
+
+/**
+ * Returns true when this string contains characters that are not valid in a Kotlin identifier.
+ */
+public fun String.hasIllegalIdentifierChars(): Boolean = illegalIdentifierCharRegex.containsMatchIn(this)
+
+/**
+ * Converts a string with illegal identifier characters to a valid camelCase identifier.
+ * For example, "planetiler:buildtime" -> "planetilerBuildtime"
+ */
+public fun String.sanitizeToIdentifier(): String =
+    replace(sanitizeToCamelCaseRegex) { it.value.last().uppercase() }
+        .replace(illegalIdentifierCharRegex, "")
+
 private val tagToCamelCaseRegex = "-[a-z]".toRegex()
 
 /**

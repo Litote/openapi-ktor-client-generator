@@ -7,13 +7,13 @@ import org.gradle.api.provider.Property
 import org.gradle.api.provider.SetProperty
 import org.gradle.api.tasks.Input
 import org.gradle.api.tasks.InputFile
-import org.gradle.api.tasks.Optional
 import org.gradle.api.tasks.OutputDirectory
 import org.gradle.api.tasks.PathSensitive
 import org.gradle.api.tasks.PathSensitivity
 import org.gradle.api.tasks.TaskAction
 import org.litote.openapi.ktor.client.generator.ApiGeneratorConfiguration
 import org.litote.openapi.ktor.client.generator.ApiGeneratorModule.Companion.getModule
+import org.litote.openapi.ktor.client.generator.GenerationResult
 import org.litote.openapi.ktor.client.generator.generate
 
 public abstract class GenerateTask : DefaultTask() {
@@ -72,7 +72,15 @@ public abstract class GenerateTask : DefaultTask() {
         if (skip.get() == true) {
             logger.info("skip generation for ${config.openApiFile}")
         } else {
-            generate(config)
+            when (val result = generate(config)) {
+                is GenerationResult.Success -> {
+                    logger.info("Generated ${result.clientsGenerated} clients and ${result.modelsGenerated} models")
+                }
+
+                is GenerationResult.Failure -> {
+                    throw org.gradle.api.GradleException(result.message, result.error)
+                }
+            }
         }
     }
 }
