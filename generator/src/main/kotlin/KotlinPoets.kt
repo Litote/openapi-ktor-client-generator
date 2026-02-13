@@ -13,19 +13,17 @@ import org.litote.openapi.ktor.client.generator.shared.snakeToCamelCase
 
 public fun isConstSupported(typeName: com.squareup.kotlinpoet.TypeName): Boolean =
     typeName == String::class.asTypeName() ||
-            typeName == Boolean::class.asTypeName() ||
-            typeName == Long::class.asTypeName() ||
-            typeName == Double::class.asTypeName() ||
-            typeName == Float::class.asTypeName() ||
-            typeName == Int::class.asTypeName()
+        typeName == Boolean::class.asTypeName() ||
+        typeName == Long::class.asTypeName() ||
+        typeName == Double::class.asTypeName() ||
+        typeName == Float::class.asTypeName() ||
+        typeName == Int::class.asTypeName()
 
 private val constNameRegex = "[^A-Za-z0-9]+".toRegex()
 
-public fun constName(name: String): String =
-    name.replace(constNameRegex, "_").trim('_').uppercase()
+public fun constName(name: String): String = name.replace(constNameRegex, "_").trim('_').uppercase()
 
-public fun parameterTypeBaseName(name: String): String =
-    name.replace(constNameRegex, "_")
+public fun parameterTypeBaseName(name: String): String = name.replace(constNameRegex, "_")
 
 public fun parameterVariableName(name: String): String {
     val normalized = parameterTypeBaseName(name)
@@ -34,7 +32,7 @@ public fun parameterVariableName(name: String): String {
 
 public fun parameterDefaultLiteral(
     schemaOrReference: community.flock.kotlinx.openapi.bindings.OpenAPIV3SchemaOrReference?,
-    typeName: com.squareup.kotlinpoet.TypeName
+    typeName: com.squareup.kotlinpoet.TypeName,
 ): CodeBlock? {
     val schema = schemaOrReference as? OpenAPIV3Schema ?: return null
     val defaultValue = schema.default as? JsonPrimitive ?: return null

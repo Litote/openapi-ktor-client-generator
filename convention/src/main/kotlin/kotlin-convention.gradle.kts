@@ -9,6 +9,7 @@ plugins {
 }
 
 plugin("vanniktech.maven.publish")
+plugin("ktlint")
 
 dependencies {
     constraints {
@@ -16,6 +17,7 @@ dependencies {
     }
     implementation(lib("logging"))
     testImplementation(kotlin("test"))
+    testImplementation(lib("mockk"))
 }
 
 kotlin {

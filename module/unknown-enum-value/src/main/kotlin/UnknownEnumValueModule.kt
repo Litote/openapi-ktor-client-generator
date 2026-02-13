@@ -7,7 +7,6 @@ import org.litote.openapi.ktor.client.generator.ApiGeneratorModule
 import org.litote.openapi.ktor.client.generator.ApiModelGenerator
 
 internal class UnknownEnumValueModule : ApiGeneratorModule {
-
     override fun process(generator: ApiClientConfigurationGenerator) {
         generator.jsonDefaultValueProperties[JsonConfiguration::coerceInputValues.name] = "true"
     }

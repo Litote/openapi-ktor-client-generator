@@ -1,40 +1,52 @@
 [versions]
-kotlin = "2.3.0"
-kotlinx-serialization = "1.10.0"
-ktor = "3.4.0"
-logback = "1.5.25"
-logging = "7.0.3"
 coroutines = "1.10.2"
-kotlin-poet = "2.2.0"
-openapi-bindings = "0.2.1"
-maven-publish= "0.36.0"
 gradle-publish = "2.0.0"
+kotlin = "2.3.10"
+kotlin-poet = "2.2.0"
+kotlinx-serialization = "1.10.0"
+ktlint = "5.4.2"
+ktor = "3.4.0"
+logback = "1.5.29"
+logging = "7.0.14"
+maven-publish = "0.36.0"
+mockk = "1.14.9"
+openapi-bindings = "0.2.1"
+version-catalog-update = "1.0.1"
 
 [plugins]
+gradle-publish = { id = "com.gradle.plugin-publish", version.ref = "gradle-publish" }
 kotlin-jvm = { id = "org.jetbrains.kotlin.jvm", version.ref = "kotlin" }
+ktlint = { id = "org.jmailen.kotlinter", version.ref = "ktlint" }
 serialization = { id = "org.jetbrains.kotlin.plugin.serialization", version.ref = "kotlin" }
 vanniktech-maven-publish = { id = "com.vanniktech.maven.publish", version.ref = "maven-publish" }
-gradle-publish = { id = "com.gradle.plugin-publish", version.ref = "gradle-publish" }
+version-catalog-update = { id = "nl.littlerobots.version-catalog-update", version.ref = "version-catalog-update" }
 
 [libraries]
-kotlin-stdlib = { module = "org.jetbrains.kotlin:kotlin-stdlib", version.ref = "kotlin" }
+coroutines = { module = "org.jetbrains.kotlinx:kotlinx-coroutines-core", version.ref = "coroutines" }
+coroutines-jvm = { module = "org.jetbrains.kotlinx:kotlinx-coroutines-core-jvm", version.ref = "coroutines" }
+coroutines-test = { module = "org.jetbrains.kotlinx:kotlinx-coroutines-test", version.ref = "coroutines" }
+kotlin-gradle-plugin = { module = "org.jetbrains.kotlin:kotlin-gradle-plugin", version.ref = "kotlin" }
+kotlin-poet = { module = "com.squareup:kotlinpoet-jvm", version.ref = "kotlin-poet" }
 kotlin-reflect = { module = "org.jetbrains.kotlin:kotlin-reflect", version.ref = "kotlin" }
-serialization = { module = "org.jetbrains.kotlinx:kotlinx-serialization-json", version.ref = "kotlinx-serialization" }
-ktor-core = { module = "io.ktor:ktor-client-core", version.ref = "ktor" }
+kotlin-stdlib = { module = "org.jetbrains.kotlin:kotlin-stdlib", version.ref = "kotlin" }
 ktor-cio = { module = "io.ktor:ktor-client-cio", version.ref = "ktor" }
 ktor-contentnegotiation = { module = "io.ktor:ktor-client-content-negotiation", version.ref = "ktor" }
+ktor-core = { module = "io.ktor:ktor-client-core", version.ref = "ktor" }
 ktor-json = { module = "io.ktor:ktor-serialization-kotlinx-json", version.ref = "ktor" }
 ktor-log = { module = "io.ktor:ktor-client-logging", version.ref = "ktor" }
 ktor-mock = { module = "io.ktor:ktor-client-mock", version.ref = "ktor" }
-logging = { module = "io.github.oshai:kotlin-logging-jvm", version.ref = "logging" }
 logback = { module = "ch.qos.logback:logback-classic", version.ref = "logback" }
-coroutines = { module = "org.jetbrains.kotlinx:kotlinx-coroutines-core", version.ref = "coroutines" }
-coroutines-jvm = { module = "org.jetbrains.kotlinx:kotlinx-coroutines-core-jvm", version.ref = "coroutines" }
+logging = { module = "io.github.oshai:kotlin-logging-jvm", version.ref = "logging" }
+mockk = { module = "io.mockk:mockk", version.ref = "mockk" }
 openapi-bindings = { module = "community.flock.kotlinx.openapi.bindings:kotlin-openapi-bindings", version.ref = "openapi-bindings" }
-kotlin-poet = { module = "com.squareup:kotlinpoet-jvm", version.ref = "kotlin-poet" }
-kotlin-gradle-plugin = { module = "org.jetbrains.kotlin:kotlin-gradle-plugin", version.ref = "kotlin" }
-coroutines-test = { module = "org.jetbrains.kotlinx:kotlinx-coroutines-test", version.ref = "coroutines"}
+serialization = { module = "org.jetbrains.kotlinx:kotlinx-serialization-json", version.ref = "kotlinx-serialization" }
 vanniktech-maven-publish = { module = "com.vanniktech:gradle-maven-publish-plugin", version.ref = "maven-publish" }
 
 [bundles]
-ktor = ["ktor-json", "ktor-cio", "ktor-core", "ktor-contentnegotiation", "ktor-log"]
+ktor = [
+    "ktor-cio",
+    "ktor-contentnegotiation",
+    "ktor-core",
+    "ktor-json",
+    "ktor-log",
+]

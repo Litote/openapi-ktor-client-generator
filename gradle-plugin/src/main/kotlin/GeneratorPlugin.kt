@@ -15,18 +15,25 @@ public class GeneratorPlugin : Plugin<Project> {
         val extension = project.extensions.create("apiClientGenerator", ApiClientGeneratorsExtension::class.java)
 
         project.afterEvaluate {
+            val skip = extension.skip.getOrNull()
             extension.generators.names.all { generatorName ->
                 val generatorExtension = extension.generators.getByName(generatorName)
                 generatorExtension.initConventions(project)
-                val task = project.tasks.register(
-                    "generate${generatorExtension.name.capitalize()}", GenerateTask::class.java) { task ->
-                    task.group = "api client generation"
-                    task.openApiFile.set(generatorExtension.openApiFile)
-                    task.outputDirectory.set(generatorExtension.outputDirectory)
-                    task.basePackage.set(generatorExtension.basePackage)
-                    task.allowedPaths.set(generatorExtension.allowedPaths)
-                    task.modulesIds.set(generatorExtension.modulesIds)
-                }
+                val task =
+                    project.tasks.register("generate${generatorExtension.name.capitalize()}", GenerateTask::class.java) { task ->
+                        task.group = "api client generation"
+                        task.openApiFile.set(generatorExtension.openApiFile)
+                        task.outputDirectory.set(generatorExtension.outputDirectory)
+                        task.basePackage.set(generatorExtension.basePackage)
+                        task.allowedPaths.set(generatorExtension.allowedPaths)
+                        task.modulesIds.set(generatorExtension.modulesIds)
+                        val generatorSkip: Boolean? = generatorExtension.skip.getOrNull()
+                        if (skip == true && generatorSkip != false) {
+                            task.skip.set(true)
+                        } else {
+                            task.skip.set(generatorSkip == true)
+                        }
+                    }
 
                 project.plugins.withId("org.jetbrains.kotlin.multiplatform") {
                     val kotlinExtension = project.extensions.findByType(KotlinMultiplatformExtension::class.java)
@@ -34,8 +41,8 @@ public class GeneratorPlugin : Plugin<Project> {
                         project.afterEvaluate {
                             kotlinExtension.sourceSets.getByName("commonMain").kotlin.srcDir(
                                 generatorExtension.outputDirectory.dir(
-                                    "src/main/kotlin"
-                                )
+                                    "src/main/kotlin",
+                                ),
                             )
                         }
                         project.tasks.withType(KotlinCompileCommon::class.java).configureEach {
@@ -62,4 +69,3 @@ public class GeneratorPlugin : Plugin<Project> {
         }
     }
 }
-

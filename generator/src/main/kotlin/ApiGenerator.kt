@@ -1,5 +1,7 @@
 package org.litote.openapi.ktor.client.generator
 
+import io.github.oshai.kotlinlogging.KotlinLogging
+
 /**
  * Main entry point for the API client generator.
  *
@@ -12,8 +14,8 @@ public fun main(vararg args: String) {
         ApiGeneratorConfiguration(
             args.getOrNull(0)
                 ?: error("please provide the path to the OpenAPI specification file as the first argument"),
-            args.getOrNull(1) ?: error("please provide the path to the output directory as the second argument")
-        )
+            args.getOrNull(1) ?: error("please provide the path to the output directory as the second argument"),
+        ),
     )
 }
 
@@ -25,9 +27,7 @@ public fun main(vararg args: String) {
  *
  * @param configuration Custom generator configuration settings
  */
-public fun generate(
-    configuration: ApiGeneratorConfiguration
-) {
+public fun generate(configuration: ApiGeneratorConfiguration) {
     try {
         logger.debug { "Generating API for $configuration" }
 
@@ -36,10 +36,9 @@ public fun generate(
         val modelGenerator = ModelGenerator(fileContent)
         clientGenerator.generate()
         modelGenerator.generate()
-
     } catch (e: Throwable) {
         logger.error(e) { "Error while generating API for $configuration" }
     }
 }
 
-private val logger = io.github.oshai.kotlinlogging.KotlinLogging.logger {}
+private val logger = KotlinLogging.logger {}

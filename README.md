@@ -14,7 +14,7 @@ Add the plugin to your `build.gradle.kts`:
 
 ```kotlin
 plugins {
-    id("org.litote.openapi.ktor.client.generator.gradle") version "0.1.1"
+    id("org.litote.openapi.ktor.client.generator.gradle") version "0.1.2"
 }
 ```
 
@@ -56,13 +56,23 @@ This will generate Ktor client code based on your OpenAPI specification and plug
 
 ## Configuration Properties
 
-| Property | Description | Default value | Allowed values |
-| --- | --- | --- | --- |
-| `openApiFile` | OpenAPI v3 source file | `file("src/main/openapi/${name}.json")` | Any existing OpenAPI file |
+### Root properties
+
+| Property       | Description                 | Default value                   | Allowed values                                  |
+|----------------|-----------------------------|---------------------------------|-------------------------------------------------|
+| `generators`   | Generators configuration    | `{}`                            | Any configuration                               |
+| `skip`         | Skip all clients generation | false                           | Boolean                                         |
+
+### Generator properties
+
+| Property | Description                                                                             | Default value | Allowed values |
+| --- |-----------------------------------------------------------------------------------------| --- | --- |
+| `openApiFile` | OpenAPI v3 source file                                                                  | `file("src/main/openapi/${name}.json")` | Any existing OpenAPI file |
 | `outputDirectory` | Target directory for generated sources (a `src/main/kotlin` subdirectory will be added) | `file("build/api-${name}")` | Any relative directory |
-| `basePackage` | Base package for all generated classes | `org.example` | Any valid package name |
-| `allowedPaths` | Restrict generation to a subset of OpenAPI paths | empty (all paths are generated) | Any subset of paths defined in the OpenAPI spec |
-| `modulesIds` | Extra generation modules to enable | Empty (no modules) | `UnknownEnumValueModule`, `LoggingSl4jModule` |
+| `basePackage` | Base package for all generated classes                                                  | `org.example` | Any valid package name |
+| `allowedPaths` | Restrict generation to a subset of OpenAPI paths                                        | empty (all paths are generated) | Any subset of paths defined in the OpenAPI spec |
+| `modulesIds` | Extra generation modules to enable                                                      | Empty (no modules) | `UnknownEnumValueModule`, `LoggingSl4jModule` |
+| `skip`         | Skip this client generation                                                             | false                           | Boolean                                         |
 
 ## Project Structure
 

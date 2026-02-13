@@ -3,7 +3,6 @@ package org.litote.openapi.ktor.client.generator
 import java.util.ServiceLoader
 
 public interface ApiGeneratorModule {
-
     public val id: String get() = this::class.simpleName ?: error("Module must have a simple class name")
 
     public fun process(generator: ApiClientConfigurationGenerator) {}

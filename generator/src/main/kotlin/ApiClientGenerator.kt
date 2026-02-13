@@ -17,6 +17,7 @@ import community.flock.kotlinx.openapi.bindings.OpenAPIV3Operation
 import community.flock.kotlinx.openapi.bindings.OpenAPIV3ParameterLocation
 import community.flock.kotlinx.openapi.bindings.OpenAPIV3RequestBody
 import community.flock.kotlinx.openapi.bindings.OpenAPIV3Response
+import io.github.oshai.kotlinlogging.KotlinLogging
 import io.ktor.http.HttpStatusCode.Companion.InternalServerError
 import kotlinx.serialization.Serializable
 import org.litote.openapi.ktor.client.generator.shared.capitalize
@@ -25,8 +26,9 @@ import org.litote.openapi.ktor.client.generator.shared.tagToCamelCase
 import org.litote.openapi.ktor.client.generator.shared.uncapitalize
 import java.io.File
 
-public class ApiClientGenerator internal constructor(public val apiModel: ApiModel) {
-
+public class ApiClientGenerator internal constructor(
+    public val apiModel: ApiModel,
+) {
     private companion object {
         val bodyMember = MemberName("io.ktor.client.call", "body")
         val setBodyMember = MemberName("io.ktor.client.request", "setBody")
@@ -36,7 +38,7 @@ public class ApiClientGenerator internal constructor(public val apiModel: ApiMod
         val contentTypeClass = ClassName("io.ktor.http", "ContentType")
         val serializableAnnotation = AnnotationSpec.builder(Serializable::class).build()
 
-        private val logger = io.github.oshai.kotlinlogging.KotlinLogging.logger {}
+        private val logger = KotlinLogging.logger {}
     }
 
     public val clientConfigurationClass: ClassName =
@@ -54,97 +56,105 @@ public class ApiClientGenerator internal constructor(public val apiModel: ApiMod
         operation: OpenAPIV3Operation,
         clientBuilder: TypeSpec.Builder,
         responseBaseName: String,
-        responseSealedClass: ClassName
+        responseSealedClass: ClassName,
     ): List<ResponseEntry> =
         (
-                operation
-                    .responses
-                    ?.asSequence()
-                    ?.map { (statusCode, responseOrReference) ->
-                        val code = statusCode.value.toIntOrNull() ?: error("Invalid status code: ${statusCode.value}")
-                        val response = responseOrReference as? OpenAPIV3Response
+            operation
+                .responses
+                ?.asSequence()
+                ?.map { (statusCode, responseOrReference) ->
+                    val code = statusCode.value.toIntOrNull() ?: error("Invalid status code: ${statusCode.value}")
+                    val response =
+                        responseOrReference as? OpenAPIV3Response
                             ?: error("Unsupported response reference: $responseOrReference")
-                        val schema =
-                            response.content?.values?.firstOrNull()?.schema
-                        if ((response.content?.size ?: 0) > 1) {
-                            logger.warn { "More than one response content specified - unsupported - take first" }
+                    val schema =
+                        response.content
+                            ?.values
+                            ?.firstOrNull()
+                            ?.schema
+                    if ((response.content?.size ?: 0) > 1) {
+                        logger.warn { "More than one response content specified - unsupported - take first" }
+                    }
+                    val responseType =
+                        if (schema == null) {
+                            null
+                        } else {
+                            apiModel.getClassName(
+                                "${responseBaseName}ResponseBody",
+                                schema,
+                            )
                         }
-                        val responseType = if (schema == null) null else apiModel.getClassName(
-                            "${responseBaseName}ResponseBody",
-                            schema
-                        )
-                        code to responseType
-                    }
-                    ?.sortedBy { it.first }
-                    ?.groupBy({ it.second to it.first.isSuccess }) { it.first }
-                    ?.map { (type: Pair<TypeName?, Boolean>, statusCodes) ->
-                        Triple(
-                            type.first,
-                            type.second,
-                            statusCodes
-                        )
-                    }
-                    ?.run {
-                        mapIndexed { index, (typeName, success, statusCodes) ->
-                            val classNameSuffix = if (success) {
+                    code to responseType
+                }?.sortedBy { it.first }
+                ?.groupBy({ it.second to it.first.isSuccess }) { it.first }
+                ?.map { (type: Pair<TypeName?, Boolean>, statusCodes) ->
+                    Triple(
+                        type.first,
+                        type.second,
+                        statusCodes,
+                    )
+                }?.run {
+                    mapIndexed { index, (typeName, success, statusCodes) ->
+                        val classNameSuffix =
+                            if (success) {
                                 if (getOrNull(index + 1)?.second == true) "Success${statusCodes.first()}" else "Success"
                             } else if (getOrNull(index + 1) != null) {
                                 "Failure${statusCodes.first()}"
                             } else {
                                 "Failure"
                             }
-                            val responseClassName = "${responseBaseName}Response$classNameSuffix"
-                            val responseType = if (typeName == null) {
+                        val responseClassName = "${responseBaseName}Response$classNameSuffix"
+                        val responseType =
+                            if (typeName == null) {
                                 TypeSpec
                                     .objectBuilder(responseClassName)
                                     .addAnnotation(serializableAnnotation)
                                     .superclass(responseSealedClass)
                                     .build()
                             } else {
-                                TypeSpec.classBuilder(responseClassName)
+                                TypeSpec
+                                    .classBuilder(responseClassName)
                                     .addModifiers(KModifier.DATA)
                                     .addAnnotation(serializableAnnotation)
                                     .primaryConstructor(
-                                        FunSpec.constructorBuilder()
+                                        FunSpec
+                                            .constructorBuilder()
                                             .addParameter("body", typeName)
-                                            .build()
-                                    )
-                                    .addProperty(
-                                        PropertySpec.builder("body", typeName)
+                                            .build(),
+                                    ).addProperty(
+                                        PropertySpec
+                                            .builder("body", typeName)
                                             .initializer("body")
-                                            .build()
-                                    )
-                                    .superclass(responseSealedClass)
+                                            .build(),
+                                    ).superclass(responseSealedClass)
                                     .build()
                             }
 
-                            clientBuilder.addType(responseType)
-                            ResponseEntry(statusCodes, typeName, responseType)
-                        }
+                        clientBuilder.addType(responseType)
+                        ResponseEntry(statusCodes, typeName, responseType)
                     }
-                    ?.takeUnless { it.isEmpty() }
-                    ?: error("no response specified"))
-            .apply {
-
-                clientBuilder.addType(
-                    TypeSpec
-                        .classBuilder("${responseBaseName}ResponseUnknownFailure")
-                        .addModifiers(KModifier.DATA)
-                        .addAnnotation(serializableAnnotation)
-                        .primaryConstructor(
-                            FunSpec.constructorBuilder()
-                                .addParameter("statusCode", INT)
-                                .build()
-                        )
-                        .addProperty(
-                            PropertySpec.builder("statusCode", INT)
-                                .initializer("statusCode")
-                                .build()
-                        )
-                        .superclass(responseSealedClass)
-                        .build()
-                )
-            }
+                }?.takeUnless { it.isEmpty() }
+                ?: error("no response specified")
+        ).apply {
+            clientBuilder.addType(
+                TypeSpec
+                    .classBuilder("${responseBaseName}ResponseUnknownFailure")
+                    .addModifiers(KModifier.DATA)
+                    .addAnnotation(serializableAnnotation)
+                    .primaryConstructor(
+                        FunSpec
+                            .constructorBuilder()
+                            .addParameter("statusCode", INT)
+                            .build(),
+                    ).addProperty(
+                        PropertySpec
+                            .builder("statusCode", INT)
+                            .initializer("statusCode")
+                            .build(),
+                    ).superclass(responseSealedClass)
+                    .build(),
+            )
+        }
 
     private fun getHeaderParameters(operation: OpenAPIV3Operation): List<HeaderParameter> =
         operation
@@ -155,29 +165,30 @@ public class ApiClientGenerator internal constructor(public val apiModel: ApiMod
             .filter { it.`in` == OpenAPIV3ParameterLocation.HEADER }
             .distinctBy { it.name }
             .map { parameter ->
-                val parameterTypeName = parameter.schema?.let { schema ->
-                    apiModel.getClassName(parameterTypeBaseName(parameter.name), schema)
-                } ?: STRING
+                val parameterTypeName =
+                    parameter.schema?.let { schema ->
+                        apiModel.getClassName(parameterTypeBaseName(parameter.name), schema)
+                    } ?: STRING
                 val defaultLiteral = parameterDefaultLiteral(parameter.schema, parameterTypeName)
                 val isOptional = parameter.required != true && defaultLiteral == null
                 val parameterType =
                     if (isOptional) parameterTypeName.copy(nullable = true) else parameterTypeName
                 val constBaseName = constName(parameter.name)
                 val parameterName = parameterVariableName(parameter.name)
-                val defaultConst = if (defaultLiteral != null && isConstSupported(parameterTypeName)) {
-                    "PARAMETER_${constBaseName}_DEFAULT_VALUE"
-                } else {
-                    null
-                }
+                val defaultConst =
+                    if (defaultLiteral != null && isConstSupported(parameterTypeName)) {
+                        "PARAMETER_${constBaseName}_DEFAULT_VALUE"
+                    } else {
+                        null
+                    }
                 HeaderParameter(
                     parameterName,
                     parameterType,
                     "PARAMETER_$constBaseName",
                     defaultConst,
-                    isOptional
+                    isOptional,
                 )
-            }
-            .toList()
+            }.toList()
 
     private fun getPathParameters(operation: OpenAPIV3Operation): List<PathParameter> =
         operation
@@ -188,9 +199,10 @@ public class ApiClientGenerator internal constructor(public val apiModel: ApiMod
             .filter { it.`in` == OpenAPIV3ParameterLocation.PATH }
             .distinctBy { it.name }
             .map { parameter ->
-                val parameterTypeName = parameter.schema?.let { schema ->
-                    apiModel.getClassName(parameterTypeBaseName(parameter.name), schema)
-                } ?: STRING
+                val parameterTypeName =
+                    parameter.schema?.let { schema ->
+                        apiModel.getClassName(parameterTypeBaseName(parameter.name), schema)
+                    } ?: STRING
                 val defaultLiteral = parameterDefaultLiteral(parameter.schema, parameterTypeName)
                 val isOptional = parameter.required != true && defaultLiteral == null
                 val parameterType =
@@ -200,10 +212,9 @@ public class ApiClientGenerator internal constructor(public val apiModel: ApiMod
                     parameterName,
                     parameterType,
                     parameter.name,
-                    isOptional
+                    isOptional,
                 )
-            }
-            .toList()
+            }.toList()
 
     private fun getQueryParameters(operation: OpenAPIV3Operation): List<QueryParameter> =
         operation
@@ -214,9 +225,10 @@ public class ApiClientGenerator internal constructor(public val apiModel: ApiMod
             .filter { it.`in` == OpenAPIV3ParameterLocation.QUERY }
             .distinctBy { it.name }
             .map { parameter ->
-                val parameterTypeName = parameter.schema?.let { schema ->
-                    apiModel.getClassName(parameterTypeBaseName(parameter.name), schema)
-                } ?: STRING
+                val parameterTypeName =
+                    parameter.schema?.let { schema ->
+                        apiModel.getClassName(parameterTypeBaseName(parameter.name), schema)
+                    } ?: STRING
                 val defaultLiteral = parameterDefaultLiteral(parameter.schema, parameterTypeName)
                 val isOptional = parameter.required != true && defaultLiteral == null
                 val parameterType =
@@ -226,40 +238,43 @@ public class ApiClientGenerator internal constructor(public val apiModel: ApiMod
                     parameterName,
                     parameterType,
                     parameter.name,
-                    isOptional
+                    isOptional,
                 )
-            }
-            .toList()
+            }.toList()
 
     private fun buildOperation(
         context: ClientGenerationContext,
         operationInfo: ApiOperation,
         clientBuilder: TypeSpec.Builder,
-        clientName: String
+        clientName: String,
     ) {
         val operation = operationInfo.operation
-        val operationId = operation.operationId
-            ?: "${operationInfo.method}_${operationInfo.path.replace("/", "_").replace("{", "With_").replace("}", "")}"
+        val operationId =
+            operation.operationId
+                ?: "${operationInfo.method}_${operationInfo.path.replace("/", "_").replace("{", "With_").replace("}", "")}"
         val responseBaseName = operationId.replace("-", "_").snakeToCamelCase().capitalize()
         val functionName = responseBaseName.uncapitalize()
 
         val requestBody = operation.requestBody as? OpenAPIV3RequestBody
 
-        val requestSchema = requestBody
-            ?.content
-            ?.values
-            ?.firstOrNull()
-            ?.schema
+        val requestSchema =
+            requestBody
+                ?.content
+                ?.values
+                ?.firstOrNull()
+                ?.schema
         val requestType =
             requestSchema?.let { apiModel.getClassName("${responseBaseName}Request", it) }
 
         val responseSealedName = "${responseBaseName}Response"
         val packageName = apiModel.configuration.clientPackage
         val responseSealedClass = ClassName(packageName, clientName, responseSealedName)
-        val responseSealedType = TypeSpec.classBuilder(responseSealedName)
-            .addModifiers(KModifier.SEALED)
-            .addAnnotation(serializableAnnotation)
-            .build()
+        val responseSealedType =
+            TypeSpec
+                .classBuilder(responseSealedName)
+                .addModifiers(KModifier.SEALED)
+                .addAnnotation(serializableAnnotation)
+                .build()
 
         clientBuilder.addType(responseSealedType)
 
@@ -267,20 +282,22 @@ public class ApiClientGenerator internal constructor(public val apiModel: ApiMod
             buildResponseEntries(operation, clientBuilder, responseBaseName, responseSealedClass)
 
         val methodMember = MemberName("io.ktor.client.request", operationInfo.method)
-        val funBuilder = FunSpec.builder(functionName)
-            .addModifiers(KModifier.SUSPEND)
-            .returns(responseSealedClass)
+        val funBuilder =
+            FunSpec
+                .builder(functionName)
+                .addModifiers(KModifier.SUSPEND)
+                .returns(responseSealedClass)
 
         operation.summary?.let { summary ->
             funBuilder.addKdoc("%L\n", summary)
         }
 
-        val requestContentTypes = requestBody
-            ?.content
-            ?.keys
-            ?.map { it.value }
-            ?.toSet()
-
+        val requestContentTypes =
+            requestBody
+                ?.content
+                ?.keys
+                ?.map { it.value }
+                ?.toSet()
 
         requestType?.let { type ->
             funBuilder.addParameter("request", type)
@@ -291,10 +308,11 @@ public class ApiClientGenerator internal constructor(public val apiModel: ApiMod
             context.hasPathComponents = true
         }
         pathParameters.forEach { pathParameter ->
-            val pathBuilder = ParameterSpec.builder(
-                pathParameter.parameterName,
-                pathParameter.parameterType
-            )
+            val pathBuilder =
+                ParameterSpec.builder(
+                    pathParameter.parameterName,
+                    pathParameter.parameterType,
+                )
             if (pathParameter.isOptional) {
                 pathBuilder.defaultValue("null")
             }
@@ -303,10 +321,11 @@ public class ApiClientGenerator internal constructor(public val apiModel: ApiMod
 
         val queryParameters = getQueryParameters(operation)
         queryParameters.forEach { queryParameter ->
-            val queryBuilder = ParameterSpec.builder(
-                queryParameter.parameterName,
-                queryParameter.parameterType
-            )
+            val queryBuilder =
+                ParameterSpec.builder(
+                    queryParameter.parameterName,
+                    queryParameter.parameterType,
+                )
             if (queryParameter.isOptional) {
                 queryBuilder.defaultValue("null")
             }
@@ -319,16 +338,17 @@ public class ApiClientGenerator internal constructor(public val apiModel: ApiMod
         }
 
         headerParameters.forEach { headerParameter ->
-            val parameterBuilder = ParameterSpec.builder(
-                headerParameter.parameterName,
-                headerParameter.parameterType
-            )
+            val parameterBuilder =
+                ParameterSpec.builder(
+                    headerParameter.parameterName,
+                    headerParameter.parameterType,
+                )
             when {
                 headerParameter.defaultValueConst != null -> {
                     parameterBuilder.defaultValue(
                         "%T.%L",
                         clientConfigurationClass,
-                        headerParameter.defaultValueConst
+                        headerParameter.defaultValueConst,
                     )
                 }
 
@@ -341,19 +361,22 @@ public class ApiClientGenerator internal constructor(public val apiModel: ApiMod
 
         val hasJsonContentType =
             requestContentTypes?.any { it.equals("application/json", ignoreCase = true) } == true
-        val trimmedPath = operationInfo.path.trimStart('/').run {
-            var s = "\"$this\""
-            pathParameters.forEach { pathParameter ->
-                if (pathParameter.isOptional) {
-                    s += ".replace(\"/{${pathParameter.pathName}}\", if(${pathParameter.parameterName} == null) \"\" else \"/\${${pathParameter.parameterName}.encodeURLPathPart()}\")"
-                } else {
-                    s += ".replace(\"/{${pathParameter.pathName}}\", \"/\${${pathParameter.parameterName}.encodeURLPathPart()}\")"
+        val trimmedPath =
+            operationInfo.path.trimStart('/').run {
+                var s = "\"$this\""
+                pathParameters.forEach { pathParameter ->
+                    if (pathParameter.isOptional) {
+                        s +=
+                            ".replace(\"/{${pathParameter.pathName}}\", if(${pathParameter.parameterName} == null) \"\" else \"/\${${pathParameter.parameterName}.encodeURLPathPart()}\")"
+                    } else {
+                        s += ".replace(\"/{${pathParameter.pathName}}\", \"/\${${pathParameter.parameterName}.encodeURLPathPart()}\")"
+                    }
                 }
+                s
             }
-            s
-        }
         funBuilder.addCode(
-            CodeBlock.builder()
+            CodeBlock
+                .builder()
                 .beginControlFlow("try")
                 .beginControlFlow("val response = configuration.client.%M(%L)", methodMember, trimmedPath)
                 .apply {
@@ -364,7 +387,7 @@ public class ApiClientGenerator internal constructor(public val apiModel: ApiMod
                                 "$ALIAS_HEADER(%T.%L, %N)",
                                 clientConfigurationClass,
                                 headerParameter.nameConst,
-                                headerParameter.parameterName
+                                headerParameter.parameterName,
                             )
                             endControlFlow()
                         } else {
@@ -372,7 +395,7 @@ public class ApiClientGenerator internal constructor(public val apiModel: ApiMod
                                 "$ALIAS_HEADER(%T.%L, %N)",
                                 clientConfigurationClass,
                                 headerParameter.nameConst,
-                                headerParameter.parameterName
+                                headerParameter.parameterName,
                             )
                         }
                     }
@@ -384,14 +407,14 @@ public class ApiClientGenerator internal constructor(public val apiModel: ApiMod
                                 addStatement(
                                     "parameters.append(%S, %N.toString())",
                                     queryParameter.queryKey,
-                                    queryParameter.parameterName
+                                    queryParameter.parameterName,
                                 )
                                 endControlFlow()
                             } else {
                                 addStatement(
                                     "parameters.append(%S, %N.toString())",
                                     queryParameter.queryKey,
-                                    queryParameter.parameterName
+                                    queryParameter.parameterName,
                                 )
                             }
                         }
@@ -405,8 +428,7 @@ public class ApiClientGenerator internal constructor(public val apiModel: ApiMod
                             addStatement("%M(%T.Application.Json)", contentTypeMember, contentTypeClass)
                         }
                     }
-                }
-                .endControlFlow()
+                }.endControlFlow()
                 .beginControlFlow("return when (response.status.value)")
                 .apply {
                     responseEntries.forEach { (statusCodes, bodyType, type) ->
@@ -416,7 +438,7 @@ public class ApiClientGenerator internal constructor(public val apiModel: ApiMod
                             addStatement(
                                 "%L -> %N",
                                 codesLiteral,
-                                type
+                                type,
                             )
                         } else {
                             addStatement(
@@ -424,27 +446,25 @@ public class ApiClientGenerator internal constructor(public val apiModel: ApiMod
                                 codesLiteral,
                                 type,
                                 bodyMember,
-                                bodyType
+                                bodyType,
                             )
                         }
                     }
                     addStatement(
                         "else -> %L(%L)",
                         "${responseBaseName}ResponseUnknownFailure",
-                        "response.status.value"
+                        "response.status.value",
                     )
-                }
-                .endControlFlow()
+                }.endControlFlow()
                 .endControlFlow()
                 .beginControlFlow("catch(e: Exception)")
                 .addStatement("%L(%L)", "configuration.exceptionLogger", "e")
                 .addStatement(
                     "return %L(%L)",
                     "${responseBaseName}ResponseUnknownFailure",
-                    InternalServerError.value
-                )
-                .endControlFlow()
-                .build()
+                    InternalServerError.value,
+                ).endControlFlow()
+                .build(),
         )
 
         clientBuilder.addFunction(funBuilder.build())
@@ -453,25 +473,27 @@ public class ApiClientGenerator internal constructor(public val apiModel: ApiMod
     internal fun buildClient(context: ClientGenerationContext): ClientFileContext {
         val clientName = clientNameForTag(context.name)
 
-        val clientBuilder = TypeSpec.classBuilder(clientName)
-            .primaryConstructor(
-                FunSpec.constructorBuilder()
-                    .addParameter(
-                        ParameterSpec.builder("configuration", clientConfigurationClass)
-                            .defaultValue(
-                                "%M",
-                                MemberName(clientConfigurationCompanionClass, "defaultClientConfiguration")
-                            )
-                            .build()
-                    )
-                    .build()
-            )
-            .addProperty(
-                PropertySpec.builder("configuration", clientConfigurationClass)
-                    .addModifiers(KModifier.PRIVATE)
-                    .initializer("configuration")
-                    .build()
-            )
+        val clientBuilder =
+            TypeSpec
+                .classBuilder(clientName)
+                .primaryConstructor(
+                    FunSpec
+                        .constructorBuilder()
+                        .addParameter(
+                            ParameterSpec
+                                .builder("configuration", clientConfigurationClass)
+                                .defaultValue(
+                                    "%M",
+                                    MemberName(clientConfigurationCompanionClass, "defaultClientConfiguration"),
+                                ).build(),
+                        ).build(),
+                ).addProperty(
+                    PropertySpec
+                        .builder("configuration", clientConfigurationClass)
+                        .addModifiers(KModifier.PRIVATE)
+                        .initializer("configuration")
+                        .build(),
+                )
 
         context.operations.forEach { operationInfo ->
             buildOperation(context, operationInfo, clientBuilder, clientName)
@@ -482,29 +504,28 @@ public class ApiClientGenerator internal constructor(public val apiModel: ApiMod
 
     internal fun writeFile(context: ClientFileContext) {
         val clientName = clientNameForTag(context.name)
-        val fileSpec = FileSpec.builder(apiModel.configuration.clientPackage, clientName)
-            .apply {
-                if (context.hasHeaders) {
-                    addAliasedImport(headerMember, ALIAS_HEADER)
-                }
-                if (context.hasPathComponents) {
-                    addImport("io.ktor.http", "encodeURLPathPart")
-                }
-            }
-            .addType(context.clientClass)
-            .build()
+        val fileSpec =
+            FileSpec
+                .builder(apiModel.configuration.clientPackage, clientName)
+                .apply {
+                    if (context.hasHeaders) {
+                        addAliasedImport(headerMember, ALIAS_HEADER)
+                    }
+                    if (context.hasPathComponents) {
+                        addImport("io.ktor.http", "encodeURLPathPart")
+                    }
+                }.addType(context.clientClass)
+                .build()
         val basePath = File(apiModel.outputDirectory).resolve("src/main/kotlin")
-        println("Writing $clientName to $basePath")
+        logger.debug { "Writing $clientName to $basePath" }
         fileSpec.writeTo(basePath)
     }
-
 }
 
 private data class ResponseEntry(
     val statusCodes: List<Int>,
     val bodyType: TypeName?,
-    val type: TypeSpec
-
+    val type: TypeSpec,
 ) {
     val isSuccess: Boolean get() = statusCodes.any { it.isSuccess }
 }
@@ -516,21 +537,21 @@ private data class HeaderParameter(
     val parameterType: TypeName,
     val nameConst: String,
     val defaultValueConst: String?,
-    val isOptional: Boolean
+    val isOptional: Boolean,
 )
 
 private data class PathParameter(
     val parameterName: String,
     val parameterType: TypeName,
     val pathName: String,
-    val isOptional: Boolean
+    val isOptional: Boolean,
 )
 
 private data class QueryParameter(
     val parameterName: String,
     val parameterType: TypeName,
     val queryKey: String,
-    val isOptional: Boolean
+    val isOptional: Boolean,
 )
 
 internal data class ClientGenerationContext private constructor(
@@ -542,7 +563,7 @@ internal data class ClientGenerationContext private constructor(
     constructor(name: String, operations: List<ApiOperation>) : this(
         name,
         operations,
-        false
+        false,
     )
 }
 
@@ -554,11 +575,11 @@ internal data class ClientFileContext private constructor(
     val clientClass: TypeSpec,
 ) {
     constructor(generationContext: ClientGenerationContext, clientClass: TypeSpec) :
-            this(
-                generationContext.name,
-                generationContext.operations,
-                generationContext.hasHeaders,
-                generationContext.hasPathComponents,
-                clientClass
-            )
+        this(
+            generationContext.name,
+            generationContext.operations,
+            generationContext.hasHeaders,
+            generationContext.hasPathComponents,
+            clientClass,
+        )
 }

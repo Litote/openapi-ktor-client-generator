@@ -7,8 +7,11 @@ import community.flock.kotlinx.openapi.bindings.OpenAPIV3SchemaOrReference
 import org.litote.openapi.ktor.client.generator.shared.isSnakeCase
 import org.litote.openapi.ktor.client.generator.shared.snakeToCamelCase
 
-public data class ApiClassProperty(val initialName: String, val type: TypeName, val apiModel: OpenAPIV3SchemaOrReference) {
-
+public data class ApiClassProperty(
+    val initialName: String,
+    val type: TypeName,
+    val apiModel: OpenAPIV3SchemaOrReference,
+) {
     internal val isSnakeCase: Boolean = initialName.isSnakeCase()
     internal val camelCaseName: String = initialName.snakeToCamelCase()
     internal val asSchema: OpenAPIV3Schema? get() = apiModel as? OpenAPIV3Schema

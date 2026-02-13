@@ -7,6 +7,7 @@ import org.gradle.api.provider.Property
 import org.gradle.api.provider.SetProperty
 import org.gradle.api.tasks.Input
 import org.gradle.api.tasks.InputFile
+import org.gradle.api.tasks.Optional
 import org.gradle.api.tasks.OutputDirectory
 import org.gradle.api.tasks.PathSensitive
 import org.gradle.api.tasks.PathSensitivity
@@ -29,7 +30,6 @@ public abstract class GenerateTask : DefaultTask() {
     @get:OutputDirectory
     public abstract val outputDirectory: DirectoryProperty
 
-
     /**
      * Base package of generated classes.
      */
@@ -48,21 +48,31 @@ public abstract class GenerateTask : DefaultTask() {
     @get:Input
     public abstract val modulesIds: SetProperty<String>
 
+    @get:Input
+    public abstract val skip: Property<Boolean>
+
     @TaskAction
     public fun generate() {
         val allowedPaths = allowedPaths.get()
-        val config = ApiGeneratorConfiguration(
-            openApiFile = openApiFile.get().asFile.absolutePath,
-            outputDirectory = outputDirectory.get().asFile.absolutePath,
-            basePackage = basePackage.get(),
-            operationFilter = { operation ->
-                val path = operation.path
-                allowedPaths.isEmpty() || allowedPaths.contains(path)
-            },
-            modules = modulesIds.get()
-                .map { moduleId -> checkNotNull(getModule(moduleId)) { "Module identifier $moduleId not found" } }
-        )
+        val config =
+            ApiGeneratorConfiguration(
+                openApiFile = openApiFile.get().asFile.absolutePath,
+                outputDirectory = outputDirectory.get().asFile.absolutePath,
+                basePackage = basePackage.get(),
+                operationFilter = { operation ->
+                    val path = operation.path
+                    allowedPaths.isEmpty() || allowedPaths.contains(path)
+                },
+                modules =
+                    modulesIds
+                        .get()
+                        .map { moduleId -> checkNotNull(getModule(moduleId)) { "Module identifier $moduleId not found" } },
+            )
 
-        generate(config)
+        if (skip.get() == true) {
+            logger.info("skip generation for ${config.openApiFile}")
+        } else {
+            generate(config)
+        }
     }
 }
