@@ -14,7 +14,7 @@ Add the plugin to your `build.gradle.kts`:
 
 ```kotlin
 plugins {
-    id("org.litote.openapi.ktor.client.generator.gradle") version "0.1.0"
+    id("org.litote.openapi.ktor.client.generator.gradle") version "0.1.1"
 }
 ```
 
