@@ -1,5 +1,6 @@
 package org.litote.openapi.ktor.client.generator
 
+import com.squareup.kotlinpoet.TypeSpec
 import community.flock.kotlinx.openapi.bindings.OpenAPIV3Schema
 import community.flock.kotlinx.openapi.bindings.OpenAPIV3SchemaOrReference
 
@@ -16,15 +17,23 @@ internal class ModelGenerator(
         return count
     }
 
-    fun generateSchema(
+    fun buildModel(
+        name: String,
+        schema: OpenAPIV3Schema,
+        generator: ApiModelGenerator = ApiModelGenerator(apiModel),
+    ): TypeSpec {
+        apiModel.configuration.modules.forEach { module -> module.process(generator) }
+
+        return generator.buildModel(name, schema)
+    }
+
+    private fun generateSchema(
         name: String,
         schema: OpenAPIV3SchemaOrReference,
     ): Boolean =
         if (schema is OpenAPIV3Schema) {
             val generator = ApiModelGenerator(apiModel)
-            apiModel.configuration.modules.forEach { module -> module.process(generator) }
-
-            val typeSpec = generator.buildModel(name, schema)
+            val typeSpec = buildModel(name, schema, generator)
 
             generator.writeFile(name, typeSpec)
             true

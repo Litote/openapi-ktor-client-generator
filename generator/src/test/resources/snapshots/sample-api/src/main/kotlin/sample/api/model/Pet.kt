@@ -1,4 +1,4 @@
-package org.example.model
+package sample.api.model
 
 import kotlin.Long
 import kotlin.String

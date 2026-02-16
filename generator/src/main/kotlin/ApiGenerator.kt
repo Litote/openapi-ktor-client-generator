@@ -81,8 +81,9 @@ public fun generate(configuration: ApiGeneratorConfiguration): GenerationResult 
         logger.debug { "Generating API for $configuration" }
 
         val fileContent = ApiModel.parseOpenApiFile(configuration)
-        val clientGenerator = ClientGenerator(fileContent)
         val modelGenerator = ModelGenerator(fileContent)
+        val clientGenerator = ClientGenerator(fileContent, modelGenerator)
+
         val clientsGenerated = clientGenerator.generate()
         val modelsGenerated = modelGenerator.generate()
 

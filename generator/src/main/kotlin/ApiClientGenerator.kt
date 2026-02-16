@@ -33,8 +33,6 @@ public class ApiClientGenerator internal constructor(
     public val apiModel: ApiModel,
 ) {
     private companion object {
-        val headerMember = MemberName("io.ktor.client.request", "header")
-        const val ALIAS_HEADER = "setHeader"
         private val logger = KotlinLogging.logger {}
     }
 
@@ -86,6 +84,8 @@ public class ApiClientGenerator internal constructor(
         context.operations.forEach { operationInfo ->
             operationBuilder.buildOperation(context, operationInfo, clientBuilder, clientName)
         }
+
+        context.additionalEntities.forEach { clientBuilder.addType(it) }
 
         return ClientFileContext(context, clientBuilder.build())
     }

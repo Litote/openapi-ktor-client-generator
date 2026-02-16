@@ -18,6 +18,7 @@ package org.litote.openapi.ktor.client.generator.client
 
 import com.squareup.kotlinpoet.TypeSpec
 import org.litote.openapi.ktor.client.generator.ApiOperation
+import org.litote.openapi.ktor.client.generator.ModelGenerator
 
 /**
  * Context for client generation, tracking state during the build process.
@@ -25,8 +26,10 @@ import org.litote.openapi.ktor.client.generator.ApiOperation
 internal data class ClientGenerationContext(
     val name: String,
     val operations: List<ApiOperation>,
+    val modelGenerator: ModelGenerator,
     var hasHeaders: Boolean = false,
     var hasPathComponents: Boolean = false,
+    val additionalEntities: MutableSet<TypeSpec> = mutableSetOf(),
 )
 
 /**

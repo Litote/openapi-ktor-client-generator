@@ -67,7 +67,21 @@
               "externalValue": "http://example.com/examples/dog.json"
             }
           }
-        }],
+        },
+          {
+            "name": "test",
+            "in": "query",
+            "required": false,
+            "schema": {
+              "type": "string"
+            }},
+          {
+            "name": "testInt",
+            "in": "query",
+            "required": false,
+            "schema": {
+              "type": "integer"
+            }}],
         "responses": {
           "200": {
             "description": "successful operation",

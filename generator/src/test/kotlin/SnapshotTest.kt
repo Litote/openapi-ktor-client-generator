@@ -87,6 +87,7 @@ class SnapshotTest {
             ApiGeneratorConfiguration(
                 openApiFile = openApiFile,
                 outputDirectory = "$OUTPUT_DIR/$snapshotName",
+                basePackage = snapshotName.replace('-', '.'),
             )
 
         // Clean output directory

@@ -1,4 +1,4 @@
-package org.example.client
+package simple.api.client
 
 import io.ktor.client.call.body
 import io.ktor.client.request.post
@@ -9,9 +9,9 @@ import io.ktor.http.encodeURLPathPart
 import kotlin.Int
 import kotlin.String
 import kotlinx.serialization.Serializable
-import org.example.client.ClientConfiguration.Companion.defaultClientConfiguration
-import org.example.model.TestRequest
-import org.example.model.TestResponse
+import simple.api.client.ClientConfiguration.Companion.defaultClientConfiguration
+import simple.api.model.TestRequest
+import simple.api.model.TestResponse
 
 public class Client(
   private val configuration: ClientConfiguration = defaultClientConfiguration,

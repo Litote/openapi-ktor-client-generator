@@ -4,6 +4,7 @@ import org.litote.openapi.ktor.client.generator.client.ClientGenerationContext
 
 internal class ClientGenerator(
     val apiModel: ApiModel,
+    val modelGenerator: ModelGenerator,
 ) {
     fun generate(): Int {
         generateClientConfiguration()
@@ -30,7 +31,7 @@ internal class ClientGenerator(
         val generator = ApiClientGenerator(apiModel)
         apiModel.configuration.modules.forEach { module -> module.process(generator) }
 
-        val file = generator.buildClient(ClientGenerationContext(name, operations))
+        val file = generator.buildClient(ClientGenerationContext(name, operations, modelGenerator))
         generator.writeFile(file)
     }
 }

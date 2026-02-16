@@ -22,11 +22,19 @@ import com.squareup.kotlinpoet.FunSpec
 import com.squareup.kotlinpoet.KModifier
 import com.squareup.kotlinpoet.MemberName
 import com.squareup.kotlinpoet.ParameterSpec
+import com.squareup.kotlinpoet.ParameterizedTypeName
+import com.squareup.kotlinpoet.STRING
 import com.squareup.kotlinpoet.TypeSpec
+import com.squareup.kotlinpoet.asTypeName
 import community.flock.kotlinx.openapi.bindings.OpenAPIV3RequestBody
+import community.flock.kotlinx.openapi.bindings.OpenAPIV3Schema
+import community.flock.kotlinx.openapi.bindings.OpenAPIV3Type
 import io.ktor.http.HttpStatusCode.Companion.InternalServerError
 import org.litote.openapi.ktor.client.generator.ApiModel
 import org.litote.openapi.ktor.client.generator.ApiOperation
+import org.litote.openapi.ktor.client.generator.client.ParameterExtractor.Parameter
+import org.litote.openapi.ktor.client.generator.isPrimitive
+import org.litote.openapi.ktor.client.generator.isString
 import org.litote.openapi.ktor.client.generator.shared.capitalize
 import org.litote.openapi.ktor.client.generator.shared.snakeToCamelCase
 import org.litote.openapi.ktor.client.generator.shared.uncapitalize
@@ -60,7 +68,10 @@ internal class OperationBuilder(
         val operation = operationInfo.operation
         val operationId =
             operation.operationId
-                ?: "${operationInfo.method}_${operationInfo.path.replace("/", "_").replace("{", "With_").replace("}", "")}"
+                ?.takeUnless { id -> context.operations.count { it.operation.operationId == id } > 1 }
+                ?: "${operationInfo.method}_${
+                    operationInfo.path.replace("/", "_").replace("{", "With_").replace("}", "")
+                }"
         val responseBaseName = operationId.replace("-", "_").snakeToCamelCase().capitalize()
         val functionName = responseBaseName.uncapitalize()
 
@@ -79,12 +90,14 @@ internal class OperationBuilder(
         val packageName = apiModel.configuration.clientPackage
         val responseSealedClass = ClassName(packageName, clientName, responseSealedName)
         clientBuilder.addType(responseBuilder.createSealedResponseClass(responseSealedName))
-        val responseEntries = responseBuilder.buildResponseTypes(operation, clientBuilder, responseBaseName, responseSealedClass)
+        val responseEntries =
+            responseBuilder.buildResponseTypes(operation, clientBuilder, responseBaseName, responseSealedClass)
 
         // Extract parameters
-        val pathParameters = parameterExtractor.extractPathParameters(operation)
-        val queryParameters = parameterExtractor.extractQueryParameters(operation)
-        val headerParameters = parameterExtractor.extractHeaderParameters(operation)
+        val parameters = parameterExtractor.extractParameters(operation)
+        val pathParameters = parameters.filter { it.isPath }
+        val queryParameters = parameters.filter { it.isQuery }
+        val headerParameters = parameters.filter { it.isHeader }
 
         // Update context flags
         if (pathParameters.isNotEmpty()) context.hasPathComponents = true
@@ -102,9 +115,34 @@ internal class OperationBuilder(
 
         // Add parameters
         requestType?.let { funBuilder.addParameter("request", it) }
-        addPathParameters(funBuilder, pathParameters)
-        addQueryParameters(funBuilder, queryParameters)
-        addHeaderParameters(funBuilder, headerParameters)
+        addParameters(funBuilder, pathParameters)
+        addParameters(funBuilder, queryParameters)
+        addParameters(funBuilder, headerParameters)
+
+        // add parameter types
+        parameters
+            .asSequence()
+            .filter { it.parameter.schema is OpenAPIV3Schema }
+            .mapNotNull {
+                val schema = it.parameter.schema as OpenAPIV3Schema
+                val items = schema.items as? OpenAPIV3Schema
+                when {
+                    schema.type == OpenAPIV3Type.ARRAY && items == null -> {
+                        null
+                    }
+
+                    it.parameterType.isPrimitive() -> {
+                        null
+                    }
+
+                    else -> {
+                        context.modelGenerator.buildModel(
+                            it.parameterName.snakeToCamelCase().capitalize(),
+                            if (schema.type == OpenAPIV3Type.ARRAY && items != null) items else schema,
+                        )
+                    }
+                }
+            }.forEach { context.additionalEntities.add(it) }
 
         // Build function body
         val requestContentTypes =
@@ -132,37 +170,28 @@ internal class OperationBuilder(
         clientBuilder.addFunction(funBuilder.build())
     }
 
-    private fun addPathParameters(
+    private fun addParameters(
         funBuilder: FunSpec.Builder,
-        parameters: List<PathParameter>,
-    ) {
-        parameters.forEach { param ->
-            val builder = ParameterSpec.builder(param.parameterName, param.parameterType)
-            if (param.isOptional) builder.defaultValue("null")
-            funBuilder.addParameter(builder.build())
-        }
-    }
-
-    private fun addQueryParameters(
-        funBuilder: FunSpec.Builder,
-        parameters: List<QueryParameter>,
-    ) {
-        parameters.forEach { param ->
-            val builder = ParameterSpec.builder(param.parameterName, param.parameterType)
-            if (param.isOptional) builder.defaultValue("null")
-            funBuilder.addParameter(builder.build())
-        }
-    }
-
-    private fun addHeaderParameters(
-        funBuilder: FunSpec.Builder,
-        parameters: List<HeaderParameter>,
+        parameters: List<Parameter>,
     ) {
         parameters.forEach { param ->
             val builder = ParameterSpec.builder(param.parameterName, param.parameterType)
             when {
-                param.defaultValueConst != null -> builder.defaultValue("%T.%L", clientConfigurationClass, param.defaultValueConst)
-                param.isOptional -> builder.defaultValue("null")
+                param.constDefaultValue != null -> {
+                    builder.defaultValue(
+                        "%T.%L",
+                        clientConfigurationClass,
+                        param.constDefaultValue,
+                    )
+                }
+
+                param.defaultValue != null -> {
+                    builder.defaultValue(param.defaultValue)
+                }
+
+                param.isOptional -> {
+                    builder.defaultValue("null")
+                }
             }
             funBuilder.addParameter(builder.build())
         }
@@ -170,15 +199,15 @@ internal class OperationBuilder(
 
     private fun buildPathExpression(
         path: String,
-        pathParameters: List<PathParameter>,
+        pathParameters: List<Parameter>,
     ): String {
         var result = "\"${path.trimStart('/')}\""
         pathParameters.forEach { param ->
             result +=
                 if (param.isOptional) {
-                    ".replace(\"/{${param.pathName}}\", if(${param.parameterName} == null) \"\" else \"/\${${param.parameterName}.encodeURLPathPart()}\")"
+                    ".replace(\"/{${param.originalName}}\", if(${param.parameterName} == null) \"\" else \"/\${${param.parameterName}.encodeURLPathPart()}\")"
                 } else {
-                    ".replace(\"/{${param.pathName}}\", \"/\${${param.parameterName}.encodeURLPathPart()}\")"
+                    ".replace(\"/{${param.originalName}}\", \"/\${${param.parameterName}.encodeURLPathPart()}\")"
                 }
         }
         return result
@@ -187,8 +216,8 @@ internal class OperationBuilder(
     private fun buildFunctionBody(
         methodMember: MemberName,
         trimmedPath: String,
-        headerParameters: List<HeaderParameter>,
-        queryParameters: List<QueryParameter>,
+        headerParameters: List<Parameter>,
+        queryParameters: List<Parameter>,
         requestType: com.squareup.kotlinpoet.TypeName?,
         hasJsonContentType: Boolean,
         responseEntries: List<ResponseEntry>,
@@ -201,24 +230,58 @@ internal class OperationBuilder(
             .apply {
                 // Headers
                 headerParameters.forEach { param ->
-                    if (param.isOptional) {
-                        beginControlFlow("if (%N != null)", param.parameterName)
-                        addStatement("$ALIAS_HEADER(%T.%L, %N)", clientConfigurationClass, param.nameConst, param.parameterName)
-                        endControlFlow()
+                    if (param.constName != null) {
+                        if (param.isOptional) {
+                            beginControlFlow("if (%N != null)", param.parameterName)
+                            addStatement(
+                                "$ALIAS_HEADER(%T.%L, %N)",
+                                clientConfigurationClass,
+                                param.constName,
+                                param.parameterName,
+                            )
+                            endControlFlow()
+                        } else {
+                            addStatement(
+                                "$ALIAS_HEADER(%T.%L, %N)",
+                                clientConfigurationClass,
+                                param.constName,
+                                param.parameterName,
+                            )
+                        }
                     } else {
-                        addStatement("$ALIAS_HEADER(%T.%L, %N)", clientConfigurationClass, param.nameConst, param.parameterName)
+                        if (param.isOptional) {
+                            beginControlFlow("if (%N != null)", param.parameterName)
+                            addStatement(
+                                "$ALIAS_HEADER(%S, %N)",
+                                param.parameter.name,
+                                param.parameterName,
+                            )
+                            endControlFlow()
+                        } else {
+                            addStatement(
+                                "$ALIAS_HEADER(%S, %N)",
+                                param.parameter.name,
+                                param.parameterName,
+                            )
+                        }
                     }
                 }
                 // Query parameters
                 if (queryParameters.isNotEmpty()) {
                     beginControlFlow("url")
                     queryParameters.forEach { param ->
+                        val suffix =
+                            when {
+                                param.parameterType.isString() -> ""
+                                (param.parameterType as? ParameterizedTypeName)?.typeArguments?.isEmpty() == false -> ".joinToString(\",\")"
+                                else -> ".toString()"
+                            }
                         if (param.isOptional) {
                             beginControlFlow("if (%N != null)", param.parameterName)
-                            addStatement("parameters.append(%S, %N.toString())", param.queryKey, param.parameterName)
+                            addStatement("parameters.append(%S, %N$suffix)", param.originalName, param.parameterName)
                             endControlFlow()
                         } else {
-                            addStatement("parameters.append(%S, %N.toString())", param.queryKey, param.parameterName)
+                            addStatement("parameters.append(%S, %N$suffix)", param.originalName, param.parameterName)
                         }
                     }
                     endControlFlow()

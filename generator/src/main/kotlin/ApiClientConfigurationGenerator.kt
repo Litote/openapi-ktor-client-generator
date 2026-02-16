@@ -69,8 +69,9 @@ public class ApiClientConfigurationGenerator internal constructor(
         headerApiKeys.forEach { apiKey ->
             val paramName = apiKeyParamName(apiKey)
             builder.addStatement(
-                "%N?.let { header(%S, it) }",
+                "%N?.let { %L(%S, it) }",
                 paramName,
+                ALIAS_HEADER,
                 apiKey.keyName,
             )
         }
@@ -308,7 +309,11 @@ public class ApiClientConfigurationGenerator internal constructor(
         val fileSpec =
             FileSpec
                 .builder(apiModel.configuration.clientPackage, "ClientConfiguration")
-                .addType(clientConfiguration)
+                .apply {
+                    if (headerApiKeys.isNotEmpty()) {
+                        addAliasedImport(headerMember, ALIAS_HEADER)
+                    }
+                }.addType(clientConfiguration)
                 .build()
         val basePath = File(apiModel.outputDirectory).resolve("src/main/kotlin")
         logger.debug { "Writing ClientConfiguration to $basePath" }

@@ -1,11 +1,9 @@
-package org.example.model
+package simple.api.model
 
-import kotlin.Long
 import kotlin.String
 import kotlinx.serialization.Serializable
 
 @Serializable
-public data class TestResponse(
-  public val id: Long,
+public data class TestRequest(
   public val name: String,
 )

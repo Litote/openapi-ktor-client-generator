@@ -1,4 +1,4 @@
-package org.example.client
+package sample.api.client
 
 import io.ktor.client.HttpClient
 import io.ktor.client.HttpClientConfig
@@ -12,6 +12,7 @@ import kotlin.String
 import kotlin.Throwable
 import kotlin.Unit
 import kotlinx.serialization.json.Json
+import io.ktor.client.request.`header` as setHeader
 
 public class ClientConfiguration(
   public val baseUrl: String = "http://petstore.swagger.io/v2/",
@@ -41,7 +42,7 @@ public class ClientConfiguration(
       }
       defaultRequest {
         url(baseUrl)
-        apiKeyHeader?.let { header("X-Api-Key", it) }
+        apiKeyHeader?.let { setHeader("X-Api-Key", it) }
         apiKeyQueryParam?.let { url.parameters.append("api_key", it) }
       }
     }
