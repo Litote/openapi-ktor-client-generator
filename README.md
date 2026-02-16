@@ -1,5 +1,8 @@
 # OpenAPI Ktor Client Generator
 
+![Plugin Version](https://img.shields.io/gradle-plugin-portal/v/org.litote.openapi.ktor.client.generator.gradle)
+[![Apache2 license](https://img.shields.io/badge/license-Apache%20License%202.0-blue.svg?style=flat)](https://www.apache.org/licenses/LICENSE-2.0)
+
 A powerful Gradle plugin that transforms OpenAPI v3 specifications into production-ready Kotlin Ktor client code. 
 You can customize the generated clients and models to match your project's specific needs.
 
@@ -14,9 +17,11 @@ Add the plugin to your `build.gradle.kts`:
 
 ```kotlin
 plugins {
-    id("org.litote.openapi.ktor.client.generator.gradle") version "0.1.2"
+    id("org.litote.openapi.ktor.client.generator.gradle") version "<last version>"
 }
 ```
+
+Where `<last version>` is ![Plugin Version](https://img.shields.io/gradle-plugin-portal/v/org.litote.openapi.ktor.client.generator.gradle)
 
 ## Configuration
 
