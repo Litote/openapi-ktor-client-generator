@@ -21,7 +21,7 @@ internal class ModelGenerator(
         name: String,
         schema: OpenAPIV3Schema,
         generator: ApiModelGenerator = ApiModelGenerator(apiModel),
-    ): TypeSpec {
+    ): TypeSpec? {
         apiModel.configuration.modules.forEach { module -> module.process(generator) }
 
         return generator.buildModel(name, schema)
