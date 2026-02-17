@@ -10,7 +10,7 @@ logback = "1.5.29"
 logging = "7.0.14"
 maven-publish = "0.36.0"
 mockk = "1.14.9"
-openapi-bindings = "0.2.1"
+openapi-bindings = "0.2.2"
 version-catalog-update = "1.0.1"
 
 [plugins]

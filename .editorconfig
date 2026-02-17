@@ -2,3 +2,4 @@
 ktlint = disabled
 
 [**/snapshots/**/*]
+ktlint = disabled

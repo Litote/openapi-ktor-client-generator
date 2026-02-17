@@ -27,12 +27,15 @@ import community.flock.kotlinx.openapi.bindings.OpenAPIV3Schema
 import community.flock.kotlinx.openapi.bindings.OpenAPIV3SchemaOrReference
 import community.flock.kotlinx.openapi.bindings.OpenAPIV3SecurityScheme
 import community.flock.kotlinx.openapi.bindings.OpenAPIV3SecuritySchemeType
+import community.flock.kotlinx.openapi.bindings.OpenAPIV3SingleType
 import community.flock.kotlinx.openapi.bindings.OpenAPIV3Type
+import community.flock.kotlinx.openapi.bindings.OpenAPIV3TypeArray
 import io.github.oshai.kotlinlogging.KotlinLogging
 import kotlinx.serialization.json.Json
 import kotlinx.serialization.json.JsonElement
 import org.litote.openapi.ktor.client.generator.shared.capitalize
 import org.litote.openapi.ktor.client.generator.shared.ensureEndsWith
+import org.litote.openapi.ktor.client.generator.shared.sanitizeToIdentifier
 import org.litote.openapi.ktor.client.generator.shared.snakeToCamelCase
 import org.litote.openapi.ktor.client.generator.shared.toOrNull
 import java.nio.file.Files
@@ -181,20 +184,31 @@ public class ApiModel private constructor(
                     ?: emptyList()
             ) +
             (parameters?.mapNotNull { it as? OpenAPIV3Reference } ?: emptyList()) +
+            (
+                parameters?.flatMap {
+                    (it as? OpenAPIV3Parameter)?.content?.values?.flatMap { v -> v.schema.allReferences() }
+                        ?: emptyList()
+                }
+                    ?: emptyList()
+            ) +
             (responses?.values?.mapNotNull { it as? OpenAPIV3Reference } ?: emptyList()) +
             (
                 responses
                     ?.values
                     ?.flatMap {
-                        (it as? OpenAPIV3Response)?.content?.values?.map { it.schema as? OpenAPIV3Reference }
+                        (it as? OpenAPIV3Response)?.content?.values?.flatMap { v -> v.schema.allReferences() }
                             ?: emptyList()
-                    }?.filterNotNull() ?: emptyList()
+                    } ?: emptyList()
             ) // +
     // (callbacks?.values?.mapNotNull { it as? OpenAPIV3Reference } ?: emptyList()) +
     // (callbacks?.values?.flatMap { (it as? OpenAPIV3Callbacks)?.entries?.values?.map { it.schema as? OpenAPIV3Reference} ?: emptyList() }?.filterNotNull() ?: emptyList())
 
-    private fun OpenAPIV3SchemaOrReference.allReferences(): Set<OpenAPIV3Reference> =
-        (this as? OpenAPIV3Schema)?.allReferences() ?: emptySet()
+    private fun OpenAPIV3SchemaOrReference?.allReferences(): Set<OpenAPIV3Reference> =
+        when (this) {
+            is OpenAPIV3Schema -> allReferences()
+            is OpenAPIV3Reference -> setOf(this)
+            null -> emptySet()
+        }
 
     private fun OpenAPIV3Schema.allReferences(): Set<OpenAPIV3Reference> =
         setOfNotNull(
@@ -246,6 +260,89 @@ public class ApiModel private constructor(
             }
         }
 
+    private fun getClassName(
+        name: String,
+        schemaOrReference: OpenAPIV3Schema,
+        type: OpenAPIV3Type?,
+    ): TypeName =
+        when (type) {
+            OpenAPIV3Type.STRING -> {
+                if (schemaOrReference.enum?.isNotEmpty() == true) {
+                    ClassName("", name.sanitizeToIdentifier().snakeToCamelCase().capitalize())
+                } else {
+                    STRING
+                }
+            }
+
+            OpenAPIV3Type.NUMBER -> {
+                when (schemaOrReference.format) {
+                    "float" -> FLOAT
+                    else -> DOUBLE
+                }
+            }
+
+            OpenAPIV3Type.INTEGER -> {
+                when (schemaOrReference.format) {
+                    "int32" -> INT
+                    else -> LONG
+                }
+            }
+
+            OpenAPIV3Type.BOOLEAN -> {
+                BOOLEAN
+            }
+
+            OpenAPIV3Type.ARRAY -> {
+                (if (schemaOrReference.uniqueItems == true) SET else LIST)
+                    .parameterizedBy(
+                        listOf(
+                            getClassName(
+                                name,
+                                schemaOrReference.items ?: error("null items for $schemaOrReference"),
+                            ),
+                        ),
+                    )
+            }
+
+            OpenAPIV3Type.OBJECT -> {
+                val additional =
+                    schemaOrReference.additionalProperties?.run {
+                        when (this) {
+                            is OpenAPIV3Boolean -> error("boolean not allowed for $schemaOrReference")
+                            is OpenAPIV3Schema -> this
+                            is OpenAPIV3Reference -> this
+                        }
+                    }
+                if (additional == null) {
+                    // Fallback for free-form objects without declared properties.
+                    JsonElement::class.asClassName()
+                } else {
+                    MAP
+                        .parameterizedBy(
+                            listOf(
+                                String::class.asClassName(),
+                                getClassName(name, additional),
+                            ),
+                        )
+                }
+            }
+
+            else -> {
+                val oneOf = schemaOrReference.oneOf
+                if (oneOf?.isNotEmpty() == true) {
+                    if (oneOf.size == 1) {
+                        getClassName(name, oneOf.first())
+                    } else {
+                        // Fallback for polymorphic responses.
+                        JsonElement::class.asClassName()
+                    }
+                } else {
+                    // Fallback for other responses.
+                    JsonElement::class.asClassName()
+                }
+            }
+        }
+
     public fun getClassName(
         name: String,
         schemaOrReference: OpenAPIV3SchemaOrReference,
@@ -265,81 +362,18 @@ public class ApiModel private constructor(
             }
 
             is OpenAPIV3Schema -> {
-                when (schemaOrReference.type) {
-                    OpenAPIV3Type.STRING -> {
-                        if (schemaOrReference.enum?.isNotEmpty() == true) {
-                            ClassName("", name.snakeToCamelCase().capitalize())
-                        } else {
-                            STRING
-                        }
+                when (val type = schemaOrReference.type) {
+                    is OpenAPIV3SingleType -> {
+                        getClassName(name, schemaOrReference, type.value)
                     }
 
-                    OpenAPIV3Type.NUMBER -> {
-                        when (schemaOrReference.format) {
-                            "float" -> FLOAT
-                            else -> DOUBLE
-                        }
+                    is OpenAPIV3TypeArray -> {
+                        logger.warn { "For now only first type is handled for $schemaOrReference" }
+                        getClassName(name, schemaOrReference, type.values.first())
                     }
 
-                    OpenAPIV3Type.INTEGER -> {
-                        when (schemaOrReference.format) {
-                            "int32" -> INT
-                            else -> LONG
-                        }
-                    }
-
-                    OpenAPIV3Type.BOOLEAN -> {
-                        BOOLEAN
-                    }
-
-                    OpenAPIV3Type.ARRAY -> {
-                        (if (schemaOrReference.uniqueItems == true) SET else LIST)
-                            .parameterizedBy(
-                                listOf(
-                                    getClassName(
-                                        name,
-                                        schemaOrReference.items ?: error("null items for $schemaOrReference"),
-                                    ),
-                                ),
-                            )
-                    }
-
-                    OpenAPIV3Type.OBJECT -> {
-                        val additional =
-                            schemaOrReference.additionalProperties?.run {
-                                when (this) {
-                                    is OpenAPIV3Boolean -> error("boolean not allowed for $schemaOrReference")
-                                    is OpenAPIV3Schema -> this
-                                    is OpenAPIV3Reference -> this
-                                }
-                            }
-                        if (additional == null) {
-                            // Fallback for free-form objects without declared properties.
-                            JsonElement::class.asClassName()
-                        } else {
-                            MAP
-                                .parameterizedBy(
-                                    listOf(
-                                        String::class.asClassName(),
-                                        getClassName(name, additional),
-                                    ),
-                                )
-                        }
-                    }
-
-                    else -> {
-                        val oneOf = schemaOrReference.oneOf
-                        if (oneOf?.isNotEmpty() == true) {
-                            if (oneOf.size == 1) {
-                                getClassName(name, oneOf.first())
-                            } else {
-                                // Fallback for polymorphic responses.
-                                JsonElement::class.asClassName()
-                            }
-                        } else {
-                            // Fallback for other responses.
-                            JsonElement::class.asClassName()
-                        }
+                    null -> {
+                        getClassName(name, schemaOrReference, null)
                     }
                 }
             }

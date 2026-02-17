@@ -23,20 +23,14 @@ import com.squareup.kotlinpoet.KModifier
 import com.squareup.kotlinpoet.MemberName
 import com.squareup.kotlinpoet.ParameterSpec
 import com.squareup.kotlinpoet.ParameterizedTypeName
-import com.squareup.kotlinpoet.STRING
 import com.squareup.kotlinpoet.TypeSpec
-import com.squareup.kotlinpoet.asTypeName
 import community.flock.kotlinx.openapi.bindings.OpenAPIV3RequestBody
-import community.flock.kotlinx.openapi.bindings.OpenAPIV3Schema
-import community.flock.kotlinx.openapi.bindings.OpenAPIV3Type
 import io.ktor.http.HttpStatusCode.Companion.InternalServerError
 import org.litote.openapi.ktor.client.generator.ApiModel
 import org.litote.openapi.ktor.client.generator.ApiOperation
 import org.litote.openapi.ktor.client.generator.client.ParameterExtractor.Parameter
-import org.litote.openapi.ktor.client.generator.isPrimitive
 import org.litote.openapi.ktor.client.generator.isString
-import org.litote.openapi.ktor.client.generator.shared.capitalize
-import org.litote.openapi.ktor.client.generator.shared.snakeToCamelCase
+import org.litote.openapi.ktor.client.generator.methodName
 import org.litote.openapi.ktor.client.generator.shared.uncapitalize
 
 /**
@@ -56,6 +50,15 @@ internal class OperationBuilder(
         const val ALIAS_HEADER = "setHeader"
     }
 
+    fun analyseOperation(
+        context: ClientGenerationContext,
+        operationInfo: ApiOperation,
+    ) {
+        // Extract parameters
+        val parameters = parameterExtractor.extractParameters(operationInfo)
+        operationInfo.parameters.addAll(parameters)
+    }
+
     /**
      * Builds an operation (method) and adds it to the client class.
      */
@@ -66,13 +69,7 @@ internal class OperationBuilder(
         clientName: String,
     ) {
         val operation = operationInfo.operation
-        val operationId =
-            operation.operationId
-                ?.takeUnless { id -> context.operations.count { it.operation.operationId == id } > 1 }
-                ?: "${operationInfo.method}_${
-                    operationInfo.path.replace("/", "_").replace("{", "With_").replace("}", "")
-                }"
-        val responseBaseName = operationId.replace("-", "_").snakeToCamelCase().capitalize()
+        val responseBaseName = operationInfo.methodName(context)
         val functionName = responseBaseName.uncapitalize()
 
         // Request body
@@ -93,8 +90,8 @@ internal class OperationBuilder(
         val responseEntries =
             responseBuilder.buildResponseTypes(operation, clientBuilder, responseBaseName, responseSealedClass)
 
-        // Extract parameters
-        val parameters = parameterExtractor.extractParameters(operation)
+        // group parameters
+        val parameters = operationInfo.parameters
         val pathParameters = parameters.filter { it.isPath }
         val queryParameters = parameters.filter { it.isQuery }
         val headerParameters = parameters.filter { it.isHeader }
@@ -118,31 +115,6 @@ internal class OperationBuilder(
         addParameters(funBuilder, pathParameters)
         addParameters(funBuilder, queryParameters)
         addParameters(funBuilder, headerParameters)
-
-        // add parameter types
-        parameters
-            .asSequence()
-            .filter { it.parameter.schema is OpenAPIV3Schema }
-            .mapNotNull {
-                val schema = it.parameter.schema as OpenAPIV3Schema
-                val items = schema.items as? OpenAPIV3Schema
-                when {
-                    schema.type == OpenAPIV3Type.ARRAY && items == null -> {
-                        null
-                    }
-
-                    it.parameterType.isPrimitive() -> {
-                        null
-                    }
-
-                    else -> {
-                        context.modelGenerator.buildModel(
-                            it.parameterName.snakeToCamelCase().capitalize(),
-                            if (schema.type == OpenAPIV3Type.ARRAY && items != null) items else schema,
-                        )
-                    }
-                }
-            }.forEach { context.additionalEntities.add(it) }
 
         // Build function body
         val requestContentTypes =
@@ -205,9 +177,9 @@ internal class OperationBuilder(
         pathParameters.forEach { param ->
             result +=
                 if (param.isOptional) {
-                    ".replace(\"/{${param.originalName}}\", if(${param.parameterName} == null) \"\" else \"/\${${param.parameterName}.encodeURLPathPart()}\")"
+                    ".replace(\"/{${param.originalName}}\", if(${param.parameterName} == null) \"\" else \"/\${${param.parameterName}${param.toStringSuffix}.encodeURLPathPart()}\")"
                 } else {
-                    ".replace(\"/{${param.originalName}}\", \"/\${${param.parameterName}.encodeURLPathPart()}\")"
+                    ".replace(\"/{${param.originalName}}\", \"/\${${param.parameterName}${param.toStringSuffix}.encodeURLPathPart()}\")"
                 }
         }
         return result
@@ -270,12 +242,7 @@ internal class OperationBuilder(
                 if (queryParameters.isNotEmpty()) {
                     beginControlFlow("url")
                     queryParameters.forEach { param ->
-                        val suffix =
-                            when {
-                                param.parameterType.isString() -> ""
-                                (param.parameterType as? ParameterizedTypeName)?.typeArguments?.isEmpty() == false -> ".joinToString(\",\")"
-                                else -> ".toString()"
-                            }
+                        val suffix = param.toStringSuffix
                         if (param.isOptional) {
                             beginControlFlow("if (%N != null)", param.parameterName)
                             addStatement("parameters.append(%S, %N$suffix)", param.originalName, param.parameterName)

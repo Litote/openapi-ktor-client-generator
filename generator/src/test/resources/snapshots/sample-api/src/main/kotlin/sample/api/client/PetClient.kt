@@ -10,7 +10,9 @@ import kotlin.Int
 import kotlin.Long
 import kotlin.String
 import kotlin.collections.List
+import kotlinx.serialization.SerialName
 import kotlinx.serialization.Serializable
+import kotlinx.serialization.builtins.serializer
 import sample.api.client.ClientConfiguration.Companion.defaultClientConfiguration
 import sample.api.model.Pet
 
@@ -21,14 +23,14 @@ public class PetClient(
    * Finds Pets by status
    */
   public suspend fun getPetFindByStatusMultipleExamples(
-    status: List<Status>,
+    status: List<GetPetFindByStatusMultipleExamplesStatus>,
     test: String? = null,
     testInt: Long? = null,
   ): GetPetFindByStatusMultipleExamplesResponse {
     try {
       val response = configuration.client.`get`("pet/findByStatus/MultipleExamples") {
         url {
-          parameters.append("status", status.joinToString(","))
+          parameters.append("status", status.joinToString(",") { it.serialName() })
           if (test != null) {
             parameters.append("test", test)
           }
@@ -52,11 +54,11 @@ public class PetClient(
   /**
    * Finds Pets by status
    */
-  public suspend fun getPetFindByStatusSingleExample(status: List<Status>): GetPetFindByStatusSingleExampleResponse {
+  public suspend fun getPetFindByStatusSingleExample(status: List<GetPetFindByStatusSingleExampleStatus>): GetPetFindByStatusSingleExampleResponse {
     try {
       val response = configuration.client.`get`("pet/findByStatus/singleExample") {
         url {
-          parameters.append("status", status.joinToString(","))
+          parameters.append("status", status.joinToString(",") { it.serialName() })
         }
       }
       return when (response.status.value) {
@@ -89,6 +91,32 @@ public class PetClient(
       configuration.exceptionLogger(e)
       return AddPetResponseUnknownFailure(500)
     }
+  }
+
+  @Serializable
+  public enum class GetPetFindByStatusMultipleExamplesStatus {
+    @SerialName("available")
+    AVAILABLE,
+    @SerialName("pending")
+    PENDING,
+    @SerialName("sold")
+    SOLD,
+    ;
+
+    public fun serialName(): String = GetPetFindByStatusMultipleExamplesStatus.serializer().descriptor.getElementName(this.ordinal)
+  }
+
+  @Serializable
+  public enum class GetPetFindByStatusSingleExampleStatus {
+    @SerialName("available")
+    AVAILABLE,
+    @SerialName("pending")
+    PENDING,
+    @SerialName("sold")
+    SOLD,
+    ;
+
+    public fun serialName(): String = GetPetFindByStatusSingleExampleStatus.serializer().descriptor.getElementName(this.ordinal)
   }
 
   @Serializable
@@ -133,10 +161,4 @@ public class PetClient(
   public data class AddPetResponseUnknownFailure(
     public val statusCode: Int,
   ) : AddPetResponse()
-
-  public enum class Status {
-    available,
-    pending,
-    sold,
-  }
 }

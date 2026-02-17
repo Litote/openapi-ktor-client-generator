@@ -3,7 +3,6 @@
 build/
 
 # Keep generated OpenAPI files
-!generator/build/snapshot-test-output/**
 !e2e/build/generated/**
 
 # IntelliJ IDEA
