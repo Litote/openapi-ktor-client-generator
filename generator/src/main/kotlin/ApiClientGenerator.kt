@@ -6,6 +6,7 @@ import com.squareup.kotlinpoet.FunSpec
 import com.squareup.kotlinpoet.KModifier
 import com.squareup.kotlinpoet.MemberName
 import com.squareup.kotlinpoet.ParameterSpec
+import com.squareup.kotlinpoet.ParameterizedTypeName
 import com.squareup.kotlinpoet.PropertySpec
 import com.squareup.kotlinpoet.TypeSpec
 import io.github.oshai.kotlinlogging.KotlinLogging
@@ -82,10 +83,68 @@ public class ApiClientGenerator internal constructor(
                 )
 
         context.operations.forEach { operationInfo ->
-            operationBuilder.buildOperation(context, operationInfo, clientBuilder, clientName)
+            operationBuilder.analyseOperation(context, operationInfo)
         }
 
-        context.additionalEntities.forEach { clientBuilder.addType(it) }
+        context
+            .operations
+            .flatMap { operation ->
+                operation.parameters
+                    .filter { it.additionalTypeName != null }
+                    .distinctBy { it.additionalTypeName }
+                    .map { p -> p.additionalTypeName to p }
+            }.groupBy { (typeName, _) ->
+                typeName
+            }.values
+            .flatMap { values ->
+                if (values.size == 1) {
+                    listOf(values.first().second.additionalTypeSpec(context))
+                } else {
+                    values.map { (typeName, parameter) ->
+                        val operation = parameter.operation
+                        val newName = "${operation.methodName(context)}$typeName"
+                        operation.parameters.forEachIndexed { index, parameter ->
+                            val parameterAdditionalType = parameter.additionalTypeName
+                            val parameterType = parameter.parameterType
+                            if (parameterAdditionalType != null && typeName == parameterAdditionalType) {
+                                val newClassName = ClassName("", newName)
+                                operation.parameters[index] =
+                                    parameter.copy(
+                                        parameterType =
+                                            if (parameterType is ClassName) {
+                                                newClassName.run {
+                                                    copy(
+                                                        nullable = parameterType.isNullable,
+                                                    )
+                                                }
+                                            } else {
+                                                (parameterType as? ParameterizedTypeName)
+                                                    ?.copy(
+                                                        nullable = parameterType.isNullable,
+                                                        typeArguments = listOf(newClassName),
+                                                    )
+                                                    ?: error("Unexpected parameter type $parameterType")
+                                            },
+                                        defaultValue =
+                                            parameterDefaultLiteral(
+                                                parameter.parameter.schema,
+                                                newClassName,
+                                            ),
+                                    )
+                            }
+                        }
+
+                        parameter
+                            .additionalTypeSpec(context, newName)
+                    }
+                }
+            }.filterNotNull()
+            .distinct()
+            .forEach { clientBuilder.addType(it) }
+
+        context.operations.forEach { operationInfo ->
+            operationBuilder.buildOperation(context, operationInfo, clientBuilder, clientName)
+        }
 
         return ClientFileContext(context, clientBuilder.build())
     }

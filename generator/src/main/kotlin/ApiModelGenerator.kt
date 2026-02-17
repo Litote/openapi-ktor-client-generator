@@ -5,9 +5,12 @@ import com.squareup.kotlinpoet.ClassName
 import com.squareup.kotlinpoet.FileSpec
 import com.squareup.kotlinpoet.FunSpec
 import com.squareup.kotlinpoet.KModifier
+import com.squareup.kotlinpoet.MemberName
 import com.squareup.kotlinpoet.ParameterSpec
 import com.squareup.kotlinpoet.PropertySpec
+import com.squareup.kotlinpoet.STRING
 import com.squareup.kotlinpoet.TypeSpec
+import com.squareup.kotlinpoet.TypeSpec.Companion.anonymousClassBuilder
 import community.flock.kotlinx.openapi.bindings.OpenAPIV3Schema
 import community.flock.kotlinx.openapi.bindings.OpenAPIV3Type
 import io.github.oshai.kotlinlogging.KotlinLogging
@@ -16,6 +19,8 @@ import kotlinx.serialization.Serializable
 import kotlinx.serialization.json.JsonPrimitive
 import kotlinx.serialization.json.contentOrNull
 import org.litote.openapi.ktor.client.generator.shared.capitalize
+import org.litote.openapi.ktor.client.generator.shared.sanitizeToIdentifier
+import org.litote.openapi.ktor.client.generator.shared.snakeToCamelCase
 import java.io.File
 
 public class ApiModelGenerator internal constructor(
@@ -23,6 +28,7 @@ public class ApiModelGenerator internal constructor(
 ) {
     private companion object {
         private val logger = KotlinLogging.logger {}
+        val serializerName: MemberName = MemberName("kotlinx.serialization.builtins", "serializer")
     }
 
     /**
@@ -58,13 +64,26 @@ public class ApiModelGenerator internal constructor(
             } else {
                 TypeSpec
                     .enumBuilder(name)
+                    .addAnnotation(AnnotationSpec.builder(Serializable::class).build())
                     .apply {
                         schema.enum?.forEach { e ->
-                            e.contentOrNull?.let { name -> addEnumConstant(name) }
+                            e.contentOrNull?.let { name ->
+                                addEnumConstant(
+                                    name.sanitizeToIdentifier().snakeToCamelCase().uppercase(),
+                                    anonymousClassBuilder()
+                                        .addAnnotation(
+                                            AnnotationSpec
+                                                .builder(SerialName::class)
+                                                .addMember("%S", name)
+                                                .build(),
+                                        ).build(),
+                                )
+                            }
                         }
                         defaultEnumValue?.apply {
                             addEnumConstant(this)
                         }
+                        addFunction(serialNameFun(name))
                     }.build()
             }
         } else {
@@ -112,7 +131,7 @@ public class ApiModelGenerator internal constructor(
                                                 val format =
                                                     if (this != "null") {
                                                         property.asSchema?.let {
-                                                            if (it.type == OpenAPIV3Type.STRING) {
+                                                            if (it.firstType == OpenAPIV3Type.STRING) {
                                                                 if (isEnum) {
                                                                     "%L"
                                                                 } else {
@@ -150,17 +169,32 @@ public class ApiModelGenerator internal constructor(
                                 }.build(),
                         )
 
-                        if (!property.asSchema?.enum.isNullOrEmpty()) {
+                        val enum = property.asSchema?.enum ?: (property.asSchema?.items as? OpenAPIV3Schema)?.enum
+                        if (!enum.isNullOrEmpty()) {
+                            val enumName = property.camelCaseName.capitalize()
                             addType(
                                 TypeSpec
-                                    .enumBuilder(property.camelCaseName.capitalize())
+                                    .enumBuilder(enumName)
+                                    .addAnnotation(AnnotationSpec.builder(Serializable::class).build())
                                     .apply {
-                                        property.asSchema?.enum?.forEach { e ->
-                                            e.contentOrNull?.let { name -> addEnumConstant(name) }
+                                        enum.forEach { e ->
+                                            e.contentOrNull?.let { name ->
+                                                addEnumConstant(
+                                                    name.sanitizeToIdentifier().snakeToCamelCase().uppercase(),
+                                                    anonymousClassBuilder()
+                                                        .addAnnotation(
+                                                            AnnotationSpec
+                                                                .builder(SerialName::class)
+                                                                .addMember("%S", name)
+                                                                .build(),
+                                                        ).build(),
+                                                )
+                                            }
                                         }
                                         defaultEnumValue?.apply {
                                             addEnumConstant(this)
                                         }
+                                        addFunction(serialNameFun(enumName))
                                     }.build(),
                             )
                         }
@@ -168,6 +202,13 @@ public class ApiModelGenerator internal constructor(
                 }.build()
         }
     }
+
+    private fun serialNameFun(enumName: String): FunSpec =
+        FunSpec
+            .builder("serialName")
+            .returns(STRING)
+            .addStatement("return $enumName.%M().descriptor.getElementName(this.ordinal)", serializerName)
+            .build()
 
     internal fun writeFile(
         name: String,

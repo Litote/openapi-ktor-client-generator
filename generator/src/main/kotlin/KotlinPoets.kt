@@ -1,6 +1,7 @@
 package org.litote.openapi.ktor.client.generator
 
 import com.squareup.kotlinpoet.BOOLEAN
+import com.squareup.kotlinpoet.ClassName
 import com.squareup.kotlinpoet.CodeBlock
 import com.squareup.kotlinpoet.DOUBLE
 import com.squareup.kotlinpoet.FLOAT
@@ -8,8 +9,12 @@ import com.squareup.kotlinpoet.INT
 import com.squareup.kotlinpoet.LONG
 import com.squareup.kotlinpoet.STRING
 import com.squareup.kotlinpoet.TypeName
+import com.squareup.kotlinpoet.TypeSpec
 import community.flock.kotlinx.openapi.bindings.OpenAPIV3Schema
 import community.flock.kotlinx.openapi.bindings.OpenAPIV3SchemaOrReference
+import community.flock.kotlinx.openapi.bindings.OpenAPIV3SingleType
+import community.flock.kotlinx.openapi.bindings.OpenAPIV3Type
+import community.flock.kotlinx.openapi.bindings.OpenAPIV3TypeArray
 import kotlinx.serialization.json.JsonPrimitive
 import kotlinx.serialization.json.booleanOrNull
 import kotlinx.serialization.json.contentOrNull
@@ -17,7 +22,11 @@ import kotlinx.serialization.json.doubleOrNull
 import kotlinx.serialization.json.floatOrNull
 import kotlinx.serialization.json.intOrNull
 import kotlinx.serialization.json.longOrNull
+import org.litote.openapi.ktor.client.generator.client.ClientGenerationContext
+import org.litote.openapi.ktor.client.generator.shared.capitalize
+import org.litote.openapi.ktor.client.generator.shared.sanitizeToIdentifier
 import org.litote.openapi.ktor.client.generator.shared.snakeToCamelCase
+import kotlin.text.uppercase
 
 public fun isConstSupported(typeName: TypeName): Boolean = typeName.isPrimitive()
 
@@ -38,14 +47,41 @@ public fun parameterDefaultLiteral(
 ): CodeBlock? {
     val schema = schemaOrReference as? OpenAPIV3Schema ?: return null
     val defaultValue = schema.default as? JsonPrimitive ?: return null
+    val isEnum = !schema.enum.isNullOrEmpty()
     return when {
-        typeName.isString() -> defaultValue.contentOrNull?.let { CodeBlock.of("%S", it) }
-        typeName.isBoolean() -> defaultValue.booleanOrNull?.let { CodeBlock.of("%L", it) }
-        typeName.isLong() -> defaultValue.longOrNull?.let { CodeBlock.of("%L", it) }
-        typeName.isDouble() -> defaultValue.doubleOrNull?.let { CodeBlock.of("%L", it) }
-        typeName.isFloat() -> defaultValue.floatOrNull?.let { CodeBlock.of("%L", it) }
-        typeName.isInt() -> defaultValue.intOrNull?.let { CodeBlock.of("%L", it) }
-        else -> null
+        isEnum -> {
+            defaultValue.contentOrNull?.let {
+                CodeBlock.of("%L.%L", (typeName as ClassName).simpleName, it.sanitizeToIdentifier().snakeToCamelCase().uppercase())
+            }
+        }
+
+        typeName.isString() -> {
+            defaultValue.contentOrNull?.let { CodeBlock.of("%S", it) }
+        }
+
+        typeName.isBoolean() -> {
+            defaultValue.booleanOrNull?.let { CodeBlock.of("%L", it) }
+        }
+
+        typeName.isLong() -> {
+            defaultValue.longOrNull?.let { CodeBlock.of("%L", it) }
+        }
+
+        typeName.isDouble() -> {
+            defaultValue.doubleOrNull?.let { CodeBlock.of("%L", it) }
+        }
+
+        typeName.isFloat() -> {
+            defaultValue.floatOrNull?.let { CodeBlock.of("%LF", it) }
+        }
+
+        typeName.isInt() -> {
+            defaultValue.intOrNull?.let { CodeBlock.of("%L", it) }
+        }
+
+        else -> {
+            null
+        }
     }
 }
 
@@ -75,3 +111,31 @@ internal fun TypeName.isDouble(): Boolean = if (isNullable) this == NULLABLE_DOU
 internal fun TypeName.isFloat(): Boolean = if (isNullable) this == NULLABLE_FLOAT else this == FLOAT
 
 internal fun TypeName.isInt(): Boolean = if (isNullable) this == NULLABLE_INT else this == INT
+
+internal val ClassName.nonNullableName: String get() = if (isNullable) simpleName.removeSuffix("?") else simpleName
+
+internal val TypeSpec.nonNullableName: String? get() = name?.removeSuffix("?")
+
+internal fun TypeSpec.hasSameName(name: TypeName): Boolean = (name as? ClassName)?.nonNullableName == nonNullableName
+
+internal fun TypeSpec.hasSameName(spec: TypeSpec): Boolean = spec.nonNullableName == nonNullableName
+
+internal fun ApiOperation.methodName(context: ClientGenerationContext): String =
+    (
+        operation.operationId
+            ?.takeUnless { id -> context.operations.count { it.operation.operationId == id } > 1 }
+            ?: "${method}_${
+                path.replace("/", "_").replace("{", "With_").replace("}", "")
+            }"
+    ).run {
+        replace("-", "_").snakeToCamelCase().capitalize()
+    }
+
+internal val OpenAPIV3Schema.firstType: OpenAPIV3Type?
+    get() =
+        type?.run {
+            when (this) {
+                is OpenAPIV3SingleType -> value
+                is OpenAPIV3TypeArray -> values.first()
+            }
+        }

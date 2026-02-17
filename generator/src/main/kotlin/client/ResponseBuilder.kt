@@ -24,8 +24,10 @@ import com.squareup.kotlinpoet.KModifier
 import com.squareup.kotlinpoet.PropertySpec
 import com.squareup.kotlinpoet.TypeName
 import com.squareup.kotlinpoet.TypeSpec
+import community.flock.kotlinx.openapi.bindings.MediaType
 import community.flock.kotlinx.openapi.bindings.OpenAPIV3Operation
 import community.flock.kotlinx.openapi.bindings.OpenAPIV3Response
+import community.flock.kotlinx.openapi.bindings.OpenAPIV3ResponseOrReference
 import io.github.oshai.kotlinlogging.KotlinLogging
 import kotlinx.serialization.Serializable
 import org.litote.openapi.ktor.client.generator.ApiModel
@@ -85,7 +87,9 @@ internal class ResponseBuilder(
                     Triple(typeAndSuccess.first, typeAndSuccess.second, statusCodes)
                 }
 
-        if (grouped.isEmpty()) error("no response specified")
+        if (grouped.isEmpty()) {
+            error("no response specified")
+        }
 
         return grouped.mapIndexed { index, triple ->
             val typeName = triple.first
@@ -100,17 +104,24 @@ internal class ResponseBuilder(
 
     private fun parseResponse(
         statusCodeValue: String,
-        responseOrReference: Any,
+        responseOrReference: OpenAPIV3ResponseOrReference,
         responseBaseName: String,
     ): Pair<Int, TypeName?> {
         val code = statusCodeValue.toIntOrNull() ?: error("Invalid status code: $statusCodeValue")
-        val response = responseOrReference as? OpenAPIV3Response ?: error("Unsupported response reference: $responseOrReference")
+        val response =
+            responseOrReference as? OpenAPIV3Response ?: error("Unsupported response reference: $responseOrReference")
         val schema =
             response.content
-                ?.values
-                ?.firstOrNull()
+                ?.get(MediaType("application/json"))
                 ?.schema
-        if ((response.content?.size ?: 0) > 1) logger.warn { "More than one response content - taking first" }
+                ?: response.content?.get(MediaType("*/*"))?.schema
+        if (response.content != null && schema == null) {
+            logger.warn { "Unknown media type for: $responseOrReference - do not parse response" }
+        } else {
+            if ((response.content?.size ?: 0) > 1) {
+                logger.warn { "More than one response content - taking only \"application/json\"" }
+            }
+        }
         return code to schema?.let { apiModel.getClassName("${responseBaseName}ResponseBody", it) }
     }
 

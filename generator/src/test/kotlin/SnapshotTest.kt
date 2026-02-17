@@ -65,9 +65,6 @@ class SnapshotTest {
     }
 
     @Test
-    @Ignore(
-        "OpenAPI 3.1.0 is not yet supported by kotlinx-openapi-bindings see https://github.com/flock-community/kotlin-openapi-bindings/issues/8",
-    )
     fun `GIVEN mastodon openapi spec WHEN generating THEN output matches snapshot`() {
         runSnapshotTest(
             snapshotName = "mastodon-api",
