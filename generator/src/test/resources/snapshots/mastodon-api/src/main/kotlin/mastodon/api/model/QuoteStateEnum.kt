@@ -20,11 +20,11 @@ public enum class QuoteStateEnum {
   @SerialName("unauthorized")
   UNAUTHORIZED,
   @SerialName("blocked_account")
-  BLOCKEDACCOUNT,
+  BLOCKED_ACCOUNT,
   @SerialName("blocked_domain")
-  BLOCKEDDOMAIN,
+  BLOCKED_DOMAIN,
   @SerialName("muted_account")
-  MUTEDACCOUNT,
+  MUTED_ACCOUNT,
   ;
 
   public fun serialName(): String = QuoteStateEnum.serializer().descriptor.getElementName(this.ordinal)

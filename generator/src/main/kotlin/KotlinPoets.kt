@@ -26,6 +26,7 @@ import org.litote.openapi.ktor.client.generator.client.ClientGenerationContext
 import org.litote.openapi.ktor.client.generator.shared.capitalize
 import org.litote.openapi.ktor.client.generator.shared.sanitizeToIdentifier
 import org.litote.openapi.ktor.client.generator.shared.snakeToCamelCase
+import org.litote.openapi.ktor.client.generator.shared.toUpperSnakeCase
 import kotlin.text.uppercase
 
 public fun isConstSupported(typeName: TypeName): Boolean = typeName.isPrimitive()
@@ -51,7 +52,7 @@ public fun parameterDefaultLiteral(
     return when {
         isEnum -> {
             defaultValue.contentOrNull?.let {
-                CodeBlock.of("%L.%L", (typeName as ClassName).simpleName, it.sanitizeToIdentifier().snakeToCamelCase().uppercase())
+                CodeBlock.of("%L.%L", (typeName as ClassName).simpleName, it.enumFieldName)
             }
         }
 
@@ -139,3 +140,5 @@ internal val OpenAPIV3Schema.firstType: OpenAPIV3Type?
                 is OpenAPIV3TypeArray -> values.first()
             }
         }
+
+internal val String.enumFieldName: String get() = sanitizeToIdentifier().toUpperSnakeCase()

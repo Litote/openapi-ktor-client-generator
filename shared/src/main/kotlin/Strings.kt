@@ -54,3 +54,18 @@ public fun String.tagToCamelCase(): String = replace(tagToCamelCaseRegex) { it.v
  * Otherwise, appends the suffix to the string.
  */
 public fun String.ensureEndsWith(suffix: String): String = if (endsWith(suffix)) this else this + suffix
+
+private val camelCaseToSnakeCaseRegex = "([a-z])([A-Z])".toRegex()
+
+/**
+ * Converts camelCase or dash-separated strings to UPPER_SNAKE_CASE.
+ * For example:
+ * - "camelCase" -> "CAMEL_CASE"
+ * - "my-tag" -> "MY_TAG"
+ * - "myTagName" -> "MY_TAG_NAME"
+ * - "my-tagName" -> "MY_TAG_NAME"
+ */
+public fun String.toUpperSnakeCase(): String =
+    replace("-", "_")
+        .replace(camelCaseToSnakeCaseRegex) { "${it.groupValues[1]}_${it.groupValues[2]}" }
+        .uppercase()

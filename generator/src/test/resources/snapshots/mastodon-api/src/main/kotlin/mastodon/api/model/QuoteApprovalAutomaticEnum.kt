@@ -14,7 +14,7 @@ public enum class QuoteApprovalAutomaticEnum {
   @SerialName("following")
   FOLLOWING,
   @SerialName("unsupported_policy")
-  UNSUPPORTEDPOLICY,
+  UNSUPPORTED_POLICY,
   ;
 
   public fun serialName(): String = QuoteApprovalAutomaticEnum.serializer().descriptor.getElementName(this.ordinal)

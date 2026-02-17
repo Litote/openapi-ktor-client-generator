@@ -8,11 +8,11 @@ import kotlinx.serialization.builtins.serializer
 @Serializable
 public enum class RelationshipSeveranceEventTypeEnum {
   @SerialName("domain_block")
-  DOMAINBLOCK,
+  DOMAIN_BLOCK,
   @SerialName("user_domain_block")
-  USERDOMAINBLOCK,
+  USER_DOMAIN_BLOCK,
   @SerialName("account_suspension")
-  ACCOUNTSUSPENSION,
+  ACCOUNT_SUSPENSION,
   ;
 
   public fun serialName(): String = RelationshipSeveranceEventTypeEnum.serializer().descriptor.getElementName(this.ordinal)
