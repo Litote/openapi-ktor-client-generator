@@ -19,8 +19,6 @@ import kotlinx.serialization.Serializable
 import kotlinx.serialization.json.JsonPrimitive
 import kotlinx.serialization.json.contentOrNull
 import org.litote.openapi.ktor.client.generator.shared.capitalize
-import org.litote.openapi.ktor.client.generator.shared.sanitizeToIdentifier
-import org.litote.openapi.ktor.client.generator.shared.snakeToCamelCase
 import java.io.File
 
 public class ApiModelGenerator internal constructor(
@@ -69,7 +67,7 @@ public class ApiModelGenerator internal constructor(
                         schema.enum?.forEach { e ->
                             e.contentOrNull?.let { name ->
                                 addEnumConstant(
-                                    name.sanitizeToIdentifier().snakeToCamelCase().uppercase(),
+                                    name.enumFieldName,
                                     anonymousClassBuilder()
                                         .addAnnotation(
                                             AnnotationSpec
@@ -180,7 +178,7 @@ public class ApiModelGenerator internal constructor(
                                         enum.forEach { e ->
                                             e.contentOrNull?.let { name ->
                                                 addEnumConstant(
-                                                    name.sanitizeToIdentifier().snakeToCamelCase().uppercase(),
+                                                    name.enumFieldName,
                                                     anonymousClassBuilder()
                                                         .addAnnotation(
                                                             AnnotationSpec

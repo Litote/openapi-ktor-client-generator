@@ -16,13 +16,13 @@ public data class Suggestion(
     @SerialName("featured")
     FEATURED,
     @SerialName("most_followed")
-    MOSTFOLLOWED,
+    MOST_FOLLOWED,
     @SerialName("most_interactions")
-    MOSTINTERACTIONS,
+    MOST_INTERACTIONS,
     @SerialName("similar_to_recently_followed")
-    SIMILARTORECENTLYFOLLOWED,
+    SIMILAR_TO_RECENTLY_FOLLOWED,
     @SerialName("friends_of_friends")
-    FRIENDSOFFRIENDS,
+    FRIENDS_OF_FRIENDS,
     ;
 
     public fun serialName(): String = Sources.serializer().descriptor.getElementName(this.ordinal)

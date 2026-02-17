@@ -18,85 +18,85 @@ public enum class OAuthScope {
   @SerialName("follow")
   FOLLOW,
   @SerialName("admin:read")
-  ADMINREAD,
+  ADMIN_READ,
   @SerialName("admin:write")
-  ADMINWRITE,
+  ADMIN_WRITE,
   @SerialName("read:accounts")
-  READACCOUNTS,
+  READ_ACCOUNTS,
   @SerialName("read:blocks")
-  READBLOCKS,
+  READ_BLOCKS,
   @SerialName("read:bookmarks")
-  READBOOKMARKS,
+  READ_BOOKMARKS,
   @SerialName("read:favourites")
-  READFAVOURITES,
+  READ_FAVOURITES,
   @SerialName("read:filters")
-  READFILTERS,
+  READ_FILTERS,
   @SerialName("read:follows")
-  READFOLLOWS,
+  READ_FOLLOWS,
   @SerialName("read:lists")
-  READLISTS,
+  READ_LISTS,
   @SerialName("read:mutes")
-  READMUTES,
+  READ_MUTES,
   @SerialName("read:notifications")
-  READNOTIFICATIONS,
+  READ_NOTIFICATIONS,
   @SerialName("read:search")
-  READSEARCH,
+  READ_SEARCH,
   @SerialName("read:statuses")
-  READSTATUSES,
+  READ_STATUSES,
   @SerialName("write:accounts")
-  WRITEACCOUNTS,
+  WRITE_ACCOUNTS,
   @SerialName("write:blocks")
-  WRITEBLOCKS,
+  WRITE_BLOCKS,
   @SerialName("write:bookmarks")
-  WRITEBOOKMARKS,
+  WRITE_BOOKMARKS,
   @SerialName("write:conversations")
-  WRITECONVERSATIONS,
+  WRITE_CONVERSATIONS,
   @SerialName("write:favourites")
-  WRITEFAVOURITES,
+  WRITE_FAVOURITES,
   @SerialName("write:filters")
-  WRITEFILTERS,
+  WRITE_FILTERS,
   @SerialName("write:follows")
-  WRITEFOLLOWS,
+  WRITE_FOLLOWS,
   @SerialName("write:lists")
-  WRITELISTS,
+  WRITE_LISTS,
   @SerialName("write:media")
-  WRITEMEDIA,
+  WRITE_MEDIA,
   @SerialName("write:mutes")
-  WRITEMUTES,
+  WRITE_MUTES,
   @SerialName("write:notifications")
-  WRITENOTIFICATIONS,
+  WRITE_NOTIFICATIONS,
   @SerialName("write:reports")
-  WRITEREPORTS,
+  WRITE_REPORTS,
   @SerialName("write:statuses")
-  WRITESTATUSES,
+  WRITE_STATUSES,
   @SerialName("admin:read:accounts")
-  ADMINREADACCOUNTS,
+  ADMIN_READ_ACCOUNTS,
   @SerialName("admin:read:canonical_email_blocks")
-  ADMINREADCANONICALEMAILBLOCKS,
+  ADMIN_READ_CANONICAL_EMAIL_BLOCKS,
   @SerialName("admin:read:domain_allows")
-  ADMINREADDOMAINALLOWS,
+  ADMIN_READ_DOMAIN_ALLOWS,
   @SerialName("admin:read:domain_blocks")
-  ADMINREADDOMAINBLOCKS,
+  ADMIN_READ_DOMAIN_BLOCKS,
   @SerialName("admin:read:email_domain_blocks")
-  ADMINREADEMAILDOMAINBLOCKS,
+  ADMIN_READ_EMAIL_DOMAIN_BLOCKS,
   @SerialName("admin:read:ip_blocks")
-  ADMINREADIPBLOCKS,
+  ADMIN_READ_IP_BLOCKS,
   @SerialName("admin:read:reports")
-  ADMINREADREPORTS,
+  ADMIN_READ_REPORTS,
   @SerialName("admin:write:accounts")
-  ADMINWRITEACCOUNTS,
+  ADMIN_WRITE_ACCOUNTS,
   @SerialName("admin:write:canonical_email_blocks")
-  ADMINWRITECANONICALEMAILBLOCKS,
+  ADMIN_WRITE_CANONICAL_EMAIL_BLOCKS,
   @SerialName("admin:write:domain_allows")
-  ADMINWRITEDOMAINALLOWS,
+  ADMIN_WRITE_DOMAIN_ALLOWS,
   @SerialName("admin:write:domain_blocks")
-  ADMINWRITEDOMAINBLOCKS,
+  ADMIN_WRITE_DOMAIN_BLOCKS,
   @SerialName("admin:write:email_domain_blocks")
-  ADMINWRITEEMAILDOMAINBLOCKS,
+  ADMIN_WRITE_EMAIL_DOMAIN_BLOCKS,
   @SerialName("admin:write:ip_blocks")
-  ADMINWRITEIPBLOCKS,
+  ADMIN_WRITE_IP_BLOCKS,
   @SerialName("admin:write:reports")
-  ADMINWRITEREPORTS,
+  ADMIN_WRITE_REPORTS,
   ;
 
   public fun serialName(): String = OAuthScope.serializer().descriptor.getElementName(this.ordinal)

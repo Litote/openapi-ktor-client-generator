@@ -16,7 +16,7 @@ public enum class NotificationTypeEnum {
   @SerialName("follow")
   FOLLOW,
   @SerialName("follow_request")
-  FOLLOWREQUEST,
+  FOLLOW_REQUEST,
   @SerialName("favourite")
   FAVOURITE,
   @SerialName("poll")
@@ -24,17 +24,17 @@ public enum class NotificationTypeEnum {
   @SerialName("update")
   UPDATE,
   @SerialName("admin.sign_up")
-  ADMINSIGNUP,
+  ADMIN_SIGN_UP,
   @SerialName("admin.report")
-  ADMINREPORT,
+  ADMIN_REPORT,
   @SerialName("severed_relationships")
-  SEVEREDRELATIONSHIPS,
+  SEVERED_RELATIONSHIPS,
   @SerialName("moderation_warning")
-  MODERATIONWARNING,
+  MODERATION_WARNING,
   @SerialName("quote")
   QUOTE,
   @SerialName("quoted_update")
-  QUOTEDUPDATE,
+  QUOTED_UPDATE,
   ;
 
   public fun serialName(): String = NotificationTypeEnum.serializer().descriptor.getElementName(this.ordinal)

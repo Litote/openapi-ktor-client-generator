@@ -12,9 +12,9 @@ public enum class AccountWarningActionEnum {
   @SerialName("disable")
   DISABLE,
   @SerialName("mark_statuses_as_sensitive")
-  MARKSTATUSESASSENSITIVE,
+  MARK_STATUSES_AS_SENSITIVE,
   @SerialName("delete_statuses")
-  DELETESTATUSES,
+  DELETE_STATUSES,
   @SerialName("sensitive")
   SENSITIVE,
   @SerialName("silence")
