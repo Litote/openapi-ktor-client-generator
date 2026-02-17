@@ -1,0 +1,14 @@
+[
+  {
+    "id": "veh-001",
+    "type": "car",
+    "brand": "Toyota",
+    "numberOfDoors": 5
+  },
+  {
+    "id": "veh-002",
+    "type": "motorcycle",
+    "brand": "Yamaha",
+    "hasSidecar": false
+  }
+]

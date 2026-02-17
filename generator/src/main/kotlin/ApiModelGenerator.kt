@@ -9,6 +9,7 @@ import com.squareup.kotlinpoet.MemberName
 import com.squareup.kotlinpoet.ParameterSpec
 import com.squareup.kotlinpoet.PropertySpec
 import com.squareup.kotlinpoet.STRING
+import com.squareup.kotlinpoet.TypeAliasSpec
 import com.squareup.kotlinpoet.TypeSpec
 import com.squareup.kotlinpoet.TypeSpec.Companion.anonymousClassBuilder
 import community.flock.kotlinx.openapi.bindings.OpenAPIV3Schema
@@ -27,6 +28,7 @@ public class ApiModelGenerator internal constructor(
     private companion object {
         private val logger = KotlinLogging.logger {}
         val serializerName: MemberName = MemberName("kotlinx.serialization.builtins", "serializer")
+        val jsonObject: ClassName = ClassName("kotlinx.serialization.json", "JsonObject")
     }
 
     /**
@@ -39,7 +41,7 @@ public class ApiModelGenerator internal constructor(
     internal fun buildModel(
         name: String,
         schema: OpenAPIV3Schema,
-    ): TypeSpec {
+    ): TypeSpec? {
         val properties: List<ApiClassProperty> =
             schema.properties
                 ?.asSequence()
@@ -85,119 +87,123 @@ public class ApiModelGenerator internal constructor(
                     }.build()
             }
         } else {
-            TypeSpec
-                .classBuilder(name)
-                .addModifiers(KModifier.DATA)
-                .addAnnotation(AnnotationSpec.builder(Serializable::class).build())
-                .primaryConstructor(
-                    FunSpec
-                        .constructorBuilder()
-                        .apply {
-                            properties.forEach { property ->
-                                addParameter(
-                                    ParameterSpec
-                                        .builder(property.camelCaseName, property.type)
-                                        .apply {
-                                            val isEnum = apiModel.isEnum(property)
-                                            (
-                                                when {
-                                                    property.asSchema?.default != null -> {
-                                                        (property.asSchema?.default as? JsonPrimitive)?.content?.let {
-                                                            if (it == "null" || !isEnum) {
-                                                                it
-                                                            } else {
-                                                                "${(property.type as ClassName).simpleName}.$it"
-                                                            }
-                                                        }
-                                                    }
-
-                                                    property.type.isNullable -> {
-                                                        "null"
-                                                    }
-
-                                                    else -> {
-                                                        if (isEnum &&
-                                                            defaultEnumValue != null
-                                                        ) {
-                                                            "${(property.type as ClassName).simpleName}.$defaultEnumValue"
-                                                        } else {
-                                                            null
-                                                        }
-                                                    }
-                                                }
-                                            )?.apply {
-                                                val format =
-                                                    if (this != "null") {
-                                                        property.asSchema?.let {
-                                                            if (it.firstType == OpenAPIV3Type.STRING) {
-                                                                if (isEnum) {
-                                                                    "%L"
+            if (schema.discriminator != null) {
+                null
+            } else {
+                TypeSpec
+                    .classBuilder(name)
+                    .addModifiers(KModifier.DATA)
+                    .addAnnotation(AnnotationSpec.builder(Serializable::class).build())
+                    .primaryConstructor(
+                        FunSpec
+                            .constructorBuilder()
+                            .apply {
+                                properties.forEach { property ->
+                                    addParameter(
+                                        ParameterSpec
+                                            .builder(property.camelCaseName, property.type)
+                                            .apply {
+                                                val isEnum = apiModel.isEnum(property)
+                                                (
+                                                    when {
+                                                        property.asSchema?.default != null -> {
+                                                            (property.asSchema?.default as? JsonPrimitive)?.content?.let {
+                                                                if (it == "null" || !isEnum) {
+                                                                    it
                                                                 } else {
-                                                                    "%S"
+                                                                    "${(property.type as ClassName).simpleName}.$it"
                                                                 }
-                                                            } else {
-                                                                "%L"
                                                             }
                                                         }
-                                                            ?: "%L"
-                                                    } else {
-                                                        "%L"
+
+                                                        property.type.isNullable -> {
+                                                            "null"
+                                                        }
+
+                                                        else -> {
+                                                            if (isEnum &&
+                                                                defaultEnumValue != null
+                                                            ) {
+                                                                "${(property.type as ClassName).simpleName}.$defaultEnumValue"
+                                                            } else {
+                                                                null
+                                                            }
+                                                        }
                                                     }
-                                                defaultValue(format, this)
+                                                )?.apply {
+                                                    val format =
+                                                        if (this != "null") {
+                                                            property.asSchema?.let {
+                                                                if (it.firstType == OpenAPIV3Type.STRING) {
+                                                                    if (isEnum) {
+                                                                        "%L"
+                                                                    } else {
+                                                                        "%S"
+                                                                    }
+                                                                } else {
+                                                                    "%L"
+                                                                }
+                                                            }
+                                                                ?: "%L"
+                                                        } else {
+                                                            "%L"
+                                                        }
+                                                    defaultValue(format, this)
+                                                }
+                                            }.build(),
+                                    )
+                                }
+                            }.build(),
+                    ).apply {
+                        properties.forEach { property ->
+                            addProperty(
+                                PropertySpec
+                                    .builder(property.camelCaseName, property.type)
+                                    .initializer(property.camelCaseName)
+                                    .apply {
+                                        if (property.needsSerialName) {
+                                            addAnnotation(
+                                                AnnotationSpec
+                                                    .builder(SerialName::class)
+                                                    .addMember("%S", property.initialName)
+                                                    .build(),
+                                            )
+                                        }
+                                    }.build(),
+                            )
+
+                            val enum = property.asSchema?.enum ?: (property.asSchema?.items as? OpenAPIV3Schema)?.enum
+                            if (!enum.isNullOrEmpty()) {
+                                val enumName = property.camelCaseName.capitalize()
+                                addType(
+                                    TypeSpec
+                                        .enumBuilder(enumName)
+                                        .addAnnotation(AnnotationSpec.builder(Serializable::class).build())
+                                        .apply {
+                                            enum.forEach { e ->
+                                                e.contentOrNull?.let { name ->
+                                                    addEnumConstant(
+                                                        name.enumFieldName,
+                                                        anonymousClassBuilder()
+                                                            .addAnnotation(
+                                                                AnnotationSpec
+                                                                    .builder(SerialName::class)
+                                                                    .addMember("%S", name)
+                                                                    .build(),
+                                                            ).build(),
+                                                    )
+                                                }
                                             }
+                                            defaultEnumValue?.apply {
+                                                addEnumConstant(this)
+                                            }
+                                            addFunction(serialNameFun(enumName))
                                         }.build(),
                                 )
                             }
-                        }.build(),
-                ).apply {
-                    properties.forEach { property ->
-                        addProperty(
-                            PropertySpec
-                                .builder(property.camelCaseName, property.type)
-                                .initializer(property.camelCaseName)
-                                .apply {
-                                    if (property.needsSerialName) {
-                                        addAnnotation(
-                                            AnnotationSpec
-                                                .builder(SerialName::class)
-                                                .addMember("%S", property.initialName)
-                                                .build(),
-                                        )
-                                    }
-                                }.build(),
-                        )
-
-                        val enum = property.asSchema?.enum ?: (property.asSchema?.items as? OpenAPIV3Schema)?.enum
-                        if (!enum.isNullOrEmpty()) {
-                            val enumName = property.camelCaseName.capitalize()
-                            addType(
-                                TypeSpec
-                                    .enumBuilder(enumName)
-                                    .addAnnotation(AnnotationSpec.builder(Serializable::class).build())
-                                    .apply {
-                                        enum.forEach { e ->
-                                            e.contentOrNull?.let { name ->
-                                                addEnumConstant(
-                                                    name.enumFieldName,
-                                                    anonymousClassBuilder()
-                                                        .addAnnotation(
-                                                            AnnotationSpec
-                                                                .builder(SerialName::class)
-                                                                .addMember("%S", name)
-                                                                .build(),
-                                                        ).build(),
-                                                )
-                                            }
-                                        }
-                                        defaultEnumValue?.apply {
-                                            addEnumConstant(this)
-                                        }
-                                        addFunction(serialNameFun(enumName))
-                                    }.build(),
-                            )
                         }
-                    }
-                }.build()
+                    }.build()
+            }
         }
     }
 
@@ -210,9 +216,18 @@ public class ApiModelGenerator internal constructor(
 
     internal fun writeFile(
         name: String,
-        typeSpec: TypeSpec,
+        typeSpec: TypeSpec?,
     ) {
-        val fileSpec = FileSpec.builder(apiModel.configuration.modelPackage, name).addTypes(listOf(typeSpec)).build()
+        val fileSpec =
+            FileSpec
+                .builder(apiModel.configuration.modelPackage, name)
+                .apply {
+                    if (typeSpec != null) {
+                        addTypes(listOf(typeSpec))
+                    } else {
+                        addTypeAlias(TypeAliasSpec.builder(name, jsonObject).build())
+                    }
+                }.build()
 
         val basePath = File(apiModel.outputDirectory).resolve("src/main/kotlin")
         logger.debug { "Writing $name to $basePath" }
