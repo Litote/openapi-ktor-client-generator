@@ -5,6 +5,7 @@ import org.gradle.api.file.DirectoryProperty
 import org.gradle.api.file.RegularFileProperty
 import org.gradle.api.provider.Property
 import org.gradle.api.provider.SetProperty
+import org.gradle.api.tasks.CacheableTask
 import org.gradle.api.tasks.Input
 import org.gradle.api.tasks.InputFile
 import org.gradle.api.tasks.OutputDirectory
@@ -16,6 +17,7 @@ import org.litote.openapi.ktor.client.generator.ApiGeneratorModule.Companion.get
 import org.litote.openapi.ktor.client.generator.GenerationResult
 import org.litote.openapi.ktor.client.generator.generate
 
+@CacheableTask
 public abstract class GenerateTask : DefaultTask() {
     /**
      * OpenAPI3 specification file (json).

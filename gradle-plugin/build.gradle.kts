@@ -1,4 +1,5 @@
 import com.vanniktech.maven.publish.GradlePublishPlugin
+import org.gradle.plugin.compatibility.compatibility
 
 plugins {
     alias(libs.plugins.gradle.publish)
@@ -26,6 +27,21 @@ gradlePlugin {
             website = "https://github.com/Litote/openapi-ktor-client-generator"
             vcsUrl = "https://github.com/Litote/openapi-ktor-client-generator.git"
             tags.set(listOf("openapi", "ktor", "client", "generator"))
+            compatibility {
+                features {
+                    configurationCache = true
+                }
+            }
+        }
+    }
+}
+
+tasks.register("printPlugins") {
+    doLast {
+        project.plugins.forEach {
+            val pkg = it.javaClass.`package`
+            val version = pkg?.implementationVersion ?: "unknown"
+            println("${it.javaClass.name} -> $version")
         }
     }
 }

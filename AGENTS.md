@@ -2,26 +2,7 @@
 
 > **Purpose**: Instructions for AI agents working on this codebase.
 > For installation, configuration, and usage, see [`README.md`](README.md).
-
----
-
-## Quick Reference
-
-```bash
-# MANDATORY after every code change:
-./gradlew formatKotlin && ./gradlew check
-
-# Run specific tests:
-./gradlew :generator:test
-./gradlew :generator:test --tests "*.ParsingTests"
-
-# E2E testing (separate project):
-./gradlew publishToMavenLocal
-cd e2e && ./gradlew build
-
-# Debug:
-./gradlew build --info
-```
+> For contributing guildelines, see (MANDATORY!) [`CONTRIBUTING.md`](CONTRIBUTING.md).
 
 ---
 
@@ -29,13 +10,14 @@ cd e2e && ./gradlew build
 
 ### NEVER Do
 
-| Category | Forbidden Actions |
-|----------|-------------------|
-| **Code** | Use `!!`, `println`, `runBlocking`, `GlobalScope` |
-| **Architecture** | Move classes across modules, introduce circular dependencies, create new modules |
-| **Dependencies** | Add/upgrade dependencies without explicit request, change version catalogs |
-| **Security** | Log secrets/API keys, expose environment variables, commit credentials |
-| **Scope** | Mass refactors, rename symbols unnecessarily, formatting-only changes |
+| Category           | Forbidden Actions                                                               |
+|--------------------|---------------------------------------------------------------------------------|
+| **Code**           | Use `!!`, `println`, `runBlocking`, `GlobalScope`                               |
+| **Architecture**   | Move classes across modules, introduce circular dependencies, create new modules |
+| **Dependencies**   | Add/upgrade dependencies without explicit request, change version catalogs      |
+| **Security**       | Log secrets/API keys, expose environment variables, commit credentials          |
+| **Scope**          | Mass refactors, rename symbols unnecessarily, formatting-only changes           |
+| **Deploy**         | ./gradlew deploy, ./gradlew deployPlugins                                       |
 
 ### ALWAYS Do
 
@@ -51,16 +33,6 @@ cd e2e && ./gradlew build
 ---
 
 ## Module Architecture
-
-```
-shared/                 → Shared abstractions (ConfigurationOptions, utilities)
-generator/              → Code generation engine (OpenApiParser, KotlinCodeGenerator)
-gradle-plugin/          → Gradle integration (GeneratorPlugin, tasks)
-module/unknown-enum-value/ → Handles unmapped enum values
-module/logging-sl4j/    → SLF4J logging in generated clients
-convention/             → Build convention plugins
-e2e/                    → End-to-end tests (separate Gradle project)
-```
 
 **Boundary Rules:**
 - Do NOT move classes between modules
@@ -142,18 +114,6 @@ A change is complete when:
 - Prefer no change over speculative change
 - Favor architectural integrity over feature completion
 - Explain conflicts with requirements
-
----
-
-## Core Components Reference
-
-| Component | Responsibility |
-|-----------|----------------|
-| `GeneratorPlugin` | Gradle plugin, orchestrates tasks |
-| `ApiClientGenerator` | Main generation pipeline |
-| `OpenApiParser` | Parses OpenAPI v3, builds internal model |
-| `KotlinCodeGenerator` | Generates Kotlin code via KotlinPoet |
-| `GenerationModule` | Extension interface for optional features |
 
 ---
 
