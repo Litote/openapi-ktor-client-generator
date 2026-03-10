@@ -3,14 +3,19 @@ package mastodon.api.client
 import io.ktor.client.call.body
 import io.ktor.client.request.`get`
 import io.ktor.client.request.delete
+import io.ktor.client.request.forms.MultiPartFormDataContent
+import io.ktor.client.request.forms.formData
 import io.ktor.client.request.post
 import io.ktor.client.request.put
 import io.ktor.client.request.setBody
+import io.ktor.http.ContentType
+import io.ktor.http.HttpHeaders
 import io.ktor.http.encodeURLPathPart
+import io.ktor.http.headersOf
+import kotlin.ByteArray
 import kotlin.Int
 import kotlin.String
 import kotlinx.serialization.Serializable
-import kotlinx.serialization.json.JsonElement
 import mastodon.api.client.ClientConfiguration.Companion.defaultClientConfiguration
 import mastodon.api.model.Error
 import mastodon.api.model.MediaAttachment
@@ -22,10 +27,21 @@ public class MediaClient(
   /**
    * Upload media as an attachment (v1)
    */
-  public suspend fun createMedia(request: JsonElement): CreateMediaResponse {
+  public suspend fun createMedia(form: CreateMediaForm): CreateMediaResponse {
     try {
       val response = configuration.client.post("api/v1/media") {
-        setBody(request)
+        setBody(MultiPartFormDataContent(formData {
+        append("file", form.file.bytes, headersOf(HttpHeaders.ContentType, form.file.contentType.toString()))
+        form.description?.let { value ->
+          append("description", value.toString())
+        }
+        form.focus?.let { value ->
+          append("focus", value.toString())
+        }
+        form.thumbnail?.let { value ->
+          append("thumbnail", value.bytes, headersOf(HttpHeaders.ContentType, value.contentType.toString()))
+        }
+        }))
       }
       return when (response.status.value) {
         200 -> CreateMediaResponseSuccess(response.body<MediaAttachment>())
@@ -64,10 +80,20 @@ public class MediaClient(
   /**
    * Update media attachment
    */
-  public suspend fun updateMedia(request: JsonElement, id: String): UpdateMediaResponse {
+  public suspend fun updateMedia(form: UpdateMediaForm, id: String): UpdateMediaResponse {
     try {
       val response = configuration.client.put("api/v1/media/{id}".replace("/{id}", "/${id.encodeURLPathPart()}")) {
-        setBody(request)
+        setBody(MultiPartFormDataContent(formData {
+        form.description?.let { value ->
+          append("description", value.toString())
+        }
+        form.focus?.let { value ->
+          append("focus", value.toString())
+        }
+        form.thumbnail?.let { value ->
+          append("thumbnail", value.bytes, headersOf(HttpHeaders.ContentType, value.contentType.toString()))
+        }
+        }))
       }
       return when (response.status.value) {
         200 -> UpdateMediaResponseSuccess(response.body<MediaAttachment>())
@@ -106,10 +132,21 @@ public class MediaClient(
   /**
    * Upload media as an attachment (async)
    */
-  public suspend fun createMediaV2(request: JsonElement): CreateMediaV2Response {
+  public suspend fun createMediaV2(form: CreateMediaV2Form): CreateMediaV2Response {
     try {
       val response = configuration.client.post("api/v2/media") {
-        setBody(request)
+        setBody(MultiPartFormDataContent(formData {
+        append("file", form.file.bytes, headersOf(HttpHeaders.ContentType, form.file.contentType.toString()))
+        form.description?.let { value ->
+          append("description", value.toString())
+        }
+        form.focus?.let { value ->
+          append("focus", value.toString())
+        }
+        form.thumbnail?.let { value ->
+          append("thumbnail", value.bytes, headersOf(HttpHeaders.ContentType, value.contentType.toString()))
+        }
+        }))
       }
       return when (response.status.value) {
         200, 202 -> CreateMediaV2ResponseSuccess(response.body<MediaAttachment>())
@@ -123,6 +160,18 @@ public class MediaClient(
       return CreateMediaV2ResponseUnknownFailure(500)
     }
   }
+
+  public data class CreateMediaForm(
+    public val `file`: CreateMediaFormFile,
+    public val description: String? = null,
+    public val focus: String? = null,
+    public val thumbnail: CreateMediaFormFile? = null,
+  )
+
+  public data class CreateMediaFormFile(
+    public val bytes: ByteArray,
+    public val contentType: ContentType,
+  )
 
   @Serializable
   public sealed class CreateMediaResponse
@@ -169,6 +218,17 @@ public class MediaClient(
     public val statusCode: Int,
   ) : GetMediaResponse()
 
+  public data class UpdateMediaForm(
+    public val description: String? = null,
+    public val focus: String? = null,
+    public val thumbnail: UpdateMediaFormFile? = null,
+  )
+
+  public data class UpdateMediaFormFile(
+    public val bytes: ByteArray,
+    public val contentType: ContentType,
+  )
+
   @Serializable
   public sealed class UpdateMediaResponse
 
@@ -213,6 +273,18 @@ public class MediaClient(
   public data class DeleteMediaResponseUnknownFailure(
     public val statusCode: Int,
   ) : DeleteMediaResponse()
+
+  public data class CreateMediaV2Form(
+    public val `file`: CreateMediaV2FormFile,
+    public val description: String? = null,
+    public val focus: String? = null,
+    public val thumbnail: CreateMediaV2FormFile? = null,
+  )
+
+  public data class CreateMediaV2FormFile(
+    public val bytes: ByteArray,
+    public val contentType: ContentType,
+  )
 
   @Serializable
   public sealed class CreateMediaV2Response

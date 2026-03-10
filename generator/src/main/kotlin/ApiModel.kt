@@ -260,6 +260,22 @@ public class ApiModel private constructor(
             }
         }
 
+    internal fun resolveSchema(schemaOrReference: OpenAPIV3SchemaOrReference?): OpenAPIV3Schema? =
+        when (schemaOrReference) {
+            is OpenAPIV3Schema -> {
+                schemaOrReference
+            }
+
+            is OpenAPIV3Reference -> {
+                val refName = getRefClassName(schemaOrReference)
+                components?.schemas?.get(refName) as? OpenAPIV3Schema
+            }
+
+            null -> {
+                null
+            }
+        }
+
     private fun getClassName(
         name: String,
         schemaOrReference: OpenAPIV3Schema,

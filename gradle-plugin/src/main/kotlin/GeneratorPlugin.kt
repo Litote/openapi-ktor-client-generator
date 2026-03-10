@@ -24,7 +24,7 @@ public class GeneratorPlugin : Plugin<Project> {
                 val task =
                     project.tasks.register(
                         "generate${generatorExtension.name.capitalize()}",
-                        GenerateTask::class.java
+                        GenerateTask::class.java,
                     ) { task ->
                         task.group = "api client generation"
                         task.openApiFile.set(generatorExtension.openApiFile)
@@ -73,11 +73,12 @@ public class GeneratorPlugin : Plugin<Project> {
                     it.dependsOn(task.get())
                 }
 
-                project.tasks.named {
-                    it.startsWith("lintKotlin")
-                }.configureEach { t: Task ->
-                    t.dependsOn(task.get())
-                }
+                project.tasks
+                    .named {
+                        it.startsWith("lintKotlin")
+                    }.configureEach { t: Task ->
+                        t.dependsOn(task.get())
+                    }
 
                 true
             }
