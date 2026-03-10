@@ -15,7 +15,7 @@ dependencyResolutionManagement {
 
     versionCatalogs {
         create("e2e") {
-            from(files("./gradle/libs.versions.toml"))
+            from(files("../gradle/libs.versions.toml"))
         }
     }
 }

@@ -78,3 +78,40 @@ This will generate Ktor client code based on your OpenAPI specification and plug
 | `allowedPaths` | Restrict generation to a subset of OpenAPI paths                                        | empty (all paths are generated) | Any subset of paths defined in the OpenAPI spec |
 | `modulesIds` | Extra generation modules to enable                                                      | Empty (no modules) | `UnknownEnumValueModule`, `LoggingSl4jModule` |
 | `skip`         | Skip this client generation                                                             | false                           | Boolean                                         |
+
+## Troubleshooting
+
+### Gradle error: Implicit dependencies between tasks
+
+If you get an error with this message, the generator tasks have implicit dependencies with other tasks.
+(see https://docs.gradle.org/current/userguide/validation_problems.html#implicit_dependency)
+
+Add the dependencies explicitly in the gradle.kts file:
+
+```kotlin
+project
+    .tasks
+    .named { name ->
+        //any condition to match the tasks names
+        name.contains("whatever")
+    }
+    .configureEach {
+        project.tasks.withType(org.litote.openapi.ktor.client.generator.plugin.GenerateTask::class.java).forEach {
+            dependsOn(it) 
+        }
+    }
+```
+
+### Linter errors
+
+Generated code is not linted. Just ignore the errors by adding a `.editorconfig` file to your project,
+for example for ktlint:
+
+```
+[build/**/*]
+ktlint = disabled
+```
+
+
+
+

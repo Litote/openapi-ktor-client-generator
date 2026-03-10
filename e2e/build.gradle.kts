@@ -1,5 +1,4 @@
 plugins {
-    `kotlin-dsl`
     alias(e2e.plugins.kotlin.jvm)
     id("org.litote.openapi.ktor.client.generator.gradle") version "+"
     alias(e2e.plugins.serialization)

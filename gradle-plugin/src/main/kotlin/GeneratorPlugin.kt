@@ -2,6 +2,8 @@ package org.litote.openapi.ktor.client.generator.plugin
 
 import org.gradle.api.Plugin
 import org.gradle.api.Project
+import org.gradle.api.Task
+import org.gradle.jvm.tasks.Jar
 import org.jetbrains.kotlin.gradle.dsl.KotlinJvmProjectExtension
 import org.jetbrains.kotlin.gradle.dsl.KotlinMultiplatformExtension
 import org.jetbrains.kotlin.gradle.tasks.KotlinCompile
@@ -20,7 +22,10 @@ public class GeneratorPlugin : Plugin<Project> {
                 val generatorExtension = extension.generators.getByName(generatorName)
                 generatorExtension.initConventions(project)
                 val task =
-                    project.tasks.register("generate${generatorExtension.name.capitalize()}", GenerateTask::class.java) { task ->
+                    project.tasks.register(
+                        "generate${generatorExtension.name.capitalize()}",
+                        GenerateTask::class.java
+                    ) { task ->
                         task.group = "api client generation"
                         task.openApiFile.set(generatorExtension.openApiFile)
                         task.outputDirectory.set(generatorExtension.outputDirectory)
@@ -64,6 +69,16 @@ public class GeneratorPlugin : Plugin<Project> {
                 project.tasks.withType(KotlinCompile::class.java).configureEach {
                     it.dependsOn(task.get())
                 }
+                project.tasks.withType(Jar::class.java).configureEach {
+                    it.dependsOn(task.get())
+                }
+
+                project.tasks.named {
+                    it.startsWith("lintKotlin")
+                }.configureEach { t: Task ->
+                    t.dependsOn(task.get())
+                }
+
                 true
             }
         }
