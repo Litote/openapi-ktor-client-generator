@@ -30,13 +30,13 @@ Configure the plugin in your `build.gradle.kts`:
 ```kotlin
 apiClientGenerator {
     generators {
-        create("openapi") { // Task name: generateOpenapi
+        create("openapi") { // create a new task name: generateOpenapi
             outputDirectory = file("build/generated")
             openApiFile = file("src/main/openapi/openapi.json")
             basePackage = "com.example.api"
             // Optional: Add more configuration options below
         }
-        // You can create multiple generators with different names
+        // You can create multiple tasks with different names
     }
 }
 ```
@@ -78,11 +78,3 @@ This will generate Ktor client code based on your OpenAPI specification and plug
 | `allowedPaths` | Restrict generation to a subset of OpenAPI paths                                        | empty (all paths are generated) | Any subset of paths defined in the OpenAPI spec |
 | `modulesIds` | Extra generation modules to enable                                                      | Empty (no modules) | `UnknownEnumValueModule`, `LoggingSl4jModule` |
 | `skip`         | Skip this client generation                                                             | false                           | Boolean                                         |
-
-## Project Structure
-
-- `generator/` - Core code generation logic and OpenAPI parsing
-- `gradle-plugin/` - Gradle plugin implementation and task integration
-- `e2e/` - End-to-end test project(s) with example configurations
-- `module/` - Optional modules for extended functionality
-- `shared/` - Shared utilities and code used across modules
