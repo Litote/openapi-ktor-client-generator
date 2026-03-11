@@ -164,6 +164,10 @@ public class ApiClientGenerator internal constructor(
                     if (context.hasPathComponents) {
                         addImport("io.ktor.http", "encodeURLPathPart")
                     }
+                    if (context.hasSseOperations) {
+                        addImport("io.ktor.client.plugins.sse", "sse")
+                        addImport("io.ktor.client.plugins.sse", "ClientSSESession")
+                    }
                 }.addType(context.clientClass)
                 .build()
 

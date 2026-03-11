@@ -19,7 +19,6 @@ package org.litote.openapi.ktor.client.generator.client
 import com.squareup.kotlinpoet.TypeSpec
 import org.litote.openapi.ktor.client.generator.ApiOperation
 import org.litote.openapi.ktor.client.generator.ModelGenerator
-import org.litote.openapi.ktor.client.generator.client.ParameterExtractor.Parameter
 
 /**
  * Context for client generation, tracking state during the build process.
@@ -30,6 +29,7 @@ internal data class ClientGenerationContext(
     val modelGenerator: ModelGenerator,
     var hasHeaders: Boolean = false,
     var hasPathComponents: Boolean = false,
+    var hasSseOperations: Boolean = false,
 )
 
 /**
@@ -40,6 +40,7 @@ internal data class ClientFileContext(
     val operations: List<ApiOperation>,
     val hasHeaders: Boolean,
     val hasPathComponents: Boolean,
+    val hasSseOperations: Boolean,
     val clientClass: TypeSpec,
 ) {
     constructor(generationContext: ClientGenerationContext, clientClass: TypeSpec) : this(
@@ -47,6 +48,7 @@ internal data class ClientFileContext(
         generationContext.operations,
         generationContext.hasHeaders,
         generationContext.hasPathComponents,
+        generationContext.hasSseOperations,
         clientClass,
     )
 }

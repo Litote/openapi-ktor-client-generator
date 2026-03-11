@@ -116,7 +116,10 @@ internal class ResponseBuilder(
                 ?.schema
                 ?: response.content?.get(MediaType("*/*"))?.schema
         if (response.content != null && schema == null) {
-            logger.warn { "Unknown media type for: $responseOrReference - do not parse response" }
+            val isSseContent = response.content?.containsKey(MediaType("text/event-stream")) == true
+            if (!isSseContent) {
+                logger.warn { "Unknown media type for: $responseOrReference - do not parse response" }
+            }
         } else {
             if ((response.content?.size ?: 0) > 1) {
                 logger.warn { "More than one response content - taking only \"application/json\"" }

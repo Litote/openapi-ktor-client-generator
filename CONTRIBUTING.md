@@ -7,7 +7,7 @@
 
 ```bash
 # MANDATORY after every code change:
-./gradlew formatKotlin && ./gradlew check
+./gradlew clean formatKotlin && ./gradlew check
 
 # Run specific tests:
 ./gradlew :generator:test

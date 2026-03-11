@@ -43,7 +43,7 @@ class SnapshotTest {
          */
         private fun shouldUpdateSnapshots(): Boolean =
             System.getenv("UPDATE_SNAPSHOTS")?.toBoolean() == true ||
-                    System.getProperty("updateSnapshots")?.toBoolean() == true
+                System.getProperty("updateSnapshots")?.toBoolean() == true
     }
 
     @Test

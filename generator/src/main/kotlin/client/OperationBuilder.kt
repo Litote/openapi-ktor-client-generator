@@ -21,10 +21,15 @@ import com.squareup.kotlinpoet.ClassName
 import com.squareup.kotlinpoet.CodeBlock
 import com.squareup.kotlinpoet.FunSpec
 import com.squareup.kotlinpoet.KModifier
+import com.squareup.kotlinpoet.LambdaTypeName
 import com.squareup.kotlinpoet.MemberName
 import com.squareup.kotlinpoet.ParameterSpec
 import com.squareup.kotlinpoet.TypeSpec
+import com.squareup.kotlinpoet.UNIT
+import community.flock.kotlinx.openapi.bindings.MediaType
+import community.flock.kotlinx.openapi.bindings.OpenAPIV3Operation
 import community.flock.kotlinx.openapi.bindings.OpenAPIV3RequestBody
+import community.flock.kotlinx.openapi.bindings.OpenAPIV3Response
 import community.flock.kotlinx.openapi.bindings.OpenAPIV3Schema
 import community.flock.kotlinx.openapi.bindings.OpenAPIV3Type
 import io.ktor.http.HttpStatusCode.Companion.InternalServerError
@@ -59,6 +64,8 @@ internal class OperationBuilder(
         val parametersClass = ClassName("io.ktor.http", "Parameters")
         val headersOfMember = MemberName("io.ktor.http", "headersOf")
         val httpHeadersClass = ClassName("io.ktor.http", "HttpHeaders")
+        val sseMember = MemberName("io.ktor.client.plugins.sse", "sse")
+        val clientSseSessionClass = ClassName("io.ktor.client.plugins.sse", "ClientSSESession")
         const val ALIAS_HEADER = "setHeader"
     }
 
@@ -91,14 +98,6 @@ internal class OperationBuilder(
         requestBodyInfo?.formTypeSpec?.let { clientBuilder.addType(it) }
         requestBodyInfo?.additionalTypeSpecs?.forEach { clientBuilder.addType(it) }
 
-        // Response types
-        val responseSealedName = "${responseBaseName}Response"
-        val packageName = apiModel.configuration.clientPackage
-        val responseSealedClass = ClassName(packageName, clientName, responseSealedName)
-        clientBuilder.addType(responseBuilder.createSealedResponseClass(responseSealedName))
-        val responseEntries =
-            responseBuilder.buildResponseTypes(operation, clientBuilder, responseBaseName, responseSealedClass)
-
         // group parameters
         val parameters = operationInfo.parameters
         val pathParameters = parameters.filter { it.isPath }
@@ -108,6 +107,32 @@ internal class OperationBuilder(
         // Update context flags
         if (pathParameters.isNotEmpty()) context.hasPathComponents = true
         if (headerParameters.isNotEmpty()) context.hasHeaders = true
+
+        val trimmedPath = buildPathExpression(operationInfo.path, pathParameters)
+
+        if (isSseOperation(operation)) {
+            context.hasSseOperations = true
+            buildSseOperation(
+                context = context,
+                operationInfo = operationInfo,
+                clientBuilder = clientBuilder,
+                functionName = functionName,
+                requestBodyInfo = requestBodyInfo,
+                pathParameters = pathParameters,
+                queryParameters = queryParameters,
+                headerParameters = headerParameters,
+                trimmedPath = trimmedPath,
+            )
+            return
+        }
+
+        // Response types
+        val responseSealedName = "${responseBaseName}Response"
+        val packageName = apiModel.configuration.clientPackage
+        val responseSealedClass = ClassName(packageName, clientName, responseSealedName)
+        clientBuilder.addType(responseBuilder.createSealedResponseClass(responseSealedName))
+        val responseEntries =
+            responseBuilder.buildResponseTypes(operation, clientBuilder, responseBaseName, responseSealedClass)
 
         // Build function
         val methodMember = MemberName("io.ktor.client.request", operationInfo.method)
@@ -128,7 +153,6 @@ internal class OperationBuilder(
         // Build function body
         val requestContentTypes = requestBodyInfo?.contentTypes
         val hasJsonContentType = requestContentTypes?.any { it.equals("application/json", ignoreCase = true) } == true
-        val trimmedPath = buildPathExpression(operationInfo.path, pathParameters)
 
         funBuilder.addCode(
             buildFunctionBody(
@@ -144,6 +168,139 @@ internal class OperationBuilder(
         )
 
         clientBuilder.addFunction(funBuilder.build())
+    }
+
+    private fun isSseOperation(operation: OpenAPIV3Operation): Boolean {
+        val responses = operation.responses ?: return false
+        return responses.entries.any { (key, value) ->
+            val code = key.value.toIntOrNull() ?: return@any false
+            if (code !in 200..299) return@any false
+            val response = value as? OpenAPIV3Response ?: return@any false
+            response.content?.containsKey(MediaType("text/event-stream")) == true
+        }
+    }
+
+    private fun buildSseOperation(
+        context: ClientGenerationContext,
+        operationInfo: ApiOperation,
+        clientBuilder: TypeSpec.Builder,
+        functionName: String,
+        requestBodyInfo: RequestBodyInfo?,
+        pathParameters: List<Parameter>,
+        queryParameters: List<Parameter>,
+        headerParameters: List<Parameter>,
+        trimmedPath: String,
+    ) {
+        val operation = operationInfo.operation
+        val blockType =
+            LambdaTypeName
+                .get(
+                    receiver = clientSseSessionClass,
+                    returnType = UNIT,
+                ).copy(suspending = true)
+
+        val funBuilder =
+            FunSpec
+                .builder(functionName)
+                .addModifiers(KModifier.SUSPEND)
+
+        operation.summary?.let { funBuilder.addKdoc("%L\n", it) }
+
+        // Add parameters
+        requestBodyInfo?.let { funBuilder.addParameter(it.parameterName, it.parameterType) }
+        addParameters(funBuilder, pathParameters)
+        addParameters(funBuilder, queryParameters)
+        addParameters(funBuilder, headerParameters)
+        funBuilder.addParameter(ParameterSpec.builder("block", blockType).build())
+
+        funBuilder.addCode(buildSseFunctionBody(trimmedPath, headerParameters, queryParameters))
+
+        clientBuilder.addFunction(funBuilder.build())
+    }
+
+    private fun buildSseFunctionBody(
+        trimmedPath: String,
+        headerParameters: List<Parameter>,
+        queryParameters: List<Parameter>,
+    ): CodeBlock {
+        val hasRequestConfig = headerParameters.isNotEmpty() || queryParameters.isNotEmpty()
+        val builder = CodeBlock.builder()
+        builder.beginControlFlow("try")
+
+        if (hasRequestConfig) {
+            builder.beginControlFlow(
+                "configuration.client.%M(urlString = %L, request = {",
+                sseMember,
+                trimmedPath,
+            )
+            headerParameters.forEach { param ->
+                if (param.constName != null) {
+                    if (param.isOptional) {
+                        builder.beginControlFlow("if (%N != null)", param.parameterName)
+                        builder.addStatement(
+                            "$ALIAS_HEADER(%T.%L, %N)",
+                            clientConfigurationClass,
+                            param.constName,
+                            param.parameterName,
+                        )
+                        builder.endControlFlow()
+                    } else {
+                        builder.addStatement(
+                            "$ALIAS_HEADER(%T.%L, %N)",
+                            clientConfigurationClass,
+                            param.constName,
+                            param.parameterName,
+                        )
+                    }
+                } else {
+                    if (param.isOptional) {
+                        builder.beginControlFlow("if (%N != null)", param.parameterName)
+                        builder.addStatement(
+                            "$ALIAS_HEADER(%S, %N)",
+                            param.parameter.name,
+                            param.parameterName,
+                        )
+                        builder.endControlFlow()
+                    } else {
+                        builder.addStatement(
+                            "$ALIAS_HEADER(%S, %N)",
+                            param.parameter.name,
+                            param.parameterName,
+                        )
+                    }
+                }
+            }
+            if (queryParameters.isNotEmpty()) {
+                builder.beginControlFlow("url")
+                queryParameters.forEach { param ->
+                    val suffix = param.toStringSuffix
+                    if (param.isOptional) {
+                        builder.beginControlFlow("if (%N != null)", param.parameterName)
+                        builder.addStatement("parameters.append(%S, %N$suffix)", param.originalName, param.parameterName)
+                        builder.endControlFlow()
+                    } else {
+                        builder.addStatement("parameters.append(%S, %N$suffix)", param.originalName, param.parameterName)
+                    }
+                }
+                builder.endControlFlow()
+            }
+            builder.endControlFlow()
+            builder.beginControlFlow(")")
+        } else {
+            builder.beginControlFlow(
+                "configuration.client.%M(urlString = %L)",
+                sseMember,
+                trimmedPath,
+            )
+        }
+
+        builder.addStatement("block()")
+        builder.endControlFlow()
+        builder.endControlFlow()
+        builder.beginControlFlow("catch(e: Exception)")
+        builder.addStatement("%L(%L)", "configuration.exceptionLogger", "e")
+        builder.endControlFlow()
+        return builder.build()
     }
 
     private fun addParameters(
@@ -260,7 +417,7 @@ internal class OperationBuilder(
                 // Request body
                 when {
                     requestBody == null -> {
-                        //skip
+                        // skip
                     }
 
                     requestBody.isMultipartFormData -> {
