@@ -1,10 +1,11 @@
 package org.litote.openapi.ktor.client.generator.plugin
 
+import org.gradle.api.Action
 import org.gradle.api.NamedDomainObjectContainer
 import org.gradle.api.model.ObjectFactory
 import org.gradle.api.provider.Property
 import org.gradle.api.tasks.Input
-import org.gradle.api.tasks.Optional
+import org.gradle.api.tasks.Nested
 import javax.inject.Inject
 
 public abstract class ApiClientGeneratorsExtension
@@ -19,6 +20,13 @@ public abstract class ApiClientGeneratorsExtension
 
         @get:Input
         public val skip: Property<Boolean> = objects.property(Boolean::class.java)
+
+        @get:Nested
+        public val initSubproject: InitSubprojectExtension = objects.newInstance(InitSubprojectExtension::class.java)
+
+        public fun initSubproject(action: Action<InitSubprojectExtension>) {
+            action.execute(initSubproject)
+        }
 
         init {
             skip.convention(false)

@@ -41,7 +41,7 @@ apiClientGenerator {
 }
 ```
 
-For a complete example with all available options, see [e2e/build.gradle.kts](e2e/build.gradle.kts).
+There is a project sample: [e2e/build.gradle.kts](e2e/build.gradle.kts).
 
 ## Usage
 
@@ -63,10 +63,20 @@ This will generate Ktor client code based on your OpenAPI specification and plug
 
 ### Root properties
 
-| Property       | Description                 | Default value                   | Allowed values                                  |
-|----------------|-----------------------------|---------------------------------|-------------------------------------------------|
-| `generators`   | Generators configuration    | `{}`                            | Any configuration                               |
-| `skip`         | Skip all clients generation | false                           | Boolean                                         |
+| Property               | Description                                                              | Default value                   | Allowed values   |
+|------------------------|--------------------------------------------------------------------------|---------------------------------|------------------|
+| `generators`           | Generators configuration                                                 | `{}`                            | Any configuration |
+| `skip`                 | Skip all clients generation                                              | `false`                         | Boolean          |
+| `initSubproject`       | Version overrides for the `initApiClientSubproject` scaffolding task     | see below                       |                  |
+
+### `initSubproject` properties
+
+| Property               | Description                                                              | Default value  | Allowed values    |
+|------------------------|--------------------------------------------------------------------------|----------------|-------------------|
+| `kotlinVersion`        | Kotlin version used by `initApiClientSubproject`                         | from `libs.versions.toml` | Any valid version |
+| `ktorVersion`          | Ktor version used by `initApiClientSubproject`                           | from `libs.versions.toml` | Any valid version |
+| `coroutinesVersion`    | `kotlinx-coroutines` version used by `initApiClientSubproject`           | from `libs.versions.toml` | Any valid version |
+| `serializationVersion` | `kotlinx-serialization` version used by `initApiClientSubproject`        | from `libs.versions.toml` | Any valid version |
 
 ### Generator properties
 
@@ -78,6 +88,64 @@ This will generate Ktor client code based on your OpenAPI specification and plug
 | `allowedPaths` | Restrict generation to a subset of OpenAPI paths                                        | empty (all paths are generated) | Any subset of paths defined in the OpenAPI spec |
 | `modulesIds` | Extra generation modules to enable                                                      | Empty (no modules) | `UnknownEnumValueModule`, `LoggingSl4jModule` |
 | `skip`         | Skip this client generation                                                             | false                           | Boolean                                         |
+
+## Scaffolding a new subproject
+
+The plugin provides a `initApiClientSubproject` task to scaffold a ready-to-use Gradle subproject
+containing a pre-configured `build.gradle.kts` and your OpenAPI spec file.
+
+```bash
+./gradlew initApiClientSubproject \
+  -PopenApiFile=<path/to/spec.yaml> \
+  [-PsubprojectName=<directory-name>]
+```
+
+- `-PopenApiFile` — path to the OpenAPI spec (absolute or relative to the project root). **Required.**
+- `-PsubprojectName` — name of the directory to create. **Optional** — defaults to the spec filename without extension.
+
+### Example
+
+```bash
+./gradlew initApiClientSubproject -PopenApiFile=./specs/petstore.json
+```
+
+This creates the following structure:
+
+```
+petstore/
+├── build.gradle.kts        # pre-configured with the plugin + dependencies
+└── src/
+    └── main/
+        └── openapi/
+            └── petstore.json
+```
+
+The generated `build.gradle.kts` includes:
+- The `org.litote.openapi.ktor.client.generator.gradle` plugin
+- `kotlinx-serialization-json`, `kotlinx-coroutines-core`
+- All Ktor client modules: `ktor-client-core`, `ktor-client-cio`, `ktor-client-content-negotiation`, `ktor-serialization-kotlinx-json`, `ktor-client-logging`
+- A pre-filled `apiClientGenerator` block pointing to the copied spec file
+
+Then add the subproject to your `settings.gradle.kts`:
+
+```kotlin
+include("petstore")
+```
+
+### Customising dependency versions
+
+The versions embedded in the generated `build.gradle.kts` can be overridden in the plugin configuration:
+
+```kotlin
+apiClientGenerator {
+    initSubproject {
+        kotlinVersion        = "2.0.0"
+        ktorVersion          = "2.3.12"
+        coroutinesVersion    = "1.7.3"
+        serializationVersion = "1.6.3"
+    }
+}
+```
 
 ## Troubleshooting
 
