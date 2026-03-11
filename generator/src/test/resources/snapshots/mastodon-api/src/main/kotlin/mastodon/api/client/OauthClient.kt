@@ -9,8 +9,8 @@ import io.ktor.http.contentType
 import kotlin.Boolean
 import kotlin.Int
 import kotlin.String
+import kotlinx.serialization.SerialName
 import kotlinx.serialization.Serializable
-import kotlinx.serialization.json.JsonElement
 import mastodon.api.client.ClientConfiguration.Companion.defaultClientConfiguration
 import mastodon.api.model.Error
 import mastodon.api.model.Token
@@ -76,7 +76,7 @@ public class OauthClient(
   /**
    * Revoke a token
    */
-  public suspend fun postOauthRevoke(request: JsonElement): PostOauthRevokeResponse {
+  public suspend fun postOauthRevoke(request: PostOauthRevokeRequest): PostOauthRevokeResponse {
     try {
       val response = configuration.client.post("oauth/revoke") {
         setBody(request)
@@ -99,7 +99,7 @@ public class OauthClient(
   /**
    * Obtain a token
    */
-  public suspend fun postOauthToken(request: JsonElement): PostOauthTokenResponse {
+  public suspend fun postOauthToken(request: PostOauthTokenRequest): PostOauthTokenResponse {
     try {
       val response = configuration.client.post("oauth/token") {
         setBody(request)
@@ -165,6 +165,15 @@ public class OauthClient(
   ) : GetOauthAuthorizeResponse()
 
   @Serializable
+  public data class PostOauthRevokeRequest(
+    @SerialName("client_id")
+    public val clientId: String,
+    @SerialName("client_secret")
+    public val clientSecret: String,
+    public val token: String,
+  )
+
+  @Serializable
   public sealed class PostOauthRevokeResponse
 
   @Serializable
@@ -187,6 +196,22 @@ public class OauthClient(
   public data class PostOauthRevokeResponseUnknownFailure(
     public val statusCode: Int,
   ) : PostOauthRevokeResponse()
+
+  @Serializable
+  public data class PostOauthTokenRequest(
+    @SerialName("client_id")
+    public val clientId: String,
+    @SerialName("client_secret")
+    public val clientSecret: String,
+    public val code: String,
+    @SerialName("code_verifier")
+    public val codeVerifier: String? = null,
+    @SerialName("grant_type")
+    public val grantType: String,
+    @SerialName("redirect_uri")
+    public val redirectUri: String,
+    public val scope: String? = "read",
+  )
 
   @Serializable
   public sealed class PostOauthTokenResponse

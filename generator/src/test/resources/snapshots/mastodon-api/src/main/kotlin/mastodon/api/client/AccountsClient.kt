@@ -12,6 +12,7 @@ import kotlin.Boolean
 import kotlin.Int
 import kotlin.Long
 import kotlin.String
+import kotlinx.serialization.SerialName
 import kotlinx.serialization.Serializable
 import kotlinx.serialization.json.JsonElement
 import mastodon.api.client.ClientConfiguration.Companion.defaultClientConfiguration
@@ -23,6 +24,7 @@ import mastodon.api.model.FeaturedTag
 import mastodon.api.model.IdentityProof
 import mastodon.api.model.Relationship
 import mastodon.api.model.Status
+import mastodon.api.model.StatusVisibilityEnum
 import mastodon.api.model.Token
 import mastodon.api.model.ValidationError
 import kotlin.collections.List as CollectionsList
@@ -60,7 +62,7 @@ public class AccountsClient(
   /**
    * Register an account
    */
-  public suspend fun createAccount(request: JsonElement): CreateAccountResponse {
+  public suspend fun createAccount(request: CreateAccountRequest): CreateAccountResponse {
     try {
       val response = configuration.client.post("api/v1/accounts") {
         setBody(request)
@@ -202,7 +204,7 @@ public class AccountsClient(
   /**
    * Follow account
    */
-  public suspend fun postAccountFollow(request: JsonElement, id: String): PostAccountFollowResponse {
+  public suspend fun postAccountFollow(request: PostAccountFollowRequest, id: String): PostAccountFollowResponse {
     try {
       val response = configuration.client.post("api/v1/accounts/{id}/follow".replace("/{id}", "/${id.encodeURLPathPart()}")) {
         setBody(request)
@@ -346,7 +348,7 @@ public class AccountsClient(
   /**
    * Mute account
    */
-  public suspend fun postAccountMute(request: JsonElement, id: String): PostAccountMuteResponse {
+  public suspend fun postAccountMute(request: PostAccountMuteRequest, id: String): PostAccountMuteResponse {
     try {
       val response = configuration.client.post("api/v1/accounts/{id}/mute".replace("/{id}", "/${id.encodeURLPathPart()}")) {
         setBody(request)
@@ -368,7 +370,7 @@ public class AccountsClient(
   /**
    * Set private note on profile
    */
-  public suspend fun postAccountNote(request: JsonElement, id: String): PostAccountNoteResponse {
+  public suspend fun postAccountNote(request: PostAccountNoteRequest, id: String): PostAccountNoteResponse {
     try {
       val response = configuration.client.post("api/v1/accounts/{id}/note".replace("/{id}", "/${id.encodeURLPathPart()}")) {
         setBody(request)
@@ -710,7 +712,7 @@ public class AccountsClient(
   /**
    * Update account credentials
    */
-  public suspend fun patchAccountsUpdateCredentials(request: JsonElement): PatchAccountsUpdateCredentialsResponse {
+  public suspend fun patchAccountsUpdateCredentials(request: PatchAccountsUpdateCredentialsRequest): PatchAccountsUpdateCredentialsResponse {
     try {
       val response = configuration.client.patch("api/v1/accounts/update_credentials") {
         setBody(request)
@@ -783,6 +785,18 @@ public class AccountsClient(
   public data class GetAccountsResponseUnknownFailure(
     public val statusCode: Int,
   ) : GetAccountsResponse()
+
+  @Serializable
+  public data class CreateAccountRequest(
+    public val agreement: Boolean,
+    @SerialName("date_of_birth")
+    public val dateOfBirth: String? = null,
+    public val email: String,
+    public val locale: String,
+    public val password: String,
+    public val reason: String? = null,
+    public val username: String,
+  )
 
   @Serializable
   public sealed class CreateAccountResponse
@@ -931,6 +945,13 @@ public class AccountsClient(
   ) : GetAccountFeaturedTagsResponse()
 
   @Serializable
+  public data class PostAccountFollowRequest(
+    public val languages: CollectionsList<String>? = null,
+    public val notify: Boolean? = false,
+    public val reblogs: Boolean? = true,
+  )
+
+  @Serializable
   public sealed class PostAccountFollowResponse
 
   @Serializable
@@ -1046,6 +1067,12 @@ public class AccountsClient(
   ) : GetAccountListsResponse()
 
   @Serializable
+  public data class PostAccountMuteRequest(
+    public val duration: Long? = 0,
+    public val notifications: Boolean? = true,
+  )
+
+  @Serializable
   public sealed class PostAccountMuteResponse
 
   @Serializable
@@ -1065,6 +1092,11 @@ public class AccountsClient(
   public data class PostAccountMuteResponseUnknownFailure(
     public val statusCode: Int,
   ) : PostAccountMuteResponse()
+
+  @Serializable
+  public data class PostAccountNoteRequest(
+    public val comment: String? = null,
+  )
 
   @Serializable
   public sealed class PostAccountNoteResponse
@@ -1353,6 +1385,35 @@ public class AccountsClient(
   public data class GetAccountSearchResponseUnknownFailure(
     public val statusCode: Int,
   ) : GetAccountSearchResponse()
+
+  @Serializable
+  public data class PatchAccountsUpdateCredentialsRequest(
+    @SerialName("attribution_domains")
+    public val attributionDomains: CollectionsList<String>? = null,
+    public val avatar: String? = null,
+    public val bot: Boolean? = null,
+    public val discoverable: Boolean? = null,
+    @SerialName("display_name")
+    public val displayName: String? = null,
+    @SerialName("fields_attributes")
+    public val fieldsAttributes: JsonElement? = null,
+    public val `header`: String? = null,
+    @SerialName("hide_collections")
+    public val hideCollections: Boolean? = null,
+    public val indexable: Boolean? = null,
+    public val locked: Boolean? = null,
+    public val note: String? = null,
+    public val source: Source? = null,
+  ) {
+    @Serializable
+    public data class Source(
+      public val language: String? = null,
+      public val privacy: StatusVisibilityEnum? = null,
+      @SerialName("quote_policy")
+      public val quotePolicy: String? = null,
+      public val sensitive: Boolean? = null,
+    )
+  }
 
   @Serializable
   public sealed class PatchAccountsUpdateCredentialsResponse

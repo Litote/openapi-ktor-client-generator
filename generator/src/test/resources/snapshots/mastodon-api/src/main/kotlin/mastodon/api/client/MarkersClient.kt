@@ -10,8 +10,8 @@ import kotlin.Int
 import kotlin.String
 import kotlin.collections.List
 import kotlin.collections.Map
+import kotlinx.serialization.SerialName
 import kotlinx.serialization.Serializable
-import kotlinx.serialization.json.JsonElement
 import mastodon.api.client.ClientConfiguration.Companion.defaultClientConfiguration
 import mastodon.api.model.Error
 import mastodon.api.model.FilterContextEnum
@@ -50,7 +50,7 @@ public class MarkersClient(
   /**
    * Save your position in a timeline
    */
-  public suspend fun createMarker(request: JsonElement): CreateMarkerResponse {
+  public suspend fun createMarker(request: CreateMarkerRequest): CreateMarkerResponse {
     try {
       val response = configuration.client.post("api/v1/markers") {
         setBody(request)
@@ -95,6 +95,24 @@ public class MarkersClient(
   public data class GetMarkersResponseUnknownFailure(
     public val statusCode: Int,
   ) : GetMarkersResponse()
+
+  @Serializable
+  public data class CreateMarkerRequest(
+    public val home: Home? = null,
+    public val notifications: Notifications? = null,
+  ) {
+    @Serializable
+    public data class Home(
+      @SerialName("last_read_id")
+      public val lastReadId: String? = null,
+    )
+
+    @Serializable
+    public data class Notifications(
+      @SerialName("last_read_id")
+      public val lastReadId: String? = null,
+    )
+  }
 
   @Serializable
   public sealed class CreateMarkerResponse

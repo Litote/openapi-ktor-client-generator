@@ -5,12 +5,16 @@ import io.ktor.client.request.post
 import io.ktor.client.request.setBody
 import io.ktor.http.ContentType
 import io.ktor.http.contentType
+import kotlin.Boolean
 import kotlin.Int
+import kotlin.String
+import kotlin.collections.List
+import kotlinx.serialization.SerialName
 import kotlinx.serialization.Serializable
-import kotlinx.serialization.json.JsonElement
 import mastodon.api.client.ClientConfiguration.Companion.defaultClientConfiguration
 import mastodon.api.model.Error
 import mastodon.api.model.Report
+import mastodon.api.model.ReportCategoryEnum
 
 public class ReportsClient(
   private val configuration: ClientConfiguration = defaultClientConfiguration,
@@ -18,7 +22,7 @@ public class ReportsClient(
   /**
    * File a report
    */
-  public suspend fun createReport(request: JsonElement): CreateReportResponse {
+  public suspend fun createReport(request: CreateReportRequest): CreateReportResponse {
     try {
       val response = configuration.client.post("api/v1/reports") {
         setBody(request)
@@ -36,6 +40,19 @@ public class ReportsClient(
       return CreateReportResponseUnknownFailure(500)
     }
   }
+
+  @Serializable
+  public data class CreateReportRequest(
+    @SerialName("account_id")
+    public val accountId: String,
+    public val category: ReportCategoryEnum? = null,
+    public val comment: String? = null,
+    public val forward: Boolean? = false,
+    @SerialName("rule_ids")
+    public val ruleIds: List<String>? = null,
+    @SerialName("status_ids")
+    public val statusIds: List<String>? = null,
+  )
 
   @Serializable
   public sealed class CreateReportResponse

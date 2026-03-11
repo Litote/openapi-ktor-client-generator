@@ -12,7 +12,6 @@ import kotlin.Int
 import kotlin.String
 import kotlin.collections.List
 import kotlinx.serialization.Serializable
-import kotlinx.serialization.json.JsonElement
 import mastodon.api.client.ClientConfiguration.Companion.defaultClientConfiguration
 import mastodon.api.model.Error
 import mastodon.api.model.FeaturedTag
@@ -46,7 +45,7 @@ public class FeaturedTagsClient(
   /**
    * Feature a tag
    */
-  public suspend fun createFeaturedTag(request: JsonElement): CreateFeaturedTagResponse {
+  public suspend fun createFeaturedTag(request: CreateFeaturedTagRequest): CreateFeaturedTagResponse {
     try {
       val response = configuration.client.post("api/v1/featured_tags") {
         setBody(request)
@@ -132,6 +131,11 @@ public class FeaturedTagsClient(
   public data class GetFeaturedTagsResponseUnknownFailure(
     public val statusCode: Int,
   ) : GetFeaturedTagsResponse()
+
+  @Serializable
+  public data class CreateFeaturedTagRequest(
+    public val name: String,
+  )
 
   @Serializable
   public sealed class CreateFeaturedTagResponse

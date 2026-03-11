@@ -12,7 +12,6 @@ import kotlin.Long
 import kotlin.String
 import kotlin.collections.List
 import kotlinx.serialization.Serializable
-import kotlinx.serialization.json.JsonElement
 import mastodon.api.client.ClientConfiguration.Companion.defaultClientConfiguration
 import mastodon.api.model.Error
 import mastodon.api.model.ValidationError
@@ -63,7 +62,7 @@ public class DomainBlocksClient(
   /**
    * Block a domain
    */
-  public suspend fun createDomainBlock(request: JsonElement): CreateDomainBlockResponse {
+  public suspend fun createDomainBlock(request: CreateDomainBlockRequest): CreateDomainBlockResponse {
     try {
       val response = configuration.client.post("api/v1/domain_blocks") {
         setBody(request)
@@ -85,7 +84,7 @@ public class DomainBlocksClient(
   /**
    * Unblock a domain
    */
-  public suspend fun deleteDomainBlocks(request: JsonElement): DeleteDomainBlocksResponse {
+  public suspend fun deleteDomainBlocks(request: DeleteDomainBlocksRequest): DeleteDomainBlocksResponse {
     try {
       val response = configuration.client.delete("api/v1/domain_blocks") {
         setBody(request)
@@ -131,6 +130,11 @@ public class DomainBlocksClient(
   ) : GetDomainBlocksResponse()
 
   @Serializable
+  public data class CreateDomainBlockRequest(
+    public val domain: String,
+  )
+
+  @Serializable
   public sealed class CreateDomainBlockResponse
 
   @Serializable
@@ -148,6 +152,11 @@ public class DomainBlocksClient(
   public data class CreateDomainBlockResponseUnknownFailure(
     public val statusCode: Int,
   ) : CreateDomainBlockResponse()
+
+  @Serializable
+  public data class DeleteDomainBlocksRequest(
+    public val domain: String,
+  )
 
   @Serializable
   public sealed class DeleteDomainBlocksResponse

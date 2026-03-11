@@ -14,15 +14,18 @@ import kotlin.Int
 import kotlin.Long
 import kotlin.String
 import kotlin.collections.List
+import kotlinx.serialization.SerialName
 import kotlinx.serialization.Serializable
 import kotlinx.serialization.json.JsonElement
 import mastodon.api.client.ClientConfiguration.Companion.defaultClientConfiguration
 import mastodon.api.model.Account
 import mastodon.api.model.Context
+import mastodon.api.model.CreateStatusRequest
 import mastodon.api.model.Error
 import mastodon.api.model.Status
 import mastodon.api.model.StatusEdit
 import mastodon.api.model.StatusSource
+import mastodon.api.model.StatusVisibilityEnum
 import mastodon.api.model.Translation
 import mastodon.api.model.ValidationError
 import io.ktor.client.request.`header` as setHeader
@@ -59,7 +62,7 @@ public class StatusesClient(
   /**
    * Post a new status
    */
-  public suspend fun createStatus(request: JsonElement, idempotencyKey: JsonElement? = null): CreateStatusResponse {
+  public suspend fun createStatus(request: CreateStatusRequest, idempotencyKey: JsonElement? = null): CreateStatusResponse {
     try {
       val response = configuration.client.post("api/v1/statuses") {
         if (idempotencyKey != null) {
@@ -105,7 +108,7 @@ public class StatusesClient(
   /**
    * Edit a status
    */
-  public suspend fun updateStatus(request: JsonElement, id: String): UpdateStatusResponse {
+  public suspend fun updateStatus(request: UpdateStatusRequest, id: String): UpdateStatusResponse {
     try {
       val response = configuration.client.put("api/v1/statuses/{id}".replace("/{id}", "/${id.encodeURLPathPart()}")) {
         setBody(request)
@@ -274,7 +277,7 @@ public class StatusesClient(
   /**
    * Edit a status' interaction policies
    */
-  public suspend fun updateStatusInteractionPolicy(request: JsonElement, id: String): UpdateStatusInteractionPolicyResponse {
+  public suspend fun updateStatusInteractionPolicy(request: UpdateStatusInteractionPolicyRequest, id: String): UpdateStatusInteractionPolicyResponse {
     try {
       val response = configuration.client.put("api/v1/statuses/{id}/interaction_policy".replace("/{id}", "/${id.encodeURLPathPart()}")) {
         setBody(request)
@@ -396,7 +399,7 @@ public class StatusesClient(
   /**
    * Boost a status
    */
-  public suspend fun postStatusReblog(request: JsonElement, id: String): PostStatusReblogResponse {
+  public suspend fun postStatusReblog(request: PostStatusReblogRequest, id: String): PostStatusReblogResponse {
     try {
       val response = configuration.client.post("api/v1/statuses/{id}/reblog".replace("/{id}", "/${id.encodeURLPathPart()}")) {
         setBody(request)
@@ -477,7 +480,7 @@ public class StatusesClient(
   /**
    * Translate a status
    */
-  public suspend fun postStatusTranslate(request: JsonElement, id: String): PostStatusTranslateResponse {
+  public suspend fun postStatusTranslate(request: PostStatusTranslateRequest, id: String): PostStatusTranslateResponse {
     try {
       val response = configuration.client.post("api/v1/statuses/{id}/translate".replace("/{id}", "/${id.encodeURLPathPart()}")) {
         setBody(request)
@@ -682,6 +685,32 @@ public class StatusesClient(
   ) : GetStatusResponse()
 
   @Serializable
+  public data class UpdateStatusRequest(
+    public val language: String? = null,
+    @SerialName("media_attributes[]")
+    public val mediaAttributes: List<String>? = null,
+    @SerialName("media_ids")
+    public val mediaIds: List<String>? = null,
+    public val poll: Poll? = null,
+    @SerialName("quote_approval_policy")
+    public val quoteApprovalPolicy: String? = null,
+    public val sensitive: Boolean? = null,
+    @SerialName("spoiler_text")
+    public val spoilerText: String? = null,
+    public val status: String? = null,
+  ) {
+    @Serializable
+    public data class Poll(
+      @SerialName("expires_in")
+      public val expiresIn: Long? = null,
+      @SerialName("hide_totals")
+      public val hideTotals: Boolean? = null,
+      public val multiple: Boolean? = null,
+      public val options: List<String>? = null,
+    )
+  }
+
+  @Serializable
   public sealed class UpdateStatusResponse
 
   @Serializable
@@ -859,6 +888,12 @@ public class StatusesClient(
   ) : GetStatusHistoryResponse()
 
   @Serializable
+  public data class UpdateStatusInteractionPolicyRequest(
+    @SerialName("quote_approval_policy")
+    public val quoteApprovalPolicy: String? = null,
+  )
+
+  @Serializable
   public sealed class UpdateStatusInteractionPolicyResponse
 
   @Serializable
@@ -984,6 +1019,11 @@ public class StatusesClient(
   ) : PostStatusesByIdQuotesByQuotingStatusIdRevokeResponse()
 
   @Serializable
+  public data class PostStatusReblogRequest(
+    public val visibility: StatusVisibilityEnum? = null,
+  )
+
+  @Serializable
   public sealed class PostStatusReblogResponse
 
   @Serializable
@@ -1060,6 +1100,11 @@ public class StatusesClient(
   public data class GetStatusSourceResponseUnknownFailure(
     public val statusCode: Int,
   ) : GetStatusSourceResponse()
+
+  @Serializable
+  public data class PostStatusTranslateRequest(
+    public val lang: String? = null,
+  )
 
   @Serializable
   public sealed class PostStatusTranslateResponse

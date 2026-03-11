@@ -106,6 +106,69 @@ public class ApiModel private constructor(
             ?.mapValues { (_, v) -> v.allReferences().map { getRefClassName(it) }.toSet() }
             ?: emptyMap()
 
+    /**
+     * Maps sealed class parent names (derived from operation request bodies with inline `oneOf`)
+     * to their ordered list of sub-type ref names.
+     *
+     * These are "virtual" sealed classes that do not exist in `components/schemas` but are
+     * synthesised from operations whose request body contains an inline `oneOf` with 2+ `$ref` entries.
+     *
+     * Naming convention: `{operationId.capitalize()}Request` (e.g. `createStatus` → `CreateStatusRequest`).
+     */
+    internal val requestBodySealedParents: Map<String, List<String>> =
+        model.paths
+            .values
+            .flatMap { pathItem ->
+                listOfNotNull(
+                    pathItem.get,
+                    pathItem.post,
+                    pathItem.put,
+                    pathItem.delete,
+                    pathItem.patch,
+                    pathItem.options,
+                    pathItem.head,
+                    pathItem.trace,
+                ).mapNotNull { op ->
+                    val opId = op.operationId ?: return@mapNotNull null
+                    val schema =
+                        (op.requestBody as? OpenAPIV3RequestBody)
+                            ?.content
+                            ?.values
+                            ?.firstOrNull()
+                            ?.schema as? OpenAPIV3Schema
+                            ?: return@mapNotNull null
+                    val refs = schema.oneOf?.filterIsInstance<OpenAPIV3Reference>() ?: return@mapNotNull null
+                    if (refs.size < 2) return@mapNotNull null
+                    val sealedName = "${opId.snakeToCamelCase().capitalize()}Request"
+                    sealedName to refs.map { getRefClassName(it) }
+                }
+            }.toMap()
+
+    /**
+     * Maps sealed class parent names to their ordered list of sub-type names.
+     * A schema qualifies as a sealed parent when its `oneOf` contains at least 2 `$ref` entries.
+     * Also includes virtual sealed parents synthesised from inline request body `oneOf` schemas.
+     */
+    public val sealedParents: Map<String, List<String>> =
+        (
+            components
+                ?.schemas
+                ?.entries
+                ?.mapNotNull { (name, schemaOrRef) ->
+                    val schema = schemaOrRef as? OpenAPIV3Schema ?: return@mapNotNull null
+                    val refs = schema.oneOf?.filterIsInstance<OpenAPIV3Reference>() ?: return@mapNotNull null
+                    if (refs.size < 2) return@mapNotNull null
+                    name to refs.map { getRefClassName(it) }
+                }?.toMap()
+                ?: emptyMap()
+        ) + requestBodySealedParents
+
+    /** Reverse of [sealedParents]: maps each sub-type name to its sealed parent name. */
+    public val sealedSubTypes: Map<String, String> =
+        sealedParents
+            .flatMap { (parent, children) -> children.map { it to parent } }
+            .toMap()
+
     public val schemas: Map<String, OpenAPIV3Schema> =
         (
             pathsByTags
@@ -180,7 +243,7 @@ public class ApiModel private constructor(
     private fun OpenAPIV3Operation.allReferences(): Set<OpenAPIV3Reference> =
         setOfNotNull(requestBody as? OpenAPIV3Reference) +
             (
-                (requestBody as? OpenAPIV3RequestBody)?.content?.values?.mapNotNull { it.schema as? OpenAPIV3Reference }
+                (requestBody as? OpenAPIV3RequestBody)?.content?.values?.flatMap { it.schema.allReferences() }
                     ?: emptyList()
             ) +
             (parameters?.mapNotNull { it as? OpenAPIV3Reference } ?: emptyList()) +
@@ -346,11 +409,32 @@ public class ApiModel private constructor(
             else -> {
                 val oneOf = schemaOrReference.oneOf
                 if (oneOf?.isNotEmpty() == true) {
-                    if (oneOf.size == 1) {
-                        getClassName(name, oneOf.first())
-                    } else {
-                        // Fallback for polymorphic responses.
-                        JsonElement::class.asClassName()
+                    val refs = oneOf.filterIsInstance<OpenAPIV3Reference>()
+                    val hasNullSchema = oneOf.any { it.isNullSchema() }
+                    when {
+                        refs.size == 1 && hasNullSchema -> {
+                            // oneOf: [$ref, {type: null}] — treat as nullable reference type
+                            getClassName(name, refs.first()).copy(nullable = true)
+                        }
+
+                        refs.size == 1 -> {
+                            getClassName(name, refs.first())
+                        }
+
+                        else -> {
+                            // Check if this inline oneOf corresponds to a known request body sealed parent.
+                            val refNames = refs.map { getRefClassName(it) }
+                            val parentName =
+                                requestBodySealedParents.entries
+                                    .firstOrNull { it.value.toSet() == refNames.toSet() }
+                                    ?.key
+                            if (parentName != null) {
+                                ClassName(configuration.modelPackage, parentName)
+                            } else {
+                                // Fallback for polymorphic inline schemas.
+                                JsonElement::class.asClassName()
+                            }
+                        }
                     }
                 } else {
                     // Fallback for other responses.
@@ -384,8 +468,10 @@ public class ApiModel private constructor(
                     }
 
                     is OpenAPIV3TypeArray -> {
-                        logger.warn { "For now only first type is handled for $schemaOrReference" }
-                        getClassName(name, schemaOrReference, type.values.first())
+                        if (type.values.size > 1 && (type.values.size > 2 || !type.values.contains(OpenAPIV3Type.NULL))) {
+                            logger.warn { "For now only first type is handled for $schemaOrReference" }
+                        }
+                        getClassName(name, schemaOrReference, type.values.first { it != OpenAPIV3Type.NULL })
                     }
 
                     null -> {
@@ -407,4 +493,12 @@ public class ApiModel private constructor(
             },
             schemaOrReference,
         )
+
+    private fun OpenAPIV3SchemaOrReference.isNullSchema(): Boolean =
+        this is OpenAPIV3Schema &&
+            when (val t = type) {
+                is OpenAPIV3SingleType -> t.value == OpenAPIV3Type.NULL
+                is OpenAPIV3TypeArray -> t.values.all { it == OpenAPIV3Type.NULL }
+                null -> false
+            }
 }

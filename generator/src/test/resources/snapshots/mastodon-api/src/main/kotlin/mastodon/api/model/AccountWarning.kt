@@ -4,12 +4,11 @@ import kotlin.String
 import kotlin.collections.List
 import kotlinx.serialization.SerialName
 import kotlinx.serialization.Serializable
-import kotlinx.serialization.json.JsonElement
 
 @Serializable
 public data class AccountWarning(
   public val action: AccountWarningActionEnum,
-  public val appeal: JsonElement? = null,
+  public val appeal: Appeal? = null,
   @SerialName("created_at")
   public val createdAt: String,
   public val id: String,

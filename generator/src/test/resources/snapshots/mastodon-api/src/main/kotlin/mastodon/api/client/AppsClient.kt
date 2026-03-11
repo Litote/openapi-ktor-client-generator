@@ -7,8 +7,10 @@ import io.ktor.client.request.setBody
 import io.ktor.http.ContentType
 import io.ktor.http.contentType
 import kotlin.Int
+import kotlin.String
+import kotlin.collections.List
+import kotlinx.serialization.SerialName
 import kotlinx.serialization.Serializable
-import kotlinx.serialization.json.JsonElement
 import mastodon.api.client.ClientConfiguration.Companion.defaultClientConfiguration
 import mastodon.api.model.Application
 import mastodon.api.model.CredentialApplication
@@ -21,7 +23,7 @@ public class AppsClient(
   /**
    * Create an application
    */
-  public suspend fun createApp(request: JsonElement): CreateAppResponse {
+  public suspend fun createApp(request: CreateAppRequest): CreateAppResponse {
     try {
       val response = configuration.client.post("api/v1/apps") {
         setBody(request)
@@ -60,6 +62,16 @@ public class AppsClient(
       return GetAppsVerifyCredentialsResponseUnknownFailure(500)
     }
   }
+
+  @Serializable
+  public data class CreateAppRequest(
+    @SerialName("client_name")
+    public val clientName: String,
+    @SerialName("redirect_uris")
+    public val redirectUris: List<String>,
+    public val scopes: String? = "read",
+    public val website: String? = null,
+  )
 
   @Serializable
   public sealed class CreateAppResponse

@@ -9,14 +9,16 @@ import io.ktor.client.request.setBody
 import io.ktor.http.ContentType
 import io.ktor.http.contentType
 import io.ktor.http.encodeURLPathPart
+import kotlin.Boolean
 import kotlin.Int
 import kotlin.Long
 import kotlin.String
+import kotlinx.serialization.SerialName
 import kotlinx.serialization.Serializable
-import kotlinx.serialization.json.JsonElement
 import mastodon.api.client.ClientConfiguration.Companion.defaultClientConfiguration
 import mastodon.api.model.Account
 import mastodon.api.model.Error
+import mastodon.api.model.ListRepliesPolicyEnum
 import mastodon.api.model.ValidationError
 import kotlin.collections.List as CollectionsList
 import mastodon.api.model.List as ModelList
@@ -48,7 +50,7 @@ public class ListsClient(
   /**
    * Create a list
    */
-  public suspend fun createList(request: JsonElement): CreateListResponse {
+  public suspend fun createList(request: CreateListRequest): CreateListResponse {
     try {
       val response = configuration.client.post("api/v1/lists") {
         setBody(request)
@@ -91,7 +93,7 @@ public class ListsClient(
   /**
    * Update a list
    */
-  public suspend fun updateList(request: JsonElement, id: String): UpdateListResponse {
+  public suspend fun updateList(request: UpdateListRequest, id: String): UpdateListResponse {
     try {
       val response = configuration.client.put("api/v1/lists/{id}".replace("/{id}", "/${id.encodeURLPathPart()}")) {
         setBody(request)
@@ -175,7 +177,7 @@ public class ListsClient(
   /**
    * Add accounts to a list
    */
-  public suspend fun postListAccounts(request: JsonElement, id: String): PostListAccountsResponse {
+  public suspend fun postListAccounts(request: PostListAccountsRequest, id: String): PostListAccountsResponse {
     try {
       val response = configuration.client.post("api/v1/lists/{id}/accounts".replace("/{id}", "/${id.encodeURLPathPart()}")) {
         setBody(request)
@@ -197,7 +199,7 @@ public class ListsClient(
   /**
    * Remove accounts from list
    */
-  public suspend fun deleteListAccounts(request: JsonElement, id: String): DeleteListAccountsResponse {
+  public suspend fun deleteListAccounts(request: DeleteListAccountsRequest, id: String): DeleteListAccountsResponse {
     try {
       val response = configuration.client.delete("api/v1/lists/{id}/accounts".replace("/{id}", "/${id.encodeURLPathPart()}")) {
         setBody(request)
@@ -242,6 +244,14 @@ public class ListsClient(
   public data class GetListsResponseUnknownFailure(
     public val statusCode: Int,
   ) : GetListsResponse()
+
+  @Serializable
+  public data class CreateListRequest(
+    public val exclusive: Boolean? = null,
+    @SerialName("replies_policy")
+    public val repliesPolicy: ListRepliesPolicyEnum? = null,
+    public val title: String,
+  )
 
   @Serializable
   public sealed class CreateListResponse
@@ -289,6 +299,14 @@ public class ListsClient(
   public data class GetListResponseUnknownFailure(
     public val statusCode: Int,
   ) : GetListResponse()
+
+  @Serializable
+  public data class UpdateListRequest(
+    public val exclusive: Boolean? = null,
+    @SerialName("replies_policy")
+    public val repliesPolicy: ListRepliesPolicyEnum? = null,
+    public val title: String,
+  )
 
   @Serializable
   public sealed class UpdateListResponse
@@ -362,6 +380,12 @@ public class ListsClient(
   ) : GetListAccountsResponse()
 
   @Serializable
+  public data class PostListAccountsRequest(
+    @SerialName("account_ids")
+    public val accountIds: CollectionsList<String>,
+  )
+
+  @Serializable
   public sealed class PostListAccountsResponse
 
   @Serializable
@@ -379,6 +403,12 @@ public class ListsClient(
   public data class PostListAccountsResponseUnknownFailure(
     public val statusCode: Int,
   ) : PostListAccountsResponse()
+
+  @Serializable
+  public data class DeleteListAccountsRequest(
+    @SerialName("account_ids")
+    public val accountIds: CollectionsList<String>,
+  )
 
   @Serializable
   public sealed class DeleteListAccountsResponse

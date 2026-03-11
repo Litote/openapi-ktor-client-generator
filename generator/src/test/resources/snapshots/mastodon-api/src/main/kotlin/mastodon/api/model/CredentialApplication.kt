@@ -5,7 +5,6 @@ import kotlin.String
 import kotlin.collections.List
 import kotlinx.serialization.SerialName
 import kotlinx.serialization.Serializable
-import kotlinx.serialization.json.JsonElement
 
 @Serializable
 public data class CredentialApplication(
@@ -19,6 +18,6 @@ public data class CredentialApplication(
   public val name: String,
   @SerialName("redirect_uris")
   public val redirectUris: List<String>? = null,
-  public val scopes: JsonElement? = null,
+  public val scopes: OAuthScopes? = null,
   public val website: String? = null,
 )

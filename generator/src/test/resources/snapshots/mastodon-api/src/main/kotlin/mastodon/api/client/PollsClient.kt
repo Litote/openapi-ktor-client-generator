@@ -8,9 +8,10 @@ import io.ktor.http.ContentType
 import io.ktor.http.contentType
 import io.ktor.http.encodeURLPathPart
 import kotlin.Int
+import kotlin.Long
 import kotlin.String
+import kotlin.collections.List
 import kotlinx.serialization.Serializable
-import kotlinx.serialization.json.JsonElement
 import mastodon.api.client.ClientConfiguration.Companion.defaultClientConfiguration
 import mastodon.api.model.Error
 import mastodon.api.model.Poll
@@ -43,7 +44,7 @@ public class PollsClient(
   /**
    * Vote on a poll
    */
-  public suspend fun postPollVotes(request: JsonElement, id: String): PostPollVotesResponse {
+  public suspend fun postPollVotes(request: PostPollVotesRequest, id: String): PostPollVotesResponse {
     try {
       val response = configuration.client.post("api/v1/polls/{id}/votes".replace("/{id}", "/${id.encodeURLPathPart()}")) {
         setBody(request)
@@ -87,6 +88,11 @@ public class PollsClient(
   public data class GetPollResponseUnknownFailure(
     public val statusCode: Int,
   ) : GetPollResponse()
+
+  @Serializable
+  public data class PostPollVotesRequest(
+    public val choices: List<Long>,
+  )
 
   @Serializable
   public sealed class PostPollVotesResponse

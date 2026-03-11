@@ -16,9 +16,14 @@ public data class StatusEdit(
   public val emojis: List<CustomEmoji>,
   @SerialName("media_attachments")
   public val mediaAttachments: List<MediaAttachment>,
-  public val poll: JsonElement? = null,
+  public val poll: Poll? = null,
   public val quote: JsonElement? = null,
   public val sensitive: Boolean,
   @SerialName("spoiler_text")
   public val spoilerText: String,
-)
+) {
+  @Serializable
+  public data class Poll(
+    public val options: List<JsonElement>,
+  )
+}

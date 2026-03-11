@@ -17,9 +17,7 @@
 package org.litote.openapi.ktor.client.generator
 
 import java.io.File
-import kotlin.test.Ignore
 import kotlin.test.Test
-import kotlin.test.assertEquals
 import kotlin.test.assertTrue
 import kotlin.test.fail
 
@@ -45,7 +43,7 @@ class SnapshotTest {
          */
         private fun shouldUpdateSnapshots(): Boolean =
             System.getenv("UPDATE_SNAPSHOTS")?.toBoolean() == true ||
-                System.getProperty("updateSnapshots")?.toBoolean() == true
+                    System.getProperty("updateSnapshots")?.toBoolean() == true
     }
 
     @Test
@@ -69,6 +67,14 @@ class SnapshotTest {
         runSnapshotTest(
             snapshotName = "mastodon-api",
             openApiFile = "src/test/resources/mastodon.json",
+        )
+    }
+
+    @Test
+    fun `GIVEN inheritance openapi spec WHEN generating THEN output matches snapshot`() {
+        runSnapshotTest(
+            snapshotName = "inheritance-api",
+            openApiFile = "src/test/resources/inheritance.json",
         )
     }
 

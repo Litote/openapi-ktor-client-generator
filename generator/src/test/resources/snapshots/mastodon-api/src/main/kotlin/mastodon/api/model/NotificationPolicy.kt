@@ -1,9 +1,9 @@
 package mastodon.api.model
 
+import kotlin.Long
 import kotlin.String
 import kotlinx.serialization.SerialName
 import kotlinx.serialization.Serializable
-import kotlinx.serialization.json.JsonElement
 
 @Serializable
 public data class NotificationPolicy(
@@ -17,5 +17,13 @@ public data class NotificationPolicy(
   public val forNotFollowing: String,
   @SerialName("for_private_mentions")
   public val forPrivateMentions: String,
-  public val summary: JsonElement,
-)
+  public val summary: Summary,
+) {
+  @Serializable
+  public data class Summary(
+    @SerialName("pending_notifications_count")
+    public val pendingNotificationsCount: Long,
+    @SerialName("pending_requests_count")
+    public val pendingRequestsCount: Long,
+  )
+}

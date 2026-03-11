@@ -6,7 +6,6 @@ import kotlin.String
 import kotlin.collections.List
 import kotlinx.serialization.SerialName
 import kotlinx.serialization.Serializable
-import kotlinx.serialization.json.JsonElement
 
 @Serializable
 public data class CredentialAccount(
@@ -39,16 +38,35 @@ public data class CredentialAccount(
   public val limited: Boolean? = null,
   public val locked: Boolean,
   public val memorial: Boolean? = null,
-  public val moved: JsonElement? = null,
+  public val moved: Account? = null,
   public val noindex: Boolean? = null,
   public val note: String,
   public val role: Role,
   public val roles: List<AccountRole>? = null,
-  public val source: JsonElement,
+  public val source: Source,
   @SerialName("statuses_count")
   public val statusesCount: Long,
   public val suspended: Boolean? = null,
   public val uri: String,
   public val url: String? = null,
   public val username: String,
-)
+) {
+  @Serializable
+  public data class Source(
+    @SerialName("attribution_domains")
+    public val attributionDomains: List<String>? = null,
+    public val discoverable: Boolean? = null,
+    public val fields: List<Field>,
+    @SerialName("follow_requests_count")
+    public val followRequestsCount: Long,
+    @SerialName("hide_collections")
+    public val hideCollections: Boolean? = null,
+    public val indexable: Boolean? = null,
+    public val language: String? = null,
+    public val note: String,
+    public val privacy: StatusVisibilityEnum,
+    @SerialName("quote_policy")
+    public val quotePolicy: CredentialAccountSourceQuotePolicyEnum? = null,
+    public val sensitive: Boolean,
+  )
+}

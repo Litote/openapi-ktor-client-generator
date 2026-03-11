@@ -6,7 +6,6 @@ import kotlin.String
 import kotlin.collections.List
 import kotlinx.serialization.SerialName
 import kotlinx.serialization.Serializable
-import kotlinx.serialization.json.JsonElement
 
 @Serializable
 public data class Account(
@@ -39,7 +38,7 @@ public data class Account(
   public val limited: Boolean? = null,
   public val locked: Boolean,
   public val memorial: Boolean? = null,
-  public val moved: JsonElement? = null,
+  public val moved: Account? = null,
   public val noindex: Boolean? = null,
   public val note: String,
   public val roles: List<AccountRole>? = null,

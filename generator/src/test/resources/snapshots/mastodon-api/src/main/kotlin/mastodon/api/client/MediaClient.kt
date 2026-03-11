@@ -33,10 +33,10 @@ public class MediaClient(
         setBody(MultiPartFormDataContent(formData {
         append("file", form.file.bytes, headersOf(HttpHeaders.ContentType, form.file.contentType.toString()))
         form.description?.let { value ->
-          append("description", value.toString())
+          append("description", value)
         }
         form.focus?.let { value ->
-          append("focus", value.toString())
+          append("focus", value)
         }
         form.thumbnail?.let { value ->
           append("thumbnail", value.bytes, headersOf(HttpHeaders.ContentType, value.contentType.toString()))
@@ -85,10 +85,10 @@ public class MediaClient(
       val response = configuration.client.put("api/v1/media/{id}".replace("/{id}", "/${id.encodeURLPathPart()}")) {
         setBody(MultiPartFormDataContent(formData {
         form.description?.let { value ->
-          append("description", value.toString())
+          append("description", value)
         }
         form.focus?.let { value ->
-          append("focus", value.toString())
+          append("focus", value)
         }
         form.thumbnail?.let { value ->
           append("thumbnail", value.bytes, headersOf(HttpHeaders.ContentType, value.contentType.toString()))
@@ -138,10 +138,10 @@ public class MediaClient(
         setBody(MultiPartFormDataContent(formData {
         append("file", form.file.bytes, headersOf(HttpHeaders.ContentType, form.file.contentType.toString()))
         form.description?.let { value ->
-          append("description", value.toString())
+          append("description", value)
         }
         form.focus?.let { value ->
-          append("focus", value.toString())
+          append("focus", value)
         }
         form.thumbnail?.let { value ->
           append("thumbnail", value.bytes, headersOf(HttpHeaders.ContentType, value.contentType.toString()))

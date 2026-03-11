@@ -14,6 +14,13 @@ internal class ModelGenerator(
                 count++
             }
         }
+        apiModel.requestBodySealedParents.keys.forEach { name ->
+            val generator = ApiModelGenerator(apiModel)
+            apiModel.configuration.modules.forEach { module -> module.process(generator) }
+            val typeSpec = generator.buildSealedClass(name, OpenAPIV3Schema())
+            generator.writeFile(name, typeSpec)
+            count++
+        }
         return count
     }
 

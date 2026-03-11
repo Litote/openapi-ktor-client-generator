@@ -31,9 +31,11 @@ import io.ktor.http.HttpStatusCode.Companion.InternalServerError
 import org.litote.openapi.ktor.client.generator.ApiModel
 import org.litote.openapi.ktor.client.generator.ApiOperation
 import org.litote.openapi.ktor.client.generator.FormField
+import org.litote.openapi.ktor.client.generator.ModelGenerator
 import org.litote.openapi.ktor.client.generator.RequestBodyInfo
 import org.litote.openapi.ktor.client.generator.client.ParameterExtractor.Parameter
 import org.litote.openapi.ktor.client.generator.firstType
+import org.litote.openapi.ktor.client.generator.isString
 import org.litote.openapi.ktor.client.generator.methodName
 import org.litote.openapi.ktor.client.generator.shared.uncapitalize
 
@@ -84,7 +86,7 @@ internal class OperationBuilder(
 
         // Request body
         val requestBody = operation.requestBody as? OpenAPIV3RequestBody
-        val requestBodyInfo = requestBodyInfo(requestBody, responseBaseName)
+        val requestBodyInfo = requestBodyInfo(requestBody, responseBaseName, context.modelGenerator)
         operationInfo.requestBody = requestBodyInfo
         requestBodyInfo?.formTypeSpec?.let { clientBuilder.addType(it) }
         requestBodyInfo?.additionalTypeSpecs?.forEach { clientBuilder.addType(it) }
@@ -258,7 +260,7 @@ internal class OperationBuilder(
                 // Request body
                 when {
                     requestBody == null -> {
-                        Unit
+                        //skip
                     }
 
                     requestBody.isMultipartFormData -> {
@@ -313,6 +315,7 @@ internal class OperationBuilder(
     private fun requestBodyInfo(
         requestBody: OpenAPIV3RequestBody?,
         responseBaseName: String,
+        modelGenerator: ModelGenerator,
     ): RequestBodyInfo? {
         val content = requestBody?.content ?: return null
         val requestSchema =
@@ -336,9 +339,22 @@ internal class OperationBuilder(
             } else {
                 null
             }
+        val inlineObjectSchema =
+            if (!isMultipartFormData && !isUrlEncodedForm) {
+                (requestSchema as? OpenAPIV3Schema)?.takeIf {
+                    it.oneOf.isNullOrEmpty() && !it.properties.isNullOrEmpty()
+                }
+            } else {
+                null
+            }
+        val inlineObjectDefinition =
+            inlineObjectSchema?.let {
+                buildInlineObjectDefinition("${responseBaseName}Request", it, modelGenerator)
+            }
         val requestType =
             when {
                 formBodyDefinition != null -> formBodyDefinition.className
+                inlineObjectDefinition != null -> inlineObjectDefinition.className
                 else -> requestSchema?.let { apiModel.getClassName("${responseBaseName}Request", it) }
             }
         return requestType?.let {
@@ -350,9 +366,29 @@ internal class OperationBuilder(
                 isUrlEncodedForm = isUrlEncodedForm,
                 formFields = formBodyDefinition?.fields.orEmpty(),
                 formTypeSpec = formBodyDefinition?.typeSpec,
-                additionalTypeSpecs = formBodyDefinition?.additionalTypeSpecs.orEmpty(),
+                additionalTypeSpecs =
+                    formBodyDefinition?.additionalTypeSpecs.orEmpty() +
+                        listOfNotNull(inlineObjectDefinition?.typeSpec),
             )
         }
+    }
+
+    private data class InlineObjectDefinition(
+        val className: ClassName,
+        val typeSpec: TypeSpec,
+    )
+
+    private fun buildInlineObjectDefinition(
+        requestName: String,
+        schema: OpenAPIV3Schema,
+        modelGenerator: ModelGenerator,
+    ): InlineObjectDefinition {
+        val className = ClassName("", requestName)
+        val typeSpec =
+            (modelGenerator.buildModel(requestName, schema) ?: TypeSpec.classBuilder(requestName).build())
+                .toBuilder()
+                .build()
+        return InlineObjectDefinition(className, typeSpec)
     }
 
     private fun buildFormBodyDefinition(
@@ -483,6 +519,8 @@ internal class OperationBuilder(
                 httpHeadersClass,
                 valueReference,
             )
+        } else if (field.typeName.isString()) {
+            builder.addStatement("append(%S, %L)", field.originalName, valueReference)
         } else {
             builder.addStatement("append(%S, %L.toString())", field.originalName, valueReference)
         }

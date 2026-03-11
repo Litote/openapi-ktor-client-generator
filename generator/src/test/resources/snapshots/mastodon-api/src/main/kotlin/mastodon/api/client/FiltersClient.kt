@@ -9,14 +9,18 @@ import io.ktor.client.request.setBody
 import io.ktor.http.ContentType
 import io.ktor.http.contentType
 import io.ktor.http.encodeURLPathPart
+import kotlin.Boolean
 import kotlin.Int
+import kotlin.Long
 import kotlin.String
 import kotlin.collections.List
+import kotlinx.serialization.SerialName
 import kotlinx.serialization.Serializable
 import kotlinx.serialization.json.JsonElement
 import mastodon.api.client.ClientConfiguration.Companion.defaultClientConfiguration
 import mastodon.api.model.Error
 import mastodon.api.model.Filter
+import mastodon.api.model.FilterContextEnum
 import mastodon.api.model.FilterKeyword
 import mastodon.api.model.FilterStatus
 import mastodon.api.model.V1Filter
@@ -49,7 +53,7 @@ public class FiltersClient(
   /**
    * Create a filter
    */
-  public suspend fun createFilter(request: JsonElement): CreateFilterResponse {
+  public suspend fun createFilter(request: CreateFilterRequest): CreateFilterResponse {
     try {
       val response = configuration.client.post("api/v1/filters") {
         setBody(request)
@@ -92,7 +96,7 @@ public class FiltersClient(
   /**
    * Update a filter
    */
-  public suspend fun updateFilter(request: JsonElement, id: String): UpdateFilterResponse {
+  public suspend fun updateFilter(request: UpdateFilterRequest, id: String): UpdateFilterResponse {
     try {
       val response = configuration.client.put("api/v1/filters/{id}".replace("/{id}", "/${id.encodeURLPathPart()}")) {
         setBody(request)
@@ -156,7 +160,7 @@ public class FiltersClient(
   /**
    * Create a filter
    */
-  public suspend fun createFilterV2(request: JsonElement): CreateFilterV2Response {
+  public suspend fun createFilterV2(request: CreateFilterV2Request): CreateFilterV2Response {
     try {
       val response = configuration.client.post("api/v2/filters") {
         setBody(request)
@@ -199,7 +203,7 @@ public class FiltersClient(
   /**
    * Add a keyword to a filter
    */
-  public suspend fun postFilterKeywordsV2(request: JsonElement, filterId: String): PostFilterKeywordsV2Response {
+  public suspend fun postFilterKeywordsV2(request: PostFilterKeywordsV2Request, filterId: String): PostFilterKeywordsV2Response {
     try {
       val response = configuration.client.post("api/v2/filters/{filter_id}/keywords".replace("/{filter_id}", "/${filterId.encodeURLPathPart()}")) {
         setBody(request)
@@ -242,7 +246,7 @@ public class FiltersClient(
   /**
    * Add a status to a filter group
    */
-  public suspend fun postFilterStatusesV2(request: JsonElement, filterId: String): PostFilterStatusesV2Response {
+  public suspend fun postFilterStatusesV2(request: PostFilterStatusesV2Request, filterId: String): PostFilterStatusesV2Response {
     try {
       val response = configuration.client.post("api/v2/filters/{filter_id}/statuses".replace("/{filter_id}", "/${filterId.encodeURLPathPart()}")) {
         setBody(request)
@@ -286,7 +290,7 @@ public class FiltersClient(
   /**
    * Update a filter
    */
-  public suspend fun updateFilterV2(request: JsonElement, id: String): UpdateFilterV2Response {
+  public suspend fun updateFilterV2(request: UpdateFilterV2Request, id: String): UpdateFilterV2Response {
     try {
       val response = configuration.client.put("api/v2/filters/{id}".replace("/{id}", "/${id.encodeURLPathPart()}")) {
         setBody(request)
@@ -351,7 +355,7 @@ public class FiltersClient(
   /**
    * Edit a keyword within a filter
    */
-  public suspend fun updateFiltersKeywordsByIdV2(request: JsonElement, id: String): UpdateFiltersKeywordsByIdV2Response {
+  public suspend fun updateFiltersKeywordsByIdV2(request: UpdateFiltersKeywordsByIdV2Request, id: String): UpdateFiltersKeywordsByIdV2Response {
     try {
       val response = configuration.client.put("api/v2/filters/keywords/{id}".replace("/{id}", "/${id.encodeURLPathPart()}")) {
         setBody(request)
@@ -460,6 +464,17 @@ public class FiltersClient(
   ) : GetFiltersResponse()
 
   @Serializable
+  public data class CreateFilterRequest(
+    public val context: List<FilterContextEnum>,
+    @SerialName("expires_in")
+    public val expiresIn: Long? = null,
+    public val irreversible: Boolean? = false,
+    public val phrase: String,
+    @SerialName("whole_word")
+    public val wholeWord: Boolean? = false,
+  )
+
+  @Serializable
   public sealed class CreateFilterResponse
 
   @Serializable
@@ -505,6 +520,17 @@ public class FiltersClient(
   public data class GetFilterResponseUnknownFailure(
     public val statusCode: Int,
   ) : GetFilterResponse()
+
+  @Serializable
+  public data class UpdateFilterRequest(
+    public val context: List<FilterContextEnum>,
+    @SerialName("expires_in")
+    public val expiresIn: Long? = null,
+    public val irreversible: Boolean? = false,
+    public val phrase: String,
+    @SerialName("whole_word")
+    public val wholeWord: Boolean? = false,
+  )
 
   @Serializable
   public sealed class UpdateFilterResponse
@@ -578,6 +604,18 @@ public class FiltersClient(
   ) : GetFiltersV2Response()
 
   @Serializable
+  public data class CreateFilterV2Request(
+    public val context: List<FilterContextEnum>,
+    @SerialName("expires_in")
+    public val expiresIn: Long? = null,
+    @SerialName("filter_action")
+    public val filterAction: String? = null,
+    @SerialName("keywords_attributes")
+    public val keywordsAttributes: List<JsonElement>? = null,
+    public val title: String,
+  )
+
+  @Serializable
   public sealed class CreateFilterV2Response
 
   @Serializable
@@ -625,6 +663,13 @@ public class FiltersClient(
   ) : GetFilterKeywordsV2Response()
 
   @Serializable
+  public data class PostFilterKeywordsV2Request(
+    public val keyword: String,
+    @SerialName("whole_word")
+    public val wholeWord: Boolean? = null,
+  )
+
+  @Serializable
   public sealed class PostFilterKeywordsV2Response
 
   @Serializable
@@ -670,6 +715,12 @@ public class FiltersClient(
   public data class GetFilterStatusesV2ResponseUnknownFailure(
     public val statusCode: Int,
   ) : GetFilterStatusesV2Response()
+
+  @Serializable
+  public data class PostFilterStatusesV2Request(
+    @SerialName("status_id")
+    public val statusId: String,
+  )
 
   @Serializable
   public sealed class PostFilterStatusesV2Response
@@ -722,6 +773,18 @@ public class FiltersClient(
   public data class GetFilterV2ResponseUnknownFailure(
     public val statusCode: Int,
   ) : GetFilterV2Response()
+
+  @Serializable
+  public data class UpdateFilterV2Request(
+    public val context: List<FilterContextEnum>? = null,
+    @SerialName("expires_in")
+    public val expiresIn: Long? = null,
+    @SerialName("filter_action")
+    public val filterAction: String? = null,
+    @SerialName("keywords_attributes")
+    public val keywordsAttributes: List<JsonElement>? = null,
+    public val title: String? = null,
+  )
 
   @Serializable
   public sealed class UpdateFilterV2Response
@@ -798,6 +861,13 @@ public class FiltersClient(
   public data class GetFiltersKeywordsByIdV2ResponseUnknownFailure(
     public val statusCode: Int,
   ) : GetFiltersKeywordsByIdV2Response()
+
+  @Serializable
+  public data class UpdateFiltersKeywordsByIdV2Request(
+    public val keyword: String,
+    @SerialName("whole_word")
+    public val wholeWord: Boolean? = null,
+  )
 
   @Serializable
   public sealed class UpdateFiltersKeywordsByIdV2Response

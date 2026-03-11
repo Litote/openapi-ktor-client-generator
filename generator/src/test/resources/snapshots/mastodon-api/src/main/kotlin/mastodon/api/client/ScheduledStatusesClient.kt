@@ -12,8 +12,8 @@ import kotlin.Int
 import kotlin.Long
 import kotlin.String
 import kotlin.collections.List
+import kotlinx.serialization.SerialName
 import kotlinx.serialization.Serializable
-import kotlinx.serialization.json.JsonElement
 import mastodon.api.client.ClientConfiguration.Companion.defaultClientConfiguration
 import mastodon.api.model.Error
 import mastodon.api.model.ScheduledStatus
@@ -86,7 +86,7 @@ public class ScheduledStatusesClient(
   /**
    * Update a scheduled status's publishing date
    */
-  public suspend fun updateScheduledStatus(request: JsonElement, id: String): UpdateScheduledStatusResponse {
+  public suspend fun updateScheduledStatus(request: UpdateScheduledStatusRequest, id: String): UpdateScheduledStatusResponse {
     try {
       val response = configuration.client.put("api/v1/scheduled_statuses/{id}".replace("/{id}", "/${id.encodeURLPathPart()}")) {
         setBody(request)
@@ -177,6 +177,12 @@ public class ScheduledStatusesClient(
   public data class GetScheduledStatusResponseUnknownFailure(
     public val statusCode: Int,
   ) : GetScheduledStatusResponse()
+
+  @Serializable
+  public data class UpdateScheduledStatusRequest(
+    @SerialName("scheduled_at")
+    public val scheduledAt: String? = null,
+  )
 
   @Serializable
   public sealed class UpdateScheduledStatusResponse

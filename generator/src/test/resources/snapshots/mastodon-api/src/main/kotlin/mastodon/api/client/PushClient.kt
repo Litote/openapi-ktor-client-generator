@@ -8,9 +8,11 @@ import io.ktor.client.request.put
 import io.ktor.client.request.setBody
 import io.ktor.http.ContentType
 import io.ktor.http.contentType
+import kotlin.Boolean
 import kotlin.Int
+import kotlin.String
+import kotlinx.serialization.SerialName
 import kotlinx.serialization.Serializable
-import kotlinx.serialization.json.JsonElement
 import mastodon.api.client.ClientConfiguration.Companion.defaultClientConfiguration
 import mastodon.api.model.Error
 import mastodon.api.model.ValidationError
@@ -43,7 +45,7 @@ public class PushClient(
   /**
    * Change types of notifications
    */
-  public suspend fun putPushSubscription(request: JsonElement): PutPushSubscriptionResponse {
+  public suspend fun putPushSubscription(request: PutPushSubscriptionRequest): PutPushSubscriptionResponse {
     try {
       val response = configuration.client.put("api/v1/push/subscription") {
         setBody(request)
@@ -66,7 +68,7 @@ public class PushClient(
   /**
    * Subscribe to push notifications
    */
-  public suspend fun createPushSubscription(request: JsonElement): CreatePushSubscriptionResponse {
+  public suspend fun createPushSubscription(request: CreatePushSubscriptionRequest): CreatePushSubscriptionResponse {
     try {
       val response = configuration.client.post("api/v1/push/subscription") {
         setBody(request)
@@ -134,6 +136,34 @@ public class PushClient(
   ) : GetPushSubscriptionResponse()
 
   @Serializable
+  public data class PutPushSubscriptionRequest(
+    public val `data`: Data? = null,
+    public val policy: String? = null,
+  ) {
+    @Serializable
+    public data class Data(
+      public val alerts: Alerts? = null,
+    ) {
+      @Serializable
+      public data class Alerts(
+        @SerialName("admin.report")
+        public val adminReport: Boolean? = null,
+        @SerialName("admin.sign_up")
+        public val adminSignUp: Boolean? = null,
+        public val favourite: Boolean? = null,
+        public val follow: Boolean? = null,
+        @SerialName("follow_request")
+        public val followRequest: Boolean? = null,
+        public val mention: Boolean? = null,
+        public val poll: Boolean? = null,
+        public val reblog: Boolean? = null,
+        public val status: Boolean? = null,
+        public val update: Boolean? = null,
+      )
+    }
+  }
+
+  @Serializable
   public sealed class PutPushSubscriptionResponse
 
   @Serializable
@@ -158,6 +188,51 @@ public class PushClient(
   public data class PutPushSubscriptionResponseUnknownFailure(
     public val statusCode: Int,
   ) : PutPushSubscriptionResponse()
+
+  @Serializable
+  public data class CreatePushSubscriptionRequest(
+    public val `data`: Data? = null,
+    public val subscription: Subscription,
+  ) {
+    @Serializable
+    public data class Data(
+      public val alerts: Alerts? = null,
+      public val policy: String? = null,
+    ) {
+      @Serializable
+      public data class Alerts(
+        @SerialName("admin.report")
+        public val adminReport: Boolean? = null,
+        @SerialName("admin.sign_up")
+        public val adminSignUp: Boolean? = null,
+        public val favourite: Boolean? = null,
+        public val follow: Boolean? = null,
+        @SerialName("follow_request")
+        public val followRequest: Boolean? = null,
+        public val mention: Boolean? = null,
+        public val poll: Boolean? = null,
+        public val quote: Boolean? = null,
+        @SerialName("quoted_update")
+        public val quotedUpdate: Boolean? = null,
+        public val reblog: Boolean? = null,
+        public val status: Boolean? = null,
+        public val update: Boolean? = null,
+      )
+    }
+
+    @Serializable
+    public data class Subscription(
+      public val endpoint: String? = null,
+      public val keys: Keys? = null,
+      public val standard: Boolean? = null,
+    ) {
+      @Serializable
+      public data class Keys(
+        public val auth: String? = null,
+        public val p256dh: String? = null,
+      )
+    }
+  }
 
   @Serializable
   public sealed class CreatePushSubscriptionResponse

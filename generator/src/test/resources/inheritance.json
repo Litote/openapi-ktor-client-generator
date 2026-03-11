@@ -1,0 +1,170 @@
+{
+  "openapi": "3.0.0",
+  "info": {
+    "title": "Inheritance API",
+    "version": "1.0.0"
+  },
+  "paths": {
+    "/status": {
+      "post": {
+        "operationId": "createStatus",
+        "responses": {
+          "200": {
+            "description": "OK",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/StatusCreated"
+                }
+              }
+            }
+          }
+        },
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/Status"
+              }
+            }
+          }
+        }
+      }
+    }
+  },
+  "components": {
+    "schemas": {
+      "Status": {
+        "oneOf": [
+          {
+            "$ref": "#/components/schemas/TextStatus"
+          },
+          {
+            "$ref": "#/components/schemas/MediaStatus"
+          },
+          {
+            "$ref": "#/components/schemas/PollStatus"
+          }
+        ],
+        "discriminator": {
+          "propertyName": "type"
+        }
+      },
+      "TextStatus": {
+        "type": "object",
+        "required": [
+          "type",
+          "text"
+        ],
+        "properties": {
+          "type": {
+            "type": "string",
+            "enum": [
+              "text"
+            ]
+          },
+          "text": {
+            "type": "string"
+          }
+        }
+      },
+      "MediaStatus": {
+        "type": "object",
+        "required": [
+          "type",
+          "mediaUrl"
+        ],
+        "properties": {
+          "type": {
+            "type": "string",
+            "enum": [
+              "media"
+            ]
+          },
+          "mediaUrl": {
+            "type": "string"
+          }
+        }
+      },
+      "PollStatus": {
+        "type": "object",
+        "required": [
+          "type",
+          "pollOptions"
+        ],
+        "properties": {
+          "type": {
+            "type": "string",
+            "enum": [
+              "poll"
+            ]
+          },
+          "pollOptions": {
+            "type": "array",
+            "items": {
+              "type": "string"
+            }
+          }
+        }
+      },
+      "StatusCreated": {
+        "oneOf": [
+          {
+            "$ref": "#/components/schemas/TextStatusCreated"
+          },
+          {
+            "$ref": "#/components/schemas/MediaStatusCreated"
+          }
+        ],
+        "discriminator": {
+          "propertyName": "type"
+        }
+      },
+      "TextStatusCreated": {
+        "type": "object",
+        "required": [
+          "type",
+          "id",
+          "text"
+        ],
+        "properties": {
+          "type": {
+            "type": "string",
+            "enum": [
+              "text"
+            ]
+          },
+          "id": {
+            "type": "string"
+          },
+          "text": {
+            "type": "string"
+          }
+        }
+      },
+      "MediaStatusCreated": {
+        "type": "object",
+        "required": [
+          "type",
+          "id",
+          "mediaUrl"
+        ],
+        "properties": {
+          "type": {
+            "type": "string",
+            "enum": [
+              "media"
+            ]
+          },
+          "id": {
+            "type": "string"
+          },
+          "mediaUrl": {
+            "type": "string"
+          }
+        }
+      }
+    }
+  }
+}

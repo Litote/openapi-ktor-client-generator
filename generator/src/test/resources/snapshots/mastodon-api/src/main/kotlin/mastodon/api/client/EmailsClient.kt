@@ -6,8 +6,8 @@ import io.ktor.client.request.setBody
 import io.ktor.http.ContentType
 import io.ktor.http.contentType
 import kotlin.Int
+import kotlin.String
 import kotlinx.serialization.Serializable
-import kotlinx.serialization.json.JsonElement
 import mastodon.api.client.ClientConfiguration.Companion.defaultClientConfiguration
 import mastodon.api.model.Error
 import mastodon.api.model.ValidationError
@@ -18,7 +18,7 @@ public class EmailsClient(
   /**
    * Resend confirmation email
    */
-  public suspend fun createEmailConfirmations(request: JsonElement): CreateEmailConfirmationsResponse {
+  public suspend fun createEmailConfirmations(request: CreateEmailConfirmationsRequest): CreateEmailConfirmationsResponse {
     try {
       val response = configuration.client.post("api/v1/emails/confirmations") {
         setBody(request)
@@ -37,6 +37,11 @@ public class EmailsClient(
       return CreateEmailConfirmationsResponseUnknownFailure(500)
     }
   }
+
+  @Serializable
+  public data class CreateEmailConfirmationsRequest(
+    public val email: String? = null,
+  )
 
   @Serializable
   public sealed class CreateEmailConfirmationsResponse

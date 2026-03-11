@@ -10,14 +10,15 @@
 
 ### NEVER Do
 
-| Category           | Forbidden Actions                                                               |
-|--------------------|---------------------------------------------------------------------------------|
-| **Code**           | Use `!!`, `println`, `runBlocking`, `GlobalScope`                               |
-| **Architecture**   | Move classes across modules, introduce circular dependencies, create new modules |
-| **Dependencies**   | Add/upgrade dependencies without explicit request, change version catalogs      |
-| **Security**       | Log secrets/API keys, expose environment variables, commit credentials          |
-| **Scope**          | Mass refactors, rename symbols unnecessarily, formatting-only changes           |
-| **Deploy**         | ./gradlew deploy, ./gradlew deployPlugins                                       |
+| Category         | Forbidden Actions                                                                |
+|------------------|----------------------------------------------------------------------------------|
+| **Code**         | Use `!!`, `println`, `runBlocking`, `GlobalScope`                                |
+| **Architecture** | Move classes across modules, introduce circular dependencies, create new modules |
+| **Dependencies** | Add/upgrade dependencies without explicit request, change version catalogs       |
+| **Security**     | Log secrets/API keys, expose environment variables, commit credentials           |
+| **Scope**        | Mass refactors, rename symbols unnecessarily, formatting-only changes            |
+| **Deploy**       | ./gradlew deploy, ./gradlew deployPlugins                                        |
+| **Commit**       | commit changes                                                                   |
 
 ### ALWAYS Do
 

@@ -3,7 +3,6 @@ package mastodon.api.model
 import kotlin.String
 import kotlinx.serialization.SerialName
 import kotlinx.serialization.Serializable
-import kotlinx.serialization.json.JsonElement
 
 @Serializable
 public data class NotificationRequest(
@@ -12,7 +11,7 @@ public data class NotificationRequest(
   public val createdAt: String,
   public val id: String,
   @SerialName("last_status")
-  public val lastStatus: JsonElement? = null,
+  public val lastStatus: Status? = null,
   @SerialName("notifications_count")
   public val notificationsCount: String,
   @SerialName("updated_at")

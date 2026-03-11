@@ -25,7 +25,8 @@ kotlin {
         "src/test/kotlin",
         "build/snapshot-test-output/sample-api/src/main/kotlin",
         "build/snapshot-test-output/simple-api/src/main/kotlin",
-        "build/snapshot-test-output/mastodon-api/src/main/kotlin"
+        "build/snapshot-test-output/mastodon-api/src/main/kotlin",
+        "build/snapshot-test-output/inheritance-api/src/main/kotlin"
         )
 }
 

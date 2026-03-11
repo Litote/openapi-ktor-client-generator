@@ -11,9 +11,9 @@ import kotlinx.serialization.json.JsonElement
 @Serializable
 public data class Status(
   public val account: Account,
-  public val application: JsonElement? = null,
+  public val application: Application? = null,
   public val bookmarked: Boolean? = null,
-  public val card: JsonElement? = null,
+  public val card: PreviewCard? = null,
   public val content: String,
   @SerialName("created_at")
   public val createdAt: String,
@@ -35,13 +35,13 @@ public data class Status(
   public val mentions: List<StatusMention>,
   public val muted: Boolean? = null,
   public val pinned: Boolean? = null,
-  public val poll: JsonElement? = null,
+  public val poll: Poll? = null,
   public val quote: JsonElement? = null,
   @SerialName("quote_approval")
-  public val quoteApproval: JsonElement? = null,
+  public val quoteApproval: QuoteApproval? = null,
   @SerialName("quotes_count")
   public val quotesCount: Long? = null,
-  public val reblog: JsonElement? = null,
+  public val reblog: Status? = null,
   public val reblogged: Boolean? = null,
   @SerialName("reblogs_count")
   public val reblogsCount: Long,
@@ -55,4 +55,10 @@ public data class Status(
   public val uri: String,
   public val url: String? = null,
   public val visibility: StatusVisibilityEnum,
-)
+) {
+  @Serializable
+  public data class Application(
+    public val name: String,
+    public val website: String? = null,
+  )
+}
