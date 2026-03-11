@@ -40,6 +40,11 @@ kotlin {
 tasks.test {
     useJUnitPlatform()
     failOnNoDiscoveredTests = false
+    systemProperty("junit.jupiter.execution.parallel.enabled", "true")
+    systemProperty("junit.jupiter.execution.parallel.mode.default", "concurrent")
+    systemProperty("junit.jupiter.execution.parallel.mode.classes.default", "concurrent")
+
+    maxParallelForks = Runtime.getRuntime().availableProcessors()
 }
 
 signing {

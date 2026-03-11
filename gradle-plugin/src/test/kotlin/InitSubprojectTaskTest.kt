@@ -156,9 +156,9 @@ internal class InitSubprojectTaskTest {
     @Test
     fun `GIVEN relative openApiFile path WHEN initSubproject THEN resolves relative to project root`() {
         tempDir.resolve("specs/myapi.yaml").also {
-                it.parentFile.mkdirs()
-                it.writeText("openapi: 3.0.0")
-            }
+            it.parentFile.mkdirs()
+            it.writeText("openapi: 3.0.0")
+        }
         val task = buildTask(openApiFile = "specs/myapi.yaml", subprojectName = "client")
 
         task.initSubproject()
