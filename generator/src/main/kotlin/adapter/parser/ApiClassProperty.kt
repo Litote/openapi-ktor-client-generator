@@ -1,4 +1,4 @@
-package org.litote.openapi.ktor.client.generator
+package org.litote.openapi.ktor.client.generator.adapter.parser
 
 import com.squareup.kotlinpoet.TypeName
 import community.flock.kotlinx.openapi.bindings.OpenAPIV3Reference
@@ -9,7 +9,7 @@ import org.litote.openapi.ktor.client.generator.shared.isSnakeCase
 import org.litote.openapi.ktor.client.generator.shared.sanitizeToIdentifier
 import org.litote.openapi.ktor.client.generator.shared.snakeToCamelCase
 
-public data class ApiClassProperty(
+internal data class ApiClassProperty(
     val initialName: String,
     val type: TypeName,
     val apiModel: OpenAPIV3SchemaOrReference,

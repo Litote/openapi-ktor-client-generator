@@ -14,7 +14,7 @@
  * limitations under the License.
  */
 
-package org.litote.openapi.ktor.client.generator.client
+package org.litote.openapi.ktor.client.generator.adapter.renderer
 
 import com.squareup.kotlinpoet.AnnotationSpec
 import com.squareup.kotlinpoet.ClassName
@@ -24,35 +24,28 @@ import com.squareup.kotlinpoet.KModifier
 import com.squareup.kotlinpoet.PropertySpec
 import com.squareup.kotlinpoet.TypeName
 import com.squareup.kotlinpoet.TypeSpec
-import community.flock.kotlinx.openapi.bindings.MediaType
-import community.flock.kotlinx.openapi.bindings.OpenAPIV3Operation
-import community.flock.kotlinx.openapi.bindings.OpenAPIV3Response
-import community.flock.kotlinx.openapi.bindings.OpenAPIV3ResponseOrReference
-import io.github.oshai.kotlinlogging.KotlinLogging
 import kotlinx.serialization.Serializable
-import org.litote.openapi.ktor.client.generator.ApiModel
+import org.litote.openapi.ktor.client.generator.domain.ResponseEntry as DomainResponseEntry
 
 /**
  * Builds response types for API operations.
  */
-internal class ResponseBuilder(
-    private val apiModel: ApiModel,
-) {
+internal class ResponseBuilder {
     private companion object {
         val serializableAnnotation: AnnotationSpec = AnnotationSpec.builder(Serializable::class).build()
-        private val logger = KotlinLogging.logger {}
     }
 
     /**
      * Builds the sealed response class and its subclasses for an operation.
      */
     fun buildResponseTypes(
-        operation: OpenAPIV3Operation,
+        responses: List<DomainResponseEntry>,
         clientBuilder: TypeSpec.Builder,
         responseBaseName: String,
         responseSealedClass: ClassName,
-    ): List<ResponseEntry> {
-        val entries = buildResponseEntries(operation, clientBuilder, responseBaseName, responseSealedClass)
+        modelPackage: String,
+    ): List<RenderedResponseEntry> {
+        val entries = buildResponseEntries(responses, clientBuilder, responseBaseName, responseSealedClass, modelPackage)
         addUnknownFailureType(clientBuilder, responseBaseName, responseSealedClass)
         return entries
     }
@@ -65,27 +58,17 @@ internal class ResponseBuilder(
             .build()
 
     private fun buildResponseEntries(
-        operation: OpenAPIV3Operation,
+        responses: List<DomainResponseEntry>,
         clientBuilder: TypeSpec.Builder,
         responseBaseName: String,
         responseSealedClass: ClassName,
-    ): List<ResponseEntry> {
-        val responses = operation.responses ?: error("no response specified")
-
-        val parsedResponses: List<Pair<Int, TypeName?>> =
-            responses.entries
-                .map { entry ->
-                    parseResponse(entry.key.value, entry.value, responseBaseName)
-                }.sortedBy { it.first }
-
+        modelPackage: String,
+    ): List<RenderedResponseEntry> {
         val grouped: List<Triple<TypeName?, Boolean, List<Int>>> =
-            parsedResponses
-                .groupBy { pair -> pair.second to pair.first.isSuccess }
-                .map { entry ->
-                    val typeAndSuccess = entry.key
-                    val statusCodes = entry.value.map { it.first }
-                    Triple(typeAndSuccess.first, typeAndSuccess.second, statusCodes)
-                }
+            responses.map { entry ->
+                val typeName = entry.bodyType?.let { it.toTypeName(modelPackage) }
+                Triple(typeName, entry.isSuccess, entry.statusCodes)
+            }
 
         if (grouped.isEmpty()) {
             error("no response specified")
@@ -98,34 +81,8 @@ internal class ResponseBuilder(
             val suffix = determineClassNameSuffix(index, success, statusCodes, grouped)
             val responseType = createResponseType("${responseBaseName}Response$suffix", typeName, responseSealedClass)
             clientBuilder.addType(responseType)
-            ResponseEntry(statusCodes, typeName, responseType)
+            RenderedResponseEntry(statusCodes, typeName, responseType)
         }
-    }
-
-    private fun parseResponse(
-        statusCodeValue: String,
-        responseOrReference: OpenAPIV3ResponseOrReference,
-        responseBaseName: String,
-    ): Pair<Int, TypeName?> {
-        val code = statusCodeValue.toIntOrNull() ?: error("Invalid status code: $statusCodeValue")
-        val response =
-            responseOrReference as? OpenAPIV3Response ?: error("Unsupported response reference: $responseOrReference")
-        val schema =
-            response.content
-                ?.get(MediaType("application/json"))
-                ?.schema
-                ?: response.content?.get(MediaType("*/*"))?.schema
-        if (response.content != null && schema == null) {
-            val isSseContent = response.content?.containsKey(MediaType("text/event-stream")) == true
-            if (!isSseContent) {
-                logger.warn { "Unknown media type for: $responseOrReference - do not parse response" }
-            }
-        } else {
-            if ((response.content?.size ?: 0) > 1) {
-                logger.warn { "More than one response content - taking only \"application/json\"" }
-            }
-        }
-        return code to schema?.let { apiModel.getClassName("${responseBaseName}ResponseBody", it) }
     }
 
     private fun determineClassNameSuffix(
@@ -180,12 +137,10 @@ internal class ResponseBuilder(
     }
 }
 
-internal data class ResponseEntry(
+internal data class RenderedResponseEntry(
     val statusCodes: List<Int>,
-    val bodyType: TypeName?,
+    val bodyTypeName: TypeName?,
     val type: TypeSpec,
 ) {
     val isSuccess: Boolean get() = statusCodes.any { it in 200 until 300 }
 }
-
-private val Int.isSuccess: Boolean get() = this in 200 until 300

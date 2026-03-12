@@ -18,21 +18,24 @@ package org.litote.openapi.ktor.client.generator
 
 import com.squareup.kotlinpoet.ClassName
 import com.squareup.kotlinpoet.KModifier
-import community.flock.kotlinx.openapi.bindings.OpenAPIV3Schema
 import kotlinx.serialization.SerialName
+import org.litote.openapi.ktor.client.generator.adapter.parser.OpenApiSpecificationParser
+import org.litote.openapi.ktor.client.generator.adapter.renderer.ApiModelGenerator
+import org.litote.openapi.ktor.client.generator.domain.ModelSpec
 import kotlin.test.Test
 import kotlin.test.assertEquals
+import kotlin.test.assertIs
 import kotlin.test.assertNotNull
 import kotlin.test.assertTrue
 
 class InheritanceTest {
     @Test
     fun `GIVEN openapi with oneOf WHEN building model THEN generates sealed class`() {
-        val apiModel = loadModel("inheritance.json")
-        val statusSchema = apiModel.schemas["Status"] as OpenAPIV3Schema
-        val modelGenerator = ModelGenerator(apiModel)
+        val (config, generationSpec) = loadSpec("inheritance.json")
+        val modelSpec = generationSpec.models.first { it.name == "Status" }
+        val generator = ApiModelGenerator(config.modelPackage, "build/openapi-test")
 
-        val typeSpec = modelGenerator.buildModel("Status", statusSchema)
+        val typeSpec = generator.buildModel(modelSpec)
 
         assertNotNull(typeSpec)
         assertTrue(typeSpec.modifiers.contains(KModifier.SEALED), "Should be a sealed class")
@@ -41,11 +44,11 @@ class InheritanceTest {
 
     @Test
     fun `GIVEN openapi with oneOf WHEN building model THEN sealed class has JsonClassDiscriminator annotation`() {
-        val apiModel = loadModel("inheritance.json")
-        val statusSchema = apiModel.schemas["Status"] as OpenAPIV3Schema
-        val modelGenerator = ModelGenerator(apiModel)
+        val (config, generationSpec) = loadSpec("inheritance.json")
+        val modelSpec = generationSpec.models.first { it.name == "Status" }
+        val generator = ApiModelGenerator(config.modelPackage, "build/openapi-test")
 
-        val typeSpec = modelGenerator.buildModel("Status", statusSchema)
+        val typeSpec = generator.buildModel(modelSpec)
 
         assertNotNull(typeSpec)
         val discriminatorAnnotation =
@@ -57,16 +60,16 @@ class InheritanceTest {
 
     @Test
     fun `GIVEN openapi with oneOf WHEN building sub-type THEN generates data class extending sealed class`() {
-        val apiModel = loadModel("inheritance.json")
-        val textStatusSchema = apiModel.schemas["TextStatus"] as OpenAPIV3Schema
-        val modelGenerator = ModelGenerator(apiModel)
+        val (config, generationSpec) = loadSpec("inheritance.json")
+        val modelSpec = generationSpec.models.first { it.name == "TextStatus" }
+        val generator = ApiModelGenerator(config.modelPackage, "build/openapi-test")
 
-        val typeSpec = modelGenerator.buildModel("TextStatus", textStatusSchema)
+        val typeSpec = generator.buildModel(modelSpec)
 
         assertNotNull(typeSpec)
         assertTrue(typeSpec.modifiers.contains(KModifier.DATA), "Should be a data class")
         assertEquals(
-            ClassName(apiModel.configuration.modelPackage, "Status"),
+            ClassName(config.modelPackage, "Status"),
             typeSpec.superclass,
             "Should extend Status",
         )
@@ -74,11 +77,11 @@ class InheritanceTest {
 
     @Test
     fun `GIVEN openapi with oneOf WHEN building sub-type THEN generates SerialName annotation from discriminator`() {
-        val apiModel = loadModel("inheritance.json")
-        val mediaStatusSchema = apiModel.schemas["MediaStatus"] as OpenAPIV3Schema
-        val modelGenerator = ModelGenerator(apiModel)
+        val (config, generationSpec) = loadSpec("inheritance.json")
+        val modelSpec = generationSpec.models.first { it.name == "MediaStatus" }
+        val generator = ApiModelGenerator(config.modelPackage, "build/openapi-test")
 
-        val typeSpec = modelGenerator.buildModel("MediaStatus", mediaStatusSchema)
+        val typeSpec = generator.buildModel(modelSpec)
 
         assertNotNull(typeSpec)
         val serialNameAnnotation =
@@ -92,23 +95,28 @@ class InheritanceTest {
 
     @Test
     fun `GIVEN openapi with oneOf of 3 subtypes WHEN building model THEN all subtypes are recognized`() {
-        val apiModel = loadModel("inheritance.json")
+        val (_, generationSpec) = loadSpec("inheritance.json")
 
-        assertEquals(
-            listOf("TextStatus", "MediaStatus", "PollStatus"),
-            apiModel.sealedParents["Status"],
-        )
-        assertEquals("Status", apiModel.sealedSubTypes["TextStatus"])
-        assertEquals("Status", apiModel.sealedSubTypes["MediaStatus"])
-        assertEquals("Status", apiModel.sealedSubTypes["PollStatus"])
+        val statusModel = generationSpec.models.first { it.name == "Status" }
+        assertIs<org.litote.openapi.ktor.client.generator.domain.ModelSpec.SealedClassSpec>(statusModel)
+
+        val subtypeNames =
+            generationSpec.models
+                .filterIsInstance<org.litote.openapi.ktor.client.generator.domain.ModelSpec.DataClassSpec>()
+                .filter { it.sealedParentName == "Status" }
+                .map { it.name }
+        assertTrue(subtypeNames.containsAll(listOf("TextStatus", "MediaStatus", "PollStatus")))
     }
 
-    private fun loadModel(fileName: String): ApiModel {
+    private fun loadSpec(
+        fileName: String,
+    ): Pair<ApiGeneratorConfiguration, org.litote.openapi.ktor.client.generator.domain.GenerationSpec> {
         val configuration =
             ApiGeneratorConfiguration(
                 openApiFile = "src/test/resources/$fileName",
                 outputDirectory = "build/openapi-test",
             )
-        return ApiModel.parseOpenApiFile(configuration)
+        val parser = OpenApiSpecificationParser()
+        return configuration to parser.parse(configuration, configuration.operationFilter)
     }
 }

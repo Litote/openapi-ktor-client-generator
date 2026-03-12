@@ -2,7 +2,7 @@
 
 > **Purpose**: Instructions for AI agents working on this codebase.
 > For installation, configuration, and usage, see [`README.md`](README.md).
-> For contributing guildelines, see (MANDATORY!) [`CONTRIBUTING.md`](CONTRIBUTING.md).
+> For contributing guildelines and project architecture, see (MANDATORY!) [`CONTRIBUTING.md`](CONTRIBUTING.md).
 
 ---
 
@@ -18,18 +18,19 @@
 | **Security**     | Log secrets/API keys, expose environment variables, commit credentials           |
 | **Scope**        | Mass refactors, rename symbols unnecessarily, formatting-only changes            |
 | **Deploy**       | ./gradlew deploy, ./gradlew deployPlugins                                        |
-| **Commit**       | commit changes                                                                   |
+| **Commit**       | NEVER commit changes if you are not in a Pull Request Context                    |
 
 ### ALWAYS Do
 
-| Category | Required Actions |
-|----------|------------------|
-| **Validation** | Run `./gradlew formatKotlin && ./gradlew check` after every change |
-| **Testing** | Add tests for all logic changes |
-| **Imports** | Use single imports only |
-| **Language** | Write all code, comments, and documentation in English |
-| **Visibility** | Prefer `internal` visibility by default |
-| **Immutability** | Prefer `val` over `var`, use immutable data structures |
+| Category         | Required Actions                                                         |
+|------------------|--------------------------------------------------------------------------|
+| **Validation**   | Run `./gradlew formatKotlin && ./gradlew check` after every change       |
+| **Testing**      | Add tests for all logic changes                                          |
+| **Imports**      | Use single imports only                                                  |
+| **Language**     | Write all code, comments, and documentation in English                   |
+| **Visibility**   | Prefer `internal` visibility by default                                  |
+| **Immutability** | Prefer `val` over `var`, use immutable data structures                   |
+| **Document**     | After applied the changes, document them in CONTRIBUTING.md or README.md |
 
 ---
 

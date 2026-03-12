@@ -180,6 +180,8 @@ for example for ktlint:
 ktlint = disabled
 ```
 
+### Contributing & internal Architecture 
 
+See [CONTRIBUTING.md](CONTRIBUTING.md) for the full hexagonal architecture diagram.
 
 

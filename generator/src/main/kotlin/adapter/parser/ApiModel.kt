@@ -1,4 +1,4 @@
-package org.litote.openapi.ktor.client.generator
+package org.litote.openapi.ktor.client.generator.adapter.parser
 
 import com.squareup.kotlinpoet.BOOLEAN
 import com.squareup.kotlinpoet.ClassName
@@ -33,6 +33,10 @@ import community.flock.kotlinx.openapi.bindings.OpenAPIV3TypeArray
 import io.github.oshai.kotlinlogging.KotlinLogging
 import kotlinx.serialization.json.Json
 import kotlinx.serialization.json.JsonElement
+import org.litote.openapi.ktor.client.generator.ApiGeneratorConfiguration
+import org.litote.openapi.ktor.client.generator.domain.OperationMeta
+import org.litote.openapi.ktor.client.generator.domain.SecuritySchemeLocation
+import org.litote.openapi.ktor.client.generator.domain.SecuritySchemeSpec
 import org.litote.openapi.ktor.client.generator.shared.capitalize
 import org.litote.openapi.ktor.client.generator.shared.ensureEndsWith
 import org.litote.openapi.ktor.client.generator.shared.sanitizeToIdentifier
@@ -41,14 +45,14 @@ import org.litote.openapi.ktor.client.generator.shared.toOrNull
 import java.nio.file.Files
 import java.nio.file.Path
 
-public class ApiModel private constructor(
-    public val model: OpenAPIV3Model,
-    public val configuration: ApiGeneratorConfiguration,
+internal class ApiModel private constructor(
+    val model: OpenAPIV3Model,
+    val configuration: ApiGeneratorConfiguration,
 ) {
     internal companion object {
         private val logger = KotlinLogging.logger {}
 
-        fun parseOpenApiFile(configuration: ApiGeneratorConfiguration): ApiModel {
+        internal fun parseOpenApiFile(configuration: ApiGeneratorConfiguration): ApiModel {
             val openApi =
                 OpenAPIV3(
                     Json {
@@ -63,14 +67,14 @@ public class ApiModel private constructor(
         }
     }
 
-    public val outputDirectory: String get() = configuration.outputDirectory
-    public val serverUrl: String =
+    val outputDirectory: String get() = configuration.outputDirectory
+    val serverUrl: String =
         model.servers
             ?.firstOrNull()
             ?.url
             ?.ensureEndsWith("/") ?: "http://localhost:8080/"
 
-    public val pathsByTags: Map<String, List<ApiOperation>> =
+    val pathsByTags: Map<String, List<ApiOperation>> =
         model.paths.entries
             .asSequence()
             .flatMap { (path, item) ->
@@ -95,12 +99,22 @@ public class ApiModel private constructor(
                             .distinct()
                             .map { it to ApiOperation(path.value, method, operation) }
                     }
-            }.filter { (_, operation) -> configuration.operationFilter(operation) }
-            .groupBy(keySelector = { it.first }, valueTransform = { it.second })
+            }.filter { (_, operation) ->
+                val meta =
+                    OperationMeta(
+                        path = operation.path,
+                        method = operation.method,
+                        tags =
+                            operation.operation.tags
+                                .orEmpty()
+                                .filterNotNull(),
+                    )
+                configuration.operationFilter(meta)
+            }.groupBy(keySelector = { it.first }, valueTransform = { it.second })
 
-    public val components: OpenAPIV3Components? get() = model.components
+    val components: OpenAPIV3Components? get() = model.components
 
-    public val schemaParentMap: Map<String, Set<String>> =
+    val schemaParentMap: Map<String, Set<String>> =
         components
             ?.schemas
             ?.mapValues { (_, v) -> v.allReferences().map { getRefClassName(it) }.toSet() }
@@ -149,7 +163,7 @@ public class ApiModel private constructor(
      * A schema qualifies as a sealed parent when its `oneOf` contains at least 2 `$ref` entries.
      * Also includes virtual sealed parents synthesised from inline request body `oneOf` schemas.
      */
-    public val sealedParents: Map<String, List<String>> =
+    val sealedParents: Map<String, List<String>> =
         (
             components
                 ?.schemas
@@ -164,12 +178,12 @@ public class ApiModel private constructor(
         ) + requestBodySealedParents
 
     /** Reverse of [sealedParents]: maps each sub-type name to its sealed parent name. */
-    public val sealedSubTypes: Map<String, String> =
+    val sealedSubTypes: Map<String, String> =
         sealedParents
             .flatMap { (parent, children) -> children.map { it to parent } }
             .toMap()
 
-    public val schemas: Map<String, OpenAPIV3Schema> =
+    val schemas: Map<String, OpenAPIV3Schema> =
         (
             pathsByTags
                 .values
@@ -193,7 +207,7 @@ public class ApiModel private constructor(
             ).filterKeys { set.contains(it) }
         }
 
-    public val componentParameters: List<OpenAPIV3Parameter> =
+    val componentParameters: List<OpenAPIV3Parameter> =
         components
             ?.parameters
             ?.values
@@ -204,7 +218,7 @@ public class ApiModel private constructor(
      * Extracts API Key security schemes from the OpenAPI specification.
      * These are used to generate authentication configuration in the client.
      */
-    public val apiKeySecuritySchemes: List<ApiSecurityScheme> =
+    val apiKeySecuritySchemes: List<SecuritySchemeSpec> =
         components
             ?.securitySchemes
             ?.entries
@@ -215,11 +229,21 @@ public class ApiModel private constructor(
                 val inValue = securityScheme.`in` ?: return@mapNotNull null
                 val location =
                     when (inValue) {
-                        "header" -> ApiSecurityScheme.ApiKeyLocation.HEADER
-                        "query" -> ApiSecurityScheme.ApiKeyLocation.QUERY
+                        "header" -> SecuritySchemeLocation.HEADER
+                        "query" -> SecuritySchemeLocation.QUERY
                         else -> return@mapNotNull null
                     }
-                ApiSecurityScheme(schemeName, keyName, location)
+                SecuritySchemeSpec(
+                    name = schemeName,
+                    keyName = keyName,
+                    location = location,
+                    paramName =
+                        schemeName
+                            .replace("_", " ")
+                            .split(" ")
+                            .mapIndexed { i, w -> if (i == 0) w.lowercase() else w.replaceFirstChar { it.uppercase() } }
+                            .joinToString(""),
+                )
             }.orEmpty()
 
     internal fun isEnum(property: ApiClassProperty): Boolean =
@@ -262,9 +286,7 @@ public class ApiModel private constructor(
                         (it as? OpenAPIV3Response)?.content?.values?.flatMap { v -> v.schema.allReferences() }
                             ?: emptyList()
                     } ?: emptyList()
-            ) // +
-    // (callbacks?.values?.mapNotNull { it as? OpenAPIV3Reference } ?: emptyList()) +
-    // (callbacks?.values?.flatMap { (it as? OpenAPIV3Callbacks)?.entries?.values?.map { it.schema as? OpenAPIV3Reference} ?: emptyList() }?.filterNotNull() ?: emptyList())
+            )
 
     private fun OpenAPIV3SchemaOrReference?.allReferences(): Set<OpenAPIV3Reference> =
         when (this) {
@@ -393,7 +415,6 @@ public class ApiModel private constructor(
                         }
                     }
                 if (additional == null) {
-                    // Fallback for free-form objects without declared properties.
                     JsonElement::class.asClassName()
                 } else {
                     MAP
@@ -413,7 +434,6 @@ public class ApiModel private constructor(
                     val hasNullSchema = oneOf.any { it.isNullSchema() }
                     when {
                         refs.size == 1 && hasNullSchema -> {
-                            // oneOf: [$ref, {type: null}] — treat as nullable reference type
                             getClassName(name, refs.first()).copy(nullable = true)
                         }
 
@@ -422,7 +442,6 @@ public class ApiModel private constructor(
                         }
 
                         else -> {
-                            // Check if this inline oneOf corresponds to a known request body sealed parent.
                             val refNames = refs.map { getRefClassName(it) }
                             val parentName =
                                 requestBodySealedParents.entries
@@ -431,19 +450,17 @@ public class ApiModel private constructor(
                             if (parentName != null) {
                                 ClassName(configuration.modelPackage, parentName)
                             } else {
-                                // Fallback for polymorphic inline schemas.
                                 JsonElement::class.asClassName()
                             }
                         }
                     }
                 } else {
-                    // Fallback for other responses.
                     JsonElement::class.asClassName()
                 }
             }
         }
 
-    public fun getClassName(
+    fun getClassName(
         name: String,
         schemaOrReference: OpenAPIV3SchemaOrReference,
     ): TypeName =
@@ -481,7 +498,7 @@ public class ApiModel private constructor(
             }
         }
 
-    public fun getClassProperty(
+    fun getClassProperty(
         name: String,
         schemaOrReference: OpenAPIV3SchemaOrReference,
         parentSchema: OpenAPIV3Schema,

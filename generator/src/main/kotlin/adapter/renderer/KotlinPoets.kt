@@ -1,20 +1,27 @@
-package org.litote.openapi.ktor.client.generator
+package org.litote.openapi.ktor.client.generator.adapter.renderer
 
 import com.squareup.kotlinpoet.BOOLEAN
 import com.squareup.kotlinpoet.ClassName
 import com.squareup.kotlinpoet.CodeBlock
 import com.squareup.kotlinpoet.DOUBLE
 import com.squareup.kotlinpoet.FLOAT
+import com.squareup.kotlinpoet.FileSpec
 import com.squareup.kotlinpoet.INT
+import com.squareup.kotlinpoet.LIST
 import com.squareup.kotlinpoet.LONG
+import com.squareup.kotlinpoet.MAP
+import com.squareup.kotlinpoet.ParameterizedTypeName.Companion.parameterizedBy
+import com.squareup.kotlinpoet.SET
 import com.squareup.kotlinpoet.STRING
 import com.squareup.kotlinpoet.TypeName
 import com.squareup.kotlinpoet.TypeSpec
+import com.squareup.kotlinpoet.asClassName
 import community.flock.kotlinx.openapi.bindings.OpenAPIV3Schema
 import community.flock.kotlinx.openapi.bindings.OpenAPIV3SchemaOrReference
 import community.flock.kotlinx.openapi.bindings.OpenAPIV3SingleType
 import community.flock.kotlinx.openapi.bindings.OpenAPIV3Type
 import community.flock.kotlinx.openapi.bindings.OpenAPIV3TypeArray
+import kotlinx.serialization.json.JsonElement
 import kotlinx.serialization.json.JsonPrimitive
 import kotlinx.serialization.json.booleanOrNull
 import kotlinx.serialization.json.contentOrNull
@@ -22,12 +29,17 @@ import kotlinx.serialization.json.doubleOrNull
 import kotlinx.serialization.json.floatOrNull
 import kotlinx.serialization.json.intOrNull
 import kotlinx.serialization.json.longOrNull
-import org.litote.openapi.ktor.client.generator.client.ClientGenerationContext
+import org.litote.openapi.ktor.client.generator.domain.DefaultValue
+import org.litote.openapi.ktor.client.generator.domain.DomainType
+import org.litote.openapi.ktor.client.generator.domain.GeneratedFile
 import org.litote.openapi.ktor.client.generator.shared.capitalize
 import org.litote.openapi.ktor.client.generator.shared.sanitizeToIdentifier
 import org.litote.openapi.ktor.client.generator.shared.snakeToCamelCase
 import org.litote.openapi.ktor.client.generator.shared.toUpperSnakeCase
 import kotlin.text.uppercase
+
+/** Converts a KotlinPoet [FileSpec] to a domain [GeneratedFile] by rendering its content to a string. */
+internal fun FileSpec.toGeneratedFile(): GeneratedFile = GeneratedFile(packageName, name, toString())
 
 public fun isConstSupported(typeName: TypeName): Boolean = typeName.isPrimitive()
 
@@ -121,17 +133,6 @@ internal fun TypeSpec.hasSameName(name: TypeName): Boolean = (name as? ClassName
 
 internal fun TypeSpec.hasSameName(spec: TypeSpec): Boolean = spec.nonNullableName == nonNullableName
 
-internal fun ApiOperation.methodName(context: ClientGenerationContext): String =
-    (
-        operation.operationId
-            ?.takeUnless { id -> context.operations.count { it.operation.operationId == id } > 1 }
-            ?: "${method}_${
-                path.replace("/", "_").replace("{", "With_").replace("}", "")
-            }"
-    ).run {
-        replace("-", "_").snakeToCamelCase().capitalize()
-    }
-
 internal val OpenAPIV3Schema.firstType: OpenAPIV3Type?
     get() =
         type?.run {
@@ -142,3 +143,55 @@ internal val OpenAPIV3Schema.firstType: OpenAPIV3Type?
         }
 
 internal val String.enumFieldName: String get() = sanitizeToIdentifier().toUpperSnakeCase()
+
+internal fun DefaultValue.toCodeBlock(): CodeBlock =
+    when (this) {
+        is DefaultValue.StringDefault -> CodeBlock.of("%S", value)
+        is DefaultValue.BooleanDefault -> CodeBlock.of("%L", value)
+        is DefaultValue.IntDefault -> CodeBlock.of("%L", value)
+        is DefaultValue.LongDefault -> CodeBlock.of("%L", value)
+        is DefaultValue.DoubleDefault -> CodeBlock.of("%L", value)
+        is DefaultValue.FloatDefault -> CodeBlock.of("%LF", value)
+        is DefaultValue.EnumDefault -> CodeBlock.of("%L.%L", typeName, enumValue)
+    }
+
+internal fun DomainType.toTypeName(modelPackage: String): TypeName {
+    val base: TypeName =
+        when (this) {
+            is DomainType.Primitive -> {
+                when (kind) {
+                    DomainType.Primitive.Kind.STRING -> STRING
+                    DomainType.Primitive.Kind.INT -> INT
+                    DomainType.Primitive.Kind.LONG -> LONG
+                    DomainType.Primitive.Kind.DOUBLE -> DOUBLE
+                    DomainType.Primitive.Kind.FLOAT -> FLOAT
+                    DomainType.Primitive.Kind.BOOLEAN -> BOOLEAN
+                }
+            }
+
+            is DomainType.ListType -> {
+                LIST.parameterizedBy(element.toTypeName(modelPackage))
+            }
+
+            is DomainType.SetType -> {
+                SET.parameterizedBy(element.toTypeName(modelPackage))
+            }
+
+            is DomainType.MapType -> {
+                MAP.parameterizedBy(STRING, value.toTypeName(modelPackage))
+            }
+
+            is DomainType.ModelReference -> {
+                ClassName(modelPackage, name)
+            }
+
+            is DomainType.InlineType -> {
+                ClassName("", name)
+            }
+
+            is DomainType.JsonType -> {
+                JsonElement::class.asClassName()
+            }
+        }
+    return if (nullable) base.copy(nullable = true) else base
+}

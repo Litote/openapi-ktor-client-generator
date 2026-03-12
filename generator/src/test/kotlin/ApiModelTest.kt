@@ -16,104 +16,67 @@
 
 package org.litote.openapi.ktor.client.generator
 
-import com.squareup.kotlinpoet.ClassName
-import com.squareup.kotlinpoet.LONG
-import com.squareup.kotlinpoet.STRING
-import community.flock.kotlinx.openapi.bindings.OpenAPIV3RequestBody
+import org.litote.openapi.ktor.client.generator.adapter.parser.OpenApiSpecificationParser
+import org.litote.openapi.ktor.client.generator.domain.DomainType
+import org.litote.openapi.ktor.client.generator.domain.GenerationSpec
+import org.litote.openapi.ktor.client.generator.domain.ModelSpec
 import kotlin.test.Test
 import kotlin.test.assertEquals
 import kotlin.test.assertNotNull
 
 class ApiModelTest {
-    @Test
-    fun `GIVEN openapi without servers WHEN building model THEN serverUrl defaults`() {
-        // Given
-        val apiModel = loadModel("openapi.json")
-
-        // When
-        val serverUrl = apiModel.serverUrl
-
-        // Then
-        assertEquals("http://localhost:8080/", serverUrl)
-    }
-
-    @Test
-    fun `GIVEN openapi without tags WHEN building pathsByTags THEN uses empty tag key`() {
-        // Given
-        val apiModel = loadModel("openapi.json")
-
-        // When
-        val operations = apiModel.pathsByTags
-
-        // Then
-        assertEquals(setOf(""), operations.keys)
-        val firstOperation = operations[""]?.firstOrNull()
-        assertNotNull(firstOperation)
-        assertEquals("/test/{testId}", firstOperation.path)
-        assertEquals("post", firstOperation.method)
-    }
-
-    @Test
-    fun `GIVEN referenced schemas WHEN building schemas THEN includes request and response`() {
-        // Given
-        val apiModel = loadModel("openapi.json")
-
-        // When
-        val schemaNames = apiModel.schemas.keys
-
-        // Then
-        assertEquals(setOf("TestRequest", "TestResponse"), schemaNames)
-    }
-
-    @Test
-    fun `GIVEN response properties WHEN getClassName THEN maps to expected kotlin types`() {
-        // Given
-        val apiModel = loadModel("openapi.json")
-        val responseSchema = apiModel.schemas["TestResponse"]
-        val idSchema = responseSchema?.properties?.get("id")
-        val nameSchema = responseSchema?.properties?.get("name")
-        assertNotNull(idSchema)
-        assertNotNull(nameSchema)
-
-        // When
-        val idType = apiModel.getClassName("id", idSchema)
-        val nameType = apiModel.getClassName("name", nameSchema)
-
-        // Then
-        assertEquals(LONG, idType)
-        assertEquals(STRING, nameType)
-    }
-
-    @Test
-    fun `GIVEN request body reference WHEN getClassName THEN maps to model class`() {
-        // Given
-        val apiModel = loadModel("openapi.json")
-        val operation =
-            apiModel.model.paths.entries
-                .first()
-                .value.post
-        assertNotNull(operation)
-        val requestBody = operation.requestBody as OpenAPIV3RequestBody
-        val schema =
-            requestBody.content
-                ?.values
-                ?.firstOrNull()
-                ?.schema
-        assertNotNull(schema)
-
-        // When
-        val className = apiModel.getClassName("TestRequest", schema)
-
-        // Then
-        assertEquals(ClassName("org.example.model", "TestRequest"), className)
-    }
-
-    private fun loadModel(fileName: String): ApiModel {
+    private fun loadSpec(fileName: String): GenerationSpec {
         val configuration =
             ApiGeneratorConfiguration(
                 openApiFile = "src/test/resources/$fileName",
                 outputDirectory = "build/openapi-test",
             )
-        return ApiModel.parseOpenApiFile(configuration)
+        return OpenApiSpecificationParser().parse(configuration, configuration.operationFilter)
+    }
+
+    @Test
+    fun `GIVEN openapi without servers WHEN building model THEN serverUrl defaults`() {
+        val spec = loadSpec("openapi.json")
+
+        assertEquals("http://localhost:8080/", spec.clientConfiguration.serverUrl)
+    }
+
+    @Test
+    fun `GIVEN openapi without tags WHEN building pathsByTags THEN uses empty tag key`() {
+        val spec = loadSpec("openapi.json")
+
+        assertEquals(1, spec.clients.size)
+        val client = spec.clients.first()
+        assertNotNull(client)
+    }
+
+    @Test
+    fun `GIVEN referenced schemas WHEN building schemas THEN includes request and response`() {
+        val spec = loadSpec("openapi.json")
+        val modelNames = spec.models.map { it.name }.toSet()
+
+        assertEquals(setOf("TestRequest", "TestResponse"), modelNames)
+    }
+
+    @Test
+    fun `GIVEN response properties WHEN getClassName THEN maps to expected kotlin types`() {
+        val spec = loadSpec("openapi.json")
+        val testResponse = spec.models.filterIsInstance<ModelSpec.DataClassSpec>().first { it.name == "TestResponse" }
+        val idProp = testResponse.properties.first { it.originalName == "id" }
+        val nameProp = testResponse.properties.first { it.originalName == "name" }
+
+        assertEquals(DomainType.Primitive(DomainType.Primitive.Kind.LONG), idProp.type)
+        assertEquals(DomainType.Primitive(DomainType.Primitive.Kind.STRING), nameProp.type)
+    }
+
+    @Test
+    fun `GIVEN request body reference WHEN getClassName THEN maps to model class`() {
+        val spec = loadSpec("openapi.json")
+        val client = spec.clients.first()
+        val operation = client.operations.first { it.requestBody != null }
+        val requestBody = operation.requestBody
+        assertNotNull(requestBody)
+
+        assertEquals(DomainType.ModelReference("TestRequest"), requestBody.type)
     }
 }

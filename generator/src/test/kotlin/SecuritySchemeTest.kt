@@ -16,6 +16,8 @@
 
 package org.litote.openapi.ktor.client.generator
 
+import org.litote.openapi.ktor.client.generator.adapter.parser.OpenApiSpecificationParser
+import org.litote.openapi.ktor.client.generator.domain.SecuritySchemeLocation
 import kotlin.test.Test
 import kotlin.test.assertEquals
 import kotlin.test.assertTrue
@@ -23,7 +25,6 @@ import kotlin.test.assertTrue
 class SecuritySchemeTest {
     @Test
     fun `GIVEN karto spec with security schemes WHEN parsing THEN security schemes are extracted`() {
-        // Given
         val configuration =
             ApiGeneratorConfiguration(
                 openApiFile = "src/test/resources/sample.json",
@@ -31,18 +32,16 @@ class SecuritySchemeTest {
                 basePackage = "org.example",
             )
 
-        // When
-        val apiModel = ApiModel.parseOpenApiFile(configuration)
+        val spec = OpenApiSpecificationParser().parse(configuration, { true })
 
-        // Then
-        assertEquals(2, apiModel.apiKeySecuritySchemes.size, "Should have 2 API key security schemes")
+        assertEquals(2, spec.clientConfiguration.apiKeySchemes.size, "Should have 2 API key security schemes")
 
-        val headerScheme = apiModel.apiKeySecuritySchemes.find { it.location == ApiSecurityScheme.ApiKeyLocation.HEADER }
+        val headerScheme = spec.clientConfiguration.apiKeySchemes.find { it.location == SecuritySchemeLocation.HEADER }
         assertTrue(headerScheme != null, "Should have a header API key scheme")
         assertEquals("api_key_header", headerScheme.name)
         assertEquals("X-Api-Key", headerScheme.keyName)
 
-        val queryScheme = apiModel.apiKeySecuritySchemes.find { it.location == ApiSecurityScheme.ApiKeyLocation.QUERY }
+        val queryScheme = spec.clientConfiguration.apiKeySchemes.find { it.location == SecuritySchemeLocation.QUERY }
         assertTrue(queryScheme != null, "Should have a query API key scheme")
         assertEquals("api_key_query_param", queryScheme.name)
         assertEquals("api_key", queryScheme.keyName)
@@ -50,7 +49,6 @@ class SecuritySchemeTest {
 
     @Test
     fun `GIVEN spec without security schemes WHEN parsing THEN empty list returned`() {
-        // Given
         val configuration =
             ApiGeneratorConfiguration(
                 openApiFile = "src/test/resources/openapi.json",
@@ -58,10 +56,8 @@ class SecuritySchemeTest {
                 basePackage = "org.example",
             )
 
-        // When
-        val apiModel = ApiModel.parseOpenApiFile(configuration)
+        val spec = OpenApiSpecificationParser().parse(configuration, { true })
 
-        // Then
-        assertTrue(apiModel.apiKeySecuritySchemes.isEmpty(), "Should have no API key security schemes")
+        assertTrue(spec.clientConfiguration.apiKeySchemes.isEmpty(), "Should have no API key security schemes")
     }
 }

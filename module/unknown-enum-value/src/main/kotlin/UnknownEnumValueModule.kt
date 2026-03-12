@@ -1,17 +1,16 @@
 package org.litote.openapi.ktor.client.generator.module.unknown.enum.value
 
-import community.flock.kotlinx.openapi.bindings.simpleName
 import kotlinx.serialization.json.JsonConfiguration
-import org.litote.openapi.ktor.client.generator.ApiClientConfigurationGenerator
 import org.litote.openapi.ktor.client.generator.ApiGeneratorModule
-import org.litote.openapi.ktor.client.generator.ApiModelGenerator
+import org.litote.openapi.ktor.client.generator.port.ConfigurationGeneratorConfig
+import org.litote.openapi.ktor.client.generator.port.ModelGeneratorConfig
 
 internal class UnknownEnumValueModule : ApiGeneratorModule {
-    override fun process(generator: ApiClientConfigurationGenerator) {
+    override fun process(generator: ConfigurationGeneratorConfig) {
         generator.jsonDefaultValueProperties[JsonConfiguration::coerceInputValues.name] = "true"
     }
 
-    override fun process(generator: ApiModelGenerator) {
+    override fun process(generator: ModelGeneratorConfig) {
         generator.defaultEnumValue = "UNKNOWN_"
     }
 }

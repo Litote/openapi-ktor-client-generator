@@ -14,7 +14,7 @@
  * limitations under the License.
  */
 
-package org.litote.openapi.ktor.client.generator
+package org.litote.openapi.ktor.client.generator.adapter.renderer
 
 import com.squareup.kotlinpoet.MemberName
 

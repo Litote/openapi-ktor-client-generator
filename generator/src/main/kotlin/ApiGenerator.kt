@@ -1,6 +1,13 @@
 package org.litote.openapi.ktor.client.generator
 
 import io.github.oshai.kotlinlogging.KotlinLogging
+import org.litote.openapi.ktor.client.generator.adapter.parser.OpenApiSpecificationParser
+import org.litote.openapi.ktor.client.generator.adapter.renderer.ApiClientConfigurationGenerator
+import org.litote.openapi.ktor.client.generator.adapter.renderer.ApiClientGenerator
+import org.litote.openapi.ktor.client.generator.adapter.renderer.ApiModelGenerator
+import org.litote.openapi.ktor.client.generator.application.GenerateCodeService
+import org.litote.openapi.ktor.client.generator.port.ClientRenderer
+import org.litote.openapi.ktor.client.generator.port.ModelRenderer
 
 /**
  * Main entry point for the API client generator.
@@ -79,16 +86,36 @@ public sealed class GenerationResult {
 public fun generate(configuration: ApiGeneratorConfiguration): GenerationResult =
     try {
         logger.debug { "Generating API for $configuration" }
+        val parser = OpenApiSpecificationParser()
+        val spec = parser.parse(configuration, configuration.operationFilter)
 
-        val fileContent = ApiModel.parseOpenApiFile(configuration)
-        val modelGenerator = ModelGenerator(fileContent)
-        val clientGenerator = ClientGenerator(fileContent, modelGenerator)
+        val configRenderer =
+            ApiClientConfigurationGenerator(spec.clientConfiguration, configuration)
+                .apply { configuration.modules.forEach { it.process(this) } }
 
-        val clientsGenerated = clientGenerator.generate()
-        val modelsGenerated = modelGenerator.generate()
+        val clientGen =
+            ApiClientGenerator(configuration)
+                .apply { configuration.modules.forEach { it.process(this) } }
+        val clientRenderer =
+            ClientRenderer { clientSpec ->
+                val context = clientGen.buildClient(clientSpec)
+                clientGen.writeFile(context)
+            }
 
-        logger.info { "Generation completed: $clientsGenerated clients, $modelsGenerated models" }
-        GenerationResult.Success(clientsGenerated, modelsGenerated)
+        val modelGen =
+            ApiModelGenerator(configuration.modelPackage, configuration.outputDirectory)
+                .apply { configuration.modules.forEach { it.process(this) } }
+        val modelRenderer =
+            ModelRenderer { modelSpec ->
+                val typeSpec = modelGen.buildModel(modelSpec)
+                modelGen.writeFile(modelSpec.name, typeSpec)
+            }
+
+        val result = GenerateCodeService(configRenderer, clientRenderer, modelRenderer).generate(spec)
+        if (result is GenerationResult.Success) {
+            logger.info { "Generation completed: ${result.clientsGenerated} clients, ${result.modelsGenerated} models" }
+        }
+        result
     } catch (e: Throwable) {
         logger.error(e) { "Error while generating API for $configuration" }
         GenerationResult.Failure(e, "Failed to generate API for ${configuration.openApiFile}: ${e.message}")
