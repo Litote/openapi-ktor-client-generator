@@ -7,7 +7,6 @@ import org.gradle.api.file.RegularFileProperty
 import org.gradle.api.model.ObjectFactory
 import org.gradle.api.provider.Property
 import org.gradle.api.provider.SetProperty
-import java.io.File
 import javax.inject.Inject
 
 public abstract class ApiClientGenerator
@@ -42,6 +41,12 @@ public abstract class ApiClientGenerator
 
         public val skip: Property<Boolean> = objects.property(Boolean::class.java)
 
+        public val splitByClient: Property<Boolean> = objects.property(Boolean::class.java)
+
+        public val targetClientName: Property<String> = objects.property(String::class.java)
+
+        public val sharedBasePackage: Property<String> = objects.property(String::class.java)
+
         internal fun initConventions(project: Project) {
             openApiFile.convention(project.layout.projectDirectory.file("src/main/openapi/$name.json"))
             basePackage.convention("org.example")
@@ -49,5 +54,8 @@ public abstract class ApiClientGenerator
             modulesIds.convention(emptySet())
             outputDirectory.convention(project.layout.buildDirectory.dir("api-$name"))
             skip.convention(null as Boolean?)
+            splitByClient.convention(false)
+            targetClientName.convention(null as String?)
+            sharedBasePackage.convention(null as String?)
         }
     }

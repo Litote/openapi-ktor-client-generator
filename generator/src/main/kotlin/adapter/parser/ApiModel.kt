@@ -448,7 +448,7 @@ internal class ApiModel private constructor(
                                     .firstOrNull { it.value.toSet() == refNames.toSet() }
                                     ?.key
                             if (parentName != null) {
-                                ClassName(configuration.modelPackage, parentName)
+                                ClassName(configuration.resolvedModelPackage, parentName)
                             } else {
                                 JsonElement::class.asClassName()
                             }
@@ -467,10 +467,10 @@ internal class ApiModel private constructor(
         when (schemaOrReference) {
             is OpenAPIV3Reference -> {
                 ClassName(
-                    configuration.modelPackage,
+                    configuration.resolvedModelPackage,
                     getRefClassName(schemaOrReference).let {
                         if (it == "Companion") {
-                            "${configuration.modelPackage}.$it"
+                            "${configuration.resolvedModelPackage}.$it"
                         } else {
                             it
                         }

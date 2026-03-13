@@ -8,6 +8,7 @@ import kotlin.test.Test
 import kotlin.test.assertContains
 import kotlin.test.assertEquals
 import kotlin.test.assertFailsWith
+import kotlin.test.assertFalse
 import kotlin.test.assertTrue
 
 internal class InitSubprojectTaskTest {
@@ -21,6 +22,10 @@ internal class InitSubprojectTaskTest {
         ktorVersion: String = DEFAULT_KTOR_VERSION,
         coroutinesVersion: String = DEFAULT_COROUTINES_VERSION,
         serializationVersion: String = DEFAULT_SERIALIZATION_VERSION,
+        splitByClient: Boolean? = null,
+        basePackage: String? = null,
+        buildScriptTemplate: String? = null,
+        generatorConfigExtra: String? = null,
     ): InitSubprojectTask {
         val project = ProjectBuilder.builder().withProjectDir(tempDir).build()
         val task =
@@ -34,6 +39,10 @@ internal class InitSubprojectTaskTest {
         task.ktorVersion.set(ktorVersion)
         task.coroutinesVersion.set(coroutinesVersion)
         task.serializationVersion.set(serializationVersion)
+        splitByClient?.let { task.splitByClient.set(it) }
+        basePackage?.let { task.basePackage.set(it) }
+        buildScriptTemplate?.let { task.buildScriptTemplate.set(it) }
+        generatorConfigExtra?.let { task.generatorConfigExtra.set(it) }
         return task
     }
 
@@ -164,5 +173,291 @@ internal class InitSubprojectTaskTest {
         task.initSubproject()
 
         assertTrue(tempDir.resolve("client/src/main/openapi/myapi.yaml").exists())
+    }
+
+    @Test
+    fun `GIVEN splitByClient=true with multi-tag spec WHEN initSubproject THEN creates shared and per-client modules`() {
+        val openApiFile =
+            File(
+                checkNotNull(javaClass.classLoader.getResource("multi-tag.json")) { "multi-tag.json not found" }.toURI(),
+            )
+        val task =
+            buildTask(
+                openApiFile = openApiFile.absolutePath,
+                subprojectName = "my-api",
+                splitByClient = true,
+            )
+
+        task.initSubproject()
+
+        assertTrue(tempDir.resolve("shared/build.gradle.kts").exists())
+        assertFalse(tempDir.resolve("settings.gradle.kts").exists(), "settings.gradle.kts should NOT be generated")
+        assertFalse(tempDir.resolve("build.gradle.kts").exists(), "root build.gradle.kts should NOT exist")
+        assertTrue(tempDir.resolve("src/main/openapi/multi-tag.json").exists())
+    }
+
+    @Test
+    fun `GIVEN splitByClient=true with multi-tag spec WHEN initSubproject THEN client dirs are in kebab-case`() {
+        val openApiFile =
+            File(
+                checkNotNull(javaClass.classLoader.getResource("multi-tag.json")) { "multi-tag.json not found" }.toURI(),
+            )
+        val task =
+            buildTask(
+                openApiFile = openApiFile.absolutePath,
+                subprojectName = "my-api",
+                splitByClient = true,
+            )
+
+        task.initSubproject()
+
+        // UserClient → user-client, OrderClient → order-client
+        assertTrue(tempDir.resolve("user-client/build.gradle.kts").exists(), "userClient dir should exist")
+        assertTrue(tempDir.resolve("order-client/build.gradle.kts").exists(), "orderClient dir should exist")
+    }
+
+    @Test
+    fun `GIVEN splitByClient=true WHEN initSubproject THEN shared build gradle kts has splitByClient and basePackage`() {
+        val openApiFile =
+            File(
+                checkNotNull(javaClass.classLoader.getResource("multi-tag.json")) { "multi-tag.json not found" }.toURI(),
+            )
+        val task =
+            buildTask(
+                openApiFile = openApiFile.absolutePath,
+                subprojectName = "my-api",
+                splitByClient = true,
+            )
+
+        task.initSubproject()
+
+        val sharedContent = tempDir.resolve("shared/build.gradle.kts").readText()
+        assertContains(sharedContent, "splitByClient.set(true)")
+        assertContains(sharedContent, """basePackage = "org.example.multitag"""")
+    }
+
+    @Test
+    fun `GIVEN splitByClient=true WHEN initSubproject THEN client build gradle kts has targetClientName and api dependency on shared`() {
+        val openApiFile =
+            File(
+                checkNotNull(javaClass.classLoader.getResource("multi-tag.json")) { "multi-tag.json not found" }.toURI(),
+            )
+        val task =
+            buildTask(
+                openApiFile = openApiFile.absolutePath,
+                subprojectName = "my-api",
+                splitByClient = true,
+            )
+
+        task.initSubproject()
+
+        val userClientContent = tempDir.resolve("user-client/build.gradle.kts").readText()
+        assertContains(userClientContent, """targetClientName.set("UserClient")""")
+        assertContains(userClientContent, """api(project(":shared"))""")
+        assertContains(userClientContent, "splitByClient.set(true)")
+        assertContains(userClientContent, """sharedBasePackage.set("org.example.multitag")""")
+        assertContains(userClientContent, """basePackage = "org.example.multitag.user"""")
+    }
+
+    @Test
+    fun `GIVEN splitByClient=true and explicit basePackage WHEN initSubproject THEN generated build files use provided basePackage`() {
+        val openApiFile =
+            File(
+                checkNotNull(javaClass.classLoader.getResource("multi-tag.json")) { "multi-tag.json not found" }.toURI(),
+            )
+        val task =
+            buildTask(
+                openApiFile = openApiFile.absolutePath,
+                subprojectName = "my-api",
+                splitByClient = true,
+                basePackage = "com.acme.myapi",
+            )
+
+        task.initSubproject()
+
+        val sharedContent = tempDir.resolve("shared/build.gradle.kts").readText()
+        assertContains(sharedContent, """basePackage = "com.acme.myapi"""")
+
+        val userClientContent = tempDir.resolve("user-client/build.gradle.kts").readText()
+        assertContains(userClientContent, """basePackage = "com.acme.myapi.user"""")
+    }
+
+    @Test
+    fun `GIVEN splitByClient=true and openApiFile already in src main openapi WHEN initSubproject THEN source file is preserved`() {
+        val openApiDestDir = tempDir.resolve("src/main/openapi").also { it.mkdirs() }
+        val openApiFile = openApiDestDir.resolve("multi-tag.json")
+        val originalContent =
+            File(
+                checkNotNull(javaClass.classLoader.getResource("multi-tag.json")) { "multi-tag.json not found" }.toURI(),
+            ).readText()
+        openApiFile.writeText(originalContent)
+
+        val task =
+            buildTask(
+                openApiFile = openApiFile.absolutePath,
+                subprojectName = "my-api",
+                splitByClient = true,
+            )
+
+        task.initSubproject()
+
+        assertTrue(openApiFile.exists(), "Source file should still exist")
+        assertEquals(originalContent, openApiFile.readText(), "Source file content should be preserved")
+    }
+
+    @Test
+    fun `GIVEN buildScriptTemplate WHEN initSubproject THEN build gradle kts uses provided template`() {
+        val openApiFile = tempDir.resolve("petstore.yaml").also { it.writeText("openapi: 3.0.0") }
+        val template =
+            """
+            plugins {
+                alias(libs.plugins.kotlin.jvm)
+            }
+            dependencies {
+                implementation(libs.ktor.client.core)
+            }
+            """.trimIndent()
+        val task =
+            buildTask(
+                openApiFile = openApiFile.absolutePath,
+                subprojectName = "my-client",
+                buildScriptTemplate = template,
+            )
+
+        task.initSubproject()
+
+        val content = tempDir.resolve("my-client/build.gradle.kts").readText()
+        assertContains(content, "alias(libs.plugins.kotlin.jvm)")
+        assertContains(content, "implementation(libs.ktor.client.core)")
+        assertContains(content, "apiClientGenerator {")
+        // auto-generated versions should NOT be present
+        assertFalse(content.contains("""kotlin("jvm") version"""), "Should not contain generated plugins block")
+    }
+
+    @Test
+    fun `GIVEN generatorConfigExtra WHEN initSubproject THEN build gradle kts contains extra config`() {
+        val openApiFile = tempDir.resolve("petstore.yaml").also { it.writeText("openapi: 3.0.0") }
+        val task =
+            buildTask(
+                openApiFile = openApiFile.absolutePath,
+                subprojectName = "my-client",
+                generatorConfigExtra = """modulesIds.add("UnknownEnumValueModule")""",
+            )
+
+        task.initSubproject()
+
+        val content = tempDir.resolve("my-client/build.gradle.kts").readText()
+        assertContains(content, """modulesIds.add("UnknownEnumValueModule")""")
+        assertContains(content, """openApiFile = file("src/main/openapi/petstore.yaml")""")
+    }
+
+    @Test
+    fun `GIVEN buildScriptTemplate WHEN splitByClient=true THEN shared build gradle kts uses template`() {
+        val openApiFile =
+            File(
+                checkNotNull(javaClass.classLoader.getResource("multi-tag.json")) { "multi-tag.json not found" }.toURI(),
+            )
+        val template = "plugins { alias(libs.plugins.kotlin.jvm) }"
+        val task =
+            buildTask(
+                openApiFile = openApiFile.absolutePath,
+                splitByClient = true,
+                buildScriptTemplate = template,
+            )
+
+        task.initSubproject()
+
+        val sharedContent = tempDir.resolve("shared/build.gradle.kts").readText()
+        assertContains(sharedContent, "alias(libs.plugins.kotlin.jvm)")
+        assertContains(sharedContent, "splitByClient.set(true)")
+        assertFalse(sharedContent.contains("""kotlin("jvm") version"""), "Should not contain generated plugins block")
+    }
+
+    @Test
+    fun `GIVEN buildScriptTemplate WHEN splitByClient=true THEN client build gradle kts uses template and keeps api project shared`() {
+        val openApiFile =
+            File(
+                checkNotNull(javaClass.classLoader.getResource("multi-tag.json")) { "multi-tag.json not found" }.toURI(),
+            )
+        val template = "plugins { alias(libs.plugins.kotlin.jvm) }"
+        val task =
+            buildTask(
+                openApiFile = openApiFile.absolutePath,
+                splitByClient = true,
+                buildScriptTemplate = template,
+            )
+
+        task.initSubproject()
+
+        val clientContent = tempDir.resolve("user-client/build.gradle.kts").readText()
+        assertContains(clientContent, "alias(libs.plugins.kotlin.jvm)")
+        assertContains(clientContent, """api(project(":shared"))""")
+        assertContains(clientContent, """targetClientName.set("UserClient")""")
+        assertFalse(clientContent.contains("""kotlin("jvm") version"""), "Should not contain generated plugins block")
+    }
+
+    @Test
+    fun `GIVEN generatorConfigExtra WHEN splitByClient=true THEN shared and client builds contain extra config`() {
+        val openApiFile =
+            File(
+                checkNotNull(javaClass.classLoader.getResource("multi-tag.json")) { "multi-tag.json not found" }.toURI(),
+            )
+        val task =
+            buildTask(
+                openApiFile = openApiFile.absolutePath,
+                splitByClient = true,
+                generatorConfigExtra = """modulesIds.add("LoggingSl4jModule")""",
+            )
+
+        task.initSubproject()
+
+        val sharedContent = tempDir.resolve("shared/build.gradle.kts").readText()
+        assertContains(sharedContent, """modulesIds.add("LoggingSl4jModule")""")
+
+        val clientContent = tempDir.resolve("user-client/build.gradle.kts").readText()
+        assertContains(clientContent, """modulesIds.add("LoggingSl4jModule")""")
+    }
+}
+
+internal class GeneratorPluginTest {
+    @TempDir
+    lateinit var rootDir: File
+
+    @Test
+    fun `GIVEN plugin applied to root project WHEN tasks listed THEN initApiClientSubproject is registered`() {
+        val rootProject =
+            ProjectBuilder
+                .builder()
+                .withProjectDir(rootDir)
+                .build()
+        rootProject.plugins.apply(GeneratorPlugin::class.java)
+
+        assertTrue(
+            rootProject.tasks.names.contains("initApiClientSubproject"),
+            "initApiClientSubproject should be registered on the root project",
+        )
+    }
+
+    @Test
+    fun `GIVEN plugin applied to subproject WHEN tasks listed THEN initApiClientSubproject is NOT registered`() {
+        val rootProject =
+            ProjectBuilder
+                .builder()
+                .withProjectDir(rootDir)
+                .build()
+        val subprojectDir = rootDir.resolve("shared").also { it.mkdirs() }
+        val subproject =
+            ProjectBuilder
+                .builder()
+                .withParent(rootProject)
+                .withName("shared")
+                .withProjectDir(subprojectDir)
+                .build()
+        subproject.plugins.apply(GeneratorPlugin::class.java)
+
+        assertFalse(
+            subproject.tasks.names.contains("initApiClientSubproject"),
+            "initApiClientSubproject must NOT be registered on a subproject — it would overwrite generated files without templates",
+        )
     }
 }

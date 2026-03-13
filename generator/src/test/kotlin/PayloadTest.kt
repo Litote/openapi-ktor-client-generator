@@ -27,7 +27,9 @@ class PayloadTest {
     @Test
     fun `GIVEN vehicule payload WHEN deserializing THEN output matches snapshot`() {
         val json = Json { ignoreUnknownKeys = true }
-        val inputStream = PayloadTest::class.java.getResourceAsStream("/payloads/sample-vehicule.json")!!
+        val inputStream =
+            PayloadTest::class.java.getResourceAsStream("/payloads/sample-vehicule.json")
+                ?: error("Resource /payloads/sample-vehicule.json not found")
         val originalContent = inputStream.bufferedReader().readText()
         val result =
             json.decodeFromString<List<Vehicle>>(originalContent)

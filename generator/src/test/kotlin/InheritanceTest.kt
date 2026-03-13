@@ -98,11 +98,11 @@ class InheritanceTest {
         val (_, generationSpec) = loadSpec("inheritance.json")
 
         val statusModel = generationSpec.models.first { it.name == "Status" }
-        assertIs<org.litote.openapi.ktor.client.generator.domain.ModelSpec.SealedClassSpec>(statusModel)
+        assertIs<ModelSpec.SealedClassSpec>(statusModel)
 
         val subtypeNames =
             generationSpec.models
-                .filterIsInstance<org.litote.openapi.ktor.client.generator.domain.ModelSpec.DataClassSpec>()
+                .filterIsInstance<ModelSpec.DataClassSpec>()
                 .filter { it.sealedParentName == "Status" }
                 .map { it.name }
         assertTrue(subtypeNames.containsAll(listOf("TextStatus", "MediaStatus", "PollStatus")))

@@ -8,7 +8,6 @@ import com.squareup.kotlinpoet.MemberName
 import com.squareup.kotlinpoet.ParameterSpec
 import com.squareup.kotlinpoet.PropertySpec
 import com.squareup.kotlinpoet.TypeSpec
-import io.github.oshai.kotlinlogging.KotlinLogging
 import org.litote.openapi.ktor.client.generator.ApiGeneratorConfiguration
 import org.litote.openapi.ktor.client.generator.adapter.writer.KotlinPoetFileWriter
 import org.litote.openapi.ktor.client.generator.domain.ClientSpec
@@ -25,15 +24,11 @@ public class ApiClientGenerator internal constructor(
     public val configuration: ApiGeneratorConfiguration,
     private val fileSystemWriter: FileSystemWriter = KotlinPoetFileWriter(),
 ) : ClientGeneratorConfig {
-    private companion object {
-        private val logger = KotlinLogging.logger {}
-    }
-
     public val clientConfigurationClass: ClassName =
-        ClassName(configuration.clientPackage, "ClientConfiguration")
+        ClassName(configuration.configPackage, "ClientConfiguration")
 
     public val clientConfigurationCompanionClass: ClassName =
-        ClassName(configuration.clientPackage, "ClientConfiguration", "Companion")
+        ClassName(configuration.configPackage, "ClientConfiguration", "Companion")
 
     /**
      * Builds a client class for the given spec (name and operations).
@@ -69,13 +64,14 @@ public class ApiClientGenerator internal constructor(
                 operations = spec.operations,
             )
 
-        val modelGenerator = ApiModelGenerator(configuration.modelPackage, configuration.outputDirectory)
+        val modelGenerator = ApiModelGenerator(configuration.resolvedModelPackage, configuration.outputDirectory)
         val operationBuilder =
             OperationBuilder(
                 modelGenerator = modelGenerator,
                 responseBuilder = ResponseBuilder(),
                 clientConfigurationClass = clientConfigurationClass,
-                modelPackage = configuration.modelPackage,
+                modelPackage = configuration.resolvedModelPackage,
+                clientPackage = configuration.clientPackage,
             )
 
         // Add all additional inline models first (across all operations), then build operations.

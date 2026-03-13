@@ -199,7 +199,9 @@ class SnapshotTest {
         // Compare content of each file
         val differences = mutableListOf<String>()
         for ((path, snapshotContent) in snapshotFiles) {
-            val generatedContent = generatedFiles[path]!!
+            val generatedContent =
+                generatedFiles[path]
+                    ?: error("Generated file not found for path: $path")
             if (snapshotContent != generatedContent) {
                 differences.add(buildDiffMessage(path, snapshotContent, generatedContent))
             }

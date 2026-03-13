@@ -13,16 +13,14 @@ import com.squareup.kotlinpoet.STRING
 import com.squareup.kotlinpoet.TypeAliasSpec
 import com.squareup.kotlinpoet.TypeSpec
 import com.squareup.kotlinpoet.TypeSpec.Companion.anonymousClassBuilder
-import io.github.oshai.kotlinlogging.KotlinLogging
 import kotlinx.serialization.SerialName
 import kotlinx.serialization.Serializable
+import org.litote.openapi.ktor.client.generator.adapter.parser.enumFieldName
 import org.litote.openapi.ktor.client.generator.adapter.writer.KotlinPoetFileWriter
-import org.litote.openapi.ktor.client.generator.domain.DomainType
 import org.litote.openapi.ktor.client.generator.domain.ModelProperty
 import org.litote.openapi.ktor.client.generator.domain.ModelSpec
 import org.litote.openapi.ktor.client.generator.port.FileSystemWriter
 import org.litote.openapi.ktor.client.generator.port.ModelGeneratorConfig
-import org.litote.openapi.ktor.client.generator.shared.capitalize
 
 public class ApiModelGenerator internal constructor(
     private val modelPackage: String,
@@ -30,7 +28,6 @@ public class ApiModelGenerator internal constructor(
     private val fileSystemWriter: FileSystemWriter = KotlinPoetFileWriter(),
 ) : ModelGeneratorConfig {
     private companion object {
-        private val logger = KotlinLogging.logger {}
         val serializerName: MemberName = MemberName("kotlinx.serialization.builtins", "serializer")
         val jsonObject: ClassName = ClassName("kotlinx.serialization.json", "JsonObject")
         val jsonClassDiscriminator: ClassName = ClassName("kotlinx.serialization.json", "JsonClassDiscriminator")

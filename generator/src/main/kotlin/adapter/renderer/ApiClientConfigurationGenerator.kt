@@ -15,7 +15,6 @@ import com.squareup.kotlinpoet.STAR
 import com.squareup.kotlinpoet.TypeSpec
 import com.squareup.kotlinpoet.UNIT
 import com.squareup.kotlinpoet.asTypeName
-import io.github.oshai.kotlinlogging.KotlinLogging
 import io.ktor.client.HttpClient
 import io.ktor.client.HttpClientConfig
 import io.ktor.client.engine.HttpClientEngineFactory
@@ -35,8 +34,6 @@ public class ApiClientConfigurationGenerator internal constructor(
 ) : ConfigurationRenderer,
     ConfigurationGeneratorConfig {
     private companion object {
-        private val logger = KotlinLogging.logger {}
-
         val engineFactoryType: ParameterizedTypeName =
             HttpClientEngineFactory::class.asTypeName().parameterizedBy(STAR)
         val httpClientConfigType: LambdaTypeName =
@@ -219,17 +216,8 @@ public class ApiClientConfigurationGenerator internal constructor(
         )
 
         clientConfiguration.componentParameters.forEach { spec ->
-            val constBaseName = spec.constName.removePrefix("PARAMETER_")
-            companionBuilder.addProperty(
-                PropertySpec
-                    .builder(spec.constName, String::class)
-                    .addModifiers(KModifier.CONST)
-                    .initializer("%S", spec.originalName)
-                    .build(),
-            )
-
             if (spec.defaultValue != null) {
-                val typeName = spec.type.toTypeName(configuration.modelPackage)
+                val typeName = spec.type.toTypeName(configuration.resolvedModelPackage)
                 // Only add const if the type supports it (primitives)
                 if (isConstSupported(typeName)) {
                     companionBuilder.addProperty(

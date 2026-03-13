@@ -44,54 +44,22 @@ generator/src/main/kotlin/
 │
 │  ← Composition root (public API, wires adapters together)
 ├── ApiGenerator.kt              ← generate(configuration): parses, configures renderers, generates
+│                                   parseClientNames(path): returns client names from a spec
 ├── ApiGeneratorConfiguration.kt ← public config: operationFilter uses OperationMeta (domain type)
+│                                   splitByClient, targetClientName for split-by-client mode
 ├── ApiGeneratorModule.kt        ← SPI: hook into concrete renderers before generation
 │
 ├── domain/          ← pure business model, zero external dependencies
-│   ├── GenerationSpec           ← top-level: everything to generate
-│   ├── ClientSpec               ← one Ktor client class per tag
-│   ├── OperationSpec            ← one suspend method per HTTP operation
-│   ├── ModelSpec (sealed)       ← DataClass | Enum | SealedClass | Object | Alias
-│   ├── DomainType (sealed)      ← Primitive | List | Set | Map | ModelReference | Inline | Json
-│   ├── SecuritySchemeSpec       ← public: API-key security scheme (name, keyName, location, paramName)
-│   ├── SecuritySchemeLocation   ← public enum: HEADER | QUERY
-│   ├── GeneratedFile            ← internal: pure representation of a generated source file
-│   └── …
-│
+│   ├── ModelUsageAnalyzer       ← analyzes which clients reference which models (transitively)
+│   ├── PartitionedGenerationSpec← result of split: shared spec + per-client specs
+│   └── ...
 ├── port/            ← interfaces (ports): inward and outward contracts
-│   ├── SpecificationParser      ← OpenAPI file → GenerationSpec
-│   ├── ConfigurationRenderer    ← renders client configuration class to disk
-│   ├── ClientRenderer           ← renders one client class to disk (internal fun interface)
-│   ├── ModelRenderer            ← renders one model class to disk (internal fun interface)
-│   ├── ConfigurationGeneratorConfig ← (public) module hook: exceptionLogging, jsonProperties
-│   ├── ClientGeneratorConfig    ← (public) module hook: extensibility for client rendering
-│   ├── ModelGeneratorConfig     ← (public) module hook: defaultEnumValue
-│   └── FileSystemWriter         ← GeneratedFile → disk
-│
 ├── adapter/
-│   ├── parser/      ← OpenAPI bindings → domain (no KotlinPoet in public surface)
-│   │   ├── ApiModel             ← (internal) wraps OpenAPIV3 parsed model
-│   │   ├── ApiOperation         ← (internal) intermediate operation representation
-│   │   ├── ApiClassProperty     ← (internal) intermediate property representation
-│   │   ├── OpenApiSpecificationParser  ← implements SpecificationParser
-│   │   ├── TypeNameConverter    ← KotlinPoet TypeName → DomainType
-│   │   ├── ParserTypeUtils      ← (internal) TypeName predicates for parser use
-│   │   └── ParserNameUtils      ← (internal) name utilities for parser use
-│   │
 │   ├── renderer/    ← domain → KotlinPoet FileSpec/TypeSpec
-│   │   ├── ApiModelGenerator    ← implements ModelGeneratorConfig; ModelSpec → TypeSpec
-│   │   ├── ApiClientGenerator   ← implements ClientGeneratorConfig; ClientSpec → TypeSpec
-│   │   ├── ApiClientConfigurationGenerator ← implements ConfigurationRenderer + ConfigurationGeneratorConfig
-│   │   ├── OperationBuilder, ResponseBuilder, ClientGenerationContext
-│   │   ├── DomainTypeMapper     ← DomainType → KotlinPoet TypeName
-│   │   ├── DefaultValueMapper   ← DefaultValue → CodeBlock
-│   │   └── KotlinPoets, KtorPoets  ← KotlinPoet utilities (incl. FileSpec.toGeneratedFile())
-│   │
 │   └── writer/      ← GeneratedFile → disk
-│       └── KotlinPoetFileWriter ← implements FileSystemWriter (no KotlinPoet in port)
-│
 └── application/     ← orchestration via ports, no OpenAPI or KotlinPoet imports
-    └── GenerateCodeService      ← accepts port interfaces, generates from GenerationSpec
+    ├── GenerateCodeService      ← accepts port interfaces, generates from GenerationSpec
+    └── GenerationSpecPartitioner← partitions a GenerationSpec into shared + per-client specs
 ```
 
 **Dependency rules:**

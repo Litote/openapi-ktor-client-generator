@@ -12,12 +12,7 @@ import community.flock.kotlinx.openapi.bindings.OpenAPIV3Schema
 import community.flock.kotlinx.openapi.bindings.OpenAPIV3Type
 import io.github.oshai.kotlinlogging.KotlinLogging
 import kotlinx.serialization.json.JsonPrimitive
-import kotlinx.serialization.json.booleanOrNull
 import kotlinx.serialization.json.contentOrNull
-import kotlinx.serialization.json.doubleOrNull
-import kotlinx.serialization.json.floatOrNull
-import kotlinx.serialization.json.intOrNull
-import kotlinx.serialization.json.longOrNull
 import org.litote.openapi.ktor.client.generator.ApiGeneratorConfiguration
 import org.litote.openapi.ktor.client.generator.domain.ClientConfigurationSpec
 import org.litote.openapi.ktor.client.generator.domain.ClientSpec
@@ -34,7 +29,6 @@ import org.litote.openapi.ktor.client.generator.domain.OperationSpec
 import org.litote.openapi.ktor.client.generator.domain.ParameterLocation
 import org.litote.openapi.ktor.client.generator.domain.RequestBodySpec
 import org.litote.openapi.ktor.client.generator.domain.ResponseEntry
-import org.litote.openapi.ktor.client.generator.domain.SecuritySchemeSpec
 import org.litote.openapi.ktor.client.generator.port.SpecificationParser
 import org.litote.openapi.ktor.client.generator.shared.capitalize
 import org.litote.openapi.ktor.client.generator.shared.sanitizeToIdentifier
@@ -51,7 +45,7 @@ internal class OpenApiSpecificationParser : SpecificationParser {
         operationFilter: (OperationMeta) -> Boolean,
     ): GenerationSpec {
         val apiModel = ApiModel.parseOpenApiFile(configuration)
-        val modelPackage = configuration.modelPackage
+        val modelPackage = configuration.resolvedModelPackage
 
         val clientConfigurationSpec = buildClientConfigurationSpec(apiModel, configuration)
         val modelSpecs = buildModelSpecs(apiModel, configuration)
@@ -83,7 +77,7 @@ internal class OpenApiSpecificationParser : SpecificationParser {
                 ComponentParameterSpec(
                     originalName = param.name,
                     constName = "PARAMETER_${constName(param.name)}",
-                    type = typeName.toDomainType(configuration.modelPackage),
+                    type = typeName.toDomainType(configuration.resolvedModelPackage),
                     defaultValue = defaultValue,
                 )
             }
@@ -198,7 +192,9 @@ internal class OpenApiSpecificationParser : SpecificationParser {
         val methodName =
             (
                 operationId?.takeUnless { duplicateIds.contains(it) }
-                    ?: "${apiOperation.method}_${apiOperation.path.replace("/", "_").replace("{", "With_").replace("}", "")}"
+                    ?: "${apiOperation.method}_${
+                        apiOperation.path.replace("/", "_").replace("{", "With_").replace("}", "")
+                    }"
             ).replace("-", "_").snakeToCamelCase().capitalize()
 
         val parameters = buildParameters(operation, apiModel, configuration, modelPackage)
@@ -503,8 +499,6 @@ internal class OpenApiSpecificationParser : SpecificationParser {
         apiModel: ApiModel,
         configuration: ApiGeneratorConfiguration,
     ): ModelSpec? {
-        val modelPackage = configuration.modelPackage
-
         val oneOfRefs = schema.oneOf?.filterIsInstance<OpenAPIV3Reference>()
         if (oneOfRefs != null && oneOfRefs.size >= 2) {
             return ModelSpec.SealedClassSpec(
@@ -520,7 +514,14 @@ internal class OpenApiSpecificationParser : SpecificationParser {
         val mergedRequired =
             ((schema.required ?: emptyList()) + allOfParts.flatMap { it.required ?: emptyList() }).distinct()
         val effectiveSchema =
-            if (allOfParts.isNotEmpty()) schema.copy(properties = mergedProperties, required = mergedRequired) else schema
+            if (allOfParts.isNotEmpty()) {
+                schema.copy(
+                    properties = mergedProperties,
+                    required = mergedRequired,
+                )
+            } else {
+                schema
+            }
 
         val properties = buildModelProperties(effectiveSchema, apiModel, configuration)
 
@@ -538,8 +539,8 @@ internal class OpenApiSpecificationParser : SpecificationParser {
 
             properties.isEmpty() && !effectiveSchema.enum.isNullOrEmpty() -> {
                 val enumValues =
-                    effectiveSchema.enum!!.mapNotNull { e ->
-                        (e as? JsonPrimitive)?.contentOrNull
+                    effectiveSchema.enum.orEmpty().mapNotNull { e ->
+                        e?.contentOrNull
                     }
                 ModelSpec.EnumSpec(name = name, values = enumValues)
             }
@@ -567,7 +568,7 @@ internal class OpenApiSpecificationParser : SpecificationParser {
         apiModel: ApiModel,
         configuration: ApiGeneratorConfiguration,
     ): List<ModelProperty> {
-        val modelPackage = configuration.modelPackage
+        val modelPackage = configuration.resolvedModelPackage
         val rawProperties =
             schema.properties
                 ?.asSequence()
@@ -601,7 +602,7 @@ internal class OpenApiSpecificationParser : SpecificationParser {
             } else if (!enum.isNullOrEmpty()) {
                 val enumName = property.camelCaseName.capitalize()
                 val enumValues =
-                    enum.mapNotNull { (it as? JsonPrimitive)?.contentOrNull }
+                    enum.mapNotNull { it.contentOrNull }
                 nestedModels.add(ModelSpec.EnumSpec(name = enumName, values = enumValues))
                 finalType = property.type.toDomainType(modelPackage)
             } else {

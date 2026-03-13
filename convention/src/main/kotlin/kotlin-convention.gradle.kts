@@ -1,5 +1,3 @@
-import org.gradle.api.JavaVersion
-import org.gradle.kotlin.dsl.kotlin
 import org.jetbrains.kotlin.gradle.dsl.JvmTarget
 
 plugins {

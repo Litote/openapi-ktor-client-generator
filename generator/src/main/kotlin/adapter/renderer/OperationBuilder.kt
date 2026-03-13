@@ -30,7 +30,6 @@ import com.squareup.kotlinpoet.UNIT
 import io.ktor.http.HttpStatusCode.Companion.InternalServerError
 import org.litote.openapi.ktor.client.generator.domain.DomainType
 import org.litote.openapi.ktor.client.generator.domain.FormFieldSpec
-import org.litote.openapi.ktor.client.generator.domain.ModelSpec
 import org.litote.openapi.ktor.client.generator.domain.OperationParameter
 import org.litote.openapi.ktor.client.generator.domain.OperationSpec
 import org.litote.openapi.ktor.client.generator.domain.RequestBodySpec
@@ -44,6 +43,7 @@ internal class OperationBuilder(
     private val responseBuilder: ResponseBuilder,
     private val clientConfigurationClass: ClassName,
     private val modelPackage: String,
+    private val clientPackage: String,
 ) {
     private companion object {
         val bodyMember = MemberName("io.ktor.client.call", "body")
@@ -113,8 +113,7 @@ internal class OperationBuilder(
         }
 
         val responseSealedName = "${responseBaseName}Response"
-        val packageName = clientConfigurationClass.packageName
-        val responseSealedClass = ClassName(packageName, clientName, responseSealedName)
+        val responseSealedClass = ClassName(clientPackage, clientName, responseSealedName)
         clientBuilder.addType(responseBuilder.createSealedResponseClass(responseSealedName))
         val responseEntries =
             responseBuilder.buildResponseTypes(
@@ -332,10 +331,18 @@ internal class OperationBuilder(
                     val suffix = param.toStringSuffix()
                     if (param.isOptional) {
                         builder.beginControlFlow("if (%N != null)", param.camelCaseName)
-                        builder.addStatement("parameters.append(%S, %N$suffix)", param.originalName, param.camelCaseName)
+                        builder.addStatement(
+                            "parameters.append(%S, %N$suffix)",
+                            param.originalName,
+                            param.camelCaseName,
+                        )
                         builder.endControlFlow()
                     } else {
-                        builder.addStatement("parameters.append(%S, %N$suffix)", param.originalName, param.camelCaseName)
+                        builder.addStatement(
+                            "parameters.append(%S, %N$suffix)",
+                            param.originalName,
+                            param.camelCaseName,
+                        )
                     }
                 }
                 builder.endControlFlow()
@@ -470,7 +477,8 @@ internal class OperationBuilder(
                     endControlFlow()
                 }
                 when {
-                    requestBody == null -> { /* skip */ }
+                    requestBody == null -> { // skip
+                    }
 
                     requestBody.isMultipartFormData -> {
                         add(

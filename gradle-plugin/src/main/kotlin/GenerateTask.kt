@@ -8,6 +8,7 @@ import org.gradle.api.provider.SetProperty
 import org.gradle.api.tasks.CacheableTask
 import org.gradle.api.tasks.Input
 import org.gradle.api.tasks.InputFile
+import org.gradle.api.tasks.Optional
 import org.gradle.api.tasks.OutputDirectory
 import org.gradle.api.tasks.PathSensitive
 import org.gradle.api.tasks.PathSensitivity
@@ -53,6 +54,17 @@ public abstract class GenerateTask : DefaultTask() {
     @get:Input
     public abstract val skip: Property<Boolean>
 
+    @get:Input
+    public abstract val splitByClient: Property<Boolean>
+
+    @get:Input
+    @get:Optional
+    public abstract val targetClientName: Property<String>
+
+    @get:Input
+    @get:Optional
+    public abstract val sharedBasePackage: Property<String>
+
     @TaskAction
     public fun generate() {
         val allowedPaths = allowedPaths.get()
@@ -69,6 +81,9 @@ public abstract class GenerateTask : DefaultTask() {
                     modulesIds
                         .get()
                         .map { moduleId -> checkNotNull(getModule(moduleId)) { "Module identifier $moduleId not found" } },
+                splitByClient = splitByClient.get(),
+                targetClientName = targetClientName.orNull,
+                sharedBasePackage = sharedBasePackage.orNull,
             )
 
         if (skip.get() == true) {

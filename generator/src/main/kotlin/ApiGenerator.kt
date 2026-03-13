@@ -6,7 +6,9 @@ import org.litote.openapi.ktor.client.generator.adapter.renderer.ApiClientConfig
 import org.litote.openapi.ktor.client.generator.adapter.renderer.ApiClientGenerator
 import org.litote.openapi.ktor.client.generator.adapter.renderer.ApiModelGenerator
 import org.litote.openapi.ktor.client.generator.application.GenerateCodeService
+import org.litote.openapi.ktor.client.generator.application.GenerationSpecPartitioner
 import org.litote.openapi.ktor.client.generator.port.ClientRenderer
+import org.litote.openapi.ktor.client.generator.port.ConfigurationRenderer
 import org.litote.openapi.ktor.client.generator.port.ModelRenderer
 
 /**
@@ -76,6 +78,18 @@ public sealed class GenerationResult {
 }
 
 /**
+ * Parses an OpenAPI specification and returns the names of all generated clients.
+ *
+ * @param openApiFilePath Path to the OpenAPI specification file
+ * @return List of client names derived from the spec tags
+ */
+public fun parseClientNames(openApiFilePath: String): List<String> {
+    val configuration = ApiGeneratorConfiguration(openApiFile = openApiFilePath)
+    val spec = OpenApiSpecificationParser().parse(configuration, configuration.operationFilter)
+    return spec.clients.map { it.name }
+}
+
+/**
  * Executes the generation of API client and data models based on an OpenAPI specification.
  *
  * Loads the OpenAPI file, generates the HTTP client using Ktor, and creates data model classes.
@@ -89,10 +103,6 @@ public fun generate(configuration: ApiGeneratorConfiguration): GenerationResult 
         val parser = OpenApiSpecificationParser()
         val spec = parser.parse(configuration, configuration.operationFilter)
 
-        val configRenderer =
-            ApiClientConfigurationGenerator(spec.clientConfiguration, configuration)
-                .apply { configuration.modules.forEach { it.process(this) } }
-
         val clientGen =
             ApiClientGenerator(configuration)
                 .apply { configuration.modules.forEach { it.process(this) } }
@@ -103,7 +113,7 @@ public fun generate(configuration: ApiGeneratorConfiguration): GenerationResult 
             }
 
         val modelGen =
-            ApiModelGenerator(configuration.modelPackage, configuration.outputDirectory)
+            ApiModelGenerator(configuration.resolvedModelPackage, configuration.outputDirectory)
                 .apply { configuration.modules.forEach { it.process(this) } }
         val modelRenderer =
             ModelRenderer { modelSpec ->
@@ -111,7 +121,37 @@ public fun generate(configuration: ApiGeneratorConfiguration): GenerationResult 
                 modelGen.writeFile(modelSpec.name, typeSpec)
             }
 
-        val result = GenerateCodeService(configRenderer, clientRenderer, modelRenderer).generate(spec)
+        val (activeSpec, activeConfigRenderer, activeClientRenderer) =
+            if (!configuration.splitByClient) {
+                val configRenderer =
+                    ApiClientConfigurationGenerator(spec.clientConfiguration, configuration)
+                        .apply { configuration.modules.forEach { it.process(this) } }
+                Triple(spec, configRenderer as ConfigurationRenderer, clientRenderer)
+            } else {
+                val partitioned = GenerationSpecPartitioner().partition(spec)
+                val targetName = configuration.targetClientName
+                if (targetName == null) {
+                    val configRenderer =
+                        ApiClientConfigurationGenerator(spec.clientConfiguration, configuration)
+                            .apply { configuration.modules.forEach { it.process(this) } }
+                    val noopClientRenderer = ClientRenderer { }
+                    Triple(partitioned.shared, configRenderer as ConfigurationRenderer, noopClientRenderer)
+                } else {
+                    val perClientSpec =
+                        partitioned.perClient.find { it.clientName == targetName }
+                            ?: return GenerationResult.Failure(
+                                IllegalArgumentException("Client '$targetName' not found"),
+                                "Client '$targetName' not found in spec ${configuration.openApiFile}",
+                            )
+                    val noopConfigRenderer =
+                        object : ConfigurationRenderer {
+                            override fun render() = Unit
+                        }
+                    Triple(perClientSpec.spec, noopConfigRenderer, clientRenderer)
+                }
+            }
+
+        val result = GenerateCodeService(activeConfigRenderer, activeClientRenderer, modelRenderer).generate(activeSpec)
         if (result is GenerationResult.Success) {
             logger.info { "Generation completed: ${result.clientsGenerated} clients, ${result.modelsGenerated} models" }
         }

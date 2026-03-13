@@ -30,4 +30,28 @@ public abstract class InitSubprojectExtension
         @get:Input
         @get:Optional
         public val serializationVersion: Property<String> = objects.property(String::class.java)
+
+        /**
+         * Custom template that replaces the auto-generated `plugins {}` and `dependencies {}` blocks
+         * in all generated build.gradle.kts files.
+         *
+         * When set, the provided content is used verbatim before the `apiClientGenerator {}` block.
+         * Useful for projects using a Gradle version catalog (libs.versions.toml).
+         *
+         * For multi-module client builds, `dependencies { api(project(":shared")) }` is still
+         * appended automatically after the template.
+         */
+        @get:Input
+        @get:Optional
+        public val buildScriptTemplate: Property<String> = objects.property(String::class.java)
+
+        /**
+         * Extra configuration lines appended inside the `create("...") { }` generator block of
+         * all generated build.gradle.kts files, after the last auto-generated property.
+         *
+         * Example: `modulesIds.add("UnknownEnumValueModule")`
+         */
+        @get:Input
+        @get:Optional
+        public val generatorConfigExtra: Property<String> = objects.property(String::class.java)
     }

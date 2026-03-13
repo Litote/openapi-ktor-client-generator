@@ -33,7 +33,7 @@ class GenerationTest {
 
         // Then
         assertTrue(result.isSuccess, "Generation should succeed")
-        val success = result.getOrNull()!!
+        val success = result.getOrThrow()
         assertTrue(success.clientsGenerated > 0, "Should generate at least one client")
         assertTrue(success.modelsGenerated > 0, "Should generate at least one model")
     }

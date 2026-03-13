@@ -15,10 +15,13 @@ import kotlinx.serialization.json.doubleOrNull
 import kotlinx.serialization.json.floatOrNull
 import kotlinx.serialization.json.intOrNull
 import kotlinx.serialization.json.longOrNull
-import org.litote.openapi.ktor.client.generator.shared.enumFieldName
+import org.litote.openapi.ktor.client.generator.shared.sanitizeToIdentifier
 import org.litote.openapi.ktor.client.generator.shared.snakeToCamelCase
+import org.litote.openapi.ktor.client.generator.shared.toUpperSnakeCase
 
 private val nameRegex = "[^A-Za-z0-9]+".toRegex()
+
+internal val String.enumFieldName: String get() = sanitizeToIdentifier().toUpperSnakeCase()
 
 internal fun constName(name: String): String = name.replace(nameRegex, "_").trim('_').uppercase()
 

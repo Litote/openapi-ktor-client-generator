@@ -16,26 +16,32 @@ public class GeneratorPlugin : Plugin<Project> {
     override fun apply(project: Project) {
         val extension = project.extensions.create("apiClientGenerator", ApiClientGeneratorsExtension::class.java)
 
-        project.tasks.register("initApiClientSubproject", InitSubprojectTask::class.java) { task ->
-            task.group = "api client generation"
-            task.description =
-                "Scaffold a new Gradle subproject pre-configured with the OpenAPI Ktor client generator. " +
-                "Usage: ./gradlew initApiClientSubproject -PopenApiFile=<path> [-PsubprojectName=<name>]"
-            task.openApiFilePath.set(project.findProperty("openApiFile") as String?)
-            task.subprojectName.set(project.findProperty("subprojectName") as String?)
-            task.rootDirectory.set(project.rootDir)
-            task.kotlinVersion.convention(
-                extension.initSubproject.kotlinVersion.orElse(DEFAULT_KOTLIN_VERSION),
-            )
-            task.ktorVersion.convention(
-                extension.initSubproject.ktorVersion.orElse(DEFAULT_KTOR_VERSION),
-            )
-            task.coroutinesVersion.convention(
-                extension.initSubproject.coroutinesVersion.orElse(DEFAULT_COROUTINES_VERSION),
-            )
-            task.serializationVersion.convention(
-                extension.initSubproject.serializationVersion.orElse(DEFAULT_SERIALIZATION_VERSION),
-            )
+        if (project == project.rootProject) {
+            project.tasks.register("initApiClientSubproject", InitSubprojectTask::class.java) { task ->
+                task.group = "api client generation"
+                task.description =
+                    "Generate a new Gradle subproject pre-configured with the OpenAPI Ktor client generator. " +
+                    "Usage: ./gradlew initApiClientSubproject -PopenApiFile=<path> [-PsubprojectName=<name>] [-PbasePackage=<pkg>]"
+                task.openApiFilePath.set(project.findProperty("openApiFile") as String?)
+                task.subprojectName.set(project.findProperty("subprojectName") as String?)
+                task.basePackage.set(project.findProperty("basePackage") as String?)
+                task.rootDirectory.set(project.rootDir)
+                task.kotlinVersion.convention(
+                    extension.initSubproject.kotlinVersion.orElse(DEFAULT_KOTLIN_VERSION),
+                )
+                task.ktorVersion.convention(
+                    extension.initSubproject.ktorVersion.orElse(DEFAULT_KTOR_VERSION),
+                )
+                task.coroutinesVersion.convention(
+                    extension.initSubproject.coroutinesVersion.orElse(DEFAULT_COROUTINES_VERSION),
+                )
+                task.serializationVersion.convention(
+                    extension.initSubproject.serializationVersion.orElse(DEFAULT_SERIALIZATION_VERSION),
+                )
+                task.buildScriptTemplate.convention(extension.initSubproject.buildScriptTemplate)
+                task.generatorConfigExtra.convention(extension.initSubproject.generatorConfigExtra)
+                task.splitByClient.set(project.findProperty("splitByClient")?.toString()?.toBoolean() ?: false)
+            }
         }
 
         project.afterEvaluate {
@@ -54,6 +60,9 @@ public class GeneratorPlugin : Plugin<Project> {
                         task.basePackage.set(generatorExtension.basePackage)
                         task.allowedPaths.set(generatorExtension.allowedPaths)
                         task.modulesIds.set(generatorExtension.modulesIds)
+                        task.splitByClient.set(generatorExtension.splitByClient)
+                        task.targetClientName.set(generatorExtension.targetClientName)
+                        task.sharedBasePackage.set(generatorExtension.sharedBasePackage)
                         val generatorSkip: Boolean? = generatorExtension.skip.getOrNull()
                         if (skip == true && generatorSkip != false) {
                             task.skip.set(true)

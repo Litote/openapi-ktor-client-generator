@@ -66,7 +66,7 @@ internal class ResponseBuilder {
     ): List<RenderedResponseEntry> {
         val grouped: List<Triple<TypeName?, Boolean, List<Int>>> =
             responses.map { entry ->
-                val typeName = entry.bodyType?.let { it.toTypeName(modelPackage) }
+                val typeName = entry.bodyType?.toTypeName(modelPackage)
                 Triple(typeName, entry.isSuccess, entry.statusCodes)
             }
 

@@ -69,9 +69,3 @@ public fun String.toUpperSnakeCase(): String =
     replace("-", "_")
         .replace(camelCaseToSnakeCaseRegex) { "${it.groupValues[1]}_${it.groupValues[2]}" }
         .uppercase()
-
-/**
- * Converts a string to a valid UPPER_SNAKE_CASE enum field name by sanitizing illegal identifier
- * characters and converting to upper snake case.
- */
-public val String.enumFieldName: String get() = sanitizeToIdentifier().toUpperSnakeCase()
