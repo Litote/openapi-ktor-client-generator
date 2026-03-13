@@ -31,7 +31,7 @@ class ApiModelTest {
                 openApiFile = "src/test/resources/$fileName",
                 outputDirectory = "build/openapi-test",
             )
-        return OpenApiSpecificationParser().parse(configuration, configuration.operationFilter)
+        return OpenApiSpecificationParser(configuration).parse(configuration.operationFilter)
     }
 
     @Test

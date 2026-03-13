@@ -24,58 +24,77 @@ cd e2e && ./gradlew build
 ## Module Architecture
 
 ```
-shared/                 → Shared abstractions (ConfigurationOptions, utilities)
-generator/              → Code generation engine (OpenApiParser, KotlinCodeGenerator)
-gradle-plugin/          → Gradle integration (GeneratorPlugin, tasks)
-module/unknown-enum-value/ → Handles unmapped enum values
-module/logging-sl4j/    → SLF4J logging in generated clients
-convention/             → Build convention plugins
-e2e/                    → End-to-end tests (separate Gradle project)
+shared/                         → Shared abstractions (utilities)
+generator/                      → Composition root — wires all sub-modules together
+  generator:domain              → Pure domain model (zero external dependencies)
+  generator:port                → Port interfaces (inward & outward contracts)
+  generator:config              → Public API types (ApiGeneratorConfiguration, ApiGeneratorModule, GenerationResult)
+  generator:application         → Orchestration services (no adapter imports)
+  generator:adapter-writer      → File system writer adapter
+  generator:adapter-parser      → OpenAPI specification parser adapter
+  generator:adapter-renderer    → Kotlin/KotlinPoet code renderer adapter
+gradle-plugin/                  → Gradle integration (GeneratorPlugin, tasks)
+module/unknown-enum-value/      → Handles unmapped enum values
+module/logging-sl4j/            → SLF4J logging in generated clients
+convention/                     → Build convention plugins
+e2e/                            → End-to-end tests (separate Gradle project)
 ```
 ---
 
 
 ## Generator Architecture
 
-The `generator` module follows a **hexagonal architecture** (ports & adapters).
+The `generator` module follows a **hexagonal architecture** (ports & adapters) enforced by
+Gradle sub-module boundaries. Adding an illegal dependency (e.g. KotlinPoet in `domain`) causes
+a **compile error**, not just a lint warning.
+
+### Gradle Dependency Graph (enforced at compile time)
 
 ```
-generator/src/main/kotlin/
-│
-│  ← Composition root (public API, wires adapters together)
-├── ApiGenerator.kt              ← generate(configuration): parses, configures renderers, generates
-│                                   parseClientNames(path, splitGranularity): returns client names
-│                                   parseSharedClientGroups(path, splitGranularity): per-group shared info
-├── ApiGeneratorConfiguration.kt ← public config: operationFilter uses OperationMeta (domain type)
-│                                   splitByClient, targetClientName for split-by-client mode
-│                                   splitGranularity (BY_TAG/BY_TAG_AND_PATH/BY_TAG_AND_OPERATION)
-│                                   sharedModelGranularity (SHARED_ALL/SHARED_PER_GROUP)
-│                                   targetSharedGroup, modelPackageOverrides
-├── SplitGranularity.kt          ← enum: BY_TAG | BY_TAG_AND_PATH | BY_TAG_AND_OPERATION
-├── SharedModelGranularity.kt    ← enum: SHARED_ALL | SHARED_PER_GROUP
-├── ApiGeneratorModule.kt        ← SPI: hook into concrete renderers before generation
-│
-├── domain/          ← pure business model, zero external dependencies
-│   ├── ModelUsageAnalyzer       ← analyzes which clients reference which models (transitively)
-│   ├── PartitionedGenerationSpec← result of split: shared spec + per-client specs
-│   └── ...
-├── port/            ← interfaces (ports): inward and outward contracts
-├── adapter/
-│   ├── renderer/    ← domain → KotlinPoet FileSpec/TypeSpec
-│   └── writer/      ← GeneratedFile → disk
-└── application/     ← orchestration via ports, no OpenAPI or KotlinPoet imports
-    ├── GenerateCodeService      ← accepts port interfaces, generates from GenerationSpec
-    └── GenerationSpecPartitioner← partitions a GenerationSpec into shared + per-client specs
+generator:domain         → :shared
+generator:port           → generator:domain
+generator:config         → generator:domain + generator:port
+generator:application    → generator:domain + generator:port
+generator:adapter-writer → generator:domain + generator:port
+generator:adapter-parser → generator:domain + generator:port + generator:config
+generator:adapter-renderer → generator:domain + generator:port + generator:config + generator:adapter-writer
+generator (root)         → generator:config + generator:application + generator:adapter-parser
+                           + generator:adapter-renderer + generator:adapter-writer
 ```
 
-**Dependency rules:**
-- `domain/` has **no imports** from KotlinPoet, OpenAPI bindings, Ktor, or I/O libraries
-- `port/` depends only on `domain/`
-- `application/` depends only on `domain/` and `port/` — never on `adapter/`
-- `adapter/parser/` and `adapter/renderer/` are independent — they do not import each other
-- `adapter/writer/` uses `domain.GeneratedFile` — the `FileSystemWriter` port contains no KotlinPoet types
-- `ApiGenerator.kt` (composition root) is the only place that imports from all layers
-- `ApiGeneratorModule` SPI uses only `port/*GeneratorConfig` interfaces — never concrete adapter classes
+### Sub-module Contents
+
+| Sub-module | Package(s) | Contents |
+|---|---|---|
+| `generator:domain` | `*.domain` + `*.generator` (enums) | `GenerationSpec`, `ClientSpec`, `ModelSpec`, all domain types; `SplitGranularity`, `SharedModelGranularity` |
+| `generator:port` | `*.port` | `SpecificationParser`, `ClientRenderer`, `ModelRenderer`, `ConfigurationRenderer`, `FileSystemWriter`, `*GeneratorConfig` interfaces |
+| `generator:config` | `*.generator` | `ApiGeneratorConfiguration`, `ApiGeneratorModule`, `GenerationResult` |
+| `generator:application` | `*.application` | `GenerateCodeService`, `GenerationSpecPartitioner` |
+| `generator:adapter-writer` | `*.adapter.writer` | `KotlinPoetFileWriter` |
+| `generator:adapter-parser` | `*.adapter.parser` | `OpenApiSpecificationParser`, `ApiModel`, `TypeNameConverter`, helpers |
+| `generator:adapter-renderer` | `*.adapter.renderer` | `ApiClientGenerator`, `ApiModelGenerator`, `ApiClientConfigurationGenerator`, builders, helpers |
+| `generator` (root) | `*.generator` | `ApiGenerator.kt` (composition root — the only file that imports all layers) |
+
+### Key Architectural Invariants (Gradle-enforced)
+
+- **`generator:domain`** compiles with **zero** KotlinPoet / OpenAPI bindings / Ktor / I/O dependencies
+- **`generator:port`** depends only on `generator:domain` — no `ApiGeneratorConfiguration` in port interfaces
+- **`generator:application`** cannot see adapter classes (not in its dependency graph)
+- **`generator:adapter-parser`** cannot see renderer code (no `generator:adapter-renderer` dep)
+- **`generator:adapter-renderer`** cannot see parser code (no `generator:adapter-parser` dep)
+- The composition root `generator` is the **only** module that can wire all layers together
+
+### `SpecificationParser` Port Design
+
+`SpecificationParser.parse(operationFilter)` receives **only** a domain-typed filter.
+The full `ApiGeneratorConfiguration` is injected into `OpenApiSpecificationParser` at
+**construction time** in the composition root, keeping the port free of config types.
+
+```
+ApiGenerator.kt (root)
+  └─► OpenApiSpecificationParser(configuration)  ← adapter-parser
+        .parse(configuration.operationFilter)     ← port method (no ApiGeneratorConfiguration here)
+```
 
 
 ## Core Components Reference

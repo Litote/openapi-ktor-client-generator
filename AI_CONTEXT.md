@@ -22,88 +22,56 @@ openapi-ktor-client-generator/
 
 ---
 
-## Generator Module (`generator/`) — Hexagonal Architecture
+## Generator Module (`generator/`) — Hexagonal Architecture (Gradle-enforced)
+
+The `generator` module is split into **7 Gradle sub-modules**. Dependency violations cause
+compile errors, not just warnings.
+
+### Gradle Dependency Graph
 
 ```
-generator/src/main/kotlin/
-├── domain/               → Pure business models (zero external deps)
-│   ├── GenerationSpec    → Top-level: clientConfiguration + clients + models
-│   ├── ClientSpec        → One Ktor client class per OpenAPI tag
-│   ├── OperationSpec     → One suspend method per HTTP operation (with inlineModels)
-│   ├── ModelSpec (sealed)→ DataClassSpec | EnumSpec | SealedClassSpec | ObjectSpec | AliasSpec
-│   ├── DomainType (sealed)→ Primitive | ListType | SetType | MapType | ModelReference | InlineType | JsonType
-│   ├── ModelProperty     → Property with originalName, camelCaseName, type, nestedModels
-│   ├── OperationParameter→ with additionalModel for inline types
-│   ├── RequestBodySpec   → with inlineModels
-│   ├── ResponseEntry     → statusCodes + bodyType + isSuccess
-│   ├── FormFieldSpec
-│   ├── ClientConfigurationSpec, SecuritySchemeSpec
-│   ├── ComponentParameterSpec, DefaultValue
-│   ├── OperationMeta, ParameterLocation
-│   ├── ModelUsageAnalyzer       → analyzes modelName → Set<clientName> (transitively, BFS)
-│   └── PartitionedGenerationSpec / PerClientGenerationSpec → result of split-by-client partition
-│
-├── port/                 → Interfaces (contracts)
-│   ├── SpecificationParser    → parse(config, filter): GenerationSpec
-│   ├── ConfigurationRenderer  → render()
-│   ├── ClientRenderer         → render(ClientSpec) [functional interface]
-│   ├── ModelRenderer          → render(ModelSpec) [functional interface]
-│   ├── FileSystemWriter
-│   ├── ConfigurationGeneratorConfig → jsonProperties, exceptionLogging
-│   ├── ClientGeneratorConfig
-│   └── ModelGeneratorConfig   → defaultEnumValue
-│
-├── adapter/
-│   ├── parser/
-│   │   ├── OpenApiSpecificationParser  → implements SpecificationParser
-│   │   ├── TypeNameConverter, ParserNameUtils, ParserTypeUtils
-│   │   └── ApiModel, ApiOperation, ApiClassProperty
-│   ├── renderer/
-│   │   ├── ApiClientGenerator          → ClientSpec → FileSpec (KotlinPoet)
-│   │   ├── ApiModelGenerator           → ModelSpec → FileSpec (KotlinPoet)
-│   │   ├── ApiClientConfigurationGenerator → ClientConfigurationSpec → FileSpec + YamlContentConverter if YAML
-│   │   ├── YamlContentConverterGenerator   → generates YamlContentConverter.kt (YAML↔JSON via SnakeYAML)
-│   │   ├── OperationBuilder, ResponseBuilder
-│   │   ├── DomainTypeMapper            → DomainType → KotlinPoet TypeName
-│   │   └── KotlinPoets, KtorPoets      → KotlinPoet utilities
-│   └── writer/
-│       └── KotlinPoetFileWriter        → GeneratedFile → disk
-│
-└── application/
-    ├── GenerateCodeService      → orchestrates: configRenderer + clientRenderer + modelRenderer
-    └── GenerationSpecPartitioner → partitions GenerationSpec into shared + perClient
-```
-├── port/                 → Interfaces (contracts)
-│   ├── SpecificationParser    → parse(config, filter): GenerationSpec
-│   ├── ConfigurationRenderer  → render()
-│   ├── ClientRenderer         → render(ClientSpec) [functional interface]
-│   ├── ModelRenderer          → render(ModelSpec) [functional interface]
-│   ├── FileSystemWriter
-│   ├── ConfigurationGeneratorConfig → jsonProperties, exceptionLogging
-│   ├── ClientGeneratorConfig
-│   └── ModelGeneratorConfig   → defaultEnumValue
-│
-├── adapter/
-│   ├── parser/
-│   │   ├── OpenApiSpecificationParser  → implements SpecificationParser
-│   │   ├── TypeNameConverter, ParserNameUtils, ParserTypeUtils
-│   │   └── ApiModel, ApiOperation, ApiClassProperty
-│   ├── renderer/
-│   │   ├── ApiClientGenerator          → ClientSpec → FileSpec (KotlinPoet)
-│   │   ├── ApiModelGenerator           → ModelSpec → FileSpec (KotlinPoet)
-│   │   ├── ApiClientConfigurationGenerator → ClientConfigurationSpec → FileSpec + YamlContentConverter if YAML
-│   │   ├── YamlContentConverterGenerator   → generates YamlContentConverter.kt (YAML↔JSON via SnakeYAML)
-│   │   ├── OperationBuilder, ResponseBuilder
-│   │   ├── DomainTypeMapper            → DomainType → KotlinPoet TypeName
-│   │   └── KotlinPoets, KtorPoets      → KotlinPoet utilities
-│   └── writer/
-│       └── KotlinPoetFileWriter        → GeneratedFile → disk
-│
-└── application/
-    └── GenerateCodeService → orchestrates: configRenderer + clientRenderer + modelRenderer
+generator:domain         → :shared
+generator:port           → generator:domain
+generator:config         → generator:domain + generator:port
+generator:application    → generator:domain + generator:port
+generator:adapter-writer → generator:domain + generator:port
+generator:adapter-parser → generator:domain + generator:port + generator:config
+generator:adapter-renderer → generator:domain + generator:port + generator:config + generator:adapter-writer
+generator (root)         → generator:config + generator:application + generator:adapter-parser
+                           + generator:adapter-renderer + generator:adapter-writer
 ```
 
-**Dependency rules:** `domain` ← `port` ← `application`; `adapter` depends on `domain`+`port`; `ApiGenerator.kt` is the only file importing all layers.
+### Sub-module Contents
+
+| Sub-module | Package | Contents |
+|---|---|---|
+| `generator:domain` | `*.domain` | `GenerationSpec`, `ClientSpec`, `OperationSpec`, `ModelSpec` (sealed), `DomainType` (sealed), `ModelProperty`, `OperationParameter`, `RequestBodySpec`, `ResponseEntry`, `FormFieldSpec`, `ClientConfigurationSpec`, `SecuritySchemeSpec`, `ComponentParameterSpec`, `DefaultValue`, `OperationMeta`, `ParameterLocation`, `ModelUsageAnalyzer`, `PartitionedGenerationSpec`, `PerClientGenerationSpec`, `SharedGroupSpec`, `GeneratedFile` |
+| `generator:domain` | `*.generator` (enums) | `SplitGranularity`, `SharedModelGranularity` (same package as root, different module) |
+| `generator:port` | `*.port` | `SpecificationParser` (parse takes only `operationFilter`), `ConfigurationRenderer`, `ClientRenderer`, `ModelRenderer`, `FileSystemWriter`, `ConfigurationGeneratorConfig`, `ClientGeneratorConfig`, `ModelGeneratorConfig` |
+| `generator:config` | `*.generator` | `ApiGeneratorConfiguration`, `ApiGeneratorModule`, `GenerationResult` |
+| `generator:application` | `*.application` | `GenerateCodeService`, `GenerationSpecPartitioner` |
+| `generator:adapter-writer` | `*.adapter.writer` | `KotlinPoetFileWriter` |
+| `generator:adapter-parser` | `*.adapter.parser` | `OpenApiSpecificationParser(configuration)`, `ApiModel`, `TypeNameConverter`, `ParserNameUtils`, `ParserTypeUtils`, `ApiOperation`, `ApiClassProperty` |
+| `generator:adapter-renderer` | `*.adapter.renderer` | `ApiClientGenerator`, `ApiModelGenerator`, `ApiClientConfigurationGenerator`, `YamlContentConverterGenerator`, `OperationBuilder`, `ResponseBuilder`, `KotlinPoets`, `KtorPoets` |
+| `generator` (root) | `*.generator` | `ApiGenerator.kt` — composition root, the ONLY file importing all layers |
+
+### Architectural Invariants (Gradle-enforced)
+
+- **`generator:domain`**: zero KotlinPoet / OpenAPI bindings / Ktor / I/O in dependency graph
+- **`generator:port`**: depends only on `generator:domain` — no `ApiGeneratorConfiguration` in port interfaces
+- **`generator:application`**: cannot see any adapter class (not in dependency graph)
+- **`generator:adapter-parser`**: cannot see renderer code
+- **`generator:adapter-renderer`**: cannot see parser code
+- `ApiGenerator.kt` is the **only** place that imports all layers
+
+### SpecificationParser Port Design
+
+`parse(operationFilter)` takes only a domain-typed filter. `ApiGeneratorConfiguration` is
+injected at **construction time** of `OpenApiSpecificationParser` in the composition root:
+
+```kotlin
+OpenApiSpecificationParser(configuration).parse(configuration.operationFilter)
+```
 
 ---
 

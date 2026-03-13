@@ -116,7 +116,7 @@ class InheritanceTest {
                 openApiFile = "src/test/resources/$fileName",
                 outputDirectory = "build/openapi-test",
             )
-        val parser = OpenApiSpecificationParser()
-        return configuration to parser.parse(configuration, configuration.operationFilter)
+        val parser = OpenApiSpecificationParser(configuration)
+        return configuration to parser.parse(configuration.operationFilter)
     }
 }

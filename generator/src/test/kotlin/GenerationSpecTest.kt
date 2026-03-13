@@ -22,7 +22,7 @@ class GenerationSpecTest {
                 openApiFile = "src/test/resources/$fileName",
                 outputDirectory = "build/openapi-spec-test",
             )
-        return OpenApiSpecificationParser().parse(config, config.operationFilter)
+        return OpenApiSpecificationParser(config).parse(config.operationFilter)
     }
 
     // endregion

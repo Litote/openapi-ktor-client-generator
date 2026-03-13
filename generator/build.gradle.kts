@@ -4,22 +4,22 @@ plugins {
 }
 
 dependencies {
+    api(project(":generator:config"))
+    api(project(":generator:domain"))
+    api(project(":generator:port"))
+    implementation(project(":generator:application"))
+    implementation(project(":generator:adapter-parser"))
+    implementation(project(":generator:adapter-renderer"))
+    implementation(project(":generator:adapter-writer"))
     implementation(project(":shared"))
-
-    api(libs.kotlin.poet)
-    api(libs.serialization)
-    api(libs.openapi.bindings)
-
-    implementation(libs.ktor.core)
     implementation(libs.logback)
-
-    implementation(libs.snakeyaml)
 
     testImplementation(libs.coroutines)
     testImplementation(libs.ktor.cio)
     testImplementation(libs.ktor.contentnegotiation)
     testImplementation(libs.ktor.json)
     testImplementation(libs.ktor.log)
+    testImplementation(libs.snakeyaml)
 }
 
 kotlin {
@@ -30,7 +30,7 @@ kotlin {
         "build/snapshot-test-output/mastodon-api/src/main/kotlin",
         "build/snapshot-test-output/inheritance-api/src/main/kotlin",
         "build/snapshot-test-output/yaml-api/src/main/kotlin",
-        )
+    )
 }
 
 mavenPublishing {

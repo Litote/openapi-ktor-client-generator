@@ -32,55 +32,6 @@ public fun main(vararg args: String) {
 }
 
 /**
- * Result of the API generation process.
- */
-public sealed class GenerationResult {
-    /**
-     * Successful generation.
-     * @param clientsGenerated Number of client files generated
-     * @param modelsGenerated Number of model files generated
-     */
-    public data class Success(
-        val clientsGenerated: Int,
-        val modelsGenerated: Int,
-    ) : GenerationResult()
-
-    /**
-     * Failed generation.
-     * @param error The exception that caused the failure
-     * @param message A descriptive error message
-     */
-    public data class Failure(
-        val error: Throwable,
-        val message: String,
-    ) : GenerationResult()
-
-    /**
-     * Returns true if the generation was successful.
-     */
-    public val isSuccess: Boolean get() = this is Success
-
-    /**
-     * Returns true if the generation failed.
-     */
-    public val isFailure: Boolean get() = this is Failure
-
-    /**
-     * Returns the success result or null if failed.
-     */
-    public fun getOrNull(): Success? = this as? Success
-
-    /**
-     * Returns the success result or throws the error if failed.
-     */
-    public fun getOrThrow(): Success =
-        when (this) {
-            is Success -> this
-            is Failure -> throw error
-        }
-}
-
-/**
  * A group of models shared by exactly the clients in [clientGroup].
  * Used by [SharedModelGranularity.SHARED_PER_GROUP] to identify per-group subprojects.
  *
@@ -120,7 +71,7 @@ public fun parseClientNames(
             openApiFile = openApiFilePath,
             splitGranularity = splitGranularity,
         )
-    val spec = OpenApiSpecificationParser().parse(configuration, configuration.operationFilter)
+    val spec = OpenApiSpecificationParser(configuration).parse(configuration.operationFilter)
     return spec.clients.map { it.name }
 }
 
@@ -143,7 +94,7 @@ public fun parseSharedClientGroups(
             openApiFile = openApiFilePath,
             splitGranularity = splitGranularity,
         )
-    val spec = OpenApiSpecificationParser().parse(configuration, configuration.operationFilter)
+    val spec = OpenApiSpecificationParser(configuration).parse(configuration.operationFilter)
     val partitioned = GenerationSpecPartitioner().partition(spec)
     return partitioned.sharedGroups
         .filter { it.clientGroup.size >= 2 }
@@ -180,7 +131,7 @@ public fun computeSharedGroupDependencies(
             openApiFile = openApiFilePath,
             splitGranularity = splitGranularity,
         )
-    val spec = OpenApiSpecificationParser().parse(configuration, configuration.operationFilter)
+    val spec = OpenApiSpecificationParser(configuration).parse(configuration.operationFilter)
     val partitioned = GenerationSpecPartitioner().partition(spec)
     val groups = partitioned.sharedGroups.filter { it.clientGroup.size >= 2 }
 
@@ -209,8 +160,8 @@ public fun computeSharedGroupDependencies(
 public fun generate(configuration: ApiGeneratorConfiguration): GenerationResult =
     try {
         logger.debug { "Generating API for $configuration" }
-        val parser = OpenApiSpecificationParser()
-        val spec = parser.parse(configuration, configuration.operationFilter)
+        val parser = OpenApiSpecificationParser(configuration)
+        val spec = parser.parse(configuration.operationFilter)
 
         val clientGen =
             ApiClientGenerator(configuration)
@@ -289,10 +240,14 @@ public fun generate(configuration: ApiGeneratorConfiguration): GenerationResult 
                 }
             }
 
-        val result = GenerateCodeService(activeConfigRenderer, activeClientRenderer, modelRenderer).generate(activeSpec)
-        if (result is GenerationResult.Success) {
-            logger.info { "Generation completed: ${result.clientsGenerated} clients, ${result.modelsGenerated} models" }
-        }
+        val (clientsGenerated, modelsGenerated) =
+            GenerateCodeService(
+                activeConfigRenderer,
+                activeClientRenderer,
+                modelRenderer,
+            ).generate(activeSpec)
+        val result = GenerationResult.Success(clientsGenerated, modelsGenerated)
+        logger.info { "Generation completed: ${result.clientsGenerated} clients, ${result.modelsGenerated} models" }
         result
     } catch (e: Throwable) {
         logger.error(e) { "Error while generating API for $configuration" }

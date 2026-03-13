@@ -32,7 +32,7 @@ class SecuritySchemeTest {
                 basePackage = "org.example",
             )
 
-        val spec = OpenApiSpecificationParser().parse(configuration, { true })
+        val spec = OpenApiSpecificationParser(configuration).parse { true }
 
         assertEquals(2, spec.clientConfiguration.apiKeySchemes.size, "Should have 2 API key security schemes")
 
@@ -56,7 +56,7 @@ class SecuritySchemeTest {
                 basePackage = "org.example",
             )
 
-        val spec = OpenApiSpecificationParser().parse(configuration, { true })
+        val spec = OpenApiSpecificationParser(configuration).parse { true }
 
         assertTrue(spec.clientConfiguration.apiKeySchemes.isEmpty(), "Should have no API key security schemes")
     }
