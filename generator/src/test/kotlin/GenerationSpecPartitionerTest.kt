@@ -5,6 +5,7 @@ import org.litote.openapi.ktor.client.generator.domain.ClientConfigurationSpec
 import org.litote.openapi.ktor.client.generator.domain.ClientSpec
 import org.litote.openapi.ktor.client.generator.domain.DomainType
 import org.litote.openapi.ktor.client.generator.domain.GenerationSpec
+import org.litote.openapi.ktor.client.generator.domain.ModelProperty
 import org.litote.openapi.ktor.client.generator.domain.ModelSpec
 import org.litote.openapi.ktor.client.generator.domain.OperationSpec
 import org.litote.openapi.ktor.client.generator.domain.ResponseEntry
@@ -121,7 +122,7 @@ class GenerationSpecPartitionerTest {
     }
 
     @Test
-    fun `GIVEN spec with unused model WHEN partition THEN unused model goes to shared`() {
+    fun `GIVEN spec with unused model WHEN partition THEN unused model is excluded from generation`() {
         val unusedModel = ModelSpec.DataClassSpec(name = "UnusedModel", properties = emptyList())
         val client1 = ClientSpec(name = "Client1", operations = listOf(noResponseOperation()))
         val spec =
@@ -133,9 +134,56 @@ class GenerationSpecPartitionerTest {
 
         val result = GenerationSpecPartitioner().partition(spec)
 
-        assertTrue(result.shared.models.any { it.name == "UnusedModel" })
-        result.perClient.forEach { perClient ->
-            assertTrue(perClient.spec.models.none { it.name == "UnusedModel" })
+        result.sharedGroups.forEach { group ->
+            assertTrue(group.spec.models.none { it.name == "UnusedModel" }, "UnusedModel must not appear in any shared group")
         }
+        result.perClient.forEach { perClient ->
+            assertTrue(perClient.spec.models.none { it.name == "UnusedModel" }, "UnusedModel must not appear in any per-client module")
+        }
+    }
+
+    @Test
+    fun `GIVEN sealed subtype has List property WHEN partition THEN list element model inherits subtype clients`() {
+        // TagHistory is only referenced via Tag.history: List<TagHistory>
+        // Tag is a subtype of a sealed class SealedParent.
+        // SealedParent is directly used by 2 clients.
+        // Without the propagateTransitiveDeps fix, TagHistory would be classified as orphan (0 clients)
+        // because propagateSealedClassUsage doesn't traverse properties of newly-marked subtypes.
+        val tagHistory = ModelSpec.DataClassSpec(name = "TagHistory", properties = emptyList())
+        val tag =
+            ModelSpec.DataClassSpec(
+                name = "Tag",
+                sealedParentName = "SealedParent",
+                properties =
+                    listOf(
+                        ModelProperty(
+                            originalName = "history",
+                            camelCaseName = "history",
+                            type = DomainType.ListType(DomainType.ModelReference("TagHistory")),
+                            needsSerialName = false,
+                        ),
+                    ),
+            )
+        val sealedParent =
+            ModelSpec.SealedClassSpec(
+                name = "SealedParent",
+                discriminatorPropertyName = null,
+            )
+        val client1 = ClientSpec(name = "Client1", operations = listOf(operationWithResponse("SealedParent")))
+        val client2 = ClientSpec(name = "Client2", operations = listOf(operationWithResponse("SealedParent")))
+        val spec =
+            GenerationSpec(
+                clientConfiguration = minimalConfig(),
+                clients = listOf(client1, client2),
+                models = listOf(tagHistory, tag, sealedParent),
+            )
+
+        val result = GenerationSpecPartitioner().partition(spec)
+
+        val tagHistoryInShared = result.sharedGroups.any { g -> g.spec.models.any { it.name == "TagHistory" } }
+        assertTrue(
+            tagHistoryInShared,
+            "TagHistory must be in a shared group (transitively reachable via Tag which is a sealed subtype of SealedParent)",
+        )
     }
 }

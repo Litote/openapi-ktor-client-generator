@@ -28,6 +28,7 @@ internal class InitSubprojectTaskTest {
         generatorConfigExtra: String? = null,
         splitGranularity: String? = null,
         sharedModelGranularity: String? = null,
+        subprojectRootDirectory: String? = null,
     ): InitSubprojectTask {
         val project = ProjectBuilder.builder().withProjectDir(tempDir).build()
         val task =
@@ -47,6 +48,7 @@ internal class InitSubprojectTaskTest {
         generatorConfigExtra?.let { task.generatorConfigExtra.set(it) }
         splitGranularity?.let { task.splitGranularity.set(it) }
         sharedModelGranularity?.let { task.sharedModelGranularity.set(it) }
+        subprojectRootDirectory?.let { task.subprojectRootDirectory.set(it) }
         return task
     }
 
@@ -746,6 +748,119 @@ internal class InitSubprojectTaskTest {
             )
         assertContains(content, """api(project(":shared"))""")
         assertContains(content, """api(project(":shared-alpha-client-beta-client-gamma-client"))""")
+    }
+
+    @Test
+    fun `GIVEN splitByClient=true and subprojectRootDirectory WHEN initSubproject THEN module dirs are under subprojectRootDirectory`() {
+        val openApiFile =
+            File(
+                checkNotNull(javaClass.classLoader.getResource("multi-tag.json")) { "multi-tag.json not found" }.toURI(),
+            )
+        val task =
+            buildTask(
+                openApiFile = openApiFile.absolutePath,
+                subprojectName = "my-api",
+                splitByClient = true,
+                subprojectRootDirectory = "clients",
+            )
+
+        task.initSubproject()
+
+        assertTrue(tempDir.resolve("clients/shared/build.gradle.kts").exists(), "shared dir should be under clients/")
+        assertTrue(tempDir.resolve("clients/user-client/build.gradle.kts").exists(), "user-client should be under clients/")
+        assertTrue(tempDir.resolve("clients/order-client/build.gradle.kts").exists(), "order-client should be under clients/")
+        assertFalse(tempDir.resolve("shared/build.gradle.kts").exists(), "shared should NOT be at root level")
+        assertFalse(tempDir.resolve("user-client/build.gradle.kts").exists(), "user-client should NOT be at root level")
+    }
+
+    @Test
+    fun `GIVEN splitByClient=true and subprojectRootDirectory WHEN initSubproject THEN settings include uses it as prefix`() {
+        val openApiFile =
+            File(
+                checkNotNull(javaClass.classLoader.getResource("multi-tag.json")) { "multi-tag.json not found" }.toURI(),
+            )
+        val task =
+            buildTask(
+                openApiFile = openApiFile.absolutePath,
+                subprojectName = "my-api",
+                splitByClient = true,
+                subprojectRootDirectory = "clients",
+            )
+
+        task.initSubproject()
+
+        val settingsContent = tempDir.resolve("settings.gradle.kts").readText()
+        assertContains(settingsContent, """":clients:shared"""")
+        assertContains(settingsContent, """":clients:user-client"""")
+        assertContains(settingsContent, """":clients:order-client"""")
+    }
+
+    @Test
+    fun `GIVEN splitByClient=true and subprojectRootDirectory WHEN initSubproject THEN client build uses prefixed project ref`() {
+        val openApiFile =
+            File(
+                checkNotNull(javaClass.classLoader.getResource("multi-tag.json")) { "multi-tag.json not found" }.toURI(),
+            )
+        val task =
+            buildTask(
+                openApiFile = openApiFile.absolutePath,
+                subprojectName = "my-api",
+                splitByClient = true,
+                subprojectRootDirectory = "clients",
+            )
+
+        task.initSubproject()
+
+        val userClientContent = tempDir.resolve("clients/user-client/build.gradle.kts").readText()
+        assertContains(userClientContent, """api(project(":clients:shared"))""")
+    }
+
+    @Test
+    fun `GIVEN splitByClient=true and subprojectRootDirectory WHEN initSubproject THEN specRelativePath uses two levels up`() {
+        val openApiFile =
+            File(
+                checkNotNull(javaClass.classLoader.getResource("multi-tag.json")) { "multi-tag.json not found" }.toURI(),
+            )
+        val task =
+            buildTask(
+                openApiFile = openApiFile.absolutePath,
+                subprojectName = "my-api",
+                splitByClient = true,
+                subprojectRootDirectory = "clients",
+            )
+
+        task.initSubproject()
+
+        val sharedContent = tempDir.resolve("clients/shared/build.gradle.kts").readText()
+        assertContains(sharedContent, "../../src/main/openapi/")
+        val userClientContent = tempDir.resolve("clients/user-client/build.gradle.kts").readText()
+        assertContains(userClientContent, "../../src/main/openapi/")
+    }
+
+    @Test
+    fun `GIVEN splitByClient=true and subprojectRootDirectory and SHARED_PER_GROUP WHEN initSubproject THEN modules are nested`() {
+        val openApiFile =
+            File(
+                checkNotNull(
+                    javaClass.classLoader.getResource("shared-model-granularity.json"),
+                ) { "shared-model-granularity.json not found" }.toURI(),
+            )
+        val task =
+            buildTask(
+                openApiFile = openApiFile.absolutePath,
+                subprojectName = "my-api",
+                splitByClient = true,
+                sharedModelGranularity = "SHARED_PER_GROUP",
+                subprojectRootDirectory = "modules",
+            )
+
+        task.initSubproject()
+
+        assertTrue(tempDir.resolve("modules/shared/build.gradle.kts").exists(), "shared should be under modules/")
+        assertFalse(tempDir.resolve("shared/build.gradle.kts").exists(), "shared should NOT be at root level")
+
+        val settingsContent = tempDir.resolve("settings.gradle.kts").readText()
+        assertContains(settingsContent, """":modules:shared"""")
     }
 }
 

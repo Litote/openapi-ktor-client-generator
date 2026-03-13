@@ -103,16 +103,26 @@ public abstract class GenerateTask : DefaultTask() {
         // Resolve modelPackageOverrides from additionalSharedGroupPackages if needed.
         val additionalGroups = additionalSharedGroupPackages.get()
         val modelPackageOverrides: Map<String, String> =
-            if (additionalGroups.isEmpty()) {
+            if (additionalGroups.isEmpty() && targetSharedGroup.orNull == null) {
                 emptyMap()
             } else {
                 val sharedGroups = parseSharedClientGroups(openApiFilePath, splitGranularityValue)
-                additionalGroups
-                    .flatMap { (groupKey, basePackage) ->
+                buildMap {
+                    // Map each other-group's models to its own package.
+                    additionalGroups.forEach { (groupKey, groupBasePackage) ->
                         val clientGroup = groupKey.split(",").toSet()
                         val matchingGroup = sharedGroups.firstOrNull { it.clientGroup == clientGroup }
-                        matchingGroup?.modelNames?.map { modelName -> modelName to "$basePackage.model" } ?: emptyList()
-                    }.toMap()
+                        matchingGroup?.modelNames?.forEach { name -> put(name, "$groupBasePackage.model") }
+                    }
+                    // Map the current group's own models to this subproject's own model package,
+                    // so that intra-group references resolve to the correct package instead of
+                    // falling back to the global shared package (fallbackModelPackage).
+                    val currentGroupValue = targetSharedGroup.orNull?.split(",")?.toSet()
+                    if (currentGroupValue != null) {
+                        val currentGroup = sharedGroups.firstOrNull { it.clientGroup == currentGroupValue }
+                        currentGroup?.modelNames?.forEach { name -> put(name, "${basePackage.get()}.model") }
+                    }
+                }
             }
 
         val config =

@@ -16,6 +16,12 @@ public fun analyzeModelUsage(spec: GenerationSpec): Map<String, Set<String>> {
     }
 
     propagateSealedClassUsage(usage, allModels)
+
+    // After propagateSealedClassUsage, sealed class subtypes may have gained new clients without
+    // their own transitive dependencies being resolved. Run a fixpoint pass to propagate client
+    // sets from every model to every model it references, until stable.
+    propagateTransitiveDeps(usage, allModels)
+
     return usage
 }
 
@@ -104,6 +110,33 @@ private fun propagateSealedClassUsage(
                 }
             if (parentName == sealedClass.name) {
                 usage.getOrPut(model.name) { mutableSetOf() }.addAll(sealedClients)
+            }
+        }
+    }
+}
+
+/**
+ * Propagates client sets transitively across model references until stable (fixpoint).
+ *
+ * This is needed because [propagateSealedClassUsage] can assign new clients to sealed-class
+ * subtypes AFTER [resolveTransitiveDeps] has already run per client. Without this pass,
+ * properties of newly-marked subtypes (e.g. `Tag.history: List<TagHistory>`) would not
+ * propagate their clients to referenced models (e.g. `TagHistory`), leaving those models
+ * incorrectly classified as orphans.
+ */
+private fun propagateTransitiveDeps(
+    usage: MutableMap<String, MutableSet<String>>,
+    allModels: Map<String, ModelSpec>,
+) {
+    var changed = true
+    while (changed) {
+        changed = false
+        allModels.values.forEach { model ->
+            val clients = usage[model.name] ?: return@forEach
+            if (clients.isEmpty()) return@forEach
+            collectModelRefs(model).forEach { dep ->
+                val depClients = usage.getOrPut(dep) { mutableSetOf() }
+                if (depClients.addAll(clients)) changed = true
             }
         }
     }

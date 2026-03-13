@@ -10,7 +10,8 @@ containing a pre-configured `build.gradle.kts` and your OpenAPI spec file.
   [-PbasePackage=<base.package>] \
   [-PsplitByClient=true] \
   [-PsplitGranularity=BY_TAG|BY_TAG_AND_PATH|BY_TAG_AND_OPERATION] \
-  [-PsharedModelGranularity=SHARED_ALL|SHARED_PER_GROUP]
+  [-PsharedModelGranularity=SHARED_ALL|SHARED_PER_GROUP] \
+  [-PsubprojectRootDirectory=<directory-name>]
 ```
 
 | Parameter                  | Description                                                                                          | Required |
@@ -21,6 +22,7 @@ containing a pre-configured `build.gradle.kts` and your OpenAPI spec file.
 | `-PsplitByClient`          | Generate one subproject per client + one shared subproject. Defaults to `false`                    | No       |
 | `-PsplitGranularity`       | Controls how operations are grouped into clients. See [Split granularity](#split-granularity) below | No       |
 | `-PsharedModelGranularity` | Controls how shared models are grouped. See [Shared model granularity](#shared-model-granularity) below | No   |
+| `-PsubprojectRootDirectory`        | Optional subdirectory to nest all generated multi-module subprojects under (e.g. `clients`). Only used with `-PsplitByClient=true`. | No |
 
 > **Note:** this task must be run from the **root project**. It is intentionally not available in subprojects.
 
@@ -195,6 +197,47 @@ Per-group shared subproject naming conventions:
 
 > **Note:** `SHARED_PER_GROUP` is most useful when your spec has 3+ clients with partially overlapping models.
 > For two clients that share all models, it behaves identically to `SHARED_ALL`.
+
+## Intermediate directory (`-PsubprojectRootDirectory`)
+
+When generating a multi-module project, all subprojects are created at the root of the project by
+default. Use `-PsubprojectRootDirectory` to nest them under a common subdirectory.
+
+```bash
+./gradlew initApiClientSubproject \
+  -PopenApiFile=./specs/petstore.json \
+  -PsplitByClient=true \
+  -PsubprojectRootDirectory=clients
+```
+
+This produces:
+
+```
+src/main/openapi/
+└── petstore.json
+clients/
+├── shared/
+│   └── build.gradle.kts
+├── user-client/
+│   └── build.gradle.kts
+└── order-client/
+    └── build.gradle.kts
+settings.gradle.kts   # include(":clients:shared", ":clients:user-client", ":clients:order-client")
+```
+
+Gradle project paths become `:clients:shared`, `:clients:user-client`, etc., and the generated
+`build.gradle.kts` files use `project(":clients:shared")` accordingly.
+
+The option can also be set via the DSL extension:
+
+```kotlin
+// root build.gradle.kts
+apiClientGenerator {
+    initSubproject {
+        subprojectRootDirectory.set("clients")
+    }
+}
+```
 
 ## Customising the generated `build.gradle.kts`
 

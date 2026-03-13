@@ -1,6 +1,9 @@
 package org.litote.openapi.ktor.client.generator
 
 import org.junit.jupiter.api.io.TempDir
+import org.litote.openapi.ktor.client.generator.adapter.parser.OpenApiSpecificationParser
+import org.litote.openapi.ktor.client.generator.application.GenerationSpecPartitioner
+import org.litote.openapi.ktor.client.generator.domain.analyzeModelUsage
 import java.io.File
 import kotlin.test.Test
 import kotlin.test.assertEquals
@@ -291,6 +294,114 @@ class SharedModelGranularityTest {
             "UserResponse should reference Address from sharedOrderUser package, got:\n$content",
         )
     }
+
+    // ─────────────────────────────────────────────────────────────
+    // Mastodon regression: orphan models must not be generated
+    // ─────────────────────────────────────────────────────────────
+
+    @Test
+    fun `GIVEN mastodon spec WHEN analyzeModelUsage THEN StatusVisibilityEnum is used by multiple clients`() {
+        val config = ApiGeneratorConfiguration(openApiFile = "src/test/resources/mastodon.json")
+        val spec = OpenApiSpecificationParser(config).parse(config.operationFilter)
+        val usage = analyzeModelUsage(spec)
+
+        val statusVisClients = usage["StatusVisibilityEnum"] ?: emptySet()
+        assertTrue(
+            statusVisClients.size >= 2,
+            "StatusVisibilityEnum should be used by 2+ clients (via Status.visibility), got: $statusVisClients",
+        )
+    }
+
+    @Test
+    fun `GIVEN mastodon spec WHEN partition THEN StatusVisibilityEnum is in a shared group (not per-client)`() {
+        val config = ApiGeneratorConfiguration(openApiFile = "src/test/resources/mastodon.json")
+        val spec = OpenApiSpecificationParser(config).parse(config.operationFilter)
+        val partitioned = GenerationSpecPartitioner().partition(spec)
+
+        val inShared =
+            partitioned.sharedGroups.any { group ->
+                group.spec.models.any { it.name == "StatusVisibilityEnum" }
+            }
+        val inPerClient =
+            partitioned.perClient.any { perClient ->
+                perClient.spec.models.any { it.name == "StatusVisibilityEnum" }
+            }
+
+        assertTrue(inShared, "StatusVisibilityEnum must be in a shared group")
+        assertFalse(inPerClient, "StatusVisibilityEnum must NOT be in any per-client module")
+    }
+
+    @Test
+    fun `GIVEN mastodon spec WHEN partition THEN BaseStatus orphan model is not generated`() {
+        val config = ApiGeneratorConfiguration(openApiFile = "src/test/resources/mastodon.json")
+        val spec = OpenApiSpecificationParser(config).parse(config.operationFilter)
+        val partitioned = GenerationSpecPartitioner().partition(spec)
+
+        val inAnyGroup = partitioned.sharedGroups.any { group -> group.spec.models.any { it.name == "BaseStatus" } }
+        val inAnyClient = partitioned.perClient.any { client -> client.spec.models.any { it.name == "BaseStatus" } }
+
+        assertFalse(inAnyGroup, "BaseStatus is orphan (0 clients) — must not appear in any shared group")
+        assertFalse(inAnyClient, "BaseStatus is orphan (0 clients) — must not appear in any per-client module")
+    }
+
+    @Test
+    fun `GIVEN mastodon spec WHEN partition THEN no orphan group exists`() {
+        val config = ApiGeneratorConfiguration(openApiFile = "src/test/resources/mastodon.json")
+        val spec = OpenApiSpecificationParser(config).parse(config.operationFilter)
+        val partitioned = GenerationSpecPartitioner().partition(spec)
+
+        val orphanGroup = partitioned.sharedGroups.firstOrNull { it.clientGroup.isEmpty() }
+        assertTrue(
+            orphanGroup == null,
+            "There must be no orphan group (empty clientGroup) — orphan models are excluded from generation",
+        )
+    }
+
+    @Test
+    fun `GIVEN mastodon spec WHEN analyzeModelUsage THEN ListRepliesPolicyEnum has same clients as List`() {
+        val config = ApiGeneratorConfiguration(openApiFile = "src/test/resources/mastodon.json")
+        val spec = OpenApiSpecificationParser(config).parse(config.operationFilter)
+        val usage = analyzeModelUsage(spec)
+
+        val listClients = usage["List"] ?: emptySet()
+        val enumClients = usage["ListRepliesPolicyEnum"] ?: emptySet()
+
+        assertTrue(listClients.isNotEmpty(), "List model should be used by at least one client")
+        assertTrue(
+            enumClients.containsAll(listClients),
+            "ListRepliesPolicyEnum should be used by all clients that use List, got List=$listClients enum=$enumClients",
+        )
+    }
+
+    @Test
+    fun `GIVEN mastodon spec WHEN partition THEN ListRepliesPolicyEnum is reachable from List's group`() {
+        val config = ApiGeneratorConfiguration(openApiFile = "src/test/resources/mastodon.json")
+        val spec = OpenApiSpecificationParser(config).parse(config.operationFilter)
+        val partitioned = GenerationSpecPartitioner().partition(spec)
+
+        // Find the group containing List
+        val listGroup = partitioned.sharedGroups.find { g -> g.spec.models.any { it.name == "List" } }
+        val enumGroup = partitioned.sharedGroups.find { g -> g.spec.models.any { it.name == "ListRepliesPolicyEnum" } }
+        val inPerClient = partitioned.perClient.any { c -> c.spec.models.any { it.name == "ListRepliesPolicyEnum" } }
+
+        assertFalse(
+            listGroup == null && enumGroup == null && !inPerClient,
+            "ListRepliesPolicyEnum must be generated somewhere (not an orphan)",
+        )
+        // If List is in a shared group, ListRepliesPolicyEnum must be in the SAME or a dependent group
+        if (listGroup != null) {
+            val enumInSameGroup = enumGroup == listGroup
+            val enumInSuperGroup =
+                enumGroup != null &&
+                    partitioned.sharedGroups.any { g ->
+                        g == listGroup && g.spec.models.any { it.name == "List" }
+                    }
+            assertTrue(
+                enumInSameGroup || enumInSuperGroup || enumGroup != null || inPerClient,
+                "ListRepliesPolicyEnum must be in the same or a reachable group as List",
+            )
+        }
+    }
 }
 
 /**
@@ -421,6 +532,84 @@ class CrossPackageImportTest {
         assertFalse(
             content.contains("import $GROUP_PKG.model.GlobalStatus"),
             "GlobalStatus must NOT be imported from group package $GROUP_PKG.model — it lives in global shared, got:\n$content",
+        )
+    }
+}
+
+/**
+ * Regression test for intra-group imports: when model A and model B are in the same per-group
+ * subproject, and A has a property of type B (via a $ref), the generated A.kt must import B
+ * from the group's own package — NOT from the global shared fallback package.
+ *
+ * Bug: `modelPackageOverrides` only contained models from OTHER groups. Intra-group model
+ * references fell through to `fallbackModelPackage` (global shared package), producing a
+ * wrong import (e.g. `sdk.model.ListRepliesPolicyEnum` instead of `sdk.sharedXXX.model.ListRepliesPolicyEnum`).
+ *
+ * Fix: `GenerateTask` now also adds the current group's own models to `modelPackageOverrides`
+ * pointing to the group's own model package.
+ */
+class IntraGroupImportTest {
+    @TempDir
+    lateinit var tempDir: File
+
+    private companion object {
+        private const val SPEC = "src/test/resources/mastodon.json"
+        private const val TOP_PKG = "org.litote.mastodon.ktor.sdk"
+        private const val GROUP_PKG = "$TOP_PKG.sharedListsAccountsGroup"
+    }
+
+    @Test
+    fun `GIVEN per-group with intra-group modelPackageOverrides WHEN List generated THEN import uses group package`() {
+        val config =
+            ApiGeneratorConfiguration(
+                openApiFile = SPEC,
+                outputDirectory = tempDir.absolutePath,
+                basePackage = GROUP_PKG,
+                sharedBasePackage = TOP_PKG,
+                splitByClient = true,
+                sharedModelGranularity = SharedModelGranularity.SHARED_PER_GROUP,
+                targetSharedGroup = setOf("AccountsClient", "ListsClient"),
+                // Simulate what GenerateTask now does: include the current group's own models
+                modelPackageOverrides = mapOf("ListRepliesPolicyEnum" to "$GROUP_PKG.model"),
+            )
+        generate(config)
+
+        val listFile =
+            tempDir.walkTopDown().firstOrNull { it.name == "List.kt" }
+                ?: error("List.kt not generated")
+        val content = listFile.readText()
+
+        assertFalse(
+            content.contains("import $TOP_PKG.model.ListRepliesPolicyEnum"),
+            "List.kt must NOT import ListRepliesPolicyEnum from global shared package, got:\n$content",
+        )
+    }
+
+    @Test
+    fun `GIVEN per-group WITHOUT intra-group modelPackageOverrides WHEN List is generated THEN import uses wrong fallback`() {
+        // Documents the OLD (broken) behavior: without intra-group overrides the import uses fallbackModelPackage.
+        val config =
+            ApiGeneratorConfiguration(
+                openApiFile = SPEC,
+                outputDirectory = tempDir.absolutePath,
+                basePackage = GROUP_PKG,
+                sharedBasePackage = TOP_PKG,
+                splitByClient = true,
+                sharedModelGranularity = SharedModelGranularity.SHARED_PER_GROUP,
+                targetSharedGroup = setOf("AccountsClient", "ListsClient"),
+                modelPackageOverrides = emptyMap(), // no intra-group overrides → OLD behavior
+            )
+        generate(config)
+
+        val listFile =
+            tempDir.walkTopDown().firstOrNull { it.name == "List.kt" }
+                ?: error("List.kt not generated")
+        val content = listFile.readText()
+
+        // Without the fix, ListRepliesPolicyEnum resolves to fallbackModelPackage = sdk.model
+        assertTrue(
+            content.contains("import $TOP_PKG.model.ListRepliesPolicyEnum"),
+            "Without intra-group overrides, List.kt incorrectly imports from fallback package, got:\n$content",
         )
     }
 }

@@ -54,4 +54,14 @@ public abstract class InitSubprojectExtension
         @get:Input
         @get:Optional
         public val generatorConfigExtra: Property<String> = objects.property(String::class.java)
+
+        /**
+         * Optional intermediate directory name used to group all generated multi-module subprojects
+         * under a common subdirectory. When set to e.g. `"clients"`, modules `shared` and `user-client`
+         * are created at `clients/shared` and `clients/user-client`, and the settings include becomes
+         * `include("clients/shared", "clients/user-client")`.
+         */
+        @get:Input
+        @get:Optional
+        public val subprojectRootDirectory: Property<String> = objects.property(String::class.java)
     }

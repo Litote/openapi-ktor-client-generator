@@ -91,6 +91,17 @@ public abstract class InitSubprojectTask : DefaultTask() {
     @get:Optional
     public abstract val sharedModelGranularity: Property<String>
 
+    /**
+     * Optional intermediate directory name used to group all generated multi-module subprojects
+     * under a common subdirectory. When set to e.g. `"clients"`, modules `shared` and `user-client`
+     * are created at `clients/shared` and `clients/user-client`, and the settings include becomes
+     * `include("clients/shared", "clients/user-client")`.
+     * Passed via -PsubprojectRootDirectory=...
+     */
+    @get:Input
+    @get:Optional
+    public abstract val subprojectRootDirectory: Property<String>
+
     @TaskAction
     public fun initSubproject() {
         val openApiFilePathValue =
@@ -102,12 +113,13 @@ public abstract class InitSubprojectTask : DefaultTask() {
         val subprojectDir = rootDirectory.get().asFile.resolve(subprojectNameValue)
         val granularity = SplitGranularity.valueOf(splitGranularity.getOrElse("BY_TAG"))
         val sharedModelGranularityValue = sharedModelGranularity.getOrElse("SHARED_ALL")
+        val subprojectRootDirectoryValue = subprojectRootDirectory.orNull
 
         if (splitByClient.getOrElse(false)) {
             if (sharedModelGranularityValue == "SHARED_PER_GROUP") {
-                initMultiModuleSubprojectPerGroup(openApiSourceFile, subprojectNameValue, granularity)
+                initMultiModuleSubprojectPerGroup(openApiSourceFile, subprojectNameValue, granularity, subprojectRootDirectoryValue)
             } else {
-                initMultiModuleSubproject(openApiSourceFile, subprojectNameValue, granularity)
+                initMultiModuleSubproject(openApiSourceFile, subprojectNameValue, granularity, subprojectRootDirectoryValue)
             }
         } else {
             generateSubproject(subprojectDir, openApiSourceFile, subprojectNameValue)
@@ -158,6 +170,7 @@ public abstract class InitSubprojectTask : DefaultTask() {
         openApiSourceFile: File,
         subprojectNameValue: String,
         granularity: SplitGranularity,
+        subprojectRootDirectoryValue: String? = null,
     ) {
         val clientNames = parseClientNames(openApiSourceFile.absolutePath, granularity)
         val projectDir = rootDirectory.get().asFile
@@ -170,13 +183,34 @@ public abstract class InitSubprojectTask : DefaultTask() {
             openApiSourceFile.copyTo(openApiDestFile, overwrite = true)
         }
 
-        val specRelativePath = "../src/main/openapi/$openApiFileName"
+        val specRelativePath =
+            if (subprojectRootDirectoryValue != null) {
+                "../../src/main/openapi/$openApiFileName"
+            } else {
+                "../src/main/openapi/$openApiFileName"
+            }
         val specNameWithoutExt = openApiSourceFile.nameWithoutExtension
         val basePackage =
             basePackage.orNull
                 ?: "org.example.${specNameWithoutExt.lowercase().filter { it.isLetterOrDigit() }}"
 
-        val sharedDir = projectDir.resolve("shared")
+        fun resolveModuleDir(name: String): File =
+            if (subprojectRootDirectoryValue != null) {
+                projectDir.resolve("$subprojectRootDirectoryValue/$name")
+            } else {
+                projectDir.resolve(name)
+            }
+
+        fun moduleIncludeName(name: String): String =
+            if (subprojectRootDirectoryValue !=
+                null
+            ) {
+                ":$subprojectRootDirectoryValue:$name"
+            } else {
+                name
+            }
+
+        val sharedDir = resolveModuleDir("shared")
         sharedDir.mkdirs()
         sharedDir.resolve("build.gradle.kts").writeText(
             buildSharedGradleKtsContent(
@@ -195,7 +229,7 @@ public abstract class InitSubprojectTask : DefaultTask() {
 
         clientNames.forEach { clientName ->
             val subprojectDirName = clientName.toKebabCase()
-            val clientDir = projectDir.resolve(subprojectDirName)
+            val clientDir = resolveModuleDir(subprojectDirName)
             clientDir.mkdirs()
             clientDir.resolve("build.gradle.kts").writeText(
                 buildClientGradleKtsContent(
@@ -211,22 +245,30 @@ public abstract class InitSubprojectTask : DefaultTask() {
                     buildScriptTemplate = buildScriptTemplate.orNull,
                     generatorConfigExtra = generatorConfigExtra.orNull,
                     splitGranularity = granularity,
+                    subprojectRootDirectory = subprojectRootDirectoryValue,
                 ),
             )
         }
 
         val subprojectDirNames = clientNames.map { it.toKebabCase() }
         val allModulesSharedAll = listOf("shared") + subprojectDirNames
-        updateSettingsIncludes(rootDirectory.get().asFile, allModulesSharedAll)
+        updateSettingsIncludes(rootDirectory.get().asFile, allModulesSharedAll.map { moduleIncludeName(it) })
         logger.lifecycle("Multi-module project '$subprojectNameValue' created at ${projectDir.absolutePath}")
         logger.lifecycle("Generated modules: ${allModulesSharedAll.joinToString(", ")}")
-        logger.lifecycle("settings.gradle.kts updated with include(${allModulesSharedAll.joinToString(", ") { "\"$it\"" }})")
+        logger.lifecycle(
+            "settings.gradle.kts updated with include(${allModulesSharedAll.map {
+                moduleIncludeName(
+                    it,
+                )
+            }.joinToString(", ") { "\"$it\"" }})",
+        )
     }
 
     private fun initMultiModuleSubprojectPerGroup(
         openApiSourceFile: File,
         subprojectNameValue: String,
         granularity: SplitGranularity,
+        subprojectRootDirectoryValue: String? = null,
     ) {
         val clientNames = parseClientNames(openApiSourceFile.absolutePath, granularity)
         val sharedGroups = parseSharedClientGroups(openApiSourceFile.absolutePath, granularity)
@@ -240,14 +282,35 @@ public abstract class InitSubprojectTask : DefaultTask() {
             openApiSourceFile.copyTo(openApiDestFile, overwrite = true)
         }
 
-        val specRelativePath = "../src/main/openapi/$openApiFileName"
+        val specRelativePath =
+            if (subprojectRootDirectoryValue != null) {
+                "../../src/main/openapi/$openApiFileName"
+            } else {
+                "../src/main/openapi/$openApiFileName"
+            }
         val specNameWithoutExt = openApiSourceFile.nameWithoutExtension
         val basePackage =
             basePackage.orNull
                 ?: "org.example.${specNameWithoutExt.lowercase().filter { it.isLetterOrDigit() }}"
 
-        // Generate global shared project (ClientConfiguration + orphan models)
-        val sharedDir = projectDir.resolve("shared")
+        fun resolveModuleDir(name: String): File =
+            if (subprojectRootDirectoryValue != null) {
+                projectDir.resolve("$subprojectRootDirectoryValue/$name")
+            } else {
+                projectDir.resolve(name)
+            }
+
+        fun moduleIncludeName(name: String): String =
+            if (subprojectRootDirectoryValue !=
+                null
+            ) {
+                ":$subprojectRootDirectoryValue:$name"
+            } else {
+                name
+            }
+
+        // Generate global shared project (ClientConfiguration only in SHARED_PER_GROUP mode)
+        val sharedDir = resolveModuleDir("shared")
         sharedDir.mkdirs()
         sharedDir.resolve("build.gradle.kts").writeText(
             buildSharedGradleKtsContent(
@@ -281,7 +344,7 @@ public abstract class InitSubprojectTask : DefaultTask() {
         sharedGroups.forEach { group ->
             val groupDirName = group.clientGroup.toSharedGroupDirName()
             val groupBasePackage = "$basePackage.${groupDirName.toCamelCase()}"
-            val groupDir = projectDir.resolve(groupDirName)
+            val groupDir = resolveModuleDir(groupDirName)
             groupDir.mkdirs()
             // All other groups are passed for import resolution in the generator
             val otherGroupPackages = groupPackageMap.filterKeys { it != group.clientGroup.toTargetSharedGroupString() }
@@ -304,6 +367,7 @@ public abstract class InitSubprojectTask : DefaultTask() {
                     buildScriptTemplate = buildScriptTemplate.orNull,
                     generatorConfigExtra = generatorConfigExtra.orNull,
                     splitGranularity = granularity,
+                    subprojectRootDirectory = subprojectRootDirectoryValue,
                 ),
             )
         }
@@ -311,7 +375,7 @@ public abstract class InitSubprojectTask : DefaultTask() {
         // Generate client projects with references to their shared group dependencies
         clientNames.forEach { clientName ->
             val subprojectDirName = clientName.toKebabCase()
-            val clientDir = projectDir.resolve(subprojectDirName)
+            val clientDir = resolveModuleDir(subprojectDirName)
             clientDir.mkdirs()
             // Find groups this client belongs to
             val clientGroups = sharedGroups.filter { it.clientGroup.contains(clientName) }
@@ -334,6 +398,7 @@ public abstract class InitSubprojectTask : DefaultTask() {
                     buildScriptTemplate = buildScriptTemplate.orNull,
                     generatorConfigExtra = generatorConfigExtra.orNull,
                     splitGranularity = granularity,
+                    subprojectRootDirectory = subprojectRootDirectoryValue,
                 ),
             )
         }
@@ -341,10 +406,12 @@ public abstract class InitSubprojectTask : DefaultTask() {
         val groupDirNames = sharedGroups.map { it.clientGroup.toSharedGroupDirName() }
         val clientDirNames = clientNames.map { it.toKebabCase() }
         val allModules = listOf("shared") + groupDirNames + clientDirNames
-        updateSettingsIncludes(rootDirectory.get().asFile, allModules)
+        updateSettingsIncludes(rootDirectory.get().asFile, allModules.map { moduleIncludeName(it) })
         logger.lifecycle("Multi-module project (SHARED_PER_GROUP) '$subprojectNameValue' created at ${projectDir.absolutePath}")
         logger.lifecycle("Generated modules: ${allModules.joinToString(", ")}")
-        logger.lifecycle("settings.gradle.kts updated with include(${allModules.joinToString(", ") { "\"$it\"" }})")
+        logger.lifecycle(
+            "settings.gradle.kts updated with include(${allModules.map { moduleIncludeName(it) }.joinToString(", ") { "\"$it\"" }})",
+        )
     }
 
     internal companion object {
@@ -427,8 +494,7 @@ public abstract class InitSubprojectTask : DefaultTask() {
             sharedModelGranularity: String = "SHARED_ALL",
         ): String {
             val header =
-                buildScriptTemplate?.trimEnd()
-                    ?: defaultHeader(kotlinVersion, ktorVersion, coroutinesVersion, serializationVersion)
+                buildScriptTemplate?.trimEnd() ?: defaultHeader(kotlinVersion, ktorVersion, coroutinesVersion, serializationVersion)
             val properties =
                 buildList {
                     add("""openApiFile = file("$specRelativePath")""")
@@ -470,13 +536,18 @@ public abstract class InitSubprojectTask : DefaultTask() {
             buildScriptTemplate: String? = null,
             generatorConfigExtra: String? = null,
             splitGranularity: SplitGranularity = SplitGranularity.BY_TAG,
+            subprojectRootDirectory: String? = null,
         ): String {
+            val sharedProjectRef = if (subprojectRootDirectory != null) ":$subprojectRootDirectory:shared" else ":shared"
+            val groupProjectRef: (String) -> String = { dirName ->
+                if (subprojectRootDirectory != null) ":$subprojectRootDirectory:$dirName" else ":$dirName"
+            }
             // Per-group subprojects always depend on :shared. They also depend on specific other
             // per-group subprojects whose models they directly reference (directGroupDeps).
             val header =
                 if (buildScriptTemplate != null) {
-                    val sharedDep = """    api(project(":shared"))"""
-                    val otherDeps = directGroupDeps.map { """    api(project(":$it"))""" }
+                    val sharedDep = """    api(project("$sharedProjectRef"))"""
+                    val otherDeps = directGroupDeps.map { """    api(project("${groupProjectRef(it)}"))""" }
                     val extraDeps = (listOf(sharedDep) + otherDeps).joinToString("\n")
                     "${buildScriptTemplate.trimEnd()}\n\ndependencies {\n$extraDeps\n}"
                 } else {
@@ -486,6 +557,8 @@ public abstract class InitSubprojectTask : DefaultTask() {
                         coroutinesVersion,
                         serializationVersion,
                         directGroupDeps,
+                        sharedProjectRef,
+                        groupProjectRef,
                     )
                 }
             val properties =
@@ -529,12 +602,14 @@ public abstract class InitSubprojectTask : DefaultTask() {
             buildScriptTemplate: String? = null,
             generatorConfigExtra: String? = null,
             splitGranularity: SplitGranularity = SplitGranularity.BY_TAG,
+            subprojectRootDirectory: String? = null,
         ): String {
+            val sharedProjectRef = if (subprojectRootDirectory != null) ":$subprojectRootDirectory:shared" else ":shared"
             val header =
                 if (buildScriptTemplate != null) {
-                    "${buildScriptTemplate.trimEnd()}\n\ndependencies {\n    api(project(\":shared\"))\n}"
+                    "${buildScriptTemplate.trimEnd()}\n\ndependencies {\n    api(project(\"$sharedProjectRef\"))\n}"
                 } else {
-                    defaultClientHeader(kotlinVersion, ktorVersion, coroutinesVersion, serializationVersion)
+                    defaultClientHeader(kotlinVersion, ktorVersion, coroutinesVersion, serializationVersion, sharedProjectRef)
                 }
             val properties =
                 buildList {
@@ -576,13 +651,18 @@ public abstract class InitSubprojectTask : DefaultTask() {
             buildScriptTemplate: String? = null,
             generatorConfigExtra: String? = null,
             splitGranularity: SplitGranularity = SplitGranularity.BY_TAG,
+            subprojectRootDirectory: String? = null,
         ): String {
+            val sharedProjectRef = if (subprojectRootDirectory != null) ":$subprojectRootDirectory:shared" else ":shared"
+            val groupProjectRef: (String) -> String = { dirName ->
+                if (subprojectRootDirectory != null) ":$subprojectRootDirectory:$dirName" else ":$dirName"
+            }
             val groupDeps =
                 clientGroups.keys.map { groupKey ->
                     val clientGroup = groupKey.split(",").toSet()
-                    "    api(project(\":${clientGroup.toSharedGroupDirName()}\"))"
+                    "    api(project(\"${groupProjectRef(clientGroup.toSharedGroupDirName())}\"))"
                 }
-            val allDeps = listOf("    api(project(\":shared\"))") + groupDeps
+            val allDeps = listOf("    api(project(\"$sharedProjectRef\"))") + groupDeps
             val header =
                 if (buildScriptTemplate != null) {
                     "${buildScriptTemplate.trimEnd()}\n\ndependencies {\n${allDeps.joinToString("\n")}\n}"
@@ -592,12 +672,14 @@ public abstract class InitSubprojectTask : DefaultTask() {
                         ktorVersion,
                         coroutinesVersion,
                         serializationVersion,
+                        sharedProjectRef = sharedProjectRef,
                         groupProjectRefs =
                             clientGroups.keys.map { groupKey ->
                                 clientGroups.keys
                                     .map { it.split(",").toSet() }
                                     .firstOrNull { it == groupKey.split(",").toSet() }
-                                    ?.toSharedGroupDirName() ?: groupKey
+                                    ?.toSharedGroupDirName()
+                                    ?.let { groupProjectRef(it) } ?: groupKey
                             },
                     )
                 }
@@ -661,13 +743,15 @@ public abstract class InitSubprojectTask : DefaultTask() {
             coroutinesVersion: String,
             serializationVersion: String,
             directGroupDeps: List<String> = emptyList(),
+            sharedProjectRef: String = ":shared",
+            groupProjectRef: (String) -> String = { ":$it" },
         ): String {
-            val groupDeps = directGroupDeps.joinToString("\n") { ref -> """    api(project(":$ref"))""" }
+            val groupDeps = directGroupDeps.joinToString("\n") { ref -> """    api(project("${groupProjectRef(ref)}"))""" }
             val allDeps =
                 if (groupDeps.isBlank()) {
-                    "    api(project(\":shared\"))"
+                    """    api(project("$sharedProjectRef"))"""
                 } else {
-                    "    api(project(\":shared\"))\n$groupDeps"
+                    """    api(project("$sharedProjectRef"))""" + "\n$groupDeps"
                 }
             return """
                 plugins {
@@ -694,6 +778,7 @@ public abstract class InitSubprojectTask : DefaultTask() {
             ktorVersion: String,
             coroutinesVersion: String,
             serializationVersion: String,
+            sharedProjectRef: String = ":shared",
         ): String =
             """
             plugins {
@@ -703,7 +788,7 @@ public abstract class InitSubprojectTask : DefaultTask() {
             }
 
             dependencies {
-                api(project(":shared"))
+                api(project("$sharedProjectRef"))
                 implementation("org.jetbrains.kotlinx:kotlinx-serialization-json:$serializationVersion")
                 implementation("org.jetbrains.kotlinx:kotlinx-coroutines-core:$coroutinesVersion")
                 implementation("io.ktor:ktor-client-cio:$ktorVersion")
@@ -719,11 +804,12 @@ public abstract class InitSubprojectTask : DefaultTask() {
             ktorVersion: String,
             coroutinesVersion: String,
             serializationVersion: String,
+            sharedProjectRef: String = ":shared",
             groupProjectRefs: List<String>,
         ): String {
             val groupDeps =
                 groupProjectRefs.joinToString("\n") { ref ->
-                    """    api(project(":$ref"))"""
+                    """    api(project("$ref"))"""
                 }
             return """
                 plugins {
@@ -733,7 +819,7 @@ public abstract class InitSubprojectTask : DefaultTask() {
                 }
 
                 dependencies {
-                    api(project(":shared"))
+                    api(project("$sharedProjectRef"))
                 $groupDeps
                     implementation("org.jetbrains.kotlinx:kotlinx-serialization-json:$serializationVersion")
                     implementation("org.jetbrains.kotlinx:kotlinx-coroutines-core:$coroutinesVersion")

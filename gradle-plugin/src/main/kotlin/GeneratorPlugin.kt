@@ -43,6 +43,10 @@ public class GeneratorPlugin : Plugin<Project> {
                 task.splitByClient.set(project.findProperty("splitByClient")?.toString()?.toBoolean() ?: false)
                 task.splitGranularity.set(project.findProperty("splitGranularity") as String?)
                 task.sharedModelGranularity.set(project.findProperty("sharedModelGranularity") as String?)
+                task.subprojectRootDirectory.set(
+                    (project.findProperty("subprojectRootDirectory") as String?)
+                        ?: extension.initSubproject.subprojectRootDirectory.orNull,
+                )
             }
         }
 
