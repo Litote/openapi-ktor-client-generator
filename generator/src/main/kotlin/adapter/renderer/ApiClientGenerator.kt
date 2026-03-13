@@ -66,9 +66,10 @@ public class ApiClientGenerator internal constructor(
 
         val modelGenerator =
             ApiModelGenerator(
-                configuration.resolvedModelPackage,
+                configuration.generationModelPackage,
                 configuration.outputDirectory,
                 modelPackageOverrides = configuration.modelPackageOverrides,
+                fallbackModelPackage = configuration.resolvedModelPackage,
             )
         val operationBuilder =
             OperationBuilder(

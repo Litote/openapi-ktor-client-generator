@@ -67,11 +67,20 @@ apiClientGenerator {
 }
 ```
 
-Then add the subproject to your `settings.gradle.kts`:
+The task automatically updates (or creates) `settings.gradle.kts` in the project root with the
+required `include(...)` statement, wrapped in a marker block:
 
 ```kotlin
+// <openapi-ktor-generated-includes>
 include("petstore")
+// </openapi-ktor-generated-includes>
 ```
+
+- **First run**: the block is appended (or a new file is created).
+- **Re-run**: the block between the markers is replaced — the rest of `settings.gradle.kts` is untouched.
+
+> **Note:** if you want to manage the `include(...)` yourself, simply remove the marker comments
+> after the first run; the task will then append a new block on subsequent runs.
 
 ## Multi-subproject generation (`-PsplitByClient=true`)
 
@@ -109,11 +118,7 @@ the Kotlin convention `org.example.myProject`) so that packages stay distinct wh
 > **Note:** client directory names are derived from the client name in **kebab-case**
 > (e.g. `UsersClient` → `users-client/`, `ApiV1MediaClient` → `api-v1-media-client/`)
 
-Add the generated subprojects to your `settings.gradle.kts` (the exact list is also printed by the task):
-
-```kotlin
-include("shared", "users-client", "products-client")
-```
+The task automatically updates `settings.gradle.kts` with all generated module names (see marker block behaviour described above).
 
 ### Model placement rules
 

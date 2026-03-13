@@ -292,3 +292,135 @@ class SharedModelGranularityTest {
         )
     }
 }
+
+/**
+ * Tests for cross-package imports — the scenario where a model in a per-group subproject
+ * references a model from the global shared subproject (different package).
+ *
+ * Spec: `cross-package-import.json`
+ * - `GlobalStatus` used by ALL 3 clients → global `shared/` subproject (package `$top.model`)
+ * - `Address` shared by User+Order → per-group `shared-order-user/` (package `$top.sharedOrderUser.model`)
+ * - `Address` has property `status: GlobalStatus` — cross-package reference!
+ *
+ * Bug: when generating the per-group subproject WITHOUT `modelPackageOverrides` for `GlobalStatus`,
+ * the generated `Address.kt` would reference `GlobalStatus` using the wrong package (`$groupBase.model`
+ * instead of `$topBase.model`), resulting in missing/wrong import.
+ */
+class CrossPackageImportTest {
+    @TempDir
+    lateinit var tempDir: File
+
+    private companion object {
+        private const val SPEC = "src/test/resources/cross-package-import.json"
+        private const val TOP_PKG = "com.example.crosspackage"
+        private const val GROUP_PKG = "$TOP_PKG.sharedOrderUser"
+    }
+
+    // ─────────────────────────────────────────────────────────────
+    // Bug demonstration: without fix, GlobalStatus gets wrong package
+    // ─────────────────────────────────────────────────────────────
+
+    @Test
+    fun `GIVEN per-group without sharedBasePackage WHEN GlobalStatus is global shared THEN Address does NOT import it correctly`() {
+        // Known limitation: without sharedBasePackage the generator has no knowledge of where
+        // global shared models live, so GlobalStatus is referenced from the group package
+        // (GROUP_PKG.model) instead of the real global shared package (TOP_PKG.model).
+        generate(
+            ApiGeneratorConfiguration(
+                openApiFile = SPEC,
+                outputDirectory = tempDir.absolutePath,
+                basePackage = GROUP_PKG,
+                // sharedBasePackage intentionally NOT set — no cross-package knowledge
+                splitByClient = true,
+                sharedModelGranularity = SharedModelGranularity.SHARED_PER_GROUP,
+                targetSharedGroup = setOf("UserClient", "OrderClient"),
+                modelPackageOverrides = emptyMap(),
+            ),
+        )
+        val addressFile =
+            tempDir.walkTopDown().firstOrNull { it.name == "Address.kt" }
+                ?: error("Address.kt not generated")
+        val content = addressFile.readText()
+        // Without sharedBasePackage the fallback resolves to GROUP_PKG.model, so GlobalStatus
+        // is NOT imported from the correct global package — the correct fix requires sharedBasePackage.
+        assertFalse(
+            content.contains("import $TOP_PKG.model.GlobalStatus"),
+            "Without sharedBasePackage, Address.kt should NOT reference GlobalStatus from $TOP_PKG.model, got:\n$content",
+        )
+    }
+
+    // ─────────────────────────────────────────────────────────────
+    // Fix: with sharedBasePackage set, GlobalStatus is referenced from the correct package
+    // ─────────────────────────────────────────────────────────────
+
+    @Test
+    fun `GIVEN per-group with sharedBasePackage WHEN GlobalStatus is global shared THEN Address imports GlobalStatus correctly`() {
+        generate(
+            ApiGeneratorConfiguration(
+                openApiFile = SPEC,
+                outputDirectory = tempDir.absolutePath,
+                basePackage = GROUP_PKG,
+                sharedBasePackage = TOP_PKG, // points to global shared package
+                splitByClient = true,
+                sharedModelGranularity = SharedModelGranularity.SHARED_PER_GROUP,
+                targetSharedGroup = setOf("UserClient", "OrderClient"),
+                modelPackageOverrides = emptyMap(),
+            ),
+        )
+        val addressFile =
+            tempDir.walkTopDown().firstOrNull { it.name == "Address.kt" }
+                ?: error("Address.kt not generated")
+        val content = addressFile.readText()
+        assertTrue(
+            content.contains("import $TOP_PKG.model.GlobalStatus") ||
+                content.contains("$TOP_PKG.model.GlobalStatus"),
+            "Address.kt should import GlobalStatus from global shared package $TOP_PKG.model, got:\n$content",
+        )
+    }
+
+    @Test
+    fun `GIVEN per-group generation with sharedBasePackage WHEN Address is generated THEN it is in its own group package`() {
+        generate(
+            ApiGeneratorConfiguration(
+                openApiFile = SPEC,
+                outputDirectory = tempDir.absolutePath,
+                basePackage = GROUP_PKG,
+                sharedBasePackage = TOP_PKG,
+                splitByClient = true,
+                sharedModelGranularity = SharedModelGranularity.SHARED_PER_GROUP,
+                targetSharedGroup = setOf("UserClient", "OrderClient"),
+            ),
+        )
+        val addressFile =
+            tempDir.walkTopDown().firstOrNull { it.name == "Address.kt" }
+                ?: error("Address.kt not generated")
+        val content = addressFile.readText()
+        assertTrue(
+            content.startsWith("package $GROUP_PKG.model"),
+            "Address.kt should be in package $GROUP_PKG.model, got:\n${content.lines().first()}",
+        )
+    }
+
+    @Test
+    fun `GIVEN per-group with sharedBasePackage WHEN Address has GlobalStatus property THEN it is NOT imported from wrong group package`() {
+        generate(
+            ApiGeneratorConfiguration(
+                openApiFile = SPEC,
+                outputDirectory = tempDir.absolutePath,
+                basePackage = GROUP_PKG,
+                sharedBasePackage = TOP_PKG,
+                splitByClient = true,
+                sharedModelGranularity = SharedModelGranularity.SHARED_PER_GROUP,
+                targetSharedGroup = setOf("UserClient", "OrderClient"),
+            ),
+        )
+        val addressFile =
+            tempDir.walkTopDown().firstOrNull { it.name == "Address.kt" }
+                ?: error("Address.kt not generated")
+        val content = addressFile.readText()
+        assertFalse(
+            content.contains("import $GROUP_PKG.model.GlobalStatus"),
+            "GlobalStatus must NOT be imported from group package $GROUP_PKG.model — it lives in global shared, got:\n$content",
+        )
+    }
+}

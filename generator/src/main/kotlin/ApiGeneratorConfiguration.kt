@@ -48,9 +48,27 @@ public data class ApiGeneratorConfiguration(
     val configPackage: String = "${sharedBasePackage ?: basePackage}.client"
 
     /**
-     * Package used for all model type references and model file generation.
-     * When [sharedBasePackage] is set, all models (shared and private) use the shared model package
-     * so that cross-module references resolve correctly.
+     * Package where model FILES are generated.
+     *
+     * For `SHARED_PER_GROUP` mode (when [targetSharedGroup] is non-null and [sharedBasePackage]
+     * is set), uses [basePackage] so the per-group subproject generates models in its own
+     * dedicated package instead of the global shared package.
+     *
+     * In all other cases falls back to [resolvedModelPackage] to preserve existing behaviour
+     * (e.g. `SHARED_ALL` clients keep their private models in `sharedBasePackage.model`).
+     */
+    val generationModelPackage: String =
+        if (targetSharedGroup != null && sharedBasePackage != null) {
+            "$basePackage.model"
+        } else {
+            "${sharedBasePackage ?: basePackage}.model"
+        }
+
+    /**
+     * Fallback package used for model TYPE REFERENCES not explicitly in [modelPackageOverrides].
+     * When [sharedBasePackage] is set this resolves to `sharedBasePackage.model`, which is the
+     * global shared subproject's model package — ensuring cross-package imports are generated
+     * correctly for models that live in the global shared subproject.
      */
     val resolvedModelPackage: String = "${sharedBasePackage ?: basePackage}.model"
 }

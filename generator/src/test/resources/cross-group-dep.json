@@ -1,0 +1,107 @@
+{
+  "openapi": "3.0.3",
+  "info": {
+    "title": "Cross-group dependency test API",
+    "version": "1.0.0"
+  },
+  "paths": {
+    "/alpha": {
+      "get": {
+        "tags": ["Alpha"],
+        "operationId": "getAlpha",
+        "responses": {
+          "200": {
+            "content": { "application/json": { "schema": { "$ref": "#/components/schemas/SharedAB" } } },
+            "description": "ok"
+          }
+        }
+      }
+    },
+    "/alpha/detail": {
+      "get": {
+        "tags": ["Alpha"],
+        "operationId": "getAlphaDetail",
+        "responses": {
+          "200": {
+            "content": { "application/json": { "schema": { "$ref": "#/components/schemas/SharedABG" } } },
+            "description": "ok"
+          }
+        }
+      }
+    },
+    "/beta": {
+      "get": {
+        "tags": ["Beta"],
+        "operationId": "getBeta",
+        "responses": {
+          "200": {
+            "content": { "application/json": { "schema": { "$ref": "#/components/schemas/SharedAB" } } },
+            "description": "ok"
+          }
+        }
+      }
+    },
+    "/beta/detail": {
+      "get": {
+        "tags": ["Beta"],
+        "operationId": "getBetaDetail",
+        "responses": {
+          "200": {
+            "content": { "application/json": { "schema": { "$ref": "#/components/schemas/SharedABG" } } },
+            "description": "ok"
+          }
+        }
+      }
+    },
+    "/gamma": {
+      "get": {
+        "tags": ["Gamma"],
+        "operationId": "getGamma",
+        "responses": {
+          "200": {
+            "content": { "application/json": { "schema": { "$ref": "#/components/schemas/SharedABG" } } },
+            "description": "ok"
+          }
+        }
+      }
+    },
+    "/delta": {
+      "get": {
+        "tags": ["Delta"],
+        "operationId": "getDelta",
+        "responses": {
+          "200": {
+            "content": { "application/json": { "schema": { "$ref": "#/components/schemas/PrivateDelta" } } },
+            "description": "ok"
+          }
+        }
+      }
+    }
+  },
+  "components": {
+    "schemas": {
+      "SharedAB": {
+        "type": "object",
+        "description": "Used only by Alpha and Beta. Has a property referencing SharedABG → group {Alpha,Beta} depends on group {Alpha,Beta,Gamma}",
+        "properties": {
+          "name": { "type": "string" },
+          "detail": { "$ref": "#/components/schemas/SharedABG" }
+        }
+      },
+      "SharedABG": {
+        "type": "object",
+        "description": "Used by Alpha, Beta, and Gamma. Does NOT reference SharedAB → no reverse dependency",
+        "properties": {
+          "value": { "type": "string" }
+        }
+      },
+      "PrivateDelta": {
+        "type": "object",
+        "description": "Used only by Delta (private)",
+        "properties": {
+          "data": { "type": "string" }
+        }
+      }
+    }
+  }
+}

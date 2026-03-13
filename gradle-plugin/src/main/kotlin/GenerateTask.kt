@@ -88,7 +88,6 @@ public abstract class GenerateTask : DefaultTask() {
     /**
      * Map of shared group identifier → base package of that group's subproject.
      * Group identifier = comma-separated sorted client names, e.g. `"OrderClient,UserClient"`.
-     * Used to resolve [modelPackageOverrides] at build time.
      */
     @get:Input
     public abstract val additionalSharedGroupPackages: MapProperty<String, String>

@@ -10,8 +10,10 @@ import org.gradle.api.tasks.Optional
 import org.gradle.api.tasks.TaskAction
 import org.gradle.work.DisableCachingByDefault
 import org.litote.openapi.ktor.client.generator.SplitGranularity
+import org.litote.openapi.ktor.client.generator.computeSharedGroupDependencies
 import org.litote.openapi.ktor.client.generator.parseClientNames
 import org.litote.openapi.ktor.client.generator.parseSharedClientGroups
+import org.litote.openapi.ktor.client.generator.shared.toSharedGroupDirName
 import java.io.File
 
 @DisableCachingByDefault(because = "Project generation task — generates project structure on demand")
@@ -109,8 +111,9 @@ public abstract class InitSubprojectTask : DefaultTask() {
             }
         } else {
             generateSubproject(subprojectDir, openApiSourceFile, subprojectNameValue)
+            updateSettingsIncludes(rootDirectory.get().asFile, listOf(subprojectNameValue))
             logger.lifecycle("Subproject '$subprojectNameValue' created at ${subprojectDir.absolutePath}")
-            logger.lifecycle("Don't forget to add 'include(\"$subprojectNameValue\")' to your settings.gradle.kts")
+            logger.lifecycle("settings.gradle.kts updated with include(\"$subprojectNameValue\")")
         }
     }
 
@@ -213,11 +216,11 @@ public abstract class InitSubprojectTask : DefaultTask() {
         }
 
         val subprojectDirNames = clientNames.map { it.toKebabCase() }
+        val allModulesSharedAll = listOf("shared") + subprojectDirNames
+        updateSettingsIncludes(rootDirectory.get().asFile, allModulesSharedAll)
         logger.lifecycle("Multi-module project '$subprojectNameValue' created at ${projectDir.absolutePath}")
-        logger.lifecycle("Generated modules: shared, ${subprojectDirNames.joinToString(", ")}")
-        logger.lifecycle(
-            "Don't forget to add 'include(\"shared\", ${subprojectDirNames.joinToString(", ") { "\"$it\"" }})' to your settings.gradle.kts",
-        )
+        logger.lifecycle("Generated modules: ${allModulesSharedAll.joinToString(", ")}")
+        logger.lifecycle("settings.gradle.kts updated with include(${allModulesSharedAll.joinToString(", ") { "\"$it\"" }})")
     }
 
     private fun initMultiModuleSubprojectPerGroup(
@@ -263,17 +266,37 @@ public abstract class InitSubprojectTask : DefaultTask() {
         )
 
         // Generate one subproject per non-trivial shared group (2+ clients)
+        val groupPackageMap =
+            sharedGroups.associate { g ->
+                g.clientGroup.toTargetSharedGroupString() to "$basePackage.${g.clientGroup.toSharedGroupDirName().toCamelCase()}"
+            }
+        // Compute which groups each group directly depends on (for cross-group model references)
+        val groupDepsMap =
+            computeSharedGroupDependencies(openApiSourceFile.absolutePath, granularity)
+                .entries
+                .associate { (group, deps) ->
+                    group.clientGroup.toTargetSharedGroupString() to
+                        deps.map { it.clientGroup.toSharedGroupDirName() }
+                }
         sharedGroups.forEach { group ->
             val groupDirName = group.clientGroup.toSharedGroupDirName()
             val groupBasePackage = "$basePackage.${groupDirName.toCamelCase()}"
             val groupDir = projectDir.resolve(groupDirName)
             groupDir.mkdirs()
+            // All other groups are passed for import resolution in the generator
+            val otherGroupPackages = groupPackageMap.filterKeys { it != group.clientGroup.toTargetSharedGroupString() }
+            // Only the groups this group's models actually reference need a Gradle compile dependency
+            val directDepDirNames =
+                groupDepsMap[group.clientGroup.toTargetSharedGroupString()] ?: emptyList()
             groupDir.resolve("build.gradle.kts").writeText(
                 buildSharedGroupGradleKtsContent(
                     specNameWithoutExt = specNameWithoutExt,
                     specRelativePath = specRelativePath,
                     basePackage = groupBasePackage,
+                    topBasePackage = basePackage,
                     targetSharedGroup = group.clientGroup.toTargetSharedGroupString(),
+                    additionalSharedGroupPackages = otherGroupPackages,
+                    directGroupDeps = directDepDirNames,
                     kotlinVersion = kotlinVersion.get(),
                     ktorVersion = ktorVersion.get(),
                     coroutinesVersion = coroutinesVersion.get(),
@@ -318,15 +341,42 @@ public abstract class InitSubprojectTask : DefaultTask() {
         val groupDirNames = sharedGroups.map { it.clientGroup.toSharedGroupDirName() }
         val clientDirNames = clientNames.map { it.toKebabCase() }
         val allModules = listOf("shared") + groupDirNames + clientDirNames
+        updateSettingsIncludes(rootDirectory.get().asFile, allModules)
         logger.lifecycle("Multi-module project (SHARED_PER_GROUP) '$subprojectNameValue' created at ${projectDir.absolutePath}")
         logger.lifecycle("Generated modules: ${allModules.joinToString(", ")}")
-        logger.lifecycle(
-            "Don't forget to add 'include(${allModules.joinToString(", ") { "\"$it\"" }})' to your settings.gradle.kts",
-        )
+        logger.lifecycle("settings.gradle.kts updated with include(${allModules.joinToString(", ") { "\"$it\"" }})")
     }
 
     internal companion object {
         internal const val PLUGIN_ID = "org.litote.openapi.ktor.client.generator.gradle"
+
+        internal const val SETTINGS_MARKER_START = "// <openapi-ktor-generated-includes>"
+        internal const val SETTINGS_MARKER_END = "// </openapi-ktor-generated-includes>"
+
+        internal fun updateSettingsIncludes(
+            rootDir: File,
+            modules: List<String>,
+        ) {
+            val settingsFile = rootDir.resolve("settings.gradle.kts")
+            val includeStatement = "include(${modules.joinToString(", ") { "\"$it\"" }})"
+            val newBlock = "$SETTINGS_MARKER_START\n$includeStatement\n$SETTINGS_MARKER_END"
+            val existing = if (settingsFile.exists()) settingsFile.readText() else ""
+            val updated =
+                if (existing.contains(SETTINGS_MARKER_START)) {
+                    existing.replace(
+                        Regex(
+                            "${Regex.escape(SETTINGS_MARKER_START)}.*?${Regex.escape(SETTINGS_MARKER_END)}",
+                            RegexOption.DOT_MATCHES_ALL,
+                        ),
+                        newBlock,
+                    )
+                } else if (existing.isEmpty()) {
+                    "$newBlock\n"
+                } else {
+                    "$existing\n\n$newBlock\n"
+                }
+            settingsFile.writeText(updated)
+        }
 
         internal fun String.toKebabCase(): String =
             replace(Regex("([a-zA-Z0-9])([A-Z])")) { "${it.groupValues[1]}-${it.groupValues[2]}" }
@@ -337,10 +387,6 @@ public abstract class InitSubprojectTask : DefaultTask() {
             split("-")
                 .joinToString("") { part -> part.replaceFirstChar { it.uppercase() } }
                 .replaceFirstChar { it.lowercase() }
-
-        /** Converts a client group to a directory name: `{OrderClient, UserClient}` → `"shared-order-user"`. */
-        internal fun Set<String>.toSharedGroupDirName(): String =
-            "shared-${sorted().joinToString("-") { it.removeSuffix("Client").lowercase() }}"
 
         /** Converts a client group to the comma-separated sorted string used by [GenerateTask.targetSharedGroup]. */
         internal fun Set<String>.toTargetSharedGroupString(): String = sorted().joinToString(",")
@@ -408,7 +454,15 @@ public abstract class InitSubprojectTask : DefaultTask() {
             specNameWithoutExt: String,
             specRelativePath: String,
             basePackage: String,
+            topBasePackage: String,
             targetSharedGroup: String,
+            additionalSharedGroupPackages: Map<String, String> = emptyMap(),
+            /**
+             * Direct Gradle compile dependencies on other per-group subprojects.
+             * These are subproject directory names (e.g. "shared-alpha-beta") whose models
+             * are directly referenced by models in this group.
+             */
+            directGroupDeps: List<String> = emptyList(),
             kotlinVersion: String,
             ktorVersion: String,
             coroutinesVersion: String,
@@ -417,16 +471,38 @@ public abstract class InitSubprojectTask : DefaultTask() {
             generatorConfigExtra: String? = null,
             splitGranularity: SplitGranularity = SplitGranularity.BY_TAG,
         ): String {
+            // Per-group subprojects always depend on :shared. They also depend on specific other
+            // per-group subprojects whose models they directly reference (directGroupDeps).
             val header =
-                buildScriptTemplate?.trimEnd()
-                    ?: defaultHeader(kotlinVersion, ktorVersion, coroutinesVersion, serializationVersion)
+                if (buildScriptTemplate != null) {
+                    val sharedDep = """    api(project(":shared"))"""
+                    val otherDeps = directGroupDeps.map { """    api(project(":$it"))""" }
+                    val extraDeps = (listOf(sharedDep) + otherDeps).joinToString("\n")
+                    "${buildScriptTemplate.trimEnd()}\n\ndependencies {\n$extraDeps\n}"
+                } else {
+                    defaultSharedGroupHeader(
+                        kotlinVersion,
+                        ktorVersion,
+                        coroutinesVersion,
+                        serializationVersion,
+                        directGroupDeps,
+                    )
+                }
             val properties =
                 buildList {
                     add("""openApiFile = file("$specRelativePath")""")
                     add("""basePackage = "$basePackage"""")
+                    add("""sharedBasePackage.set("$topBasePackage")""")
                     add("splitByClient.set(true)")
                     add("""sharedModelGranularity.set("SHARED_PER_GROUP")""")
                     add("""targetSharedGroup.set("$targetSharedGroup")""")
+                    if (additionalSharedGroupPackages.isNotEmpty()) {
+                        val mapEntries =
+                            additionalSharedGroupPackages.entries.joinToString(", ") { (k, v) ->
+                                """"$k" to "$v""""
+                            }
+                        add("""additionalSharedGroupPackages.set(mapOf($mapEntries))""")
+                    }
                     if (splitGranularity != SplitGranularity.BY_TAG) {
                         add("""splitGranularity.set("$splitGranularity")""")
                     }
@@ -578,6 +654,40 @@ public abstract class InitSubprojectTask : DefaultTask() {
                 implementation("io.ktor:ktor-client-logging:$ktorVersion")
             }
             """.trimIndent()
+
+        private fun defaultSharedGroupHeader(
+            kotlinVersion: String,
+            ktorVersion: String,
+            coroutinesVersion: String,
+            serializationVersion: String,
+            directGroupDeps: List<String> = emptyList(),
+        ): String {
+            val groupDeps = directGroupDeps.joinToString("\n") { ref -> """    api(project(":$ref"))""" }
+            val allDeps =
+                if (groupDeps.isBlank()) {
+                    "    api(project(\":shared\"))"
+                } else {
+                    "    api(project(\":shared\"))\n$groupDeps"
+                }
+            return """
+                plugins {
+                    kotlin("jvm") version "$kotlinVersion"
+                    kotlin("plugin.serialization") version "$kotlinVersion"
+                    id("$PLUGIN_ID") version "$PLUGIN_VERSION"
+                }
+
+                dependencies {
+                $allDeps
+                    implementation("org.jetbrains.kotlinx:kotlinx-serialization-json:$serializationVersion")
+                    implementation("org.jetbrains.kotlinx:kotlinx-coroutines-core:$coroutinesVersion")
+                    implementation("io.ktor:ktor-client-cio:$ktorVersion")
+                    implementation("io.ktor:ktor-client-content-negotiation:$ktorVersion")
+                    implementation("io.ktor:ktor-client-core:$ktorVersion")
+                    implementation("io.ktor:ktor-serialization-kotlinx-json:$ktorVersion")
+                    implementation("io.ktor:ktor-client-logging:$ktorVersion")
+                }
+                """.trimIndent()
+        }
 
         private fun defaultClientHeader(
             kotlinVersion: String,

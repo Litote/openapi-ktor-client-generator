@@ -55,6 +55,31 @@ public fun String.tagToCamelCase(): String = replace(tagToCamelCaseRegex) { it.v
  */
 public fun String.ensureEndsWith(suffix: String): String = if (endsWith(suffix)) this else this + suffix
 
+private const val SHARED_GROUP_DIR_MAX_LEN = 64
+
+/**
+ * Converts a set of client names to a shared-group directory name.
+ *
+ * Short form (total length ≤ [SHARED_GROUP_DIR_MAX_LEN]):
+ * `{OrderClient, UserClient}` → `"shared-order-user"`
+ *
+ * Long form (would exceed limit): uses the first sorted client name + 8-char SHA-256 hash of the full sorted list
+ * to ensure uniqueness without exceeding filesystem limits.
+ * `{A, B, C, D, ...many...}` → `"shared-accounts-a1b2c3d4"`
+ */
+public fun Set<String>.toSharedGroupDirName(): String {
+    val parts = sorted().map { it.removeSuffix("Client").lowercase() }
+    val fullName = "shared-${parts.joinToString("-")}"
+    if (fullName.length <= SHARED_GROUP_DIR_MAX_LEN) return fullName
+    val hash =
+        java.security.MessageDigest
+            .getInstance("SHA-256")
+            .digest(parts.joinToString(",").toByteArray())
+            .take(4)
+            .joinToString("") { "%02x".format(it) }
+    return "shared-${parts.first()}-$hash"
+}
+
 private val camelCaseToSnakeCaseRegex = "([a-z])([A-Z])".toRegex()
 
 /**

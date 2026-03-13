@@ -35,7 +35,7 @@ private fun collectModelRefs(type: DomainType): Set<String> =
         -> emptySet()
     }
 
-private fun collectModelRefs(model: ModelSpec): Set<String> =
+internal fun collectModelRefs(model: ModelSpec): Set<String> =
     when (model) {
         is ModelSpec.DataClassSpec -> {
             val refs = mutableSetOf<String>()
@@ -106,5 +106,31 @@ private fun propagateSealedClassUsage(
                 usage.getOrPut(model.name) { mutableSetOf() }.addAll(sealedClients)
             }
         }
+    }
+}
+
+/**
+ * Computes the direct Gradle compile dependencies between per-group shared subprojects.
+ *
+ * For each group in [sharedGroups], finds which OTHER groups contain models that are
+ * directly referenced by models in this group. Groups form a DAG (no cycles) because
+ * transitive analysis ensures a model referenced by a group's model will have a SUPERSET
+ * client-group, never a strict subset (which would create a cycle).
+ *
+ * @return map from each SharedGroupSpec to the set of SharedGroupSpecs it depends on
+ */
+internal fun computeGroupDeps(sharedGroups: List<SharedGroupSpec>): Map<SharedGroupSpec, Set<SharedGroupSpec>> {
+    val modelToGroup: Map<String, SharedGroupSpec> =
+        sharedGroups
+            .flatMap { group -> group.spec.models.map { model -> model.name to group } }
+            .toMap()
+
+    return sharedGroups.associateWith { group ->
+        group.spec.models
+            .flatMap { model -> collectModelRefs(model) }
+            .mapNotNull { refName ->
+                val depGroup = modelToGroup[refName]
+                if (depGroup != null && depGroup != group) depGroup else null
+            }.toSet()
     }
 }

@@ -8,9 +8,11 @@ import org.litote.openapi.ktor.client.generator.adapter.renderer.ApiModelGenerat
 import org.litote.openapi.ktor.client.generator.application.GenerateCodeService
 import org.litote.openapi.ktor.client.generator.application.GenerationSpecPartitioner
 import org.litote.openapi.ktor.client.generator.domain.GenerationSpec
+import org.litote.openapi.ktor.client.generator.domain.computeGroupDeps
 import org.litote.openapi.ktor.client.generator.port.ClientRenderer
 import org.litote.openapi.ktor.client.generator.port.ConfigurationRenderer
 import org.litote.openapi.ktor.client.generator.port.ModelRenderer
+import org.litote.openapi.ktor.client.generator.shared.toSharedGroupDirName
 
 /**
  * Main entry point for the API client generator.
@@ -89,9 +91,9 @@ public data class SharedClientGroup(
     val clientGroup: Set<String>,
     val modelNames: Set<String>,
 ) {
-    /** Directory name for the dedicated shared subproject: e.g. `{OrderClient, UserClient}` → `"shared-order-user"`. */
+    /** Directory name for the dedicated shared subproject: e.g. `{OrderClient, UserClient}` → `"shared-order-user"`. Long groups get a hash suffix. */
     val directoryName: String
-        get() = "shared-${clientGroup.sorted().joinToString("-") { it.removeSuffix("Client").lowercase() }}"
+        get() = clientGroup.toSharedGroupDirName()
 
     /** Package suffix derived from the directory name: e.g. `"shared-order-user"` → `"sharedOrderUser"`. */
     val packageSuffix: String
@@ -157,6 +159,46 @@ public fun parseSharedClientGroups(
 }
 
 /**
+ * Computes the direct Gradle compile-time dependency graph between per-group shared subprojects.
+ *
+ * Each per-group subproject may reference models from other per-group subprojects.
+ * For example, if model `Foo` (in group {A,B}) has a property of type `Bar` (in group {A,B,C}),
+ * then the {A,B} subproject must declare `api(project(":shared-a-b-c"))`.
+ *
+ * The returned map only contains groups with 2+ clients. Groups always form a DAG (no cycles).
+ *
+ * @param openApiFilePath Path to the OpenAPI specification file
+ * @param splitGranularity Granularity used to group operations into clients
+ * @return map from each [SharedClientGroup] to the set of [SharedClientGroup]s it directly depends on
+ */
+public fun computeSharedGroupDependencies(
+    openApiFilePath: String,
+    splitGranularity: SplitGranularity = SplitGranularity.BY_TAG,
+): Map<SharedClientGroup, Set<SharedClientGroup>> {
+    val configuration =
+        ApiGeneratorConfiguration(
+            openApiFile = openApiFilePath,
+            splitGranularity = splitGranularity,
+        )
+    val spec = OpenApiSpecificationParser().parse(configuration, configuration.operationFilter)
+    val partitioned = GenerationSpecPartitioner().partition(spec)
+    val groups = partitioned.sharedGroups.filter { it.clientGroup.size >= 2 }
+
+    val rawDeps = computeGroupDeps(groups)
+
+    return rawDeps.entries.associate { (groupSpec, depSpecs) ->
+        val groupModelNames = groupSpec.spec.models.mapTo(mutableSetOf()) { it.name }
+        val group = SharedClientGroup(groupSpec.clientGroup, groupModelNames)
+        val deps =
+            depSpecs.mapTo(mutableSetOf()) { dep ->
+                val depModelNames = dep.spec.models.mapTo(mutableSetOf()) { it.name }
+                SharedClientGroup(dep.clientGroup, depModelNames)
+            }
+        group to deps
+    }
+}
+
+/**
  * Executes the generation of API client and data models based on an OpenAPI specification.
  *
  * Loads the OpenAPI file, generates the HTTP client using Ktor, and creates data model classes.
@@ -181,9 +223,10 @@ public fun generate(configuration: ApiGeneratorConfiguration): GenerationResult 
 
         val modelGen =
             ApiModelGenerator(
-                configuration.resolvedModelPackage,
+                configuration.generationModelPackage,
                 configuration.outputDirectory,
                 modelPackageOverrides = configuration.modelPackageOverrides,
+                fallbackModelPackage = configuration.resolvedModelPackage,
             ).apply { configuration.modules.forEach { it.process(this) } }
         val modelRenderer =
             ModelRenderer { modelSpec ->

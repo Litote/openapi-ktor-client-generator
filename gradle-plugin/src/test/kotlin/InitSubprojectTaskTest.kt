@@ -195,7 +195,12 @@ internal class InitSubprojectTaskTest {
         task.initSubproject()
 
         assertTrue(tempDir.resolve("shared/build.gradle.kts").exists())
-        assertFalse(tempDir.resolve("settings.gradle.kts").exists(), "settings.gradle.kts should NOT be generated")
+        assertTrue(tempDir.resolve("settings.gradle.kts").exists(), "settings.gradle.kts should be generated")
+        assertContains(
+            tempDir.resolve("settings.gradle.kts").readText(),
+            "include(\"shared\",",
+            message = "settings.gradle.kts should contain include for shared module",
+        )
         assertFalse(tempDir.resolve("build.gradle.kts").exists(), "root build.gradle.kts should NOT exist")
         assertTrue(tempDir.resolve("src/main/openapi/multi-tag.json").exists())
     }
@@ -585,6 +590,163 @@ internal class InitSubprojectTaskTest {
         assertTrue(tempDir.resolve("shared/build.gradle.kts").exists(), "Global shared should exist")
         assertFalse(tempDir.resolve("shared-order-user/build.gradle.kts").exists(), "No per-group shared should be created")
     }
+
+    @Test
+    fun `GIVEN sharedModelGranularity=SHARED_PER_GROUP WHEN initSubproject THEN per-group build declares api dependency on shared`() {
+        val openApiFile =
+            File(
+                checkNotNull(
+                    javaClass.classLoader.getResource("shared-model-granularity.json"),
+                ) { "shared-model-granularity.json not found" }.toURI(),
+            )
+        val task =
+            buildTask(
+                openApiFile = openApiFile.absolutePath,
+                splitByClient = true,
+                sharedModelGranularity = "SHARED_PER_GROUP",
+            )
+
+        task.initSubproject()
+
+        // Per-group subprojects reference global shared models, so they must depend on ":shared"
+        val sharedOrderUserContent = tempDir.resolve("shared-order-user/build.gradle.kts").readText()
+        assertTrue(
+            sharedOrderUserContent.contains("""api(project(":shared"))"""),
+            "shared-order-user must declare api(project(\":shared\")) to resolve global model types",
+        )
+        val sharedOrderProductContent = tempDir.resolve("shared-order-product/build.gradle.kts").readText()
+        assertTrue(
+            sharedOrderProductContent.contains("""api(project(":shared"))"""),
+            "shared-order-product must declare api(project(\":shared\")) to resolve global model types",
+        )
+    }
+
+    @Test
+    fun `GIVEN buildSharedGroupGradleKtsContent without otherGroups THEN contains api shared dependency`() {
+        val content =
+            InitSubprojectTask.buildSharedGroupGradleKtsContent(
+                specNameWithoutExt = "myapi",
+                specRelativePath = "../myapi.json",
+                basePackage = "com.example.sharedOrderUser",
+                topBasePackage = "com.example",
+                targetSharedGroup = "OrderClient,UserClient",
+                kotlinVersion = "2.0.0",
+                ktorVersion = "3.0.0",
+                coroutinesVersion = "1.8.0",
+                serializationVersion = "1.6.0",
+            )
+        assertContains(content, """api(project(":shared"))""")
+    }
+
+    @Test
+    fun `GIVEN buildSharedGroupGradleKtsContent with otherGroups THEN does NOT add cross-group project dependencies`() {
+        // Per-group subprojects must NOT declare api(project(":other-group")) dependencies —
+        // that would create circular Gradle task dependencies between groups that share a client.
+        // additionalSharedGroupPackages is for generator import resolution only, not for Gradle deps.
+        val content =
+            InitSubprojectTask.buildSharedGroupGradleKtsContent(
+                specNameWithoutExt = "myapi",
+                specRelativePath = "../myapi.json",
+                basePackage = "com.example.sharedOrderUser",
+                topBasePackage = "com.example",
+                targetSharedGroup = "OrderClient,UserClient",
+                additionalSharedGroupPackages =
+                    mapOf("OrderClient,ProductClient" to "com.example.sharedOrderProduct"),
+                kotlinVersion = "2.0.0",
+                ktorVersion = "3.0.0",
+                coroutinesVersion = "1.8.0",
+                serializationVersion = "1.6.0",
+            )
+        assertContains(content, """api(project(":shared"))""")
+        assertFalse(
+            content.contains("""api(project(":shared-order-product"))"""),
+            "Per-group subproject must NOT depend on other per-group subprojects (circular dependency risk)",
+        )
+    }
+
+    @Test
+    fun `GIVEN SHARED_PER_GROUP with multiple groups WHEN initSubproject THEN no cross-group project dependencies`() {
+        val openApiFile =
+            File(
+                checkNotNull(
+                    javaClass.classLoader.getResource("shared-model-granularity.json"),
+                ) { "shared-model-granularity.json not found" }.toURI(),
+            )
+        val task =
+            buildTask(
+                openApiFile = openApiFile.absolutePath,
+                splitByClient = true,
+                sharedModelGranularity = "SHARED_PER_GROUP",
+            )
+
+        task.initSubproject()
+
+        // shared-order-user must NOT depend on shared-order-product and vice-versa —
+        // both have OrderClient in common, so cross-deps would be circular.
+        val sharedOrderUserContent = tempDir.resolve("shared-order-user/build.gradle.kts").readText()
+        assertFalse(
+            sharedOrderUserContent.contains("""api(project(":shared-order-product"))"""),
+            "shared-order-user must not depend on shared-order-product (circular dependency)",
+        )
+        val sharedOrderProductContent = tempDir.resolve("shared-order-product/build.gradle.kts").readText()
+        assertFalse(
+            sharedOrderProductContent.contains("""api(project(":shared-order-user"))"""),
+            "shared-order-product must not depend on shared-order-user (circular dependency)",
+        )
+    }
+
+    @Test
+    fun `GIVEN SHARED_PER_GROUP where group A models reference group B models WHEN initSubproject THEN group A depends on group B`() {
+        // cross-group-dep.json: SharedAB (group {Alpha,Beta}) has property of type SharedABG (group {Alpha,Beta,Gamma})
+        // → shared-alpha-client-beta-client must depend on shared-alpha-client-beta-client-gamma-client
+        val openApiFile =
+            File(
+                checkNotNull(
+                    javaClass.classLoader.getResource("cross-group-dep.json"),
+                ) { "cross-group-dep.json not found" }.toURI(),
+            )
+        val task =
+            buildTask(
+                openApiFile = openApiFile.absolutePath,
+                splitByClient = true,
+                sharedModelGranularity = "SHARED_PER_GROUP",
+            )
+
+        task.initSubproject()
+
+        val groupAB = tempDir.resolve("shared-alpha-beta/build.gradle.kts").readText()
+        val groupABG = tempDir.resolve("shared-alpha-beta-gamma/build.gradle.kts").readText()
+
+        // SharedAB references SharedABG → group {Alpha,Beta} needs compile dep on group {Alpha,Beta,Gamma}
+        assertTrue(
+            groupAB.contains("""api(project(":shared-alpha-beta-gamma"))"""),
+            "shared-alpha-beta must depend on shared-alpha-beta-gamma",
+        )
+        // SharedABG does NOT reference SharedAB → no reverse dependency (no cycle)
+        assertFalse(
+            groupABG.contains("""api(project(":shared-alpha-beta"))"""),
+            "shared-alpha-beta-gamma must NOT depend on shared-alpha-beta",
+        )
+    }
+
+    @Test
+    fun `GIVEN buildSharedGroupGradleKtsContent with directGroupDeps THEN deps are included in build file`() {
+        val content =
+            InitSubprojectTask.buildSharedGroupGradleKtsContent(
+                specNameWithoutExt = "myapi",
+                specRelativePath = "../myapi.json",
+                basePackage = "com.example.sharedAB",
+                topBasePackage = "com.example",
+                targetSharedGroup = "AlphaClient,BetaClient",
+                directGroupDeps = listOf("shared-alpha-client-beta-client-gamma-client"),
+                kotlinVersion = "2.0.0",
+                ktorVersion = "3.0.0",
+                coroutinesVersion = "1.8.0",
+                serializationVersion = "1.6.0",
+            )
+        assertContains(content, """api(project(":shared"))""")
+        assertContains(content, """api(project(":shared-alpha-client-beta-client-gamma-client"))""")
+    }
 }
 
 internal class GeneratorPluginTest {
@@ -799,5 +961,101 @@ internal class NamingTest {
         assertContains(mediaClientContent, ".media\"", message = "Package should end with .media")
         // Should NOT be all-uppercase or mixed wrong
         assertFalse(mediaClientContent.contains(".Media\""), "Package segment must start with lowercase")
+    }
+}
+
+/**
+ * Unit tests for [InitSubprojectTask.updateSettingsIncludes].
+ *
+ * Verifies the marker-based include injection: creates a new settings file,
+ * appends to an existing one without a marker, and replaces the block when
+ * the marker is already present.
+ */
+internal class SettingsUpdaterTest {
+    @TempDir
+    lateinit var tempDir: File
+
+    @Test
+    fun `GIVEN no settings file WHEN updateSettingsIncludes THEN creates file with marker block`() {
+        with(InitSubprojectTask) {
+            updateSettingsIncludes(tempDir, listOf("my-client"))
+        }
+
+        val content = tempDir.resolve("settings.gradle.kts").readText()
+        assertContains(content, InitSubprojectTask.SETTINGS_MARKER_START)
+        assertContains(content, InitSubprojectTask.SETTINGS_MARKER_END)
+        assertContains(content, """include("my-client")""")
+    }
+
+    @Test
+    fun `GIVEN existing settings without marker WHEN updateSettingsIncludes THEN appends marker block`() {
+        val settingsFile = tempDir.resolve("settings.gradle.kts")
+        settingsFile.writeText("""rootProject.name = "my-project"""")
+
+        with(InitSubprojectTask) {
+            updateSettingsIncludes(tempDir, listOf("api-client"))
+        }
+
+        val content = settingsFile.readText()
+        assertContains(content, """rootProject.name = "my-project"""")
+        assertContains(content, InitSubprojectTask.SETTINGS_MARKER_START)
+        assertContains(content, """include("api-client")""")
+    }
+
+    @Test
+    fun `GIVEN existing settings with marker WHEN updateSettingsIncludes THEN replaces marker block`() {
+        val settingsFile = tempDir.resolve("settings.gradle.kts")
+        settingsFile.writeText(
+            """
+            rootProject.name = "my-project"
+
+            ${InitSubprojectTask.SETTINGS_MARKER_START}
+            include("old-client")
+            ${InitSubprojectTask.SETTINGS_MARKER_END}
+            """.trimIndent(),
+        )
+
+        with(InitSubprojectTask) {
+            updateSettingsIncludes(tempDir, listOf("new-client", "shared"))
+        }
+
+        val content = settingsFile.readText()
+        assertContains(content, """rootProject.name = "my-project"""")
+        assertContains(content, """include("new-client", "shared")""")
+        assertFalse(content.contains("""include("old-client")"""), "Old include should be replaced")
+        assertEquals(1, content.split(InitSubprojectTask.SETTINGS_MARKER_START).size - 1, "Marker should appear exactly once")
+    }
+
+    @Test
+    fun `GIVEN multi-module project WHEN updateSettingsIncludes THEN includes all modules`() {
+        with(InitSubprojectTask) {
+            updateSettingsIncludes(tempDir, listOf("shared", "user-client", "order-client"))
+        }
+
+        val content = tempDir.resolve("settings.gradle.kts").readText()
+        assertContains(content, """include("shared", "user-client", "order-client")""")
+    }
+
+    @Test
+    fun `GIVEN single subproject WHEN initSubproject THEN settings file is created with include`() {
+        val openApiFile = tempDir.resolve("petstore.yaml").also { it.writeText("openapi: 3.0.0") }
+        val project = ProjectBuilder.builder().withProjectDir(tempDir).build()
+        val task =
+            project.tasks
+                .register("initApiClientSubproject", InitSubprojectTask::class.java)
+                .get()
+        task.openApiFilePath.set(openApiFile.absolutePath)
+        task.subprojectName.set("my-client")
+        task.rootDirectory.set(tempDir)
+        task.kotlinVersion.set(DEFAULT_KOTLIN_VERSION)
+        task.ktorVersion.set(DEFAULT_KTOR_VERSION)
+        task.coroutinesVersion.set(DEFAULT_COROUTINES_VERSION)
+        task.serializationVersion.set(DEFAULT_SERIALIZATION_VERSION)
+
+        task.initSubproject()
+
+        val settingsContent = tempDir.resolve("settings.gradle.kts").readText()
+        assertContains(settingsContent, """include("my-client")""")
+        assertContains(settingsContent, InitSubprojectTask.SETTINGS_MARKER_START)
     }
 }

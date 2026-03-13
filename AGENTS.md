@@ -22,16 +22,16 @@
 
 ### ALWAYS Do
 
-| Category                   | Required Actions                                                         |
-|----------------------------|--------------------------------------------------------------------------|
-| **Validation**             | Run `./gradlew formatKotlin && ./gradlew check` after every change       |
-| **Testing**                | Add tests for all logic changes                                          |
-| **Imports**                | Use single imports only                                                  |
-| **Language**               | Write all code, comments, and documentation in English                   |
-| **Visibility**             | Prefer `internal` visibility by default                                  |
-| **Immutability**           | Prefer `val` over `var`, use immutable data structures                   |
-| **Document**               | After applied the changes, document them in CONTRIBUTING.md or README.md |
-| **Keep AI doc up-to-date** | Update AI_CONTEXT.md and AGENTS.md                                       |
+| Category                   | Required Actions                                                                                          |
+|----------------------------|-----------------------------------------------------------------------------------------------------------|
+| **Validation**             | Run `./gradlew formatKotlin && ./gradlew check` after every change                                        |
+| **Testing**                | When you try to fix a bug, start by adding the test and THEN fix the bug. Add tests for all logic changes |
+| **Imports**                | Use single imports only                                                                                   |
+| **Language**               | Write all code, comments, and documentation in English                                                    |
+| **Visibility**             | Prefer `internal` visibility by default                                                                   |
+| **Immutability**           | Prefer `val` over `var`, use immutable data structures                                                    |
+| **Document**               | After applied the changes, document them in CONTRIBUTING.md or README.md                                  |
+| **Keep AI doc up-to-date** | Update AI_CONTEXT.md and AGENTS.md                                                                        |
 ---
 
 ## Module Architecture

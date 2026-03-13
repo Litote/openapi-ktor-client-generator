@@ -1,0 +1,93 @@
+{
+  "openapi": "3.0.3",
+  "info": {
+    "title": "Cross-package import test API",
+    "version": "1.0.0"
+  },
+  "paths": {
+    "/users": {
+      "get": {
+        "tags": ["User"],
+        "operationId": "getUsers",
+        "responses": {
+          "200": {
+            "content": { "application/json": { "schema": { "$ref": "#/components/schemas/UserResponse" } } }
+          }
+        }
+      }
+    },
+    "/orders": {
+      "get": {
+        "tags": ["Order"],
+        "operationId": "getOrders",
+        "responses": {
+          "200": {
+            "content": { "application/json": { "schema": { "$ref": "#/components/schemas/OrderResponse" } } }
+          }
+        }
+      }
+    },
+    "/products": {
+      "get": {
+        "tags": ["Product"],
+        "operationId": "getProducts",
+        "responses": {
+          "200": {
+            "content": { "application/json": { "schema": { "$ref": "#/components/schemas/ProductResponse" } } }
+          }
+        }
+      }
+    }
+  },
+  "components": {
+    "schemas": {
+      "GlobalStatus": {
+        "type": "object",
+        "description": "Used by all 3 clients → goes to global shared subproject",
+        "properties": {
+          "code": { "type": "string" },
+          "message": { "type": "string" }
+        },
+        "required": ["code", "message"]
+      },
+      "Address": {
+        "type": "object",
+        "description": "Shared by User+Order → per-group. References GlobalStatus from global shared.",
+        "properties": {
+          "street": { "type": "string" },
+          "status": { "$ref": "#/components/schemas/GlobalStatus" }
+        },
+        "required": ["street", "status"]
+      },
+      "UserResponse": {
+        "type": "object",
+        "properties": {
+          "id": { "type": "integer", "format": "int64" },
+          "name": { "type": "string" },
+          "address": { "$ref": "#/components/schemas/Address" },
+          "status": { "$ref": "#/components/schemas/GlobalStatus" }
+        },
+        "required": ["id", "name", "address", "status"]
+      },
+      "OrderResponse": {
+        "type": "object",
+        "properties": {
+          "id": { "type": "integer", "format": "int64" },
+          "item": { "type": "string" },
+          "shippingAddress": { "$ref": "#/components/schemas/Address" },
+          "status": { "$ref": "#/components/schemas/GlobalStatus" }
+        },
+        "required": ["id", "item", "shippingAddress", "status"]
+      },
+      "ProductResponse": {
+        "type": "object",
+        "properties": {
+          "id": { "type": "integer", "format": "int64" },
+          "name": { "type": "string" },
+          "status": { "$ref": "#/components/schemas/GlobalStatus" }
+        },
+        "required": ["id", "name", "status"]
+      }
+    }
+  }
+}

@@ -19,6 +19,7 @@ package org.litote.openapi.ktor.client.generator.shared
 import kotlin.test.Test
 import kotlin.test.assertEquals
 import kotlin.test.assertFalse
+import kotlin.test.assertNotEquals
 import kotlin.test.assertTrue
 
 class StringsTest {
@@ -296,5 +297,60 @@ class StringsTest {
 
         // Then
         assertEquals("validIdentifier", result)
+    }
+
+    // ─────────────────────────────────────────────────────────────
+    // toSharedGroupDirName
+    // ─────────────────────────────────────────────────────────────
+
+    @Test
+    fun `GIVEN 2-client group WHEN toSharedGroupDirName THEN short form used`() {
+        val group = setOf("OrderClient", "UserClient")
+        assertEquals("shared-order-user", group.toSharedGroupDirName())
+    }
+
+    @Test
+    fun `GIVEN 3-client group WHEN toSharedGroupDirName THEN short form used`() {
+        val group = setOf("OrderClient", "UserClient", "ProductClient")
+        assertEquals("shared-order-product-user", group.toSharedGroupDirName())
+    }
+
+    @Test
+    fun `GIVEN very large group WHEN toSharedGroupDirName THEN length does not exceed 64 chars`() {
+        val group = (1..50).map { "Client${it}TagApiV1LongPathClient" }.toSet()
+        val result = group.toSharedGroupDirName()
+        assertTrue(result.length <= 64, "Expected length <= 64, got ${result.length}: $result")
+    }
+
+    @Test
+    fun `GIVEN very large group WHEN toSharedGroupDirName THEN result starts with shared-`() {
+        val group = (1..50).map { "Client${it}TagApiV1LongPathClient" }.toSet()
+        val result = group.toSharedGroupDirName()
+        assertTrue(result.startsWith("shared-"), "Expected to start with 'shared-', got: $result")
+    }
+
+    @Test
+    fun `GIVEN very large group WHEN toSharedGroupDirName THEN result is deterministic`() {
+        val group = (1..50).map { "Client${it}TagApiV1LongPathClient" }.toSet()
+        assertEquals(group.toSharedGroupDirName(), group.toSharedGroupDirName())
+    }
+
+    @Test
+    fun `GIVEN two different large groups WHEN toSharedGroupDirName THEN results are different`() {
+        val group1 = (1..50).map { "ClientGroup1Tag${it}Client" }.toSet()
+        val group2 = (1..50).map { "ClientGroup2Tag${it}Client" }.toSet()
+        assertNotEquals(group1.toSharedGroupDirName(), group2.toSharedGroupDirName())
+    }
+
+    @Test
+    fun `GIVEN group name exactly at limit WHEN toSharedGroupDirName THEN short form used`() {
+        // Build a group whose short name is exactly 64 chars: "shared-" (7) + parts
+        // "shared-aa-bb" = 12 chars → easy to construct a 64-char boundary name
+        val singleName = "A".repeat(56) + "Client" // removeSuffix("Client") → "A".repeat(56), "shared-" + 56 = 63 chars
+        val group = setOf(singleName)
+        val result = group.toSharedGroupDirName()
+        assertTrue(result.length <= 64, "Should use short form: $result")
+        assertTrue(result.startsWith("shared-"), result)
+        assertFalse(result.removePrefix("shared-").contains("-"), "Short form for single client should have no extra dash")
     }
 }

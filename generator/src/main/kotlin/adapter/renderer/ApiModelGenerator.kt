@@ -27,6 +27,13 @@ public class ApiModelGenerator internal constructor(
     private val outputDirectory: String,
     private val fileSystemWriter: FileSystemWriter = KotlinPoetFileWriter(),
     private val modelPackageOverrides: Map<String, String> = emptyMap(),
+    /**
+     * Fallback package for model type references not found in [modelPackageOverrides].
+     * Defaults to [modelPackage]. Set to the global shared model package when this generator
+     * produces models for a per-group subproject, so that references to global shared models
+     * resolve to the correct package and generate the correct import statement.
+     */
+    private val fallbackModelPackage: String = modelPackage,
 ) : ModelGeneratorConfig {
     private companion object {
         val serializerName: MemberName = MemberName("kotlinx.serialization.builtins", "serializer")
@@ -86,7 +93,9 @@ public class ApiModelGenerator internal constructor(
             .addAnnotation(AnnotationSpec.builder(Serializable::class).build())
             .apply {
                 if (spec.sealedParentName != null) {
-                    superclass(ClassName(modelPackage, spec.sealedParentName))
+                    superclass(
+                        ClassName(modelPackageOverrides.getOrDefault(spec.sealedParentName, fallbackModelPackage), spec.sealedParentName),
+                    )
                     spec.discriminatorValue?.let { serialName ->
                         addAnnotation(
                             AnnotationSpec
@@ -121,7 +130,9 @@ public class ApiModelGenerator internal constructor(
             .addAnnotation(AnnotationSpec.builder(Serializable::class).build())
             .apply {
                 if (spec.sealedParentName != null) {
-                    superclass(ClassName(modelPackage, spec.sealedParentName))
+                    superclass(
+                        ClassName(modelPackageOverrides.getOrDefault(spec.sealedParentName, fallbackModelPackage), spec.sealedParentName),
+                    )
                     spec.discriminatorValue?.let { serialName ->
                         addAnnotation(
                             AnnotationSpec
@@ -149,7 +160,7 @@ public class ApiModelGenerator internal constructor(
             }.build()
 
     private fun buildPropertyParameter(property: ModelProperty): ParameterSpec {
-        val typeName = property.type.toTypeName(modelPackage, modelPackageOverrides)
+        val typeName = property.type.toTypeName(fallbackModelPackage, modelPackageOverrides)
         val builder = ParameterSpec.builder(property.camelCaseName, typeName)
         val defaultValueString = computePropertyDefaultValue(property)
         if (defaultValueString != null) {
@@ -166,7 +177,7 @@ public class ApiModelGenerator internal constructor(
                 if (raw == "null" || !property.isEnum) {
                     raw
                 } else {
-                    val typeName = property.type.toTypeName(modelPackage, modelPackageOverrides)
+                    val typeName = property.type.toTypeName(fallbackModelPackage, modelPackageOverrides)
                     val simpleName =
                         (typeName as? ClassName)?.simpleName
                             ?: (typeName.copy(nullable = false) as? ClassName)?.simpleName
@@ -179,7 +190,7 @@ public class ApiModelGenerator internal constructor(
             }
 
             property.isEnum && defaultEnumValue != null -> {
-                val typeName = property.type.toTypeName(modelPackage, modelPackageOverrides)
+                val typeName = property.type.toTypeName(fallbackModelPackage, modelPackageOverrides)
                 val simpleName = (typeName as? ClassName)?.simpleName
                 simpleName?.let { "$it.$defaultEnumValue" }
             }
@@ -201,7 +212,7 @@ public class ApiModelGenerator internal constructor(
         }
 
     private fun buildPropertySpec(property: ModelProperty): PropertySpec {
-        val typeName = property.type.toTypeName(modelPackage, modelPackageOverrides)
+        val typeName = property.type.toTypeName(fallbackModelPackage, modelPackageOverrides)
         return PropertySpec
             .builder(property.camelCaseName, typeName)
             .initializer(property.camelCaseName)

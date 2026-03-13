@@ -57,10 +57,6 @@ internal val ClassName.nonNullableName: String get() = if (isNullable) simpleNam
 
 internal val TypeSpec.nonNullableName: String? get() = name?.removeSuffix("?")
 
-internal fun TypeSpec.hasSameName(name: TypeName): Boolean = (name as? ClassName)?.nonNullableName == nonNullableName
-
-internal fun TypeSpec.hasSameName(spec: TypeSpec): Boolean = spec.nonNullableName == nonNullableName
-
 internal fun DefaultValue.toCodeBlock(): CodeBlock =
     when (this) {
         is DefaultValue.StringDefault -> CodeBlock.of("%S", value)
