@@ -164,7 +164,7 @@ Map of model name → package to use when generating type references. Applied in
 | `ApiClientGenerator.kt` | Per-generator DSL: `openApiFile`, `outputDirectory`, `basePackage`, `allowedPaths`, `modulesIds`, `skip`, `splitGranularity`, `sharedModelGranularity`, `targetSharedGroup`, `additionalSharedGroupPackages` |
 | `GenerateTask.kt` | `@CacheableTask` — calls `generate(ApiGeneratorConfiguration)` |
 | `InitSubprojectTask.kt` | Generates a new Gradle subproject from an OpenAPI spec |
-| `InitSubprojectExtension.kt` | DSL for `initSubproject { }`: version overrides (`kotlinVersion`, `ktorVersion`, …), `buildScriptTemplate`, `generatorConfigExtra` |
+| `InitSubprojectExtension.kt` | DSL for `initSubproject { }`: version overrides (`kotlinVersion`, `ktorVersion`, …), `buildScriptTemplate`, `generatorConfigExtra`, `multiplatform` (KMP mode), `subprojectRootDirectory` |
 
 ### Plugin flow
 

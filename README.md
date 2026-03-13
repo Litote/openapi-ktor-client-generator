@@ -4,6 +4,9 @@
 [![Apache2 license](https://img.shields.io/badge/license-Apache%20License%202.0-blue.svg?style=flat)](https://www.apache.org/licenses/LICENSE-2.0)
 
 A Gradle plugin that transforms OpenAPI v3 specifications into production-ready Kotlin Ktor client code.
+
+The generated client code is **fully KMP-compatible**.
+
 You can customize the generated clients and models to match your project's specific needs.
 
 ## Prerequisites
@@ -88,7 +91,21 @@ The generator accepts OpenAPI V3 specification files in both **JSON** and **YAML
 ## Generating a new subproject
 
 The plugin provides an `initApiClientSubproject` task to generate a ready-to-use Gradle subproject.
-See **[PROJECT_GENERATION.md](PROJECT_GENERATION.md)** for the full documentation: single/multi-module, version catalog support, and extra generator configuration.
+See **[PROJECT_GENERATION.md](PROJECT_GENERATION.md)** for the full documentation: single/multi-module, version catalog support, extra generator configuration, and Kotlin Multiplatform (KMP) support.
+
+## KMP limitations
+
+### YAML content type
+
+The `YamlContentConverter` (see below) generated when your API uses `application/yaml` content types depends on
+[SnakeYAML](https://bitbucket.org/snakeyaml/snakeyaml), which is a **JVM-only** library. If you
+target non-JVM platforms, place the SnakeYAML dependency in a `jvmMain` source set and implement a
+platform-specific YAML converter for other targets.
+
+### `LoggingSl4jModule` and KMP
+
+The `LoggingSl4jModule` generates code that uses `org.slf4j.LoggerFactory`, which is JVM-only.
+Do not use this module in KMP projects targeting non-JVM platforms.
 
 ## Advanced usage
 
@@ -106,6 +123,8 @@ dependencies {
     implementation("org.yaml:snakeyaml:<latest version>")
 }
 ```
+
+
 
 ## Troubleshooting
 
@@ -137,4 +156,4 @@ ktlint = disabled
 
 ### Contributing & internal architecture
 
-See [CONTRIBUTING.md](CONTRIBUTING.md) for the full hexagonal architecture diagram.
+See [CONTRIBUTING.md](CONTRIBUTING.md) for the hexagonal architecture diagram.

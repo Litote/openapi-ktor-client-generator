@@ -23,8 +23,7 @@ public class ClientConfiguration(
   public val httpClientConfig:
       HttpClientConfig<*>.() -> Unit = defaultHttpClientConfig(baseUrl, json),
   public val client: HttpClient = HttpClient(engine) { httpClientConfig() },
-  public val exceptionLogger:
-      Throwable.() -> Unit = { org.slf4j.LoggerFactory.getLogger(ClientConfiguration::class.java).error("error", this) },
+  public val exceptionLogger: Throwable.() -> Unit = { printStackTrace() },
 ) {
   public companion object {
     public val defaultClientConfiguration: ClientConfiguration by lazy { ClientConfiguration() }

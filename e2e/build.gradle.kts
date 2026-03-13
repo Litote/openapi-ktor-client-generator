@@ -1,13 +1,20 @@
 plugins {
-    alias(e2e.plugins.kotlin.jvm)
+    alias(e2e.plugins.kotlin.multiplatform)
     id("org.litote.openapi.ktor.client.generator.gradle") version "+"
     alias(e2e.plugins.serialization)
 }
 
-dependencies {
-    implementation(e2e.serialization)
-    implementation(e2e.coroutines)
-    implementation(e2e.bundles.ktor)
+kotlin {
+    jvm()
+    // Add your targets: iosArm64(), js(IR) { browser() }, linuxX64(), etc.
+
+    sourceSets {
+        commonMain.dependencies {
+            implementation(e2e.serialization)
+            implementation(e2e.coroutines)
+            implementation(e2e.bundles.ktor)
+        }
+    }
 }
 
 group = providers.gradleProperty("GROUP").orNull ?: error("Missing gradle.properties 'group'")
@@ -18,7 +25,7 @@ apiClientGenerator {
         create("openapi") {
             outputDirectory = file("build/generated")
             allowedPaths = setOf("/test-status")
-            modulesIds = setOf("UnknownEnumValueModule", "LoggingSl4jModule")
+            modulesIds = setOf("UnknownEnumValueModule")
         }
     }
 }

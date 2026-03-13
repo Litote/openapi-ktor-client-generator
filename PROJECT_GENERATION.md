@@ -11,7 +11,8 @@ containing a pre-configured `build.gradle.kts` and your OpenAPI spec file.
   [-PsplitByClient=true] \
   [-PsplitGranularity=BY_TAG|BY_TAG_AND_PATH|BY_TAG_AND_OPERATION] \
   [-PsharedModelGranularity=SHARED_ALL|SHARED_PER_GROUP] \
-  [-PsubprojectRootDirectory=<directory-name>]
+  [-PsubprojectRootDirectory=<directory-name>] \
+  [-PmultiplatformTargets=true]
 ```
 
 | Parameter                  | Description                                                                                          | Required |
@@ -23,6 +24,7 @@ containing a pre-configured `build.gradle.kts` and your OpenAPI spec file.
 | `-PsplitGranularity`       | Controls how operations are grouped into clients. See [Split granularity](#split-granularity) below | No       |
 | `-PsharedModelGranularity` | Controls how shared models are grouped. See [Shared model granularity](#shared-model-granularity) below | No   |
 | `-PsubprojectRootDirectory`        | Optional subdirectory to nest all generated multi-module subprojects under (e.g. `clients`). Only used with `-PsplitByClient=true`. | No |
+| `-PmultiplatformTargets`           | When `true`, generated `build.gradle.kts` files use `kotlin("multiplatform")` instead of `kotlin("jvm")`. Defaults to `false`.     | No |
 
 > **Note:** this task must be run from the **root project**. It is intentionally not available in subprojects.
 
@@ -260,6 +262,7 @@ apiClientGenerator {
 | `serializationVersion` | `kotlinx-serialization` version in the generated `build.gradle.kts`                                                                       | from `libs.versions.toml` | Any valid version            |
 | `buildScriptTemplate`  | Replaces the entire auto-generated `plugins {}` + `dependencies {}` block. Use this when your project has a Gradle version catalog.       | `null` (auto-generated)   | Any Gradle Kotlin DSL string |
 | `generatorConfigExtra` | Extra lines appended inside every `create("...") { }` block. Use this to enable modules or set shared properties across all subprojects.  | `null` (nothing appended) | Any Gradle Kotlin DSL lines  |
+| `multiplatform`        | When `true`, generated `build.gradle.kts` files use `kotlin("multiplatform")` with a `commonMain.dependencies {}` block.                 | `false`                   | `Boolean`                    |
 
 ### Overriding dependency versions
 
@@ -319,6 +322,77 @@ apiClientGenerator {
             modulesIds.add("LoggingSl4jModule")
         """.trimIndent()
     }
+}
+```
+
+## Kotlin Multiplatform (KMP) support
+
+The generated code (clients, models, `ClientConfiguration.kt`) is fully **Kotlin Multiplatform
+compatible** — it only depends on `ktor-client-core`, `kotlinx-serialization`, and
+`kotlinx-coroutines`, which are all multiplatform libraries.
+The `CIO` engine used as the default in `ClientConfiguration` supports JVM, Android, Native, and
+JS/WASM targets.
+
+### Generating a KMP-ready Gradle project
+
+Pass `-PmultiplatformTargets=true` to scaffold a project with `kotlin("multiplatform")`:
+
+```bash
+./gradlew initApiClientSubproject \
+  -PopenApiFile=./specs/petstore.json \
+  -PmultiplatformTargets=true
+```
+
+Or configure it permanently in the DSL:
+
+```kotlin
+apiClientGenerator {
+    initSubproject {
+        multiplatform.set(true)
+    }
+}
+```
+
+The generated `build.gradle.kts` will look like:
+
+```kotlin
+plugins {
+    kotlin("multiplatform") version "<version>"
+    kotlin("plugin.serialization") version "<version>"
+    id("org.litote.openapi.ktor.client.generator.gradle") version "<version>"
+}
+
+kotlin {
+    jvm()
+    // Add your targets: iosArm64(), js(IR) { browser() }, linuxX64(), etc.
+
+    sourceSets {
+        commonMain.dependencies {
+            implementation("org.jetbrains.kotlinx:kotlinx-serialization-json:<version>")
+            implementation("org.jetbrains.kotlinx:kotlinx-coroutines-core:<version>")
+            implementation("io.ktor:ktor-client-cio:<version>")
+            implementation("io.ktor:ktor-client-content-negotiation:<version>")
+            implementation("io.ktor:ktor-client-core:<version>")
+            implementation("io.ktor:ktor-serialization-kotlinx-json:<version>")
+            implementation("io.ktor:ktor-client-logging:<version>")
+        }
+    }
+}
+
+// apiClientGenerator { ... } block follows
+```
+
+### Adding KMP targets
+
+The generated project declares only `jvm()` as a target. Add other targets in the `kotlin {}` block:
+
+```kotlin
+kotlin {
+    jvm()
+    iosArm64()
+    iosSimulatorArm64()
+    js(IR) { browser() }
+    // ...
 }
 ```
 

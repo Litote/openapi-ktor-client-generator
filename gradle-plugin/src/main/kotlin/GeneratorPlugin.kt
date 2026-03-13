@@ -47,6 +47,10 @@ public class GeneratorPlugin : Plugin<Project> {
                     (project.findProperty("subprojectRootDirectory") as String?)
                         ?: extension.initSubproject.subprojectRootDirectory.orNull,
                 )
+                task.multiplatform.set(
+                    (project.findProperty("multiplatformTargets") as String?)?.toBoolean()
+                        ?: extension.initSubproject.multiplatform.orNull,
+                )
             }
         }
 

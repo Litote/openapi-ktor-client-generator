@@ -102,6 +102,16 @@ public abstract class InitSubprojectTask : DefaultTask() {
     @get:Optional
     public abstract val subprojectRootDirectory: Property<String>
 
+    /**
+     * When true, generated `build.gradle.kts` files use `kotlin("multiplatform")` instead of
+     * `kotlin("jvm")`, and dependencies are placed inside a `kotlin { sourceSets { commonMain.dependencies { } } }`
+     * block. A single `jvm()` target is declared by default; add other targets manually.
+     * Passed via -PmultiplatformTargets=true.
+     */
+    @get:Input
+    @get:Optional
+    public abstract val multiplatform: Property<Boolean>
+
     @TaskAction
     public fun initSubproject() {
         val openApiFilePathValue =
@@ -160,6 +170,7 @@ public abstract class InitSubprojectTask : DefaultTask() {
                 serializationVersion = serializationVersion.get(),
                 buildScriptTemplate = buildScriptTemplate.orNull,
                 generatorConfigExtra = generatorConfigExtra.orNull,
+                multiplatform = multiplatform.getOrElse(false),
             ),
         )
 
@@ -224,6 +235,7 @@ public abstract class InitSubprojectTask : DefaultTask() {
                 buildScriptTemplate = buildScriptTemplate.orNull,
                 generatorConfigExtra = generatorConfigExtra.orNull,
                 splitGranularity = granularity,
+                multiplatform = multiplatform.getOrElse(false),
             ),
         )
 
@@ -246,6 +258,7 @@ public abstract class InitSubprojectTask : DefaultTask() {
                     generatorConfigExtra = generatorConfigExtra.orNull,
                     splitGranularity = granularity,
                     subprojectRootDirectory = subprojectRootDirectoryValue,
+                    multiplatform = multiplatform.getOrElse(false),
                 ),
             )
         }
@@ -325,6 +338,7 @@ public abstract class InitSubprojectTask : DefaultTask() {
                 generatorConfigExtra = generatorConfigExtra.orNull,
                 splitGranularity = granularity,
                 sharedModelGranularity = "SHARED_PER_GROUP",
+                multiplatform = multiplatform.getOrElse(false),
             ),
         )
 
@@ -368,6 +382,7 @@ public abstract class InitSubprojectTask : DefaultTask() {
                     generatorConfigExtra = generatorConfigExtra.orNull,
                     splitGranularity = granularity,
                     subprojectRootDirectory = subprojectRootDirectoryValue,
+                    multiplatform = multiplatform.getOrElse(false),
                 ),
             )
         }
@@ -399,6 +414,7 @@ public abstract class InitSubprojectTask : DefaultTask() {
                     generatorConfigExtra = generatorConfigExtra.orNull,
                     splitGranularity = granularity,
                     subprojectRootDirectory = subprojectRootDirectoryValue,
+                    multiplatform = multiplatform.getOrElse(false),
                 ),
             )
         }
@@ -467,10 +483,11 @@ public abstract class InitSubprojectTask : DefaultTask() {
             serializationVersion: String,
             buildScriptTemplate: String? = null,
             generatorConfigExtra: String? = null,
+            multiplatform: Boolean = false,
         ): String {
             val header =
                 buildScriptTemplate?.trimEnd()
-                    ?: defaultHeader(kotlinVersion, ktorVersion, coroutinesVersion, serializationVersion)
+                    ?: defaultHeader(kotlinVersion, ktorVersion, coroutinesVersion, serializationVersion, multiplatform)
             val generatorBlock =
                 buildGeneratorContent(
                     generatorName = generatorName,
@@ -492,9 +509,11 @@ public abstract class InitSubprojectTask : DefaultTask() {
             generatorConfigExtra: String? = null,
             splitGranularity: SplitGranularity = SplitGranularity.BY_TAG,
             sharedModelGranularity: String = "SHARED_ALL",
+            multiplatform: Boolean = false,
         ): String {
             val header =
-                buildScriptTemplate?.trimEnd() ?: defaultHeader(kotlinVersion, ktorVersion, coroutinesVersion, serializationVersion)
+                buildScriptTemplate?.trimEnd()
+                    ?: defaultHeader(kotlinVersion, ktorVersion, coroutinesVersion, serializationVersion, multiplatform)
             val properties =
                 buildList {
                     add("""openApiFile = file("$specRelativePath")""")
@@ -537,6 +556,7 @@ public abstract class InitSubprojectTask : DefaultTask() {
             generatorConfigExtra: String? = null,
             splitGranularity: SplitGranularity = SplitGranularity.BY_TAG,
             subprojectRootDirectory: String? = null,
+            multiplatform: Boolean = false,
         ): String {
             val sharedProjectRef = if (subprojectRootDirectory != null) ":$subprojectRootDirectory:shared" else ":shared"
             val groupProjectRef: (String) -> String = { dirName ->
@@ -548,8 +568,8 @@ public abstract class InitSubprojectTask : DefaultTask() {
                 if (buildScriptTemplate != null) {
                     val sharedDep = """    api(project("$sharedProjectRef"))"""
                     val otherDeps = directGroupDeps.map { """    api(project("${groupProjectRef(it)}"))""" }
-                    val extraDeps = (listOf(sharedDep) + otherDeps).joinToString("\n")
-                    "${buildScriptTemplate.trimEnd()}\n\ndependencies {\n$extraDeps\n}"
+                    val depsBlock = buildProjectDepsBlock(listOf(sharedDep) + otherDeps, multiplatform)
+                    "${buildScriptTemplate.trimEnd()}\n\n$depsBlock"
                 } else {
                     defaultSharedGroupHeader(
                         kotlinVersion,
@@ -559,6 +579,7 @@ public abstract class InitSubprojectTask : DefaultTask() {
                         directGroupDeps,
                         sharedProjectRef,
                         groupProjectRef,
+                        multiplatform,
                     )
                 }
             val properties =
@@ -603,13 +624,22 @@ public abstract class InitSubprojectTask : DefaultTask() {
             generatorConfigExtra: String? = null,
             splitGranularity: SplitGranularity = SplitGranularity.BY_TAG,
             subprojectRootDirectory: String? = null,
+            multiplatform: Boolean = false,
         ): String {
             val sharedProjectRef = if (subprojectRootDirectory != null) ":$subprojectRootDirectory:shared" else ":shared"
             val header =
                 if (buildScriptTemplate != null) {
-                    "${buildScriptTemplate.trimEnd()}\n\ndependencies {\n    api(project(\"$sharedProjectRef\"))\n}"
+                    val depsBlock = buildProjectDepsBlock(listOf("""    api(project("$sharedProjectRef"))"""), multiplatform)
+                    "${buildScriptTemplate.trimEnd()}\n\n$depsBlock"
                 } else {
-                    defaultClientHeader(kotlinVersion, ktorVersion, coroutinesVersion, serializationVersion, sharedProjectRef)
+                    defaultClientHeader(
+                        kotlinVersion,
+                        ktorVersion,
+                        coroutinesVersion,
+                        serializationVersion,
+                        sharedProjectRef,
+                        multiplatform,
+                    )
                 }
             val properties =
                 buildList {
@@ -652,6 +682,7 @@ public abstract class InitSubprojectTask : DefaultTask() {
             generatorConfigExtra: String? = null,
             splitGranularity: SplitGranularity = SplitGranularity.BY_TAG,
             subprojectRootDirectory: String? = null,
+            multiplatform: Boolean = false,
         ): String {
             val sharedProjectRef = if (subprojectRootDirectory != null) ":$subprojectRootDirectory:shared" else ":shared"
             val groupProjectRef: (String) -> String = { dirName ->
@@ -665,7 +696,8 @@ public abstract class InitSubprojectTask : DefaultTask() {
             val allDeps = listOf("    api(project(\"$sharedProjectRef\"))") + groupDeps
             val header =
                 if (buildScriptTemplate != null) {
-                    "${buildScriptTemplate.trimEnd()}\n\ndependencies {\n${allDeps.joinToString("\n")}\n}"
+                    val depsBlock = buildProjectDepsBlock(allDeps, multiplatform)
+                    "${buildScriptTemplate.trimEnd()}\n\n$depsBlock"
                 } else {
                     defaultClientPerGroupHeader(
                         kotlinVersion,
@@ -681,6 +713,7 @@ public abstract class InitSubprojectTask : DefaultTask() {
                                     ?.toSharedGroupDirName()
                                     ?.let { groupProjectRef(it) } ?: groupKey
                             },
+                        multiplatform = multiplatform,
                     )
                 }
             val additionalGroupPackages =
@@ -718,24 +751,52 @@ public abstract class InitSubprojectTask : DefaultTask() {
             ktorVersion: String,
             coroutinesVersion: String,
             serializationVersion: String,
+            multiplatform: Boolean = false,
         ): String =
-            """
-            plugins {
-                kotlin("jvm") version "$kotlinVersion"
-                kotlin("plugin.serialization") version "$kotlinVersion"
-                id("$PLUGIN_ID") version "$PLUGIN_VERSION"
-            }
+            if (multiplatform) {
+                """
+                plugins {
+                    kotlin("multiplatform") version "$kotlinVersion"
+                    kotlin("plugin.serialization") version "$kotlinVersion"
+                    id("$PLUGIN_ID") version "$PLUGIN_VERSION"
+                }
 
-            dependencies {
-                implementation("org.jetbrains.kotlinx:kotlinx-serialization-json:$serializationVersion")
-                implementation("org.jetbrains.kotlinx:kotlinx-coroutines-core:$coroutinesVersion")
-                implementation("io.ktor:ktor-client-cio:$ktorVersion")
-                implementation("io.ktor:ktor-client-content-negotiation:$ktorVersion")
-                implementation("io.ktor:ktor-client-core:$ktorVersion")
-                implementation("io.ktor:ktor-serialization-kotlinx-json:$ktorVersion")
-                implementation("io.ktor:ktor-client-logging:$ktorVersion")
+                kotlin {
+                    jvm()
+                    // Add your targets: iosArm64(), js(IR) { browser() }, linuxX64(), etc.
+
+                    sourceSets {
+                        commonMain.dependencies {
+                            implementation("org.jetbrains.kotlinx:kotlinx-serialization-json:$serializationVersion")
+                            implementation("org.jetbrains.kotlinx:kotlinx-coroutines-core:$coroutinesVersion")
+                            implementation("io.ktor:ktor-client-cio:$ktorVersion")
+                            implementation("io.ktor:ktor-client-content-negotiation:$ktorVersion")
+                            implementation("io.ktor:ktor-client-core:$ktorVersion")
+                            implementation("io.ktor:ktor-serialization-kotlinx-json:$ktorVersion")
+                            implementation("io.ktor:ktor-client-logging:$ktorVersion")
+                        }
+                    }
+                }
+                """.trimIndent()
+            } else {
+                """
+                plugins {
+                    kotlin("jvm") version "$kotlinVersion"
+                    kotlin("plugin.serialization") version "$kotlinVersion"
+                    id("$PLUGIN_ID") version "$PLUGIN_VERSION"
+                }
+
+                dependencies {
+                    implementation("org.jetbrains.kotlinx:kotlinx-serialization-json:$serializationVersion")
+                    implementation("org.jetbrains.kotlinx:kotlinx-coroutines-core:$coroutinesVersion")
+                    implementation("io.ktor:ktor-client-cio:$ktorVersion")
+                    implementation("io.ktor:ktor-client-content-negotiation:$ktorVersion")
+                    implementation("io.ktor:ktor-client-core:$ktorVersion")
+                    implementation("io.ktor:ktor-serialization-kotlinx-json:$ktorVersion")
+                    implementation("io.ktor:ktor-client-logging:$ktorVersion")
+                }
+                """.trimIndent()
             }
-            """.trimIndent()
 
         private fun defaultSharedGroupHeader(
             kotlinVersion: String,
@@ -745,6 +806,7 @@ public abstract class InitSubprojectTask : DefaultTask() {
             directGroupDeps: List<String> = emptyList(),
             sharedProjectRef: String = ":shared",
             groupProjectRef: (String) -> String = { ":$it" },
+            multiplatform: Boolean = false,
         ): String {
             val groupDeps = directGroupDeps.joinToString("\n") { ref -> """    api(project("${groupProjectRef(ref)}"))""" }
             val allDeps =
@@ -753,7 +815,35 @@ public abstract class InitSubprojectTask : DefaultTask() {
                 } else {
                     """    api(project("$sharedProjectRef"))""" + "\n$groupDeps"
                 }
-            return """
+            return if (multiplatform) {
+                val indentedDeps = allDeps.lines().joinToString("\n") { "        $it" }
+                """
+                plugins {
+                    kotlin("multiplatform") version "$kotlinVersion"
+                    kotlin("plugin.serialization") version "$kotlinVersion"
+                    id("$PLUGIN_ID") version "$PLUGIN_VERSION"
+                }
+
+                kotlin {
+                    jvm()
+                    // Add your targets: iosArm64(), js(IR) { browser() }, linuxX64(), etc.
+
+                    sourceSets {
+                        commonMain.dependencies {
+                $indentedDeps
+                            implementation("org.jetbrains.kotlinx:kotlinx-serialization-json:$serializationVersion")
+                            implementation("org.jetbrains.kotlinx:kotlinx-coroutines-core:$coroutinesVersion")
+                            implementation("io.ktor:ktor-client-cio:$ktorVersion")
+                            implementation("io.ktor:ktor-client-content-negotiation:$ktorVersion")
+                            implementation("io.ktor:ktor-client-core:$ktorVersion")
+                            implementation("io.ktor:ktor-serialization-kotlinx-json:$ktorVersion")
+                            implementation("io.ktor:ktor-client-logging:$ktorVersion")
+                        }
+                    }
+                }
+                """.trimIndent()
+            } else {
+                """
                 plugins {
                     kotlin("jvm") version "$kotlinVersion"
                     kotlin("plugin.serialization") version "$kotlinVersion"
@@ -771,6 +861,7 @@ public abstract class InitSubprojectTask : DefaultTask() {
                     implementation("io.ktor:ktor-client-logging:$ktorVersion")
                 }
                 """.trimIndent()
+            }
         }
 
         private fun defaultClientHeader(
@@ -779,25 +870,54 @@ public abstract class InitSubprojectTask : DefaultTask() {
             coroutinesVersion: String,
             serializationVersion: String,
             sharedProjectRef: String = ":shared",
+            multiplatform: Boolean = false,
         ): String =
-            """
-            plugins {
-                kotlin("jvm") version "$kotlinVersion"
-                kotlin("plugin.serialization") version "$kotlinVersion"
-                id("$PLUGIN_ID") version "$PLUGIN_VERSION"
-            }
+            if (multiplatform) {
+                """
+                plugins {
+                    kotlin("multiplatform") version "$kotlinVersion"
+                    kotlin("plugin.serialization") version "$kotlinVersion"
+                    id("$PLUGIN_ID") version "$PLUGIN_VERSION"
+                }
 
-            dependencies {
-                api(project("$sharedProjectRef"))
-                implementation("org.jetbrains.kotlinx:kotlinx-serialization-json:$serializationVersion")
-                implementation("org.jetbrains.kotlinx:kotlinx-coroutines-core:$coroutinesVersion")
-                implementation("io.ktor:ktor-client-cio:$ktorVersion")
-                implementation("io.ktor:ktor-client-content-negotiation:$ktorVersion")
-                implementation("io.ktor:ktor-client-core:$ktorVersion")
-                implementation("io.ktor:ktor-serialization-kotlinx-json:$ktorVersion")
-                implementation("io.ktor:ktor-client-logging:$ktorVersion")
+                kotlin {
+                    jvm()
+                    // Add your targets: iosArm64(), js(IR) { browser() }, linuxX64(), etc.
+
+                    sourceSets {
+                        commonMain.dependencies {
+                            api(project("$sharedProjectRef"))
+                            implementation("org.jetbrains.kotlinx:kotlinx-serialization-json:$serializationVersion")
+                            implementation("org.jetbrains.kotlinx:kotlinx-coroutines-core:$coroutinesVersion")
+                            implementation("io.ktor:ktor-client-cio:$ktorVersion")
+                            implementation("io.ktor:ktor-client-content-negotiation:$ktorVersion")
+                            implementation("io.ktor:ktor-client-core:$ktorVersion")
+                            implementation("io.ktor:ktor-serialization-kotlinx-json:$ktorVersion")
+                            implementation("io.ktor:ktor-client-logging:$ktorVersion")
+                        }
+                    }
+                }
+                """.trimIndent()
+            } else {
+                """
+                plugins {
+                    kotlin("jvm") version "$kotlinVersion"
+                    kotlin("plugin.serialization") version "$kotlinVersion"
+                    id("$PLUGIN_ID") version "$PLUGIN_VERSION"
+                }
+
+                dependencies {
+                    api(project("$sharedProjectRef"))
+                    implementation("org.jetbrains.kotlinx:kotlinx-serialization-json:$serializationVersion")
+                    implementation("org.jetbrains.kotlinx:kotlinx-coroutines-core:$coroutinesVersion")
+                    implementation("io.ktor:ktor-client-cio:$ktorVersion")
+                    implementation("io.ktor:ktor-client-content-negotiation:$ktorVersion")
+                    implementation("io.ktor:ktor-client-core:$ktorVersion")
+                    implementation("io.ktor:ktor-serialization-kotlinx-json:$ktorVersion")
+                    implementation("io.ktor:ktor-client-logging:$ktorVersion")
+                }
+                """.trimIndent()
             }
-            """.trimIndent()
 
         private fun defaultClientPerGroupHeader(
             kotlinVersion: String,
@@ -806,12 +926,42 @@ public abstract class InitSubprojectTask : DefaultTask() {
             serializationVersion: String,
             sharedProjectRef: String = ":shared",
             groupProjectRefs: List<String>,
+            multiplatform: Boolean = false,
         ): String {
             val groupDeps =
                 groupProjectRefs.joinToString("\n") { ref ->
                     """    api(project("$ref"))"""
                 }
-            return """
+            return if (multiplatform) {
+                val indentedGroupDeps = groupDeps.lines().joinToString("\n") { "        $it" }
+                """
+                plugins {
+                    kotlin("multiplatform") version "$kotlinVersion"
+                    kotlin("plugin.serialization") version "$kotlinVersion"
+                    id("$PLUGIN_ID") version "$PLUGIN_VERSION"
+                }
+
+                kotlin {
+                    jvm()
+                    // Add your targets: iosArm64(), js(IR) { browser() }, linuxX64(), etc.
+
+                    sourceSets {
+                        commonMain.dependencies {
+                            api(project("$sharedProjectRef"))
+                $indentedGroupDeps
+                            implementation("org.jetbrains.kotlinx:kotlinx-serialization-json:$serializationVersion")
+                            implementation("org.jetbrains.kotlinx:kotlinx-coroutines-core:$coroutinesVersion")
+                            implementation("io.ktor:ktor-client-cio:$ktorVersion")
+                            implementation("io.ktor:ktor-client-content-negotiation:$ktorVersion")
+                            implementation("io.ktor:ktor-client-core:$ktorVersion")
+                            implementation("io.ktor:ktor-serialization-kotlinx-json:$ktorVersion")
+                            implementation("io.ktor:ktor-client-logging:$ktorVersion")
+                        }
+                    }
+                }
+                """.trimIndent()
+            } else {
+                """
                 plugins {
                     kotlin("jvm") version "$kotlinVersion"
                     kotlin("plugin.serialization") version "$kotlinVersion"
@@ -830,7 +980,23 @@ public abstract class InitSubprojectTask : DefaultTask() {
                     implementation("io.ktor:ktor-client-logging:$ktorVersion")
                 }
                 """.trimIndent()
+            }
         }
+
+        /**
+         * Builds a `dependencies {}` or `sourceSets { commonMain.dependencies {} }` block
+         * from a list of dependency lines (each already 4-space-indented, e.g. `    api(project(...))`).
+         */
+        private fun buildProjectDepsBlock(
+            deps: List<String>,
+            multiplatform: Boolean,
+        ): String =
+            if (multiplatform) {
+                val indented = deps.joinToString("\n") { "        $it" }
+                "kotlin {\n    sourceSets {\n        commonMain.dependencies {\n$indented\n        }\n    }\n}"
+            } else {
+                "dependencies {\n${deps.joinToString("\n")}\n}"
+            }
 
         private fun buildGeneratorContent(
             generatorName: String,

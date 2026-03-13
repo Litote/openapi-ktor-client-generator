@@ -64,4 +64,15 @@ public abstract class InitSubprojectExtension
         @get:Input
         @get:Optional
         public val subprojectRootDirectory: Property<String> = objects.property(String::class.java)
+
+        /**
+         * When true, generated `build.gradle.kts` files use `kotlin("multiplatform")` instead of
+         * `kotlin("jvm")`, and dependencies are placed inside a `kotlin { sourceSets { commonMain.dependencies { } } }`
+         * block. A single `jvm()` target is declared by default; add other targets manually.
+         *
+         * Can also be set via `-PmultiplatformTargets=true` on the command line.
+         */
+        @get:Input
+        @get:Optional
+        public val multiplatform: Property<Boolean> = objects.property(Boolean::class.java)
     }

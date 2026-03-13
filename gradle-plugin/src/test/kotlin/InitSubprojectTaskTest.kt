@@ -29,6 +29,7 @@ internal class InitSubprojectTaskTest {
         splitGranularity: String? = null,
         sharedModelGranularity: String? = null,
         subprojectRootDirectory: String? = null,
+        multiplatform: Boolean? = null,
     ): InitSubprojectTask {
         val project = ProjectBuilder.builder().withProjectDir(tempDir).build()
         val task =
@@ -49,6 +50,7 @@ internal class InitSubprojectTaskTest {
         splitGranularity?.let { task.splitGranularity.set(it) }
         sharedModelGranularity?.let { task.sharedModelGranularity.set(it) }
         subprojectRootDirectory?.let { task.subprojectRootDirectory.set(it) }
+        multiplatform?.let { task.multiplatform.set(it) }
         return task
     }
 
@@ -408,6 +410,55 @@ internal class InitSubprojectTaskTest {
     }
 
     @Test
+    fun `GIVEN buildScriptTemplate and multiplatform=true WHEN splitByClient=true THEN client deps use commonMain`() {
+        val openApiFile =
+            File(
+                checkNotNull(javaClass.classLoader.getResource("multi-tag.json")) { "multi-tag.json not found" }.toURI(),
+            )
+        val template = "plugins { kotlin(\"multiplatform\") }"
+        val task =
+            buildTask(
+                openApiFile = openApiFile.absolutePath,
+                splitByClient = true,
+                buildScriptTemplate = template,
+                multiplatform = true,
+            )
+
+        task.initSubproject()
+
+        val clientContent = tempDir.resolve("user-client/build.gradle.kts").readText()
+        assertContains(clientContent, "kotlin(\"multiplatform\")")
+        assertContains(clientContent, "kotlin {")
+        assertContains(clientContent, "sourceSets {")
+        assertContains(clientContent, "commonMain.dependencies {")
+        assertContains(clientContent, """api(project(":shared"))""")
+        assertFalse(clientContent.contains("\ndependencies {"), "Should not contain top-level dependencies block")
+    }
+
+    @Test
+    fun `GIVEN buildScriptTemplate and multiplatform=true WHEN splitByClient=true THEN shared deps use commonMain`() {
+        val openApiFile =
+            File(
+                checkNotNull(javaClass.classLoader.getResource("multi-tag.json")) { "multi-tag.json not found" }.toURI(),
+            )
+        val template = "plugins { kotlin(\"multiplatform\") }"
+        val task =
+            buildTask(
+                openApiFile = openApiFile.absolutePath,
+                splitByClient = true,
+                buildScriptTemplate = template,
+                multiplatform = true,
+            )
+
+        task.initSubproject()
+
+        val sharedContent = tempDir.resolve("shared/build.gradle.kts").readText()
+        assertFalse(
+            sharedContent.contains("dependencies {"),
+            "Shared build should not contain top-level dependencies block; uses buildScriptTemplate without added deps",
+        )
+    }
+
     fun `GIVEN generatorConfigExtra WHEN splitByClient=true THEN shared and client builds contain extra config`() {
         val openApiFile =
             File(
@@ -862,6 +913,57 @@ internal class InitSubprojectTaskTest {
         val settingsContent = tempDir.resolve("settings.gradle.kts").readText()
         assertContains(settingsContent, """":modules:shared"""")
     }
+
+    @Test
+    fun `GIVEN multiplatform=true WHEN initSubproject single module THEN build file uses multiplatform`() {
+        val openApiFile = tempDir.resolve("petstore.yaml").also { it.writeText("openapi: 3.0.0") }
+        val task = buildTask(openApiFile = openApiFile.absolutePath, subprojectName = "petstore", multiplatform = true)
+
+        task.initSubproject()
+
+        val content = tempDir.resolve("petstore/build.gradle.kts").readText()
+        assertContains(content, """kotlin("multiplatform")""")
+        assertContains(content, "commonMain.dependencies")
+        assertFalse(content.contains("""kotlin("jvm")"""), "Should not use JVM-only plugin")
+    }
+
+    @Test
+    fun `GIVEN multiplatform=true and splitByClient WHEN initSubproject THEN all modules use multiplatform`() {
+        val spec =
+            """
+            openapi: "3.0.0"
+            info:
+              title: Test
+              version: "1.0"
+            paths:
+              /users:
+                get:
+                  tags: [User]
+                  operationId: getUsers
+                  responses:
+                    "200":
+                      description: ok
+            """.trimIndent()
+        val openApiFile = tempDir.resolve("spec.yaml").also { it.writeText(spec) }
+        val task =
+            buildTask(
+                openApiFile = openApiFile.absolutePath,
+                splitByClient = true,
+                basePackage = "org.example",
+                multiplatform = true,
+            )
+
+        task.initSubproject()
+
+        val sharedContent = tempDir.resolve("shared/build.gradle.kts").readText()
+        assertContains(sharedContent, """kotlin("multiplatform")""")
+        assertContains(sharedContent, "commonMain.dependencies")
+
+        val clientContent = tempDir.resolve("user-client/build.gradle.kts").readText()
+        assertContains(clientContent, """kotlin("multiplatform")""")
+        assertContains(clientContent, "commonMain.dependencies")
+        assertContains(clientContent, """api(project(":shared"))""")
+    }
 }
 
 internal class GeneratorPluginTest {
@@ -1172,5 +1274,116 @@ internal class SettingsUpdaterTest {
         val settingsContent = tempDir.resolve("settings.gradle.kts").readText()
         assertContains(settingsContent, """include("my-client")""")
         assertContains(settingsContent, InitSubprojectTask.SETTINGS_MARKER_START)
+    }
+
+    @Test
+    fun `GIVEN multiplatform=true WHEN buildGradleKtsContent THEN uses kotlin multiplatform plugin`() {
+        val content =
+            InitSubprojectTask.buildGradleKtsContent(
+                generatorName = "petstore",
+                openApiFileName = "petstore.yaml",
+                kotlinVersion = DEFAULT_KOTLIN_VERSION,
+                ktorVersion = DEFAULT_KTOR_VERSION,
+                coroutinesVersion = DEFAULT_COROUTINES_VERSION,
+                serializationVersion = DEFAULT_SERIALIZATION_VERSION,
+                multiplatform = true,
+            )
+
+        assertContains(content, """kotlin("multiplatform") version "${DEFAULT_KOTLIN_VERSION}"""")
+        assertFalse(content.contains("""kotlin("jvm") version"""), "Should not contain jvm plugin")
+        assertContains(content, "commonMain.dependencies")
+        assertContains(content, "io.ktor:ktor-client-cio:${DEFAULT_KTOR_VERSION}")
+    }
+
+    @Test
+    fun `GIVEN multiplatform=false WHEN buildGradleKtsContent THEN uses kotlin jvm plugin`() {
+        val content =
+            InitSubprojectTask.buildGradleKtsContent(
+                generatorName = "petstore",
+                openApiFileName = "petstore.yaml",
+                kotlinVersion = DEFAULT_KOTLIN_VERSION,
+                ktorVersion = DEFAULT_KTOR_VERSION,
+                coroutinesVersion = DEFAULT_COROUTINES_VERSION,
+                serializationVersion = DEFAULT_SERIALIZATION_VERSION,
+                multiplatform = false,
+            )
+
+        assertContains(content, """kotlin("jvm") version "${DEFAULT_KOTLIN_VERSION}"""")
+        assertFalse(content.contains("kotlin(\"multiplatform\")"), "Should not contain multiplatform plugin")
+        assertFalse(content.contains("commonMain.dependencies"), "Should not contain KMP source sets")
+    }
+
+    @Test
+    fun `GIVEN multiplatform=true WHEN buildClientGradleKtsContent THEN uses multiplatform with project dep in commonMain`() {
+        val content =
+            InitSubprojectTask.buildClientGradleKtsContent(
+                clientName = "UserClient",
+                subprojectDirName = "user-client",
+                specNameWithoutExt = "spec",
+                specRelativePath = "../src/main/openapi/spec.yaml",
+                basePackage = "org.example",
+                kotlinVersion = DEFAULT_KOTLIN_VERSION,
+                ktorVersion = DEFAULT_KTOR_VERSION,
+                coroutinesVersion = DEFAULT_COROUTINES_VERSION,
+                serializationVersion = DEFAULT_SERIALIZATION_VERSION,
+                multiplatform = true,
+            )
+
+        assertContains(content, """kotlin("multiplatform")""")
+        assertContains(content, "commonMain.dependencies")
+        assertContains(content, """api(project(":shared"))""")
+        assertFalse(content.contains("""kotlin("jvm")"""), "Should not use JVM-only plugin")
+    }
+
+    @Test
+    fun `GIVEN buildScriptTemplate and multiplatform=true WHEN buildClientGradleKtsContent THEN deps use commonMain`() {
+        val template = "plugins { kotlin(\"multiplatform\") }"
+        val content =
+            InitSubprojectTask.buildClientGradleKtsContent(
+                clientName = "UserClient",
+                subprojectDirName = "user-client",
+                specNameWithoutExt = "spec",
+                specRelativePath = "../src/main/openapi/spec.yaml",
+                basePackage = "org.example",
+                kotlinVersion = DEFAULT_KOTLIN_VERSION,
+                ktorVersion = DEFAULT_KTOR_VERSION,
+                coroutinesVersion = DEFAULT_COROUTINES_VERSION,
+                serializationVersion = DEFAULT_SERIALIZATION_VERSION,
+                buildScriptTemplate = template,
+                multiplatform = true,
+            )
+
+        assertContains(content, "kotlin {")
+        assertContains(content, "sourceSets {")
+        assertContains(content, "commonMain.dependencies {")
+        assertContains(content, """api(project(":shared"))""")
+        assertFalse(content.contains("\ndependencies {"), "Should not contain top-level dependencies block")
+    }
+
+    @Test
+    fun `GIVEN buildScriptTemplate and multiplatform=true WHEN buildSharedGroupGradleKtsContent THEN deps use commonMain`() {
+        val template = "plugins { kotlin(\"multiplatform\") }"
+        val content =
+            InitSubprojectTask.buildSharedGroupGradleKtsContent(
+                specNameWithoutExt = "spec",
+                specRelativePath = "../src/main/openapi/spec.yaml",
+                basePackage = "org.example.group",
+                topBasePackage = "org.example",
+                targetSharedGroup = "groupA",
+                directGroupDeps = listOf("shared-other-group"),
+                kotlinVersion = DEFAULT_KOTLIN_VERSION,
+                ktorVersion = DEFAULT_KTOR_VERSION,
+                coroutinesVersion = DEFAULT_COROUTINES_VERSION,
+                serializationVersion = DEFAULT_SERIALIZATION_VERSION,
+                buildScriptTemplate = template,
+                multiplatform = true,
+            )
+
+        assertContains(content, "kotlin {")
+        assertContains(content, "sourceSets {")
+        assertContains(content, "commonMain.dependencies {")
+        assertContains(content, """api(project(":shared"))""")
+        assertContains(content, """api(project(":shared-other-group"))""")
+        assertFalse(content.contains("\ndependencies {"), "Should not contain top-level dependencies block")
     }
 }
