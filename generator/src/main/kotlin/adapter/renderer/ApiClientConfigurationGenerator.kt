@@ -45,6 +45,7 @@ public class ApiClientConfigurationGenerator internal constructor(
         val contentNegotiationClass: ClassName =
             ClassName("io.ktor.client.plugins.contentnegotiation", "ContentNegotiation")
         val jsonMember: MemberName = MemberName("io.ktor.serialization.kotlinx.json", "json")
+        val contentTypeClass: ClassName = ClassName("io.ktor.http", "ContentType")
         val cioMember: MemberName = MemberName("io.ktor.client.engine.cio", "CIO")
         val exceptionLoggerType: LambdaTypeName =
             LambdaTypeName.get(
@@ -71,9 +72,31 @@ public class ApiClientConfigurationGenerator internal constructor(
                 .addStatement("install(%T)", loggingClass)
                 .beginControlFlow("install(%T)", contentNegotiationClass)
                 .addStatement("%M(%N)", jsonMember, "json")
-                .endControlFlow()
-                .beginControlFlow("%M", MemberName("io.ktor.client.plugins", "defaultRequest"))
-                .addStatement("url(%N)", "baseUrl")
+
+        if (clientConfiguration.hasYamlContentType) {
+            val yamlConverterClass = ClassName(configuration.clientPackage, "YamlContentConverter")
+            builder
+                .addStatement(
+                    "register(%T(%S, %S), %T(%N))",
+                    contentTypeClass,
+                    "application",
+                    "yaml",
+                    yamlConverterClass,
+                    "json",
+                ).addStatement(
+                    "register(%T(%S, %S), %T(%N))",
+                    contentTypeClass,
+                    "application",
+                    "x-yaml",
+                    yamlConverterClass,
+                    "json",
+                )
+        }
+
+        builder
+            .endControlFlow()
+            .beginControlFlow("%M", MemberName("io.ktor.client.plugins", "defaultRequest"))
+            .addStatement("url(%N)", "baseUrl")
 
         headerApiKeys.forEach { scheme ->
             builder.addStatement(
@@ -308,5 +331,12 @@ public class ApiClientConfigurationGenerator internal constructor(
         val companion = buildCompanion()
         val clientConfiguration = buildClientConfiguration(constructor, companion)
         writeFile(clientConfiguration)
+        if (this.clientConfiguration.hasYamlContentType) {
+            YamlContentConverterGenerator(
+                clientPackage = configuration.clientPackage,
+                outputDirectory = configuration.outputDirectory,
+                fileSystemWriter = fileSystemWriter,
+            ).render()
+        }
     }
 }

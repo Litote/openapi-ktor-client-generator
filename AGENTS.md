@@ -138,3 +138,4 @@ cat build/openapi/src/main/kotlin/com/example/api/client/Client.kt
 - [OpenAPI Spec](https://spec.openapis.org/oas)
 - [KotlinPoet](https://square.github.io/kotlinpoet/)
 - [kotlinx.serialization](https://github.com/Kotlin/kotlinx.serialization)
+- [SnakeYAML](https://bitbucket.org/snakeyaml/snakeyaml) — used for YAML support via `YamlContentConverter`

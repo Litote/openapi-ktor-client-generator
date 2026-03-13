@@ -11,6 +11,7 @@ logging = "8.0.01"
 maven-publish = "0.36.0"
 mockk = "1.14.9"
 openapi-bindings = "0.2.2"
+snakeyaml = "2.3"
 version-catalog-update = "1.1.0"
 
 [plugins]
@@ -40,6 +41,7 @@ logging = { module = "io.github.oshai:kotlin-logging-jvm", version.ref = "loggin
 mockk = { module = "io.mockk:mockk", version.ref = "mockk" }
 openapi-bindings = { module = "community.flock.kotlinx.openapi.bindings:kotlin-openapi-bindings", version.ref = "openapi-bindings" }
 serialization = { module = "org.jetbrains.kotlinx:kotlinx-serialization-json", version.ref = "kotlinx-serialization" }
+snakeyaml = { module = "org.yaml:snakeyaml", version.ref = "snakeyaml" }
 vanniktech-maven-publish = { module = "com.vanniktech:gradle-maven-publish-plugin", version.ref = "maven-publish" }
 
 [bundles]

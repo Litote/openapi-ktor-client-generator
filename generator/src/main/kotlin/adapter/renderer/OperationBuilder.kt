@@ -146,6 +146,10 @@ internal class OperationBuilder(
         val requestContentTypes = requestBody?.contentTypes
         val hasJsonContentType =
             requestContentTypes?.any { it.equals("application/json", ignoreCase = true) } == true
+        val hasYamlContentType =
+            requestContentTypes?.any {
+                it.equals("application/yaml", ignoreCase = true) || it.equals("application/x-yaml", ignoreCase = true)
+            } == true
 
         funBuilder.addCode(
             buildFunctionBody(
@@ -155,6 +159,7 @@ internal class OperationBuilder(
                 queryParameters = queryParameters,
                 requestBody = requestBody,
                 hasJsonContentType = hasJsonContentType,
+                hasYamlContentType = hasYamlContentType,
                 responseEntries = responseEntries,
                 responseBaseName = responseBaseName,
             ),
@@ -419,6 +424,7 @@ internal class OperationBuilder(
         queryParameters: List<OperationParameter>,
         requestBody: RequestBodySpec?,
         hasJsonContentType: Boolean,
+        hasYamlContentType: Boolean,
         responseEntries: List<RenderedResponseEntry>,
         responseBaseName: String,
     ): CodeBlock =
@@ -506,8 +512,20 @@ internal class OperationBuilder(
 
                     else -> {
                         addStatement("%M(%N)", setBodyMember, requestBody.parameterName)
-                        if (hasJsonContentType) {
-                            addStatement("%M(%T.Application.Json)", contentTypeMember, contentTypeClass)
+                        when {
+                            hasJsonContentType -> {
+                                addStatement("%M(%T.Application.Json)", contentTypeMember, contentTypeClass)
+                            }
+
+                            hasYamlContentType -> {
+                                addStatement(
+                                    "%M(%T(%S, %S))",
+                                    contentTypeMember,
+                                    contentTypeClass,
+                                    "application",
+                                    "yaml",
+                                )
+                            }
                         }
                     }
                 }

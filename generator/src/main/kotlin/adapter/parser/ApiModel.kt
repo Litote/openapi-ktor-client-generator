@@ -32,7 +32,10 @@ import community.flock.kotlinx.openapi.bindings.OpenAPIV3Type
 import community.flock.kotlinx.openapi.bindings.OpenAPIV3TypeArray
 import io.github.oshai.kotlinlogging.KotlinLogging
 import kotlinx.serialization.json.Json
+import kotlinx.serialization.json.JsonArray
 import kotlinx.serialization.json.JsonElement
+import kotlinx.serialization.json.JsonNull
+import kotlinx.serialization.json.JsonPrimitive
 import org.litote.openapi.ktor.client.generator.ApiGeneratorConfiguration
 import org.litote.openapi.ktor.client.generator.domain.OperationMeta
 import org.litote.openapi.ktor.client.generator.domain.SecuritySchemeLocation
@@ -44,6 +47,7 @@ import org.litote.openapi.ktor.client.generator.shared.snakeToCamelCase
 import org.litote.openapi.ktor.client.generator.shared.toOrNull
 import java.nio.file.Files
 import java.nio.file.Path
+import org.yaml.snakeyaml.Yaml as SnakeYaml
 
 internal class ApiModel private constructor(
     val model: OpenAPIV3Model,
@@ -61,10 +65,62 @@ internal class ApiModel private constructor(
                 )
             val openApiFile = configuration.openApiFile
             logger.debug { "Parsing $openApiFile" }
-            val json = Files.readString(Path.of(openApiFile))
+            val rawContent = Files.readString(Path.of(openApiFile))
+            val json =
+                if (openApiFile.endsWith(".yaml", ignoreCase = true) || openApiFile.endsWith(
+                        ".yml",
+                        ignoreCase = true
+                    )
+                ) {
+                    yamlToJson(rawContent)
+                } else {
+                    rawContent
+                }
 
             return ApiModel(openApi.decodeFromString(json), configuration)
         }
+
+        private fun yamlToJson(yamlContent: String): String {
+            val snakeYaml = SnakeYaml()
+            val parsed = snakeYaml.load<Any>(yamlContent)
+            return Json.encodeToString(
+                JsonElement.serializer(),
+                anyToJsonElement(parsed),
+            )
+        }
+
+        private fun anyToJsonElement(obj: Any?): JsonElement =
+            when (obj) {
+                null -> {
+                    JsonNull
+                }
+
+                is Map<*, *> -> {
+                    kotlinx.serialization.json.JsonObject(
+                        obj.entries.associate { (k, v) -> k.toString() to anyToJsonElement(v) },
+                    )
+                }
+
+                is List<*> -> {
+                    JsonArray(obj.map { anyToJsonElement(it) })
+                }
+
+                is Boolean -> {
+                    JsonPrimitive(obj)
+                }
+
+                is Number -> {
+                    JsonPrimitive(obj)
+                }
+
+                is String -> {
+                    JsonPrimitive(obj)
+                }
+
+                else -> {
+                    JsonPrimitive(obj.toString())
+                }
+            }
     }
 
     val outputDirectory: String get() = configuration.outputDirectory
@@ -90,11 +146,11 @@ internal class ApiModel private constructor(
                 ).asSequence()
                     .flatMap { (method, operation) ->
                         (
-                            operation
-                                .tags
-                                .takeUnless { it.isNullOrEmpty() }
-                                ?: listOf("")
-                        ).asSequence()
+                                operation
+                                    .tags
+                                    .takeUnless { it.isNullOrEmpty() }
+                                    ?: listOf("")
+                                ).asSequence()
                             .filterNotNull()
                             .distinct()
                             .map { it to ApiOperation(path.value, method, operation) }
@@ -165,17 +221,17 @@ internal class ApiModel private constructor(
      */
     val sealedParents: Map<String, List<String>> =
         (
-            components
-                ?.schemas
-                ?.entries
-                ?.mapNotNull { (name, schemaOrRef) ->
-                    val schema = schemaOrRef as? OpenAPIV3Schema ?: return@mapNotNull null
-                    val refs = schema.oneOf?.filterIsInstance<OpenAPIV3Reference>() ?: return@mapNotNull null
-                    if (refs.size < 2) return@mapNotNull null
-                    name to refs.map { getRefClassName(it) }
-                }?.toMap()
-                ?: emptyMap()
-        ) + requestBodySealedParents
+                components
+                    ?.schemas
+                    ?.entries
+                    ?.mapNotNull { (name, schemaOrRef) ->
+                        val schema = schemaOrRef as? OpenAPIV3Schema ?: return@mapNotNull null
+                        val refs = schema.oneOf?.filterIsInstance<OpenAPIV3Reference>() ?: return@mapNotNull null
+                        if (refs.size < 2) return@mapNotNull null
+                        name to refs.map { getRefClassName(it) }
+                    }?.toMap()
+                    ?: emptyMap()
+                ) + requestBodySealedParents
 
     /** Reverse of [sealedParents]: maps each sub-type name to its sealed parent name. */
     val sealedSubTypes: Map<String, String> =
@@ -185,27 +241,27 @@ internal class ApiModel private constructor(
 
     val schemas: Map<String, OpenAPIV3Schema> =
         (
-            pathsByTags
-                .values
-                .flatten()
-                .distinct()
-                .flatMap { o ->
-                    o.operation.allReferences().map { getRefClassName(it) }
-                }.toSet()
-                .run {
-                    val set = mutableSetOf<String>()
-                    forEach { addChildren(set, it) }
-                    set
-                }
-        ).let { set ->
-            (
-                components
-                    ?.schemas
-                    ?.filterValues { it is OpenAPIV3Schema }
-                    ?.mapValues { it.value as OpenAPIV3Schema }
-                    ?: emptyMap()
-            ).filterKeys { set.contains(it) }
-        }
+                pathsByTags
+                    .values
+                    .flatten()
+                    .distinct()
+                    .flatMap { o ->
+                        o.operation.allReferences().map { getRefClassName(it) }
+                    }.toSet()
+                    .run {
+                        val set = mutableSetOf<String>()
+                        forEach { addChildren(set, it) }
+                        set
+                    }
+                ).let { set ->
+                (
+                        components
+                            ?.schemas
+                            ?.filterValues { it is OpenAPIV3Schema }
+                            ?.mapValues { it.value as OpenAPIV3Schema }
+                            ?: emptyMap()
+                        ).filterKeys { set.contains(it) }
+            }
 
     val componentParameters: List<OpenAPIV3Parameter> =
         components
@@ -248,7 +304,7 @@ internal class ApiModel private constructor(
 
     internal fun isEnum(property: ApiClassProperty): Boolean =
         (!property.asSchema?.enum.isNullOrEmpty()) ||
-            property.asReference?.let { !schemas[getRefClassName(it)]?.enum.isNullOrEmpty() } == true
+                property.asReference?.let { !schemas[getRefClassName(it)]?.enum.isNullOrEmpty() } == true
 
     private fun addChildren(
         set: MutableSet<String>,
@@ -266,27 +322,27 @@ internal class ApiModel private constructor(
 
     private fun OpenAPIV3Operation.allReferences(): Set<OpenAPIV3Reference> =
         setOfNotNull(requestBody as? OpenAPIV3Reference) +
-            (
-                (requestBody as? OpenAPIV3RequestBody)?.content?.values?.flatMap { it.schema.allReferences() }
-                    ?: emptyList()
-            ) +
-            (parameters?.mapNotNull { it as? OpenAPIV3Reference } ?: emptyList()) +
-            (
-                parameters?.flatMap {
-                    (it as? OpenAPIV3Parameter)?.content?.values?.flatMap { v -> v.schema.allReferences() }
-                        ?: emptyList()
-                }
-                    ?: emptyList()
-            ) +
-            (responses?.values?.mapNotNull { it as? OpenAPIV3Reference } ?: emptyList()) +
-            (
-                responses
-                    ?.values
-                    ?.flatMap {
-                        (it as? OpenAPIV3Response)?.content?.values?.flatMap { v -> v.schema.allReferences() }
+                (
+                        (requestBody as? OpenAPIV3RequestBody)?.content?.values?.flatMap { it.schema.allReferences() }
                             ?: emptyList()
-                    } ?: emptyList()
-            )
+                        ) +
+                (parameters?.mapNotNull { it as? OpenAPIV3Reference } ?: emptyList()) +
+                (
+                        parameters?.flatMap {
+                            (it as? OpenAPIV3Parameter)?.content?.values?.flatMap { v -> v.schema.allReferences() }
+                                ?: emptyList()
+                        }
+                            ?: emptyList()
+                        ) +
+                (responses?.values?.mapNotNull { it as? OpenAPIV3Reference } ?: emptyList()) +
+                (
+                        responses
+                            ?.values
+                            ?.flatMap {
+                                (it as? OpenAPIV3Response)?.content?.values?.flatMap { v -> v.schema.allReferences() }
+                                    ?: emptyList()
+                            } ?: emptyList()
+                        )
 
     private fun OpenAPIV3SchemaOrReference?.allReferences(): Set<OpenAPIV3Reference> =
         when (this) {
@@ -301,15 +357,15 @@ internal class ApiModel private constructor(
             items as? OpenAPIV3Reference,
             additionalProperties as? OpenAPIV3Reference,
         ) +
-            (oneOf?.mapNotNull { it as? OpenAPIV3Reference } ?: emptyList()) +
-            (anyOf?.mapNotNull { it as? OpenAPIV3Reference } ?: emptyList()) +
-            (allOf?.mapNotNull { it as? OpenAPIV3Reference } ?: emptyList()) +
-            (properties?.values?.mapNotNull { it as? OpenAPIV3Reference } ?: emptyList()) +
-            (
-                properties?.values?.flatMap { (it as? OpenAPIV3Schema)?.allReferences() ?: emptyList() }
-                    ?: emptyList()
-            ) +
-            ((items as? OpenAPIV3Schema)?.allReferences() ?: emptyList())
+                (oneOf?.mapNotNull { it as? OpenAPIV3Reference } ?: emptyList()) +
+                (anyOf?.mapNotNull { it as? OpenAPIV3Reference } ?: emptyList()) +
+                (allOf?.mapNotNull { it as? OpenAPIV3Reference } ?: emptyList()) +
+                (properties?.values?.mapNotNull { it as? OpenAPIV3Reference } ?: emptyList()) +
+                (
+                        properties?.values?.flatMap { (it as? OpenAPIV3Schema)?.allReferences() ?: emptyList() }
+                            ?: emptyList()
+                        ) +
+                ((items as? OpenAPIV3Schema)?.allReferences() ?: emptyList())
 
     private fun getRefClassName(refValue: String): String = refValue.substringAfterLast("/")
 
@@ -513,9 +569,9 @@ internal class ApiModel private constructor(
 
     private fun OpenAPIV3SchemaOrReference.isNullSchema(): Boolean =
         this is OpenAPIV3Schema &&
-            when (val t = type) {
-                is OpenAPIV3SingleType -> t.value == OpenAPIV3Type.NULL
-                is OpenAPIV3TypeArray -> t.values.all { it == OpenAPIV3Type.NULL }
-                null -> false
-            }
+                when (val t = type) {
+                    is OpenAPIV3SingleType -> t.value == OpenAPIV3Type.NULL
+                    is OpenAPIV3TypeArray -> t.values.all { it == OpenAPIV3Type.NULL }
+                    null -> false
+                }
 }

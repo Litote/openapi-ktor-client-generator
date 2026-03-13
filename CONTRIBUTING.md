@@ -82,11 +82,24 @@ generator/src/main/kotlin/
 
 | Component | Responsibility |
 |-----------|----------------|
-| `GeneratorPlugin` | Gradle plugin, orchestrates tasks |
-| `ApiClientGenerator` | Main generation pipeline |
-| `OpenApiParser` | Parses OpenAPI v3, builds internal model |
-| `KotlinCodeGenerator` | Generates Kotlin code via KotlinPoet |
-| `GenerationModule` | Extension interface for optional features |
+| `ApiClientConfigurationGenerator` | Generates `ClientConfiguration.kt` and (if YAML) `YamlContentConverter.kt` |
+| `YamlContentConverterGenerator`   | Generates `YamlContentConverter.kt` — bridges YAML ↔ JSON via SnakeYAML |
+| `OperationBuilder`                | Builds per-operation methods with correct `contentType()` headers |
+
+## YAML Support
+
+When an OpenAPI spec contains `application/yaml` or `application/x-yaml` content types (in request bodies or responses), the generator automatically:
+
+1. Sets `ClientConfigurationSpec.hasYamlContentType = true` (detected in `OpenApiSpecificationParser`)
+2. Generates `YamlContentConverter.kt` in the client package (`YamlContentConverterGenerator`)
+3. Registers the converter in `ContentNegotiation` for both YAML content types (`ApiClientConfigurationGenerator`)
+4. Sets `contentType(ContentType("application", "yaml"))` on operations with YAML request bodies (`OperationBuilder`)
+
+The `YamlContentConverter` bridges YAML ↔ `kotlinx.serialization` via SnakeYAML:
+- **Deserialize**: YAML bytes → SnakeYAML `Map/List` → `JsonElement` → `kotlinx.serialization`
+- **Serialize**: `kotlinx.serialization` JSON string → SnakeYAML → YAML bytes
+
+Users must add `org.yaml:snakeyaml` to their project dependencies when YAML endpoints are used.
 
 ---
 

@@ -13,6 +13,8 @@ dependencies {
     implementation(libs.ktor.core)
     implementation(libs.logback)
 
+    implementation(libs.snakeyaml)
+
     testImplementation(libs.coroutines)
     testImplementation(libs.ktor.cio)
     testImplementation(libs.ktor.contentnegotiation)
@@ -26,7 +28,8 @@ kotlin {
         "build/snapshot-test-output/sample-api/src/main/kotlin",
         "build/snapshot-test-output/simple-api/src/main/kotlin",
         "build/snapshot-test-output/mastodon-api/src/main/kotlin",
-        "build/snapshot-test-output/inheritance-api/src/main/kotlin"
+        "build/snapshot-test-output/inheritance-api/src/main/kotlin",
+        "build/snapshot-test-output/yaml-api/src/main/kotlin",
         )
 }
 

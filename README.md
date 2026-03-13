@@ -58,6 +58,10 @@ Or let it run automatically as part of the build:
 
 The generated code is placed in the configured `outputDirectory`. You also need to add Ktor, kotlinx-serialization, and kotlinx-coroutines to your dependencies for the project to compile.
 
+### OpenAPI spec
+
+The generator accepts OpenAPI V3 specification files in both **JSON** and **YAML** format.
+
 ## Configuration Properties
 
 ### Root properties
@@ -85,6 +89,23 @@ The generated code is placed in the configured `outputDirectory`. You also need 
 
 The plugin provides an `initApiClientSubproject` task to generate a ready-to-use Gradle subproject.
 See **[PROJECT_GENERATION.md](PROJECT_GENERATION.md)** for the full documentation: single/multi-module, version catalog support, and extra generator configuration.
+
+## Advanced usage
+
+### YAML support
+
+If your OpenAPI spec uses `application/yaml` or `application/x-yaml` content types, the generator automatically:
+- Generates a `YamlContentConverter` class in the client package
+- Registers it in `ContentNegotiation` for both `application/yaml` and `application/x-yaml`
+- Sets the correct `Content-Type` header on YAML requests
+
+You must add **SnakeYAML** to your project dependencies:
+
+```kotlin
+dependencies {
+    implementation("org.yaml:snakeyaml:<latest version>")
+}
+```
 
 ## Troubleshooting
 

@@ -78,6 +78,22 @@ class SnapshotTest {
         )
     }
 
+    @Test
+    fun `GIVEN yaml openapi spec WHEN generating THEN output matches snapshot`() {
+        runSnapshotTest(
+            snapshotName = "yaml-api",
+            openApiFile = "src/test/resources/yaml-api.json",
+        )
+    }
+
+    @Test
+    fun `GIVEN openapi spec in yaml format WHEN generating THEN output matches json spec snapshot`() {
+        runSnapshotTest(
+            snapshotName = "simple-api",
+            openApiFile = "src/test/resources/openapi.yaml",
+        )
+    }
+
     /**
      * Runs a snapshot test for a given OpenAPI specification.
      */

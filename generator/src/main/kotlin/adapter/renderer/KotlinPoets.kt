@@ -53,10 +53,6 @@ internal fun TypeName.isFloat(): Boolean = if (isNullable) this == NULLABLE_FLOA
 
 internal fun TypeName.isInt(): Boolean = if (isNullable) this == NULLABLE_INT else this == INT
 
-internal val ClassName.nonNullableName: String get() = if (isNullable) simpleName.removeSuffix("?") else simpleName
-
-internal val TypeSpec.nonNullableName: String? get() = name?.removeSuffix("?")
-
 internal fun DefaultValue.toCodeBlock(): CodeBlock =
     when (this) {
         is DefaultValue.StringDefault -> CodeBlock.of("%S", value)

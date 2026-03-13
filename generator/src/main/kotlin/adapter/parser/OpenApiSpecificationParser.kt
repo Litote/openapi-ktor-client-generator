@@ -87,7 +87,29 @@ internal class OpenApiSpecificationParser : SpecificationParser {
             serverUrl = apiModel.serverUrl,
             apiKeySchemes = apiKeySchemes,
             componentParameters = componentParams,
+            hasYamlContentType = detectYamlContentType(apiModel),
         )
+    }
+
+    private fun detectYamlContentType(apiModel: ApiModel): Boolean {
+        val yamlMimeTypes = setOf("application/yaml", "application/x-yaml")
+        return apiModel.pathsByTags.values.flatten().any { apiOperation ->
+            val requestYaml =
+                (apiOperation.operation.requestBody as? OpenAPIV3RequestBody)
+                    ?.content
+                    ?.keys
+                    ?.map { it.value }
+                    ?.any { it.lowercase() in yamlMimeTypes } == true
+            val responseYaml =
+                apiOperation.operation.responses?.values?.any { response ->
+                    (response as? OpenAPIV3Response)
+                        ?.content
+                        ?.keys
+                        ?.map { it.value }
+                        ?.any { it.lowercase() in yamlMimeTypes } == true
+                } == true
+            requestYaml || responseYaml
+        }
     }
 
     private fun buildClientSpecs(
@@ -488,6 +510,8 @@ internal class OpenApiSpecificationParser : SpecificationParser {
                     val response = responseOrRef as? OpenAPIV3Response ?: return@mapNotNull null
                     val schema =
                         response.content?.get(MediaType("application/json"))?.schema
+                            ?: response.content?.get(MediaType("application/yaml"))?.schema
+                            ?: response.content?.get(MediaType("application/x-yaml"))?.schema
                             ?: response.content?.get(MediaType("*/*"))?.schema
                     if (response.content != null && schema == null) {
                         val isSseContent =

@@ -61,7 +61,8 @@ generator/src/main/kotlin/
 │   ├── renderer/
 │   │   ├── ApiClientGenerator          → ClientSpec → FileSpec (KotlinPoet)
 │   │   ├── ApiModelGenerator           → ModelSpec → FileSpec (KotlinPoet)
-│   │   ├── ApiClientConfigurationGenerator → ClientConfigurationSpec → FileSpec
+│   │   ├── ApiClientConfigurationGenerator → ClientConfigurationSpec → FileSpec + YamlContentConverter if YAML
+│   │   ├── YamlContentConverterGenerator   → generates YamlContentConverter.kt (YAML↔JSON via SnakeYAML)
 │   │   ├── OperationBuilder, ResponseBuilder
 │   │   ├── DomainTypeMapper            → DomainType → KotlinPoet TypeName
 │   │   └── KotlinPoets, KtorPoets      → KotlinPoet utilities
@@ -90,7 +91,8 @@ generator/src/main/kotlin/
 │   ├── renderer/
 │   │   ├── ApiClientGenerator          → ClientSpec → FileSpec (KotlinPoet)
 │   │   ├── ApiModelGenerator           → ModelSpec → FileSpec (KotlinPoet)
-│   │   ├── ApiClientConfigurationGenerator → ClientConfigurationSpec → FileSpec
+│   │   ├── ApiClientConfigurationGenerator → ClientConfigurationSpec → FileSpec + YamlContentConverter if YAML
+│   │   ├── YamlContentConverterGenerator   → generates YamlContentConverter.kt (YAML↔JSON via SnakeYAML)
 │   │   ├── OperationBuilder, ResponseBuilder
 │   │   ├── DomainTypeMapper            → DomainType → KotlinPoet TypeName
 │   │   └── KotlinPoets, KtorPoets      → KotlinPoet utilities
