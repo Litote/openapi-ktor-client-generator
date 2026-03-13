@@ -41,6 +41,8 @@ public class GeneratorPlugin : Plugin<Project> {
                 task.buildScriptTemplate.convention(extension.initSubproject.buildScriptTemplate)
                 task.generatorConfigExtra.convention(extension.initSubproject.generatorConfigExtra)
                 task.splitByClient.set(project.findProperty("splitByClient")?.toString()?.toBoolean() ?: false)
+                task.splitGranularity.set(project.findProperty("splitGranularity") as String?)
+                task.sharedModelGranularity.set(project.findProperty("sharedModelGranularity") as String?)
             }
         }
 
@@ -63,6 +65,10 @@ public class GeneratorPlugin : Plugin<Project> {
                         task.splitByClient.set(generatorExtension.splitByClient)
                         task.targetClientName.set(generatorExtension.targetClientName)
                         task.sharedBasePackage.set(generatorExtension.sharedBasePackage)
+                        task.splitGranularity.set(generatorExtension.splitGranularity)
+                        task.sharedModelGranularity.set(generatorExtension.sharedModelGranularity)
+                        task.targetSharedGroup.set(generatorExtension.targetSharedGroup)
+                        task.additionalSharedGroupPackages.set(generatorExtension.additionalSharedGroupPackages)
                         val generatorSkip: Boolean? = generatorExtension.skip.getOrNull()
                         if (skip == true && generatorSkip != false) {
                             task.skip.set(true)

@@ -217,7 +217,7 @@ public class ApiClientConfigurationGenerator internal constructor(
 
         clientConfiguration.componentParameters.forEach { spec ->
             if (spec.defaultValue != null) {
-                val typeName = spec.type.toTypeName(configuration.resolvedModelPackage)
+                val typeName = spec.type.toTypeName(configuration.resolvedModelPackage, configuration.modelPackageOverrides)
                 // Only add const if the type supports it (primitives)
                 if (isConstSupported(typeName)) {
                     companionBuilder.addProperty(

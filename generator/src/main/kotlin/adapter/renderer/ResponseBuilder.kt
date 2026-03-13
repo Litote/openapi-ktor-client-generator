@@ -44,8 +44,10 @@ internal class ResponseBuilder {
         responseBaseName: String,
         responseSealedClass: ClassName,
         modelPackage: String,
+        modelPackageOverrides: Map<String, String> = emptyMap(),
     ): List<RenderedResponseEntry> {
-        val entries = buildResponseEntries(responses, clientBuilder, responseBaseName, responseSealedClass, modelPackage)
+        val entries =
+            buildResponseEntries(responses, clientBuilder, responseBaseName, responseSealedClass, modelPackage, modelPackageOverrides)
         addUnknownFailureType(clientBuilder, responseBaseName, responseSealedClass)
         return entries
     }
@@ -63,10 +65,11 @@ internal class ResponseBuilder {
         responseBaseName: String,
         responseSealedClass: ClassName,
         modelPackage: String,
+        modelPackageOverrides: Map<String, String> = emptyMap(),
     ): List<RenderedResponseEntry> {
         val grouped: List<Triple<TypeName?, Boolean, List<Int>>> =
             responses.map { entry ->
-                val typeName = entry.bodyType?.toTypeName(modelPackage)
+                val typeName = entry.bodyType?.toTypeName(modelPackage, modelPackageOverrides)
                 Triple(typeName, entry.isSuccess, entry.statusCodes)
             }
 

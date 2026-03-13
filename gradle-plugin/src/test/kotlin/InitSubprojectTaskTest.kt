@@ -26,6 +26,8 @@ internal class InitSubprojectTaskTest {
         basePackage: String? = null,
         buildScriptTemplate: String? = null,
         generatorConfigExtra: String? = null,
+        splitGranularity: String? = null,
+        sharedModelGranularity: String? = null,
     ): InitSubprojectTask {
         val project = ProjectBuilder.builder().withProjectDir(tempDir).build()
         val task =
@@ -43,6 +45,8 @@ internal class InitSubprojectTaskTest {
         basePackage?.let { task.basePackage.set(it) }
         buildScriptTemplate?.let { task.buildScriptTemplate.set(it) }
         generatorConfigExtra?.let { task.generatorConfigExtra.set(it) }
+        splitGranularity?.let { task.splitGranularity.set(it) }
+        sharedModelGranularity?.let { task.sharedModelGranularity.set(it) }
         return task
     }
 
@@ -417,6 +421,170 @@ internal class InitSubprojectTaskTest {
         val clientContent = tempDir.resolve("user-client/build.gradle.kts").readText()
         assertContains(clientContent, """modulesIds.add("LoggingSl4jModule")""")
     }
+
+    @Test
+    fun `GIVEN splitGranularity=BY_TAG_AND_PATH WHEN initSubproject THEN client build references splitGranularity`() {
+        val openApiFile =
+            File(
+                checkNotNull(javaClass.classLoader.getResource("multi-tag.json")) { "multi-tag.json not found" }.toURI(),
+            )
+        val task =
+            buildTask(
+                openApiFile = openApiFile.absolutePath,
+                splitByClient = true,
+                splitGranularity = "BY_TAG_AND_PATH",
+            )
+
+        task.initSubproject()
+
+        val sharedContent = tempDir.resolve("shared/build.gradle.kts").readText()
+        assertContains(sharedContent, """splitGranularity.set("BY_TAG_AND_PATH")""")
+
+        // BY_TAG_AND_PATH: User tag + /users path → UserUsersClient → user-users-client dir
+        val userClientDir = tempDir.resolve("user-users-client")
+        assertTrue(userClientDir.exists(), "Expected user-users-client dir, found: ${tempDir.listFiles()?.map { it.name }}")
+        val clientContent = userClientDir.resolve("build.gradle.kts").readText()
+        assertContains(clientContent, """splitGranularity.set("BY_TAG_AND_PATH")""")
+    }
+
+    @Test
+    fun `GIVEN splitGranularity=BY_TAG_AND_OPERATION WHEN initSubproject THEN client build references splitGranularity`() {
+        val openApiFile =
+            File(
+                checkNotNull(javaClass.classLoader.getResource("multi-tag.json")) { "multi-tag.json not found" }.toURI(),
+            )
+        val task =
+            buildTask(
+                openApiFile = openApiFile.absolutePath,
+                splitByClient = true,
+                splitGranularity = "BY_TAG_AND_OPERATION",
+            )
+
+        task.initSubproject()
+
+        val sharedContent = tempDir.resolve("shared/build.gradle.kts").readText()
+        assertContains(sharedContent, """splitGranularity.set("BY_TAG_AND_OPERATION")""")
+    }
+
+    @Test
+    fun `GIVEN BY_TAG splitGranularity (default) WHEN initSubproject THEN build files do NOT contain splitGranularity`() {
+        val openApiFile =
+            File(
+                checkNotNull(javaClass.classLoader.getResource("multi-tag.json")) { "multi-tag.json not found" }.toURI(),
+            )
+        val task =
+            buildTask(
+                openApiFile = openApiFile.absolutePath,
+                splitByClient = true,
+                splitGranularity = "BY_TAG",
+            )
+
+        task.initSubproject()
+
+        val sharedContent = tempDir.resolve("shared/build.gradle.kts").readText()
+        assertFalse(sharedContent.contains("splitGranularity"), "BY_TAG is default, should not appear in build file")
+    }
+
+    @Test
+    fun `GIVEN sharedModelGranularity=SHARED_PER_GROUP WHEN initSubproject THEN creates per-group shared subprojects`() {
+        val openApiFile =
+            File(
+                checkNotNull(
+                    javaClass.classLoader.getResource("shared-model-granularity.json"),
+                ) { "shared-model-granularity.json not found" }.toURI(),
+            )
+        val task =
+            buildTask(
+                openApiFile = openApiFile.absolutePath,
+                splitByClient = true,
+                sharedModelGranularity = "SHARED_PER_GROUP",
+            )
+
+        task.initSubproject()
+
+        assertTrue(tempDir.resolve("shared/build.gradle.kts").exists(), "Global shared should exist")
+        // Address shared by User+Order → shared-order-user
+        assertTrue(tempDir.resolve("shared-order-user/build.gradle.kts").exists(), "shared-order-user should exist")
+        // Category shared by Order+Product → shared-order-product
+        assertTrue(tempDir.resolve("shared-order-product/build.gradle.kts").exists(), "shared-order-product should exist")
+    }
+
+    @Test
+    fun `GIVEN sharedModelGranularity=SHARED_PER_GROUP WHEN initSubproject THEN per-group build has targetSharedGroup`() {
+        val openApiFile =
+            File(
+                checkNotNull(
+                    javaClass.classLoader.getResource("shared-model-granularity.json"),
+                ) { "shared-model-granularity.json not found" }.toURI(),
+            )
+        val task =
+            buildTask(
+                openApiFile = openApiFile.absolutePath,
+                splitByClient = true,
+                sharedModelGranularity = "SHARED_PER_GROUP",
+            )
+
+        task.initSubproject()
+
+        val sharedOrderUserContent = tempDir.resolve("shared-order-user/build.gradle.kts").readText()
+        assertContains(sharedOrderUserContent, "targetSharedGroup")
+        assertContains(sharedOrderUserContent, "OrderClient")
+        assertContains(sharedOrderUserContent, "UserClient")
+        assertContains(sharedOrderUserContent, "sharedModelGranularity.set(\"SHARED_PER_GROUP\")")
+    }
+
+    @Test
+    fun `GIVEN sharedModelGranularity=SHARED_PER_GROUP WHEN initSubproject THEN client build declares per-group shared dependencies`() {
+        val openApiFile =
+            File(
+                checkNotNull(
+                    javaClass.classLoader.getResource("shared-model-granularity.json"),
+                ) { "shared-model-granularity.json not found" }.toURI(),
+            )
+        val task =
+            buildTask(
+                openApiFile = openApiFile.absolutePath,
+                splitByClient = true,
+                sharedModelGranularity = "SHARED_PER_GROUP",
+            )
+
+        task.initSubproject()
+
+        // UserClient uses Address (shared-order-user) but not Category (shared-order-product)
+        val userClientContent = tempDir.resolve("user-client/build.gradle.kts").readText()
+        assertContains(userClientContent, """api(project(":shared"))""")
+        assertContains(userClientContent, """api(project(":shared-order-user"))""")
+        assertFalse(
+            userClientContent.contains("""api(project(":shared-order-product"))"""),
+            "UserClient should not depend on shared-order-product",
+        )
+
+        // OrderClient uses both Address and Category
+        val orderClientContent = tempDir.resolve("order-client/build.gradle.kts").readText()
+        assertContains(orderClientContent, """api(project(":shared-order-user"))""")
+        assertContains(orderClientContent, """api(project(":shared-order-product"))""")
+    }
+
+    @Test
+    fun `GIVEN sharedModelGranularity=SHARED_ALL (default) WHEN initSubproject THEN no per-group shared subprojects created`() {
+        val openApiFile =
+            File(
+                checkNotNull(
+                    javaClass.classLoader.getResource("shared-model-granularity.json"),
+                ) { "shared-model-granularity.json not found" }.toURI(),
+            )
+        val task =
+            buildTask(
+                openApiFile = openApiFile.absolutePath,
+                splitByClient = true,
+                sharedModelGranularity = "SHARED_ALL",
+            )
+
+        task.initSubproject()
+
+        assertTrue(tempDir.resolve("shared/build.gradle.kts").exists(), "Global shared should exist")
+        assertFalse(tempDir.resolve("shared-order-user/build.gradle.kts").exists(), "No per-group shared should be created")
+    }
 }
 
 internal class GeneratorPluginTest {
@@ -459,5 +627,177 @@ internal class GeneratorPluginTest {
             subproject.tasks.names.contains("initApiClientSubproject"),
             "initApiClientSubproject must NOT be registered on a subproject — it would overwrite generated files without templates",
         )
+    }
+}
+
+/**
+ * Unit tests for [InitSubprojectTask] internal naming helpers.
+ *
+ * Validates the two fixes:
+ * 1. `toKebabCase()` handles digit→uppercase transitions (e.g. `V1Media` → `v1-media`)
+ * 2. Client package names use camelCase (`apiV1Media`) instead of all-lowercase (`apiv1media`)
+ */
+internal class NamingTest {
+    // ─────────────────────────────────────────────────────────────
+    // toKebabCase — digit→uppercase transition
+    // ─────────────────────────────────────────────────────────────
+
+    @Test
+    fun `GIVEN single-word client WHEN toKebabCase THEN lowercased`() {
+        with(InitSubprojectTask) { assertEquals("user-client", "UserClient".toKebabCase()) }
+    }
+
+    @Test
+    fun `GIVEN multi-word client WHEN toKebabCase THEN kebab-cased`() {
+        with(InitSubprojectTask) { assertEquals("media-client", "MediaClient".toKebabCase()) }
+    }
+
+    @Test
+    fun `GIVEN client with digit-uppercase transition WHEN toKebabCase THEN digit and uppercase are separated`() {
+        // Bug: previously V1Media → v1media (no separator between 1 and M)
+        with(InitSubprojectTask) { assertEquals("api-v1-media-client", "ApiV1MediaClient".toKebabCase()) }
+    }
+
+    @Test
+    fun `GIVEN client with multiple digit segments WHEN toKebabCase THEN all transitions are separated`() {
+        with(InitSubprojectTask) { assertEquals("api-v1-users-client", "ApiV1UsersClient".toKebabCase()) }
+    }
+
+    @Test
+    fun `GIVEN client with BY_TAG_AND_PATH name WHEN toKebabCase THEN path segment is properly separated`() {
+        with(InitSubprojectTask) { assertEquals("media-api-v1-media-client", "MediaApiV1MediaClient".toKebabCase()) }
+    }
+
+    // ─────────────────────────────────────────────────────────────
+    // Client package — camelCase (Kotlin convention: org.example.myProject)
+    // ─────────────────────────────────────────────────────────────
+
+    @Test
+    fun `GIVEN single-word client WHEN package derived THEN first char lowercased`() {
+        val clientName = "UserClient"
+        val pkg = clientName.removeSuffix("Client").replaceFirstChar { it.lowercase() }
+        assertEquals("user", pkg)
+    }
+
+    @Test
+    fun `GIVEN multi-segment client with digits WHEN package derived THEN camelCase preserved`() {
+        // Bug: previously ApiV1Media → apiv1media (all lowercase)
+        val clientName = "ApiV1MediaClient"
+        val pkg = clientName.removeSuffix("Client").replaceFirstChar { it.lowercase() }
+        assertEquals("apiV1Media", pkg)
+    }
+
+    @Test
+    fun `GIVEN BY_TAG_AND_PATH client name WHEN package derived THEN camelCase preserved`() {
+        val clientName = "MediaApiV1MediaClient"
+        val pkg = clientName.removeSuffix("Client").replaceFirstChar { it.lowercase() }
+        assertEquals("mediaApiV1Media", pkg)
+    }
+
+    // ─────────────────────────────────────────────────────────────
+    // Integration: initSubproject with /api/v1/... paths
+    // ─────────────────────────────────────────────────────────────
+
+    @TempDir
+    lateinit var tempDir: File
+
+    private fun buildTask(
+        openApiFile: String,
+        splitByClient: Boolean = true,
+        splitGranularity: String? = null,
+    ): InitSubprojectTask {
+        val project = ProjectBuilder.builder().withProjectDir(tempDir).build()
+        val task =
+            project.tasks
+                .register("initApiClientSubproject", InitSubprojectTask::class.java)
+                .get()
+        task.openApiFilePath.set(openApiFile)
+        task.rootDirectory.set(tempDir)
+        task.kotlinVersion.set(DEFAULT_KOTLIN_VERSION)
+        task.ktorVersion.set(DEFAULT_KTOR_VERSION)
+        task.coroutinesVersion.set(DEFAULT_COROUTINES_VERSION)
+        task.serializationVersion.set(DEFAULT_SERIALIZATION_VERSION)
+        task.splitByClient.set(splitByClient)
+        splitGranularity?.let { task.splitGranularity.set(it) }
+        return task
+    }
+
+    @Test
+    fun `GIVEN spec with v1 paths and BY_TAG_AND_PATH WHEN initSubproject THEN directory uses kebab with digit separator`() {
+        val openApiFile =
+            File(
+                checkNotNull(
+                    javaClass.classLoader.getResource("v1-path.json"),
+                ) { "v1-path.json not found" }.toURI(),
+            )
+        val task = buildTask(openApiFile = openApiFile.absolutePath, splitGranularity = "BY_TAG_AND_PATH")
+
+        task.initSubproject()
+
+        // Media tag + /api/v1/media path → MediaApiV1MediaClient → media-api-v1-media-client
+        val mediaDir = tempDir.resolve("media-api-v1-media-client")
+        assertTrue(
+            mediaDir.exists(),
+            "Expected media-api-v1-media-client dir. Found: ${tempDir.listFiles()?.map { it.name }}",
+        )
+        // User tag + /api/v1/users path → UserApiV1UsersClient → user-api-v1-users-client
+        val userDir = tempDir.resolve("user-api-v1-users-client")
+        assertTrue(
+            userDir.exists(),
+            "Expected user-api-v1-users-client dir. Found: ${tempDir.listFiles()?.map { it.name }}",
+        )
+    }
+
+    @Test
+    fun `GIVEN spec with v1 paths and BY_TAG_AND_PATH WHEN initSubproject THEN client package uses camelCase`() {
+        val openApiFile =
+            File(
+                checkNotNull(
+                    javaClass.classLoader.getResource("v1-path.json"),
+                ) { "v1-path.json not found" }.toURI(),
+            )
+        val task = buildTask(openApiFile = openApiFile.absolutePath, splitGranularity = "BY_TAG_AND_PATH")
+
+        task.initSubproject()
+
+        val mediaClientContent = tempDir.resolve("media-api-v1-media-client/build.gradle.kts").readText()
+        // Package should be camelCase: basePackage.mediaApiV1Media (NOT mediaapiV1Media or mediaapiV1media)
+        assertContains(mediaClientContent, ".mediaApiV1Media\"", message = "Package should use camelCase: got\n$mediaClientContent")
+    }
+
+    @Test
+    fun `GIVEN spec with v1 paths and BY_TAG WHEN initSubproject THEN single-word client dirs are correct`() {
+        val openApiFile =
+            File(
+                checkNotNull(
+                    javaClass.classLoader.getResource("v1-path.json"),
+                ) { "v1-path.json not found" }.toURI(),
+            )
+        val task = buildTask(openApiFile = openApiFile.absolutePath)
+
+        task.initSubproject()
+
+        // BY_TAG: Media → media-client, User → user-client
+        assertTrue(tempDir.resolve("media-client/build.gradle.kts").exists(), "Expected media-client dir")
+        assertTrue(tempDir.resolve("user-client/build.gradle.kts").exists(), "Expected user-client dir")
+    }
+
+    @Test
+    fun `GIVEN spec with v1 paths and BY_TAG WHEN initSubproject THEN client package uses camelCase`() {
+        val openApiFile =
+            File(
+                checkNotNull(
+                    javaClass.classLoader.getResource("v1-path.json"),
+                ) { "v1-path.json not found" }.toURI(),
+            )
+        val task = buildTask(openApiFile = openApiFile.absolutePath)
+
+        task.initSubproject()
+
+        val mediaClientContent = tempDir.resolve("media-client/build.gradle.kts").readText()
+        // MediaClient → media (single word, lowercase = decapitalized = same)
+        assertContains(mediaClientContent, ".media\"", message = "Package should end with .media")
+        // Should NOT be all-uppercase or mixed wrong
+        assertFalse(mediaClientContent.contains(".Media\""), "Package segment must start with lowercase")
     }
 }

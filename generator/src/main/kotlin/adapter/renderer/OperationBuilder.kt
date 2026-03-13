@@ -44,6 +44,7 @@ internal class OperationBuilder(
     private val clientConfigurationClass: ClassName,
     private val modelPackage: String,
     private val clientPackage: String,
+    private val modelPackageOverrides: Map<String, String> = emptyMap(),
 ) {
     private companion object {
         val bodyMember = MemberName("io.ktor.client.call", "body")
@@ -122,6 +123,7 @@ internal class OperationBuilder(
                 responseBaseName,
                 responseSealedClass,
                 modelPackage,
+                modelPackageOverrides,
             )
 
         val methodMember = MemberName("io.ktor.client.request", operationInfo.method)
@@ -134,7 +136,7 @@ internal class OperationBuilder(
         operationInfo.summary?.let { funBuilder.addKdoc("%L\n", it) }
 
         requestBody?.let {
-            val requestTypeName = it.type.toTypeName(modelPackage)
+            val requestTypeName = it.type.toTypeName(modelPackage, modelPackageOverrides)
             funBuilder.addParameter(it.parameterName, requestTypeName)
         }
         addParameters(funBuilder, pathParameters)
@@ -186,7 +188,7 @@ internal class OperationBuilder(
                         .constructorBuilder()
                         .apply {
                             fields.forEach { field ->
-                                val fieldTypeName = field.type.toTypeName(modelPackage)
+                                val fieldTypeName = field.type.toTypeName(modelPackage, modelPackageOverrides)
                                 addParameter(
                                     ParameterSpec
                                         .builder(field.parameterName, fieldTypeName)
@@ -198,7 +200,7 @@ internal class OperationBuilder(
                         }.build(),
                 ).apply {
                     fields.forEach { field ->
-                        val fieldTypeName = field.type.toTypeName(modelPackage)
+                        val fieldTypeName = field.type.toTypeName(modelPackage, modelPackageOverrides)
                         addProperty(
                             PropertySpec
                                 .builder(field.parameterName, fieldTypeName)
@@ -260,7 +262,7 @@ internal class OperationBuilder(
         operationInfo.summary?.let { funBuilder.addKdoc("%L\n", it) }
 
         requestBody?.let {
-            val requestTypeName = it.type.toTypeName(modelPackage)
+            val requestTypeName = it.type.toTypeName(modelPackage, modelPackageOverrides)
             funBuilder.addParameter(it.parameterName, requestTypeName)
         }
         addParameters(funBuilder, pathParameters)
@@ -371,7 +373,7 @@ internal class OperationBuilder(
         parameters: List<OperationParameter>,
     ) {
         parameters.forEach { param ->
-            val paramTypeName = param.type.toTypeName(modelPackage)
+            val paramTypeName = param.type.toTypeName(modelPackage, modelPackageOverrides)
             val builder = ParameterSpec.builder(param.camelCaseName, paramTypeName)
             when {
                 param.constDefaultName != null -> {
@@ -565,7 +567,7 @@ internal class OperationBuilder(
                 valueReference,
             )
         } else {
-            val typeName = field.type.toTypeName(modelPackage)
+            val typeName = field.type.toTypeName(modelPackage, modelPackageOverrides)
             if (typeName.isString()) {
                 builder.addStatement("append(%S, %L)", field.originalName, valueReference)
             } else {

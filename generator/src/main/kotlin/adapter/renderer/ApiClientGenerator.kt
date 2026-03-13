@@ -64,7 +64,12 @@ public class ApiClientGenerator internal constructor(
                 operations = spec.operations,
             )
 
-        val modelGenerator = ApiModelGenerator(configuration.resolvedModelPackage, configuration.outputDirectory)
+        val modelGenerator =
+            ApiModelGenerator(
+                configuration.resolvedModelPackage,
+                configuration.outputDirectory,
+                modelPackageOverrides = configuration.modelPackageOverrides,
+            )
         val operationBuilder =
             OperationBuilder(
                 modelGenerator = modelGenerator,
@@ -72,6 +77,7 @@ public class ApiClientGenerator internal constructor(
                 clientConfigurationClass = clientConfigurationClass,
                 modelPackage = configuration.resolvedModelPackage,
                 clientPackage = configuration.clientPackage,
+                modelPackageOverrides = configuration.modelPackageOverrides,
             )
 
         // Add all additional inline models first (across all operations), then build operations.

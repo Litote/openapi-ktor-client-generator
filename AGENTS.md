@@ -1,7 +1,7 @@
 # AGENTS.md — OpenAPI Ktor Client Generator
 
 > **Purpose**: Instructions for AI agents working on this codebase.
-> For installation, configuration, and usage, see [`README.md`](README.md).
+> For installation, configuration, and usage, see [`README.md`](README.md) and [`PROJECT_GENERATION.md`](PROJECT_GENERATION.md).
 > For contributing guildelines and project architecture, see (MANDATORY!) [`CONTRIBUTING.md`](CONTRIBUTING.md).
 > For a project analysis, see (MANDATORY!) [`AI_CONTEXT.md`](AI_CONTEXT.md).
 ---

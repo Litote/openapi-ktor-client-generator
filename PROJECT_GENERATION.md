@@ -8,15 +8,19 @@ containing a pre-configured `build.gradle.kts` and your OpenAPI spec file.
   -PopenApiFile=<path/to/spec.yaml> \
   [-PsubprojectName=<directory-name>] \
   [-PbasePackage=<base.package>] \
-  [-PsplitByClient=true]
+  [-PsplitByClient=true] \
+  [-PsplitGranularity=BY_TAG|BY_TAG_AND_PATH|BY_TAG_AND_OPERATION] \
+  [-PsharedModelGranularity=SHARED_ALL|SHARED_PER_GROUP]
 ```
 
-| Parameter          | Description                                                                            | Required |
-|--------------------|----------------------------------------------------------------------------------------|----------|
-| `-PopenApiFile`    | Path to the OpenAPI spec (absolute or relative to the project root)                   | **Yes**  |
-| `-PsubprojectName` | Name of the directory to create. Defaults to the spec filename without extension       | No       |
-| `-PbasePackage`    | Base package for all generated classes. Defaults to `org.example.<specname>`          | No       |
-| `-PsplitByClient`  | Generate one subproject per client + one shared subproject. Defaults to `false`       | No       |
+| Parameter                  | Description                                                                                          | Required |
+|----------------------------|------------------------------------------------------------------------------------------------------|----------|
+| `-PopenApiFile`            | Path to the OpenAPI spec (absolute or relative to the project root)                                 | **Yes**  |
+| `-PsubprojectName`         | Name of the directory to create. Defaults to the spec filename without extension                    | No       |
+| `-PbasePackage`            | Base package for all generated classes. Defaults to `org.example.<specname>`                       | No       |
+| `-PsplitByClient`          | Generate one subproject per client + one shared subproject. Defaults to `false`                    | No       |
+| `-PsplitGranularity`       | Controls how operations are grouped into clients. See [Split granularity](#split-granularity) below | No       |
+| `-PsharedModelGranularity` | Controls how shared models are grouped. See [Shared model granularity](#shared-model-granularity) below | No   |
 
 > **Note:** this task must be run from the **root project**. It is intentionally not available in subprojects.
 
@@ -97,11 +101,13 @@ products-client/
 
 Each client subproject declares `api(project(":shared"))` so that shared classes are available at compile time.
 All subprojects share the same root `basePackage`. The `shared` module uses it as-is; each client module
-appends the lowercase tag name (e.g. `com.example.petstore.users` for `UsersClient`) so that packages
-stay distinct while cross-references to `ClientConfiguration` and shared models resolve correctly.
+appends the client name (without "Client" suffix, first char lowercased, camelCase preserved — following
+the Kotlin convention `org.example.myProject`) so that packages stay distinct while cross-references to
+`ClientConfiguration` and shared models resolve correctly.
+(e.g. `UsersClient` → `com.example.petstore.users`, `ApiV1MediaClient` → `com.example.petstore.apiV1Media`)
 
-> **Note:** client directory names are derived from the tag name in **kebab-case**
-> (e.g. `UsersClient` → `users-client/`).
+> **Note:** client directory names are derived from the client name in **kebab-case**
+> (e.g. `UsersClient` → `users-client/`, `ApiV1MediaClient` → `api-v1-media-client/`)
 
 Add the generated subprojects to your `settings.gradle.kts` (the exact list is also printed by the task):
 
@@ -118,6 +124,72 @@ include("shared", "users-client", "products-client")
 | no client (orphan)   | `shared`                    |
 
 If a `sealed class` is placed in `shared`, all its subtypes are also placed in `shared` regardless of individual usage.
+
+## Split granularity
+
+By default (`-PsplitByClient=true`), operations are grouped into one client per OpenAPI **tag**.
+The `-PsplitGranularity` parameter changes this key:
+
+| Value | Client key | Example |
+|-------|-----------|---------|
+| `BY_TAG` *(default)* | tag | `UsersClient` |
+| `BY_TAG_AND_PATH` | tag + sanitized path | `UsersGetV1UsersIdClient` |
+| `BY_TAG_AND_OPERATION` | tag + path + HTTP method | `UsersGetV1UsersIdGetClient` |
+
+```bash
+# One client per tag+path combination
+./gradlew initApiClientSubproject \
+  -PopenApiFile=./specs/petstore.json \
+  -PsplitByClient=true \
+  -PsplitGranularity=BY_TAG_AND_PATH
+```
+
+Use `BY_TAG_AND_PATH` or `BY_TAG_AND_OPERATION` when a single tag groups many unrelated operations
+and you want finer-grained subprojects.
+
+## Shared model granularity
+
+By default (`-PsharedModelGranularity=SHARED_ALL`), all models used by more than one client go into a
+single `shared` subproject. Use `SHARED_PER_GROUP` to instead create one dedicated shared subproject
+per **unique set** of clients that share models.
+
+```bash
+./gradlew initApiClientSubproject \
+  -PopenApiFile=./specs/petstore.json \
+  -PsplitByClient=true \
+  -PsharedModelGranularity=SHARED_PER_GROUP
+```
+
+Assuming `Address` is used by both `OrderClient` and `UserClient`, and `Category` is used by both
+`OrderClient` and `ProductClient`, this creates:
+
+```
+src/main/openapi/
+└── petstore.json
+shared/
+└── build.gradle.kts          # ClientConfiguration + orphan models only
+shared-order-user/
+└── build.gradle.kts          # Address (used by OrderClient + UserClient)
+shared-order-product/
+└── build.gradle.kts          # Category (used by OrderClient + ProductClient)
+order-client/
+└── build.gradle.kts          # api(project(":shared")) + api(project(":shared-order-user")) + api(project(":shared-order-product"))
+user-client/
+└── build.gradle.kts          # api(project(":shared")) + api(project(":shared-order-user"))
+product-client/
+└── build.gradle.kts          # api(project(":shared")) + api(project(":shared-order-product"))
+```
+
+Per-group shared subproject naming conventions:
+- **Directory name**: sorted client names, "Client" suffix stripped, lowercase, joined with `-`, prefixed with `shared-`
+  (e.g. `OrderClient` + `UserClient` → `shared-order-user`)
+- **Package**: `basePackage` + camelCase of the directory name (Kotlin convention: `org.example.myProject`)
+  (e.g. `shared-order-user` → `com.example.petstore.sharedOrderUser.model`)
+- **Client subproject package**: `basePackage` + client name without "Client", first char lowercased (camelCase preserved)
+  (e.g. `ApiV1MediaClient` → `com.example.petstore.apiV1Media`)
+
+> **Note:** `SHARED_PER_GROUP` is most useful when your spec has 3+ clients with partially overlapping models.
+> For two clients that share all models, it behaves identically to `SHARED_ALL`.
 
 ## Customising the generated `build.gradle.kts`
 

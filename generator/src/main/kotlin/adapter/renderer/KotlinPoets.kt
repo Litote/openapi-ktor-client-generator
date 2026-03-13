@@ -72,7 +72,10 @@ internal fun DefaultValue.toCodeBlock(): CodeBlock =
         is DefaultValue.EnumDefault -> CodeBlock.of("%L.%L", typeName, enumValue)
     }
 
-internal fun DomainType.toTypeName(modelPackage: String): TypeName {
+internal fun DomainType.toTypeName(
+    modelPackage: String,
+    modelPackageOverrides: Map<String, String> = emptyMap(),
+): TypeName {
     val base: TypeName =
         when (this) {
             is DomainType.Primitive -> {
@@ -87,19 +90,19 @@ internal fun DomainType.toTypeName(modelPackage: String): TypeName {
             }
 
             is DomainType.ListType -> {
-                LIST.parameterizedBy(element.toTypeName(modelPackage))
+                LIST.parameterizedBy(element.toTypeName(modelPackage, modelPackageOverrides))
             }
 
             is DomainType.SetType -> {
-                SET.parameterizedBy(element.toTypeName(modelPackage))
+                SET.parameterizedBy(element.toTypeName(modelPackage, modelPackageOverrides))
             }
 
             is DomainType.MapType -> {
-                MAP.parameterizedBy(STRING, value.toTypeName(modelPackage))
+                MAP.parameterizedBy(STRING, value.toTypeName(modelPackage, modelPackageOverrides))
             }
 
             is DomainType.ModelReference -> {
-                ClassName(modelPackage, name)
+                ClassName(modelPackageOverrides.getOrDefault(name, modelPackage), name)
             }
 
             is DomainType.InlineType -> {

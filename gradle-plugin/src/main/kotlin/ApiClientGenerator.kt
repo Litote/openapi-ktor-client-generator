@@ -5,6 +5,7 @@ import org.gradle.api.Project
 import org.gradle.api.file.DirectoryProperty
 import org.gradle.api.file.RegularFileProperty
 import org.gradle.api.model.ObjectFactory
+import org.gradle.api.provider.MapProperty
 import org.gradle.api.provider.Property
 import org.gradle.api.provider.SetProperty
 import javax.inject.Inject
@@ -47,6 +48,36 @@ public abstract class ApiClientGenerator
 
         public val sharedBasePackage: Property<String> = objects.property(String::class.java)
 
+        /**
+         * Granularity used to group operations into client classes.
+         * Accepted values: `BY_TAG` (default), `BY_TAG_AND_PATH`, `BY_TAG_AND_OPERATION`.
+         */
+        public val splitGranularity: Property<String> = objects.property(String::class.java)
+
+        /**
+         * How shared models are distributed when [splitByClient] is true.
+         * Accepted values: `SHARED_ALL` (default), `SHARED_PER_GROUP`.
+         */
+        public val sharedModelGranularity: Property<String> = objects.property(String::class.java)
+
+        /**
+         * Exact set of client names identifying a specific shared group to generate.
+         * Only used when [sharedModelGranularity] is `SHARED_PER_GROUP` and [targetClientName] is not set.
+         * Encoded as a comma-separated sorted list, e.g. `"OrderClient,UserClient"`.
+         */
+        public val targetSharedGroup: Property<String> = objects.property(String::class.java)
+
+        /**
+         * Mapping of shared group identifier → base package of that group's subproject.
+         * The group identifier is a comma-separated sorted list of client names,
+         * e.g. `"OrderClient,UserClient" to "org.example.sharedOrderUser"`.
+         *
+         * Used when generating a client subproject that depends on per-group shared subprojects.
+         * The [GenerateTask] resolves the model-to-package mapping at build time.
+         */
+        public val additionalSharedGroupPackages: MapProperty<String, String> =
+            objects.mapProperty(String::class.java, String::class.java)
+
         internal fun initConventions(project: Project) {
             openApiFile.convention(project.layout.projectDirectory.file("src/main/openapi/$name.json"))
             basePackage.convention("org.example")
@@ -57,5 +88,9 @@ public abstract class ApiClientGenerator
             splitByClient.convention(false)
             targetClientName.convention(null as String?)
             sharedBasePackage.convention(null as String?)
+            splitGranularity.convention("BY_TAG")
+            sharedModelGranularity.convention("SHARED_ALL")
+            targetSharedGroup.convention(null as String?)
+            additionalSharedGroupPackages.convention(emptyMap())
         }
     }

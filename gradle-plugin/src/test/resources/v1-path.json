@@ -1,0 +1,63 @@
+{
+  "openapi": "3.0.3",
+  "info": {
+    "title": "V1 path test API",
+    "version": "1.0.0"
+  },
+  "paths": {
+    "/api/v1/media": {
+      "get": {
+        "tags": ["Media"],
+        "summary": "Get all media",
+        "operationId": "getMedia",
+        "responses": {
+          "200": {
+            "description": "List of media",
+            "content": {
+              "application/json": {
+                "schema": { "$ref": "#/components/schemas/MediaResponse" }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/v1/users": {
+      "get": {
+        "tags": ["User"],
+        "summary": "Get all users",
+        "operationId": "getUsers",
+        "responses": {
+          "200": {
+            "description": "List of users",
+            "content": {
+              "application/json": {
+                "schema": { "$ref": "#/components/schemas/UserResponse" }
+              }
+            }
+          }
+        }
+      }
+    }
+  },
+  "components": {
+    "schemas": {
+      "MediaResponse": {
+        "type": "object",
+        "properties": {
+          "id": { "type": "integer", "format": "int64" },
+          "url": { "type": "string" }
+        },
+        "required": ["id", "url"]
+      },
+      "UserResponse": {
+        "type": "object",
+        "properties": {
+          "id": { "type": "integer", "format": "int64" },
+          "name": { "type": "string" }
+        },
+        "required": ["id", "name"]
+      }
+    }
+  }
+}

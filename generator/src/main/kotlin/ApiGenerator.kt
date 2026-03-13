@@ -7,6 +7,7 @@ import org.litote.openapi.ktor.client.generator.adapter.renderer.ApiClientGenera
 import org.litote.openapi.ktor.client.generator.adapter.renderer.ApiModelGenerator
 import org.litote.openapi.ktor.client.generator.application.GenerateCodeService
 import org.litote.openapi.ktor.client.generator.application.GenerationSpecPartitioner
+import org.litote.openapi.ktor.client.generator.domain.GenerationSpec
 import org.litote.openapi.ktor.client.generator.port.ClientRenderer
 import org.litote.openapi.ktor.client.generator.port.ConfigurationRenderer
 import org.litote.openapi.ktor.client.generator.port.ModelRenderer
@@ -78,15 +79,81 @@ public sealed class GenerationResult {
 }
 
 /**
+ * A group of models shared by exactly the clients in [clientGroup].
+ * Used by [SharedModelGranularity.SHARED_PER_GROUP] to identify per-group subprojects.
+ *
+ * @param clientGroup The exact set of client names that use these models.
+ * @param modelNames The names of all model classes in this group.
+ */
+public data class SharedClientGroup(
+    val clientGroup: Set<String>,
+    val modelNames: Set<String>,
+) {
+    /** Directory name for the dedicated shared subproject: e.g. `{OrderClient, UserClient}` → `"shared-order-user"`. */
+    val directoryName: String
+        get() = "shared-${clientGroup.sorted().joinToString("-") { it.removeSuffix("Client").lowercase() }}"
+
+    /** Package suffix derived from the directory name: e.g. `"shared-order-user"` → `"sharedOrderUser"`. */
+    val packageSuffix: String
+        get() =
+            directoryName
+                .split("-")
+                .mapIndexed { i, part -> if (i == 0) part else part.replaceFirstChar { it.uppercase() } }
+                .joinToString("")
+}
+
+/**
  * Parses an OpenAPI specification and returns the names of all generated clients.
  *
  * @param openApiFilePath Path to the OpenAPI specification file
- * @return List of client names derived from the spec tags
+ * @param splitGranularity Granularity used to group operations into clients
+ * @return List of client names derived from the spec
  */
-public fun parseClientNames(openApiFilePath: String): List<String> {
-    val configuration = ApiGeneratorConfiguration(openApiFile = openApiFilePath)
+public fun parseClientNames(
+    openApiFilePath: String,
+    splitGranularity: SplitGranularity = SplitGranularity.BY_TAG,
+): List<String> {
+    val configuration =
+        ApiGeneratorConfiguration(
+            openApiFile = openApiFilePath,
+            splitGranularity = splitGranularity,
+        )
     val spec = OpenApiSpecificationParser().parse(configuration, configuration.operationFilter)
     return spec.clients.map { it.name }
+}
+
+/**
+ * Parses an OpenAPI specification and returns all non-trivial shared model groups.
+ * A group is non-trivial when it contains models shared by exactly 2 or more clients.
+ *
+ * Used by [SharedModelGranularity.SHARED_PER_GROUP] to generate dedicated subprojects.
+ *
+ * @param openApiFilePath Path to the OpenAPI specification file
+ * @param splitGranularity Granularity used to group operations into clients
+ * @return List of shared client groups (only groups with 2+ clients)
+ */
+public fun parseSharedClientGroups(
+    openApiFilePath: String,
+    splitGranularity: SplitGranularity = SplitGranularity.BY_TAG,
+): List<SharedClientGroup> {
+    val configuration =
+        ApiGeneratorConfiguration(
+            openApiFile = openApiFilePath,
+            splitGranularity = splitGranularity,
+        )
+    val spec = OpenApiSpecificationParser().parse(configuration, configuration.operationFilter)
+    val partitioned = GenerationSpecPartitioner().partition(spec)
+    return partitioned.sharedGroups
+        .filter { it.clientGroup.size >= 2 }
+        .map { group ->
+            SharedClientGroup(
+                clientGroup = group.clientGroup,
+                modelNames =
+                    group.spec.models
+                        .map { it.name }
+                        .toSet(),
+            )
+        }
 }
 
 /**
@@ -113,8 +180,11 @@ public fun generate(configuration: ApiGeneratorConfiguration): GenerationResult 
             }
 
         val modelGen =
-            ApiModelGenerator(configuration.resolvedModelPackage, configuration.outputDirectory)
-                .apply { configuration.modules.forEach { it.process(this) } }
+            ApiModelGenerator(
+                configuration.resolvedModelPackage,
+                configuration.outputDirectory,
+                modelPackageOverrides = configuration.modelPackageOverrides,
+            ).apply { configuration.modules.forEach { it.process(this) } }
         val modelRenderer =
             ModelRenderer { modelSpec ->
                 val typeSpec = modelGen.buildModel(modelSpec)
@@ -130,24 +200,49 @@ public fun generate(configuration: ApiGeneratorConfiguration): GenerationResult 
             } else {
                 val partitioned = GenerationSpecPartitioner().partition(spec)
                 val targetName = configuration.targetClientName
-                if (targetName == null) {
-                    val configRenderer =
-                        ApiClientConfigurationGenerator(spec.clientConfiguration, configuration)
-                            .apply { configuration.modules.forEach { it.process(this) } }
-                    val noopClientRenderer = ClientRenderer { }
-                    Triple(partitioned.shared, configRenderer as ConfigurationRenderer, noopClientRenderer)
-                } else {
-                    val perClientSpec =
-                        partitioned.perClient.find { it.clientName == targetName }
-                            ?: return GenerationResult.Failure(
-                                IllegalArgumentException("Client '$targetName' not found"),
-                                "Client '$targetName' not found in spec ${configuration.openApiFile}",
-                            )
-                    val noopConfigRenderer =
-                        object : ConfigurationRenderer {
-                            override fun render() = Unit
-                        }
-                    Triple(perClientSpec.spec, noopConfigRenderer, clientRenderer)
+                val targetSharedGroup = configuration.targetSharedGroup
+
+                when {
+                    targetName != null -> {
+                        // Per-client mode: generate one client + its private models
+                        val perClientSpec =
+                            partitioned.perClient.find { it.clientName == targetName }
+                                ?: return GenerationResult.Failure(
+                                    IllegalArgumentException("Client '$targetName' not found"),
+                                    "Client '$targetName' not found in spec ${configuration.openApiFile}",
+                                )
+                        val noopConfigRenderer =
+                            object : ConfigurationRenderer {
+                                override fun render() = Unit
+                            }
+                        Triple(perClientSpec.spec, noopConfigRenderer, clientRenderer)
+                    }
+
+                    targetSharedGroup != null -> {
+                        // Specific shared group mode (SHARED_PER_GROUP): generate models for that group only
+                        val groupSpec =
+                            partitioned.sharedGroups.find { it.clientGroup == targetSharedGroup }
+                                ?: return GenerationResult.Failure(
+                                    IllegalArgumentException("Shared group '$targetSharedGroup' not found"),
+                                    "Shared group '$targetSharedGroup' not found in spec ${configuration.openApiFile}",
+                                )
+                        val noopConfigRenderer =
+                            object : ConfigurationRenderer {
+                                override fun render() = Unit
+                            }
+                        val noopClientRenderer = ClientRenderer { }
+                        Triple(groupSpec.spec, noopConfigRenderer, noopClientRenderer)
+                    }
+
+                    else -> {
+                        // Shared mode: generate ClientConfiguration + shared models
+                        val sharedSpec = resolveSharedSpec(spec, partitioned, configuration)
+                        val configRenderer =
+                            ApiClientConfigurationGenerator(spec.clientConfiguration, configuration)
+                                .apply { configuration.modules.forEach { it.process(this) } }
+                        val noopClientRenderer = ClientRenderer { }
+                        Triple(sharedSpec, configRenderer as ConfigurationRenderer, noopClientRenderer)
+                    }
                 }
             }
 
@@ -159,6 +254,37 @@ public fun generate(configuration: ApiGeneratorConfiguration): GenerationResult 
     } catch (e: Throwable) {
         logger.error(e) { "Error while generating API for $configuration" }
         GenerationResult.Failure(e, "Failed to generate API for ${configuration.openApiFile}: ${e.message}")
+    }
+
+/**
+ * Resolves the shared [GenerationSpec] based on [ApiGeneratorConfiguration.sharedModelGranularity].
+ *
+ * - [SharedModelGranularity.SHARED_ALL]: merges all shared groups into one spec (backward-compatible).
+ * - [SharedModelGranularity.SHARED_PER_GROUP]: only includes orphan models (used by 0 clients).
+ */
+private fun resolveSharedSpec(
+    fullSpec: GenerationSpec,
+    partitioned: org.litote.openapi.ktor.client.generator.domain.PartitionedGenerationSpec,
+    configuration: ApiGeneratorConfiguration,
+): GenerationSpec =
+    when (configuration.sharedModelGranularity) {
+        SharedModelGranularity.SHARED_ALL -> {
+            partitioned.shared
+        }
+
+        SharedModelGranularity.SHARED_PER_GROUP -> {
+            val orphanModels =
+                partitioned.sharedGroups
+                    .firstOrNull { it.clientGroup.isEmpty() }
+                    ?.spec
+                    ?.models
+                    ?: emptyList()
+            GenerationSpec(
+                clientConfiguration = fullSpec.clientConfiguration,
+                clients = emptyList(),
+                models = orphanModels,
+            )
+        }
     }
 
 private val logger = KotlinLogging.logger {}

@@ -44,9 +44,15 @@ generator/src/main/kotlin/
 │
 │  ← Composition root (public API, wires adapters together)
 ├── ApiGenerator.kt              ← generate(configuration): parses, configures renderers, generates
-│                                   parseClientNames(path): returns client names from a spec
+│                                   parseClientNames(path, splitGranularity): returns client names
+│                                   parseSharedClientGroups(path, splitGranularity): per-group shared info
 ├── ApiGeneratorConfiguration.kt ← public config: operationFilter uses OperationMeta (domain type)
 │                                   splitByClient, targetClientName for split-by-client mode
+│                                   splitGranularity (BY_TAG/BY_TAG_AND_PATH/BY_TAG_AND_OPERATION)
+│                                   sharedModelGranularity (SHARED_ALL/SHARED_PER_GROUP)
+│                                   targetSharedGroup, modelPackageOverrides
+├── SplitGranularity.kt          ← enum: BY_TAG | BY_TAG_AND_PATH | BY_TAG_AND_OPERATION
+├── SharedModelGranularity.kt    ← enum: SHARED_ALL | SHARED_PER_GROUP
 ├── ApiGeneratorModule.kt        ← SPI: hook into concrete renderers before generation
 │
 ├── domain/          ← pure business model, zero external dependencies

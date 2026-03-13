@@ -19,6 +19,30 @@ public data class ApiGeneratorConfiguration(
      * the shared module's package (e.g. `com.example.api`).
      */
     val sharedBasePackage: String? = null,
+    /**
+     * Controls how operations are grouped into client classes.
+     * Defaults to [SplitGranularity.BY_TAG] (one client per OpenAPI tag).
+     */
+    val splitGranularity: SplitGranularity = SplitGranularity.BY_TAG,
+    /**
+     * Controls how shared models are distributed across Gradle subprojects when [splitByClient] is true.
+     * Defaults to [SharedModelGranularity.SHARED_ALL] (all shared models in one `shared` subproject).
+     */
+    val sharedModelGranularity: SharedModelGranularity = SharedModelGranularity.SHARED_ALL,
+    /**
+     * When [sharedModelGranularity] is [SharedModelGranularity.SHARED_PER_GROUP] and [targetClientName]
+     * is null, targets a specific shared group identified by the exact set of client names that use it.
+     * When null, generates the global shared subproject (ClientConfiguration + orphan models).
+     */
+    val targetSharedGroup: Set<String>? = null,
+    /**
+     * Overrides the model package for specific model classes.
+     * Used when a client depends on per-group shared subprojects with dedicated packages.
+     * Maps model class name → fully qualified package name.
+     *
+     * Example: `mapOf("OrderModel" to "org.example.sharedOrderUser.model")`
+     */
+    val modelPackageOverrides: Map<String, String> = emptyMap(),
 ) {
     /** Package used to reference `ClientConfiguration` — the shared module's client package when set. */
     val configPackage: String = "${sharedBasePackage ?: basePackage}.client"

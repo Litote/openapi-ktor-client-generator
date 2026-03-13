@@ -14,6 +14,7 @@ import io.github.oshai.kotlinlogging.KotlinLogging
 import kotlinx.serialization.json.JsonPrimitive
 import kotlinx.serialization.json.contentOrNull
 import org.litote.openapi.ktor.client.generator.ApiGeneratorConfiguration
+import org.litote.openapi.ktor.client.generator.SplitGranularity
 import org.litote.openapi.ktor.client.generator.domain.ClientConfigurationSpec
 import org.litote.openapi.ktor.client.generator.domain.ClientSpec
 import org.litote.openapi.ktor.client.generator.domain.ComponentParameterSpec
@@ -93,15 +94,50 @@ internal class OpenApiSpecificationParser : SpecificationParser {
         apiModel: ApiModel,
         configuration: ApiGeneratorConfiguration,
         modelPackage: String,
-    ): List<ClientSpec> =
-        apiModel.pathsByTags.map { (tag, operations) ->
-            val tagName = tag.sanitizeToIdentifier().tagToCamelCase()
-            val clientBaseName = tagName.removeSuffix("Controller")
-            val clientName = "${clientBaseName}Client"
+    ): List<ClientSpec> {
+        val pathsByTags = apiModel.pathsByTags
+        return when (configuration.splitGranularity) {
+            SplitGranularity.BY_TAG -> {
+                pathsByTags.map { (tag, operations) ->
+                    ClientSpec(
+                        name = tagToClientName(tag),
+                        operations = buildOperationSpecs(operations, apiModel, configuration, modelPackage),
+                    )
+                }
+            }
 
-            val operationSpecs = buildOperationSpecs(operations, apiModel, configuration, modelPackage)
-            ClientSpec(name = clientName, operations = operationSpecs)
+            SplitGranularity.BY_TAG_AND_PATH -> {
+                pathsByTags.flatMap { (tag, operations) ->
+                    operations
+                        .groupBy { it.path }
+                        .map { (path, pathOps) ->
+                            ClientSpec(
+                                name = "${tagBaseName(tag)}${pathToCamelCase(path)}Client",
+                                operations = buildOperationSpecs(pathOps, apiModel, configuration, modelPackage),
+                            )
+                        }
+                }
+            }
+
+            SplitGranularity.BY_TAG_AND_OPERATION -> {
+                pathsByTags.flatMap { (tag, operations) ->
+                    operations.map { op ->
+                        ClientSpec(
+                            name = "${tagBaseName(tag)}${pathToCamelCase(op.path)}${op.method.capitalize()}Client",
+                            operations = buildOperationSpecs(listOf(op), apiModel, configuration, modelPackage),
+                        )
+                    }
+                }
+            }
         }
+    }
+
+    private fun tagBaseName(tag: String): String = tag.sanitizeToIdentifier().tagToCamelCase().removeSuffix("Controller")
+
+    private fun tagToClientName(tag: String): String = "${tagBaseName(tag)}Client"
+
+    /** Converts an OpenAPI path like `/v1/users/{id}` to a camelCase identifier `V1UsersId`. */
+    private fun pathToCamelCase(path: String): String = path.removePrefix("/").sanitizeToIdentifier().capitalize()
 
     private fun buildOperationSpecs(
         operations: List<ApiOperation>,
@@ -540,7 +576,7 @@ internal class OpenApiSpecificationParser : SpecificationParser {
             properties.isEmpty() && !effectiveSchema.enum.isNullOrEmpty() -> {
                 val enumValues =
                     effectiveSchema.enum.orEmpty().mapNotNull { e ->
-                        e?.contentOrNull
+                        e.contentOrNull
                     }
                 ModelSpec.EnumSpec(name = name, values = enumValues)
             }
