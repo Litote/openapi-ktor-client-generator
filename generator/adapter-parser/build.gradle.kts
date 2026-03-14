@@ -7,8 +7,8 @@ dependencies {
     implementation(project(":generator:port"))
     implementation(project(":generator:config"))
     implementation(project(":shared"))
-    api(libs.openapi.bindings)
-    api(libs.kotlin.poet)
+    implementation(libs.openapi.bindings)
+    implementation(libs.kotlin.poet)
     implementation(libs.serialization)
     implementation(libs.snakeyaml)
 }

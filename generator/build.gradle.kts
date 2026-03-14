@@ -12,13 +12,10 @@ dependencies {
     implementation(project(":generator:adapter-renderer"))
     implementation(project(":generator:adapter-writer"))
     implementation(project(":shared"))
-    implementation(libs.logback)
+    runtimeOnly(libs.logback)
 
     testImplementation(libs.coroutines)
-    testImplementation(libs.ktor.cio)
-    testImplementation(libs.ktor.contentnegotiation)
-    testImplementation(libs.ktor.json)
-    testImplementation(libs.ktor.log)
+    testImplementation(libs.bundles.ktor)
     testImplementation(libs.snakeyaml)
 }
 

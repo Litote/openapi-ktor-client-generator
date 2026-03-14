@@ -20,19 +20,15 @@ dependencies {
 
 kotlin {
     explicitApi()
-    java {
-        compilerOptions {
-            jvmTarget.set(JvmTarget.JVM_17)
-            sourceCompatibility = JavaVersion.VERSION_17
-            targetCompatibility = JavaVersion.VERSION_17
-        }
-    }
     compilerOptions {
         jvmTarget.set(JvmTarget.JVM_17)
+        freeCompilerArgs.addAll("-Xjdk-release=17", "-Xconsistent-data-class-copy-visibility")
     }
-    compilerOptions.freeCompilerArgs = listOf(
-        "-Xjdk-release=17","-Xconsistent-data-class-copy-visibility"
-    )
+}
+
+java {
+    sourceCompatibility = JavaVersion.VERSION_17
+    targetCompatibility = JavaVersion.VERSION_17
 }
 
 tasks.test {
@@ -48,5 +44,3 @@ tasks.test {
 signing {
     useGpgCmd()
 }
-
-

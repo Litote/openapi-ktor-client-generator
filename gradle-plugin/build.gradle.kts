@@ -6,25 +6,22 @@ plugins {
     id("kotlin-convention")
 }
 
+val catalog = extensions.getByType<VersionCatalogsExtension>().named("libs")
+
 val generateVersionConstants by tasks.registering {
     val version = project.version.toString()
-    val tomlFile = rootProject.file("gradle/libs.versions.toml")
+    val kotlinVersion = catalog.findVersion("kotlin").get().requiredVersion
+    val ktorVersion = catalog.findVersion("ktor").get().requiredVersion
+    val coroutinesVersion = catalog.findVersion("coroutines").get().requiredVersion
+    val serializationVersion = catalog.findVersion("kotlinx-serialization").get().requiredVersion
     val outputDir = layout.buildDirectory.dir("generated/kotlin")
     outputs.dir(outputDir)
     inputs.property("version", version)
-    inputs.file(tomlFile)
+    inputs.property("kotlinVersion", kotlinVersion)
+    inputs.property("ktorVersion", ktorVersion)
+    inputs.property("coroutinesVersion", coroutinesVersion)
+    inputs.property("serializationVersion", serializationVersion)
     doLast {
-        fun readTomlVersion(key: String): String =
-            tomlFile.readLines()
-                .first { it.trimStart().startsWith("$key =") }
-                .substringAfter("\"")
-                .substringBefore("\"")
-
-        val kotlinVersion = readTomlVersion("kotlin")
-        val ktorVersion = readTomlVersion("ktor")
-        val coroutinesVersion = readTomlVersion("coroutines")
-        val serializationVersion = readTomlVersion("kotlinx-serialization")
-
         val dir = outputDir.get().asFile
         dir.mkdirs()
         dir.resolve("PluginVersion.kt").writeText(
@@ -75,19 +72,8 @@ gradlePlugin {
     }
 }
 
-tasks.register("printPlugins") {
-    doLast {
-        project.plugins.forEach {
-            val pkg = it.javaClass.`package`
-            val version = pkg?.implementationVersion ?: "unknown"
-            println("${it.javaClass.name} -> $version")
-        }
-    }
-}
-
 mavenPublishing {
     configure(GradlePublishPlugin())
-    description = pluginDescription
     pom {
         description = pluginDescription
     }

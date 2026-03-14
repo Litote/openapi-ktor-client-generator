@@ -1,6 +1,5 @@
 plugins {
     id("kotlin-convention")
-    alias(libs.plugins.serialization)
 }
 
 dependencies {
@@ -9,9 +8,8 @@ dependencies {
     implementation(project(":generator:config"))
     implementation(project(":generator:adapter-writer"))
     implementation(project(":shared"))
-    implementation(project(":generator:adapter-parser"))
     api(libs.kotlin.poet)
-    api(libs.serialization)
+    implementation(libs.serialization)
     implementation(libs.ktor.core)
     implementation(libs.snakeyaml)
 }

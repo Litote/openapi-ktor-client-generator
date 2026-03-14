@@ -10,17 +10,13 @@ dependencies {
 }
 
 kotlin {
-    java {
-        compilerOptions {
-            jvmTarget.set(JvmTarget.JVM_17)
-            sourceCompatibility = JavaVersion.VERSION_17
-            targetCompatibility = JavaVersion.VERSION_17
-        }
-    }
     compilerOptions {
         jvmTarget.set(JvmTarget.JVM_17)
+        freeCompilerArgs.add("-Xjdk-release=17")
     }
-    compilerOptions.freeCompilerArgs = listOf(
-        "-Xjdk-release=17",
-    )
+}
+
+java {
+    sourceCompatibility = JavaVersion.VERSION_17
+    targetCompatibility = JavaVersion.VERSION_17
 }

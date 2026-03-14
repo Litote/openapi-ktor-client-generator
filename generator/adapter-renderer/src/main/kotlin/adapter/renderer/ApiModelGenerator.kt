@@ -15,10 +15,10 @@ import com.squareup.kotlinpoet.TypeSpec
 import com.squareup.kotlinpoet.TypeSpec.Companion.anonymousClassBuilder
 import kotlinx.serialization.SerialName
 import kotlinx.serialization.Serializable
-import org.litote.openapi.ktor.client.generator.adapter.parser.enumFieldName
 import org.litote.openapi.ktor.client.generator.adapter.writer.KotlinPoetFileWriter
 import org.litote.openapi.ktor.client.generator.domain.ModelProperty
 import org.litote.openapi.ktor.client.generator.domain.ModelSpec
+import org.litote.openapi.ktor.client.generator.domain.enumFieldName
 import org.litote.openapi.ktor.client.generator.port.FileSystemWriter
 import org.litote.openapi.ktor.client.generator.port.ModelGeneratorConfig
 

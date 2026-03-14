@@ -459,6 +459,7 @@ internal class InitSubprojectTaskTest {
         )
     }
 
+    @Test
     fun `GIVEN generatorConfigExtra WHEN splitByClient=true THEN shared and client builds contain extra config`() {
         val openApiFile =
             File(
