@@ -12,6 +12,7 @@ maven-publish = "0.36.0"
 mockk = "1.14.9"
 openapi-bindings = "0.2.2"
 snakeyaml = "2.3"
+sonarqube = "7.2.3.7755"
 version-catalog-update = "1.1.0"
 
 [plugins]
@@ -19,6 +20,7 @@ gradle-publish = { id = "com.gradle.plugin-publish", version.ref = "gradle-publi
 kotlin-multiplatform = { id = "org.jetbrains.kotlin.multiplatform", version.ref = "kotlin" }
 ktlint = { id = "org.jmailen.kotlinter", version.ref = "ktlint" }
 serialization = { id = "org.jetbrains.kotlin.plugin.serialization", version.ref = "kotlin" }
+sonarqube = { id = "org.sonarqube", version.ref = "sonarqube" }
 vanniktech-maven-publish = { id = "com.vanniktech.maven.publish", version.ref = "maven-publish" }
 version-catalog-update = { id = "nl.littlerobots.version-catalog-update", version.ref = "version-catalog-update" }
 

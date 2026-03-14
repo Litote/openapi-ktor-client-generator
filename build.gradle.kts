@@ -2,4 +2,134 @@ plugins {
     id("project-convention")
     alias(libs.plugins.version.catalog.update)
     alias(libs.plugins.ktlint) apply false
+    alias(libs.plugins.sonarqube)
+    id("jacoco")
+}
+
+val jacocoAggregatedReport by tasks.registering(JacocoReport::class) {
+    dependsOn(subprojects.mapNotNull { it.tasks.findByName("test") })
+
+    executionData.setFrom(
+        subprojects.flatMap { sub ->
+            sub.fileTree("${sub.layout.buildDirectory.get()}/jacoco") { include("*.exec") }
+        },
+    )
+
+    sourceDirectories.setFrom(
+        subprojects.flatMap { sub ->
+            sub.extensions.findByType(org.jetbrains.kotlin.gradle.dsl.KotlinJvmProjectExtension::class)
+                ?.sourceSets?.getByName("main")?.kotlin?.srcDirs
+                ?: emptyList<File>()
+        },
+    )
+
+    classDirectories.setFrom(
+        subprojects.flatMap { sub ->
+            sub.fileTree("${sub.layout.buildDirectory.get()}/classes/kotlin/main") {
+                exclude("**/*\$\$serializer.class")
+            }
+        },
+    )
+
+    reports {
+        xml.required.set(true)
+        html.required.set(true)
+    }
+}
+
+sonar {
+    properties {
+        property("sonar.projectKey", "Litote_openapi-ktor-client-generator")
+        property("sonar.organization", "litote")
+        property("sonar.host.url", "https://sonarcloud.io")
+        property(
+            "sonar.coverage.jacoco.xmlReportPaths",
+            layout.buildDirectory.file("reports/jacoco/jacocoAggregatedReport/jacocoAggregatedReport.xml").get().asFile.absolutePath,
+        )
+    }
+}
+
+val aggregatedReportPath = layout.buildDirectory
+    .file("reports/jacoco/jacocoAggregatedReport/jacocoAggregatedReport.xml")
+    .get().asFile.absolutePath
+
+subprojects {
+    afterEvaluate {
+        extensions.findByType(org.sonarqube.gradle.SonarExtension::class)?.properties {
+            property("sonar.coverage.jacoco.xmlReportPaths", aggregatedReportPath)
+        }
+    }
+}
+
+/**
+ * Fetches quality gate status and open issues from SonarCloud.
+ * Fails the build if the gate is not OK or any issue/hotspot remains.
+ *
+ * Prerequisites: run `./gradlew check jacocoAggregatedReport sonar` first to push the analysis.
+ * Token: set `systemProp.sonar.token=<token>` in ~/.gradle/gradle.properties
+ *
+ * Full quality loop:
+ *   ./gradlew check jacocoAggregatedReport sonar sonarCheck
+ */
+tasks.register("sonarCheck") {
+    group = "verification"
+    description = "Verifies SonarCloud quality gate: fails if gate != OK, issues > 0, or hotspots > 0."
+    doLast {
+        val token = System.getProperty("sonar.token")
+            ?: System.getenv("SONAR_TOKEN")
+            ?: error("sonar.token not set. Add systemProp.sonar.token=<token> to ~/.gradle/gradle.properties")
+
+        val projectKey = "Litote_openapi-ktor-client-generator"
+        val client = java.net.http.HttpClient.newHttpClient()
+        val slurper = groovy.json.JsonSlurper()
+
+        fun fetch(url: String): Any {
+            val req = java.net.http.HttpRequest.newBuilder()
+                .uri(java.net.URI.create(url))
+                .header("Authorization", "Bearer $token")
+                .GET()
+                .build()
+            val resp = client.send(req, java.net.http.HttpResponse.BodyHandlers.ofString())
+            check(resp.statusCode() == 200) {
+                "SonarCloud API error ${resp.statusCode()}: ${resp.body()}"
+            }
+            return slurper.parseText(resp.body())
+        }
+
+        @Suppress("UNCHECKED_CAST")
+        val qgData = fetch("https://sonarcloud.io/api/qualitygates/project_status?projectKey=$projectKey") as Map<String, Any>
+        @Suppress("UNCHECKED_CAST")
+        val gateStatus = (qgData["projectStatus"] as Map<String, Any>)["status"] as String
+
+        @Suppress("UNCHECKED_CAST")
+        val issuesData = fetch("https://sonarcloud.io/api/issues/search?projectKeys=$projectKey&resolved=false&ps=1") as Map<String, Any>
+        val issueCount = (issuesData["total"] as Number).toInt()
+
+        @Suppress("UNCHECKED_CAST")
+        val hotspotsData = fetch("https://sonarcloud.io/api/hotspots/search?projectKey=$projectKey&status=TO_REVIEW&ps=1") as Map<String, Any>
+        @Suppress("UNCHECKED_CAST")
+        val hotspotCount = ((hotspotsData["paging"] as Map<String, Any>)["total"] as Number).toInt()
+
+        logger.lifecycle("")
+        logger.lifecycle("╔════════════════════════════════════╗")
+        logger.lifecycle("║     SonarCloud Quality Gate        ║")
+        logger.lifecycle("╠════════════════════════════════════╣")
+        logger.lifecycle("║  Gate    : ${gateStatus.padEnd(24)}║")
+        logger.lifecycle("║  Issues  : ${issueCount.toString().padEnd(24)}║")
+        logger.lifecycle("║  Hotspots: ${hotspotCount.toString().padEnd(24)}║")
+        logger.lifecycle("╚════════════════════════════════════╝")
+        logger.lifecycle("")
+
+        val failures = buildList {
+            if (gateStatus != "OK") add("quality gate status is '$gateStatus' (expected OK)")
+            if (issueCount > 0) add("$issueCount unresolved issue(s)")
+            if (hotspotCount > 0) add("$hotspotCount unreviewed security hotspot(s)")
+        }
+
+        check(failures.isEmpty()) {
+            "❌ SonarCloud check FAILED:\n${failures.joinToString("\n") { "  • $it" }}"
+        }
+
+        logger.lifecycle("✅ SonarCloud quality gate passed — 0 issues, 0 hotspots.")
+    }
 }

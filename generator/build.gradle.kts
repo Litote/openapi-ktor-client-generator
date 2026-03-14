@@ -22,11 +22,16 @@ dependencies {
 kotlin {
     sourceSets["test"].kotlin.srcDirs(
         "src/test/kotlin",
-        "build/snapshot-test-output/sample-api/src/main/kotlin",
-        "build/snapshot-test-output/simple-api/src/main/kotlin",
-        "build/snapshot-test-output/mastodon-api/src/main/kotlin",
-        "build/snapshot-test-output/inheritance-api/src/main/kotlin",
-        "build/snapshot-test-output/yaml-api/src/main/kotlin",
+        // Snapshot .kt files are committed in src/test/resources/snapshots/ and used
+        // as test source roots so that tests like PayloadTest can import generated classes.
+        // SnapshotTest also regenerates them into build/snapshot-test-output/ at runtime
+        // for comparison, but compilation always resolves against the committed snapshots.
+        "src/test/resources/snapshots/sample-api/src/main/kotlin",
+        "src/test/resources/snapshots/simple-api/src/main/kotlin",
+        "src/test/resources/snapshots/mastodon-api/src/main/kotlin",
+        "src/test/resources/snapshots/inheritance-api/src/main/kotlin",
+        "src/test/resources/snapshots/yaml-api/src/main/kotlin",
+        "src/test/resources/snapshots/karto-api/src/main/kotlin",
     )
 }
 

@@ -284,7 +284,57 @@ Modules implement hooks on `ConfigurationGeneratorConfig`, `ClientGeneratorConfi
 
 ---
 
-## Key Domain Relationships
+## Quality Gate (SonarCloud)
+
+The project uses SonarCloud for static analysis with a strict **0 issues** quality gate.
+
+### Running the full quality loop
+
+```bash
+./gradlew check jacocoAggregatedReport sonar sonarCheck
+```
+
+- `check` — compiles + runs all tests + generates per-module JaCoCo `.exec` files
+- `jacocoAggregatedReport` — merges all `.exec` into `build/reports/jacoco/jacocoAggregatedReport/jacocoAggregatedReport.xml`
+- `sonar` — sends analysis + aggregated coverage to SonarCloud
+- `sonarCheck` — **calls the SonarCloud API** to verify gate status, issues count, and hotspot count; **fails the build** if any is non-zero
+
+> ⚠️ **MANDATORY before finalizing any task**: `sonarCheck` must exit with `BUILD SUCCESSFUL`.
+> If it fails, fix all reported issues before marking the task done.
+
+### `sonarCheck` task
+
+The `sonarCheck` Gradle task (registered in root `build.gradle.kts`) calls three SonarCloud API endpoints:
+
+| Endpoint | What it checks |
+|----------|----------------|
+| `/api/qualitygates/project_status` | Quality gate status must be `OK` |
+| `/api/issues/search?resolved=false` | Total open issues must be `0` |
+| `/api/hotspots/search?status=TO_REVIEW` | Unreviewed security hotspots must be `0` |
+
+It prints a summary box and fails with a clear error message listing each violation.
+
+### Token setup
+
+Add to `~/.gradle/gradle.properties` (never commit):
+```
+systemProp.sonar.token=<your-token>
+```
+
+### Project
+
+- **Project key**: `Litote_openapi-ktor-client-generator`
+- **Organization**: `litote`
+- **URL**: https://sonarcloud.io/project/overview?id=Litote_openapi-ktor-client-generator
+
+### Coverage notes
+
+- JaCoCo is applied to all modules via `kotlin-convention.gradle.kts`
+- The aggregated report covers all sub-modules (including `adapter-parser`, `adapter-renderer`, etc.) which have no direct tests but are exercised by `generator` tests
+- `sonar.coverage.jacoco.xmlReportPaths` is set per-subproject to point to the root aggregated report
+- Files at the root of `src/main/kotlin/` (e.g. `ApiGenerator.kt`) produce "File not found in project sources" warnings — this is a known Sonar/JaCoCo limitation with the Kotlin "common root omitted" convention; the code analysis is not affected
+
+---
 
 ```
 GenerationSpec

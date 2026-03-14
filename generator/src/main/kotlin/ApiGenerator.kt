@@ -138,13 +138,20 @@ public fun computeSharedGroupDependencies(
     val rawDeps = computeGroupDeps(groups)
 
     return rawDeps.entries.associate { (groupSpec, depSpecs) ->
-        val groupModelNames = groupSpec.spec.models.mapTo(mutableSetOf()) { it.name }
+        val groupModelNames =
+            groupSpec.spec.models
+                .map { it.name }
+                .toSet()
         val group = SharedClientGroup(groupSpec.clientGroup, groupModelNames)
         val deps =
-            depSpecs.mapTo(mutableSetOf()) { dep ->
-                val depModelNames = dep.spec.models.mapTo(mutableSetOf()) { it.name }
-                SharedClientGroup(dep.clientGroup, depModelNames)
-            }
+            depSpecs
+                .map { dep ->
+                    val depModelNames =
+                        dep.spec.models
+                            .map { it.name }
+                            .toSet()
+                    SharedClientGroup(dep.clientGroup, depModelNames)
+                }.toSet()
         group to deps
     }
 }
@@ -205,10 +212,7 @@ public fun generate(configuration: ApiGeneratorConfiguration): GenerationResult 
                                     IllegalArgumentException("Client '$targetName' not found"),
                                     "Client '$targetName' not found in spec ${configuration.openApiFile}",
                                 )
-                        val noopConfigRenderer =
-                            object : ConfigurationRenderer {
-                                override fun render() = Unit
-                            }
+                        val noopConfigRenderer = ConfigurationRenderer { }
                         Triple(perClientSpec.spec, noopConfigRenderer, clientRenderer)
                     }
 
@@ -220,10 +224,7 @@ public fun generate(configuration: ApiGeneratorConfiguration): GenerationResult 
                                     IllegalArgumentException("Shared group '$targetSharedGroup' not found"),
                                     "Shared group '$targetSharedGroup' not found in spec ${configuration.openApiFile}",
                                 )
-                        val noopConfigRenderer =
-                            object : ConfigurationRenderer {
-                                override fun render() = Unit
-                            }
+                        val noopConfigRenderer = ConfigurationRenderer { }
                         val noopClientRenderer = ClientRenderer { }
                         Triple(groupSpec.spec, noopConfigRenderer, noopClientRenderer)
                     }

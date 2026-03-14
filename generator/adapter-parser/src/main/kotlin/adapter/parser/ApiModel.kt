@@ -463,59 +463,64 @@ internal class ApiModel private constructor(
             }
 
             OpenAPIV3Type.OBJECT -> {
-                val additional =
-                    schemaOrReference.additionalProperties?.run {
-                        when (this) {
-                            is OpenAPIV3Boolean -> error("boolean not allowed for $schemaOrReference")
-                            is OpenAPIV3Schema -> this
-                            is OpenAPIV3Reference -> this
-                        }
-                    }
-                if (additional == null) {
-                    JsonElement::class.asClassName()
-                } else {
-                    MAP
-                        .parameterizedBy(
-                            listOf(
-                                String::class.asClassName(),
-                                getClassName(name, additional),
-                            ),
-                        )
-                }
+                resolveObjectType(name, schemaOrReference)
             }
 
             else -> {
-                val oneOf = schemaOrReference.oneOf
-                if (oneOf?.isNotEmpty() == true) {
-                    val refs = oneOf.filterIsInstance<OpenAPIV3Reference>()
-                    val hasNullSchema = oneOf.any { it.isNullSchema() }
-                    when {
-                        refs.size == 1 && hasNullSchema -> {
-                            getClassName(name, refs.first()).copy(nullable = true)
-                        }
-
-                        refs.size == 1 -> {
-                            getClassName(name, refs.first())
-                        }
-
-                        else -> {
-                            val refNames = refs.map { getRefClassName(it) }
-                            val parentName =
-                                requestBodySealedParents.entries
-                                    .firstOrNull { it.value.toSet() == refNames.toSet() }
-                                    ?.key
-                            if (parentName != null) {
-                                ClassName(configuration.resolvedModelPackage, parentName)
-                            } else {
-                                JsonElement::class.asClassName()
-                            }
-                        }
-                    }
-                } else {
-                    JsonElement::class.asClassName()
-                }
+                resolveNullableOrUnionType(name, schemaOrReference)
             }
         }
+
+    private fun resolveObjectType(
+        name: String,
+        schemaOrReference: OpenAPIV3Schema,
+    ): TypeName =
+        schemaOrReference.additionalProperties?.let { additionalProp ->
+            when (additionalProp) {
+                is OpenAPIV3Boolean -> {
+                    error("boolean not allowed for $schemaOrReference")
+                }
+
+                is OpenAPIV3Schema,
+                is OpenAPIV3Reference,
+                -> {
+                    MAP.parameterizedBy(
+                        listOf(
+                            String::class.asClassName(),
+                            getClassName(name, additionalProp),
+                        ),
+                    )
+                }
+            }
+        } ?: JsonElement::class.asClassName()
+
+    private fun resolveNullableOrUnionType(
+        name: String,
+        schemaOrReference: OpenAPIV3Schema,
+    ): TypeName {
+        val oneOf = schemaOrReference.oneOf
+        if (oneOf.isNullOrEmpty()) return JsonElement::class.asClassName()
+        val refs = oneOf.filterIsInstance<OpenAPIV3Reference>()
+        val hasNullSchema = oneOf.any { it.isNullSchema() }
+        return when {
+            refs.size == 1 && hasNullSchema -> getClassName(name, refs.first()).copy(nullable = true)
+            refs.size == 1 -> getClassName(name, refs.first())
+            else -> resolveMultiRefUnionType(refs)
+        }
+    }
+
+    private fun resolveMultiRefUnionType(refs: List<OpenAPIV3Reference>): TypeName {
+        val refNames = refs.map { getRefClassName(it) }
+        val parentName =
+            requestBodySealedParents.entries
+                .firstOrNull { it.value.toSet() == refNames.toSet() }
+                ?.key
+        return if (parentName != null) {
+            ClassName(configuration.resolvedModelPackage, parentName)
+        } else {
+            JsonElement::class.asClassName()
+        }
+    }
 
     fun getClassName(
         name: String,

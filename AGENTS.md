@@ -25,6 +25,7 @@
 | Category                   | Required Actions                                                                                          |
 |----------------------------|-----------------------------------------------------------------------------------------------------------|
 | **Validation**             | Run `./gradlew formatKotlin && ./gradlew check` after every change                                        |
+| **Quality Gate**           | Run `./gradlew check jacocoAggregatedReport sonar sonarCheck` before finalizing **every** task — **`sonarCheck` must pass (0 issues, gate OK)** |
 | **Testing**                | When you try to fix a bug, start by adding the test and THEN fix the bug. Add tests for all logic changes |
 | **Imports**                | Use single imports only                                                                                   |
 | **Language**               | Write all code, comments, and documentation in English                                                    |
@@ -109,6 +110,7 @@ A change is complete when:
 
 - [ ] `./gradlew formatKotlin` passes
 - [ ] `./gradlew check` passes (compiles without warnings, all tests pass)
+- [ ] `./gradlew check jacocoAggregatedReport sonar sonarCheck` passes — **`sonarCheck` must exit with BUILD SUCCESSFUL (0 issues, 0 hotspots, gate OK)**
 - [ ] No public API is broken
 - [ ] Only relevant files are modified
 - [ ] Type safety is preserved

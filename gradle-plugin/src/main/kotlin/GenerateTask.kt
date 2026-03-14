@@ -101,7 +101,7 @@ public abstract class GenerateTask : DefaultTask() {
         val targetSharedGroupValue = targetSharedGroup.orNull?.split(",")?.toSet()
 
         // Resolve modelPackageOverrides from additionalSharedGroupPackages if needed.
-        val additionalGroups = additionalSharedGroupPackages.get()
+        val additionalGroups: Map<String, String> = additionalSharedGroupPackages.get()
         val modelPackageOverrides: Map<String, String> =
             if (additionalGroups.isEmpty() && targetSharedGroup.orNull == null) {
                 emptyMap()

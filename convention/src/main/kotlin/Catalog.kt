@@ -1,8 +1,10 @@
 import org.gradle.api.Project
+import org.gradle.api.artifacts.MinimalExternalModuleDependency
+import org.gradle.api.provider.Provider
 import org.gradle.api.artifacts.VersionCatalogsExtension
 import org.gradle.kotlin.dsl.getByType
 
-fun Project.lib(name: String) =
+fun Project.lib(name: String) : Provider<MinimalExternalModuleDependency> =
     extensions
         .getByType(VersionCatalogsExtension::class)
         .named("libs")

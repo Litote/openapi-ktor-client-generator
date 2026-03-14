@@ -179,62 +179,70 @@ public class OpenApiSpecificationParser(
                 buildOperationSpec(apiOperation, duplicateIds, apiModel, configuration, modelPackage)
             }
 
-        // Resolve additionalModel name conflicts within a client.
-        // Use the additionalModel.name for detection (not the type name), so we find conflicts
-        // even for cases where the type is still List<String> (non-enum, non-conflict baseline).
+        val conflictingModelNames = findConflictingAdditionalModelNames(rawSpecs)
+        if (conflictingModelNames.isEmpty()) return rawSpecs
+
+        return rawSpecs.map { spec ->
+            spec.copy(parameters = resolveAdditionalModelConflicts(spec, conflictingModelNames))
+        }
+    }
+
+    private fun findConflictingAdditionalModelNames(specs: List<OperationSpec>): Set<String> {
         val allAdditionalModelEntries =
-            rawSpecs.flatMap { spec ->
+            specs.flatMap { spec ->
                 spec.parameters.mapNotNull { p ->
                     p.additionalModel?.let { it.name to spec }
                 }
             }
+        return allAdditionalModelEntries
+            .groupBy { it.first }
+            .filter { it.value.size > 1 }
+            .keys
+            .toSet()
+    }
 
-        val conflictingModelNames =
-            allAdditionalModelEntries
-                .groupBy { it.first }
-                .filter { it.value.size > 1 }
-                .keys
-                .toSet()
-
-        if (conflictingModelNames.isEmpty()) return rawSpecs
-
-        // Fix conflicts by prefixing with operation name
-        return rawSpecs.map { spec ->
-            val newParams =
-                spec.parameters.map { param ->
-                    val additionalModelLocal = param.additionalModel
-                    if (additionalModelLocal != null && conflictingModelNames.contains(additionalModelLocal.name)) {
-                        val modelName = additionalModelLocal.name
-                        val newName = "${spec.name}$modelName"
-                        val newModel = renameModelSpec(additionalModelLocal, newName)
-                        val isEnum = additionalModelLocal is ModelSpec.EnumSpec
-                        val inlineType = DomainType.InlineType(newName, isEnum = isEnum)
-                        // Update the type to reference the new inline type name
-                        val baseType = if (param.type.nullable) param.type.asNonNullable() else param.type
-                        val newBaseType: DomainType =
-                            when (baseType) {
-                                is DomainType.InlineType -> inlineType
-                                is DomainType.ListType -> baseType.copy(element = inlineType)
-                                is DomainType.SetType -> baseType.copy(element = inlineType)
-                                else -> inlineType
-                            }
-                        val finalType = if (param.type.nullable) newBaseType.asNullable() else newBaseType
-                        val newDefaultValue =
-                            if (param.isEnum && param.defaultValue != null) {
-                                when (val dv = param.defaultValue) {
-                                    is DefaultValue.EnumDefault -> dv.copy(typeName = newName)
-                                    else -> dv
-                                }
-                            } else {
-                                param.defaultValue
-                            }
-                        param.copy(type = finalType, additionalModel = newModel, defaultValue = newDefaultValue)
-                    } else {
-                        param
-                    }
-                }
-            spec.copy(parameters = newParams)
+    private fun resolveAdditionalModelConflicts(
+        spec: OperationSpec,
+        conflictingModelNames: Set<String>,
+    ): List<OperationParameter> =
+        spec.parameters.map { param ->
+            val additionalModelLocal = param.additionalModel
+            if (additionalModelLocal != null && conflictingModelNames.contains(additionalModelLocal.name)) {
+                resolveParamConflict(param, additionalModelLocal, spec.name)
+            } else {
+                param
+            }
         }
+
+    private fun resolveParamConflict(
+        param: OperationParameter,
+        additionalModel: ModelSpec,
+        specName: String,
+    ): OperationParameter {
+        val modelName = additionalModel.name
+        val newName = "$specName$modelName"
+        val newModel = renameModelSpec(additionalModel, newName)
+        val isEnum = additionalModel is ModelSpec.EnumSpec
+        val inlineType = DomainType.InlineType(newName, isEnum = isEnum)
+        val baseType = if (param.type.nullable) param.type.asNonNullable() else param.type
+        val newBaseType: DomainType =
+            when (baseType) {
+                is DomainType.InlineType -> inlineType
+                is DomainType.ListType -> baseType.copy(element = inlineType)
+                is DomainType.SetType -> baseType.copy(element = inlineType)
+                else -> inlineType
+            }
+        val finalType = if (param.type.nullable) newBaseType.asNullable() else newBaseType
+        val newDefaultValue =
+            if (param.isEnum && param.defaultValue != null) {
+                when (val dv = param.defaultValue) {
+                    is DefaultValue.EnumDefault -> dv.copy(typeName = newName)
+                    else -> dv
+                }
+            } else {
+                param.defaultValue
+            }
+        return param.copy(type = finalType, additionalModel = newModel, defaultValue = newDefaultValue)
     }
 
     private fun buildOperationSpec(
@@ -289,67 +297,73 @@ public class OpenApiSpecificationParser(
             .mapNotNull { apiModel.getComponentParameter(it) }
             .distinctBy { it.name }
             .map { parameter ->
-                val paramBaseName = parameterTypeBaseName(parameter.name)
-                val parameterTypeName =
-                    parameter.schema?.let { schema ->
-                        apiModel.getClassName(paramBaseName, schema)
-                    } ?: STRING
-                val defaultLiteral = parameterDefaultLiteral(parameter.schema, parameterTypeName)
-                val isOptional = parameter.required != true
-                val constBaseName = constName(parameter.name)
-                val constName =
-                    if (apiModel.componentParameters.none { it.name == parameter.name }) {
-                        null
-                    } else {
-                        "PARAMETER_$constBaseName"
-                    }
-                val constDefaultValue =
-                    if (constName != null && defaultLiteral != null && parameterTypeName.isPrimitive()) {
-                        "PARAMETER_${constBaseName}_DEFAULT_VALUE"
-                    } else {
-                        null
-                    }
-                val paramName = parameterVariableName(parameter.name)
-                val rawDomainType = parameterTypeName.toDomainType(modelPackage)
-                val additionalTypeName = computeAdditionalTypeName(parameter, parameterTypeName, paramName)
-                val additionalModel =
-                    if (additionalTypeName != null) {
-                        buildAdditionalModel(additionalTypeName, parameter, apiModel, configuration)
-                    } else {
-                        null
-                    }
-
-                // For enum models, fix the isEnum flag in the domain type (type identity is preserved).
-                // For non-enum object models, keep the original type (e.g., List<String>);
-                // the type will be updated to reference the inline type only during conflict resolution.
-                val domainType =
-                    if (additionalModel is ModelSpec.EnumSpec && additionalTypeName != null) {
-                        adjustTypeForAdditionalModel(rawDomainType, additionalModel, additionalTypeName)
-                    } else {
-                        rawDomainType
-                    }
-                val domainTypeWithNullability = if (isOptional) domainType.asNullable() else domainType
-                val defaultValue = defaultLiteral?.let { buildDefaultValueFromCodeBlock(it, parameterTypeName) }
-
-                OperationParameter(
-                    originalName = parameter.name,
-                    camelCaseName = paramName,
-                    type = domainTypeWithNullability,
-                    location =
-                        when (parameter.`in`) {
-                            OpenAPIV3ParameterLocation.HEADER -> ParameterLocation.HEADER
-                            OpenAPIV3ParameterLocation.PATH -> ParameterLocation.PATH
-                            OpenAPIV3ParameterLocation.QUERY -> ParameterLocation.QUERY
-                            else -> ParameterLocation.QUERY
-                        },
-                    required = !isOptional,
-                    constName = constName,
-                    constDefaultName = constDefaultValue,
-                    defaultValue = defaultValue,
-                    additionalModel = additionalModel,
-                    additionalModelBaseName = additionalTypeName,
-                )
+                buildOperationParameter(parameter, apiModel, configuration, modelPackage)
             }.toList()
+
+    private fun buildOperationParameter(
+        parameter: OpenAPIV3Parameter,
+        apiModel: ApiModel,
+        configuration: ApiGeneratorConfiguration,
+        modelPackage: String,
+    ): OperationParameter {
+        val paramBaseName = parameterTypeBaseName(parameter.name)
+        val parameterTypeName =
+            parameter.schema?.let { schema ->
+                apiModel.getClassName(paramBaseName, schema)
+            } ?: STRING
+        val defaultLiteral = parameterDefaultLiteral(parameter.schema, parameterTypeName)
+        val isOptional = parameter.required != true
+        val constBaseName = constName(parameter.name)
+        val constName =
+            if (apiModel.componentParameters.none { it.name == parameter.name }) {
+                null
+            } else {
+                "PARAMETER_$constBaseName"
+            }
+        val constDefaultValue =
+            if (constName != null && defaultLiteral != null && parameterTypeName.isPrimitive()) {
+                "PARAMETER_${constBaseName}_DEFAULT_VALUE"
+            } else {
+                null
+            }
+        val paramName = parameterVariableName(parameter.name)
+        val rawDomainType = parameterTypeName.toDomainType(modelPackage)
+        val additionalTypeName = computeAdditionalTypeName(parameter, parameterTypeName, paramName)
+        val additionalModel =
+            if (additionalTypeName != null) {
+                buildAdditionalModel(additionalTypeName, parameter, apiModel, configuration)
+            } else {
+                null
+            }
+
+        val domainType =
+            if (additionalModel is ModelSpec.EnumSpec && additionalTypeName != null) {
+                adjustTypeForAdditionalModel(rawDomainType, additionalModel, additionalTypeName)
+            } else {
+                rawDomainType
+            }
+        val domainTypeWithNullability = if (isOptional) domainType.asNullable() else domainType
+        val defaultValue = defaultLiteral?.let { buildDefaultValueFromCodeBlock(it, parameterTypeName) }
+
+        return OperationParameter(
+            originalName = parameter.name,
+            camelCaseName = paramName,
+            type = domainTypeWithNullability,
+            location =
+                when (parameter.`in`) {
+                    OpenAPIV3ParameterLocation.HEADER -> ParameterLocation.HEADER
+                    OpenAPIV3ParameterLocation.PATH -> ParameterLocation.PATH
+                    OpenAPIV3ParameterLocation.QUERY -> ParameterLocation.QUERY
+                    else -> ParameterLocation.QUERY
+                },
+            required = !isOptional,
+            constName = constName,
+            constDefaultName = constDefaultValue,
+            defaultValue = defaultValue,
+            additionalModel = additionalModel,
+            additionalModelBaseName = additionalTypeName,
+        )
+    }
 
     private fun computeAdditionalTypeName(
         parameter: OpenAPIV3Parameter,

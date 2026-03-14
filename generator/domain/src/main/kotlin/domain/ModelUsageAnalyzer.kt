@@ -100,7 +100,7 @@ private fun propagateSealedClassUsage(
     allModels: Map<String, ModelSpec>,
 ) {
     allModels.values.filterIsInstance<ModelSpec.SealedClassSpec>().forEach { sealedClass ->
-        val sealedClients = usage[sealedClass.name] ?: return@forEach
+        val sealedClients: Set<String> = usage[sealedClass.name] ?: return@forEach
         allModels.values.forEach { model ->
             val parentName =
                 when (model) {
@@ -132,7 +132,7 @@ private fun propagateTransitiveDeps(
     while (changed) {
         changed = false
         allModels.values.forEach { model ->
-            val clients = usage[model.name] ?: return@forEach
+            val clients: Set<String> = usage[model.name] ?: return@forEach
             if (clients.isEmpty()) return@forEach
             collectModelRefs(model).forEach { dep ->
                 val depClients = usage.getOrPut(dep) { mutableSetOf() }

@@ -3,6 +3,7 @@ import org.jetbrains.kotlin.gradle.dsl.JvmTarget
 plugins {
     id("project-convention")
     kotlin("jvm")
+    id("jacoco")
     id("signing")
 }
 
@@ -39,6 +40,15 @@ tasks.test {
     systemProperty("junit.jupiter.execution.parallel.mode.classes.default", "concurrent")
 
     maxParallelForks = Runtime.getRuntime().availableProcessors()
+    finalizedBy(tasks.jacocoTestReport)
+}
+
+tasks.jacocoTestReport {
+    dependsOn(tasks.test)
+    reports {
+        xml.required.set(true)
+        html.required.set(false)
+    }
 }
 
 signing {

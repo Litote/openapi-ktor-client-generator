@@ -16,6 +16,8 @@
 
 package org.litote.openapi.ktor.client.generator
 
+import org.junit.jupiter.api.parallel.Execution
+import org.junit.jupiter.api.parallel.ExecutionMode
 import java.io.File
 import kotlin.test.Test
 import kotlin.test.assertTrue
@@ -33,6 +35,7 @@ import kotlin.test.fail
  *
  * The test will fail if generated code differs from snapshots (unless updating).
  */
+@Execution(ExecutionMode.SAME_THREAD)
 class SnapshotTest {
     companion object {
         private const val SNAPSHOTS_DIR = "src/test/resources/snapshots"

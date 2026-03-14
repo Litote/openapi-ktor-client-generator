@@ -46,17 +46,39 @@ internal class OperationBuilder(
     private val clientPackage: String,
     private val modelPackageOverrides: Map<String, String> = emptyMap(),
 ) {
+    private data class OperationParameters(
+        val pathParameters: List<OperationParameter>,
+        val queryParameters: List<OperationParameter>,
+        val headerParameters: List<OperationParameter>,
+        val trimmedPath: String,
+    )
+
+    private data class RequestBodyContext(
+        val requestBody: RequestBodySpec?,
+        val hasJsonContentType: Boolean,
+        val hasYamlContentType: Boolean,
+    )
+
+    private data class ResponseBuildContext(
+        val entries: List<RenderedResponseEntry>,
+        val baseName: String,
+    )
+
     private companion object {
+        private const val KTOR_HTTP = "io.ktor.http"
+        private const val KTOR_FORMS = "io.ktor.client.request.forms"
+        private const val IF_NOT_NULL = "if (%N != null)"
+
         val bodyMember = MemberName("io.ktor.client.call", "body")
         val setBodyMember = MemberName("io.ktor.client.request", "setBody")
-        val contentTypeMember = MemberName("io.ktor.http", "contentType")
-        val contentTypeClass = ClassName("io.ktor.http", "ContentType")
-        val formDataMember = MemberName("io.ktor.client.request.forms", "formData")
-        val formDataContentClass = ClassName("io.ktor.client.request.forms", "FormDataContent")
-        val multiPartFormDataContentClass = ClassName("io.ktor.client.request.forms", "MultiPartFormDataContent")
-        val parametersClass = ClassName("io.ktor.http", "Parameters")
-        val headersOfMember = MemberName("io.ktor.http", "headersOf")
-        val httpHeadersClass = ClassName("io.ktor.http", "HttpHeaders")
+        val contentTypeMember = MemberName(KTOR_HTTP, "contentType")
+        val contentTypeClass = ClassName(KTOR_HTTP, "ContentType")
+        val formDataMember = MemberName(KTOR_FORMS, "formData")
+        val formDataContentClass = ClassName(KTOR_FORMS, "FormDataContent")
+        val multiPartFormDataContentClass = ClassName(KTOR_FORMS, "MultiPartFormDataContent")
+        val parametersClass = ClassName(KTOR_HTTP, "Parameters")
+        val headersOfMember = MemberName(KTOR_HTTP, "headersOf")
+        val httpHeadersClass = ClassName(KTOR_HTTP, "HttpHeaders")
         val sseMember = MemberName("io.ktor.client.plugins.sse", "sse")
         val clientSseSessionClass = ClassName("io.ktor.client.plugins.sse", "ClientSSESession")
         const val ALIAS_HEADER = "setHeader"
@@ -96,19 +118,22 @@ internal class OperationBuilder(
         if (headerParameters.isNotEmpty()) context.hasHeaders = true
 
         val trimmedPath = buildPathExpression(operationInfo.path, pathParameters)
-
-        if (operationInfo.isSse) {
-            context.hasSseOperations = true
-            buildSseOperation(
-                context = context,
-                operationInfo = operationInfo,
-                clientBuilder = clientBuilder,
-                functionName = functionName,
-                requestBody = requestBody,
+        val operationParams =
+            OperationParameters(
                 pathParameters = pathParameters,
                 queryParameters = queryParameters,
                 headerParameters = headerParameters,
                 trimmedPath = trimmedPath,
+            )
+
+        if (operationInfo.isSse) {
+            context.hasSseOperations = true
+            buildSseOperation(
+                operationInfo = operationInfo,
+                clientBuilder = clientBuilder,
+                functionName = functionName,
+                requestBody = requestBody,
+                params = operationParams,
             )
             return
         }
@@ -154,14 +179,18 @@ internal class OperationBuilder(
         funBuilder.addCode(
             buildFunctionBody(
                 methodMember = methodMember,
-                trimmedPath = trimmedPath,
-                headerParameters = headerParameters,
-                queryParameters = queryParameters,
-                requestBody = requestBody,
-                hasJsonContentType = hasJsonContentType,
-                hasYamlContentType = hasYamlContentType,
-                responseEntries = responseEntries,
-                responseBaseName = responseBaseName,
+                operationParams = operationParams,
+                requestBodyCtx =
+                    RequestBodyContext(
+                        requestBody = requestBody,
+                        hasJsonContentType = hasJsonContentType,
+                        hasYamlContentType = hasYamlContentType,
+                    ),
+                responseCtx =
+                    ResponseBuildContext(
+                        entries = responseEntries,
+                        baseName = responseBaseName,
+                    ),
             ),
         )
 
@@ -242,15 +271,11 @@ internal class OperationBuilder(
             ).build()
 
     private fun buildSseOperation(
-        context: ClientGenerationContext,
         operationInfo: OperationSpec,
         clientBuilder: TypeSpec.Builder,
         functionName: String,
         requestBody: RequestBodySpec?,
-        pathParameters: List<OperationParameter>,
-        queryParameters: List<OperationParameter>,
-        headerParameters: List<OperationParameter>,
-        trimmedPath: String,
+        params: OperationParameters,
     ) {
         val blockType =
             LambdaTypeName
@@ -270,12 +295,12 @@ internal class OperationBuilder(
             val requestTypeName = it.type.toTypeName(modelPackage, modelPackageOverrides)
             funBuilder.addParameter(it.parameterName, requestTypeName)
         }
-        addParameters(funBuilder, pathParameters)
-        addParameters(funBuilder, queryParameters)
-        addParameters(funBuilder, headerParameters)
+        addParameters(funBuilder, params.pathParameters)
+        addParameters(funBuilder, params.queryParameters)
+        addParameters(funBuilder, params.headerParameters)
         funBuilder.addParameter(ParameterSpec.builder("block", blockType).build())
 
-        funBuilder.addCode(buildSseFunctionBody(trimmedPath, headerParameters, queryParameters))
+        funBuilder.addCode(buildSseFunctionBody(params.trimmedPath, params.headerParameters, params.queryParameters))
 
         clientBuilder.addFunction(funBuilder.build())
     }
@@ -295,65 +320,8 @@ internal class OperationBuilder(
                 sseMember,
                 trimmedPath,
             )
-            headerParameters.forEach { param ->
-                if (param.constName != null) {
-                    if (param.isOptional) {
-                        builder.beginControlFlow("if (%N != null)", param.camelCaseName)
-                        builder.addStatement(
-                            "$ALIAS_HEADER(%T.%L, %N)",
-                            clientConfigurationClass,
-                            param.constName,
-                            param.camelCaseName,
-                        )
-                        builder.endControlFlow()
-                    } else {
-                        builder.addStatement(
-                            "$ALIAS_HEADER(%T.%L, %N)",
-                            clientConfigurationClass,
-                            param.constName,
-                            param.camelCaseName,
-                        )
-                    }
-                } else {
-                    if (param.isOptional) {
-                        builder.beginControlFlow("if (%N != null)", param.camelCaseName)
-                        builder.addStatement(
-                            "$ALIAS_HEADER(%S, %N)",
-                            param.originalName,
-                            param.camelCaseName,
-                        )
-                        builder.endControlFlow()
-                    } else {
-                        builder.addStatement(
-                            "$ALIAS_HEADER(%S, %N)",
-                            param.originalName,
-                            param.camelCaseName,
-                        )
-                    }
-                }
-            }
-            if (queryParameters.isNotEmpty()) {
-                builder.beginControlFlow("url")
-                queryParameters.forEach { param ->
-                    val suffix = param.toStringSuffix()
-                    if (param.isOptional) {
-                        builder.beginControlFlow("if (%N != null)", param.camelCaseName)
-                        builder.addStatement(
-                            "parameters.append(%S, %N$suffix)",
-                            param.originalName,
-                            param.camelCaseName,
-                        )
-                        builder.endControlFlow()
-                    } else {
-                        builder.addStatement(
-                            "parameters.append(%S, %N$suffix)",
-                            param.originalName,
-                            param.camelCaseName,
-                        )
-                    }
-                }
-                builder.endControlFlow()
-            }
+            addSseHeaderParams(builder, headerParameters)
+            addQueryParams(builder, queryParameters)
             builder.endControlFlow()
             builder.beginControlFlow(")")
         } else {
@@ -371,6 +339,76 @@ internal class OperationBuilder(
         builder.addStatement("%L(%L)", "configuration.exceptionLogger", "e")
         builder.endControlFlow()
         return builder.build()
+    }
+
+    private fun addSseHeaderParams(
+        builder: CodeBlock.Builder,
+        headerParameters: List<OperationParameter>,
+    ) {
+        headerParameters.forEach { param ->
+            if (param.constName != null) {
+                if (param.isOptional) {
+                    builder.beginControlFlow(IF_NOT_NULL, param.camelCaseName)
+                    builder.addStatement(
+                        "$ALIAS_HEADER(%T.%L, %N)",
+                        clientConfigurationClass,
+                        param.constName,
+                        param.camelCaseName,
+                    )
+                    builder.endControlFlow()
+                } else {
+                    builder.addStatement(
+                        "$ALIAS_HEADER(%T.%L, %N)",
+                        clientConfigurationClass,
+                        param.constName,
+                        param.camelCaseName,
+                    )
+                }
+            } else {
+                if (param.isOptional) {
+                    builder.beginControlFlow(IF_NOT_NULL, param.camelCaseName)
+                    builder.addStatement(
+                        "$ALIAS_HEADER(%S, %N)",
+                        param.originalName,
+                        param.camelCaseName,
+                    )
+                    builder.endControlFlow()
+                } else {
+                    builder.addStatement(
+                        "$ALIAS_HEADER(%S, %N)",
+                        param.originalName,
+                        param.camelCaseName,
+                    )
+                }
+            }
+        }
+    }
+
+    private fun addQueryParams(
+        builder: CodeBlock.Builder,
+        queryParameters: List<OperationParameter>,
+    ) {
+        if (queryParameters.isEmpty()) return
+        builder.beginControlFlow("url")
+        queryParameters.forEach { param ->
+            val suffix = param.toStringSuffix()
+            if (param.isOptional) {
+                builder.beginControlFlow(IF_NOT_NULL, param.camelCaseName)
+                builder.addStatement(
+                    "parameters.append(%S, %N$suffix)",
+                    param.originalName,
+                    param.camelCaseName,
+                )
+                builder.endControlFlow()
+            } else {
+                builder.addStatement(
+                    "parameters.append(%S, %N$suffix)",
+                    param.originalName,
+                    param.camelCaseName,
+                )
+            }
+        }
+        builder.endControlFlow()
     }
 
     private fun addParameters(
@@ -419,141 +457,142 @@ internal class OperationBuilder(
 
     private fun buildFunctionBody(
         methodMember: MemberName,
-        trimmedPath: String,
+        operationParams: OperationParameters,
+        requestBodyCtx: RequestBodyContext,
+        responseCtx: ResponseBuildContext,
+    ): CodeBlock {
+        val responseBaseName = responseCtx.baseName
+        val builder = CodeBlock.builder()
+        builder.beginControlFlow("try")
+        builder.beginControlFlow("val response = configuration.client.%M(%L)", methodMember, operationParams.trimmedPath)
+        addRegularHeaderParams(builder, operationParams.headerParameters)
+        addQueryParams(builder, operationParams.queryParameters)
+        addRequestBodyCode(builder, requestBodyCtx)
+        builder.endControlFlow()
+        builder.beginControlFlow("return when (response.status.value)")
+        addResponseCases(builder, responseCtx, responseBaseName)
+        builder.endControlFlow()
+        builder.endControlFlow()
+        builder.beginControlFlow("catch(e: Exception)")
+        builder.addStatement("%L(%L)", "configuration.exceptionLogger", "e")
+        builder.addStatement("return %L(%L)", "${responseBaseName}ResponseUnknownFailure", InternalServerError.value)
+        builder.endControlFlow()
+        return builder.build()
+    }
+
+    private fun addRegularHeaderParams(
+        builder: CodeBlock.Builder,
         headerParameters: List<OperationParameter>,
-        queryParameters: List<OperationParameter>,
-        requestBody: RequestBodySpec?,
-        hasJsonContentType: Boolean,
-        hasYamlContentType: Boolean,
-        responseEntries: List<RenderedResponseEntry>,
-        responseBaseName: String,
-    ): CodeBlock =
-        CodeBlock
-            .builder()
-            .beginControlFlow("try")
-            .beginControlFlow("val response = configuration.client.%M(%L)", methodMember, trimmedPath)
-            .apply {
-                headerParameters.forEach { param ->
-                    if (param.constName != null) {
-                        if (param.isOptional) {
-                            beginControlFlow("if (%N != null)", param.camelCaseName)
-                            addStatement(
-                                "$ALIAS_HEADER(%T.%L, %N)",
-                                clientConfigurationClass,
-                                param.constName,
-                                param.camelCaseName,
-                            )
-                            endControlFlow()
-                        } else {
-                            addStatement(
-                                "$ALIAS_HEADER(%T.%L, %N)",
-                                clientConfigurationClass,
-                                param.constName,
-                                param.camelCaseName,
-                            )
-                        }
-                    } else {
-                        if (param.isOptional) {
-                            beginControlFlow("if (%N != null)", param.camelCaseName)
-                            addStatement(
-                                "$ALIAS_HEADER(%S, %N)",
-                                param.originalName,
-                                param.camelCaseName,
-                            )
-                            endControlFlow()
-                        } else {
-                            addStatement(
-                                "$ALIAS_HEADER(%S, %N)",
-                                param.originalName,
-                                param.camelCaseName,
-                            )
-                        }
-                    }
+    ) {
+        headerParameters.forEach { param ->
+            if (param.constName != null) {
+                if (param.isOptional) {
+                    builder.beginControlFlow(IF_NOT_NULL, param.camelCaseName)
+                    builder.addStatement(
+                        "$ALIAS_HEADER(%T.%L, %N)",
+                        clientConfigurationClass,
+                        param.constName,
+                        param.camelCaseName,
+                    )
+                    builder.endControlFlow()
+                } else {
+                    builder.addStatement(
+                        "$ALIAS_HEADER(%T.%L, %N)",
+                        clientConfigurationClass,
+                        param.constName,
+                        param.camelCaseName,
+                    )
                 }
-                if (queryParameters.isNotEmpty()) {
-                    beginControlFlow("url")
-                    queryParameters.forEach { param ->
-                        val suffix = param.toStringSuffix()
-                        if (param.isOptional) {
-                            beginControlFlow("if (%N != null)", param.camelCaseName)
-                            addStatement("parameters.append(%S, %N$suffix)", param.originalName, param.camelCaseName)
-                            endControlFlow()
-                        } else {
-                            addStatement("parameters.append(%S, %N$suffix)", param.originalName, param.camelCaseName)
-                        }
-                    }
-                    endControlFlow()
+            } else {
+                if (param.isOptional) {
+                    builder.beginControlFlow(IF_NOT_NULL, param.camelCaseName)
+                    builder.addStatement(
+                        "$ALIAS_HEADER(%S, %N)",
+                        param.originalName,
+                        param.camelCaseName,
+                    )
+                    builder.endControlFlow()
+                } else {
+                    builder.addStatement(
+                        "$ALIAS_HEADER(%S, %N)",
+                        param.originalName,
+                        param.camelCaseName,
+                    )
                 }
+            }
+        }
+    }
+
+    private fun addRequestBodyCode(
+        builder: CodeBlock.Builder,
+        requestBodyCtx: RequestBodyContext,
+    ) {
+        val requestBody = requestBodyCtx.requestBody ?: return
+        when {
+            requestBody.isMultipartFormData -> {
+                builder.add(
+                    CodeBlock
+                        .builder()
+                        .add("%M(%T(%M {\n", setBodyMember, multiPartFormDataContentClass, formDataMember)
+                        .add(buildMultipartFormData(requestBody))
+                        .add("}))\n")
+                        .build(),
+                )
+            }
+
+            requestBody.isUrlEncodedForm -> {
+                builder.add(
+                    CodeBlock
+                        .builder()
+                        .add("%M(%T(%T.build {\n", setBodyMember, formDataContentClass, parametersClass)
+                        .add(buildUrlEncodedFormData(requestBody))
+                        .add("}))\n")
+                        .build(),
+                )
+            }
+
+            else -> {
+                builder.addStatement("%M(%N)", setBodyMember, requestBody.parameterName)
                 when {
-                    requestBody == null -> { // skip
+                    requestBodyCtx.hasJsonContentType -> {
+                        builder.addStatement("%M(%T.Application.Json)", contentTypeMember, contentTypeClass)
                     }
 
-                    requestBody.isMultipartFormData -> {
-                        add(
-                            CodeBlock
-                                .builder()
-                                .add("%M(%T(%M {\n", setBodyMember, multiPartFormDataContentClass, formDataMember)
-                                .add(buildMultipartFormData(requestBody))
-                                .add("}))\n")
-                                .build(),
-                        )
-                    }
-
-                    requestBody.isUrlEncodedForm -> {
-                        add(
-                            CodeBlock
-                                .builder()
-                                .add("%M(%T(%T.build {\n", setBodyMember, formDataContentClass, parametersClass)
-                                .add(buildUrlEncodedFormData(requestBody))
-                                .add("}))\n")
-                                .build(),
-                        )
-                    }
-
-                    else -> {
-                        addStatement("%M(%N)", setBodyMember, requestBody.parameterName)
-                        when {
-                            hasJsonContentType -> {
-                                addStatement("%M(%T.Application.Json)", contentTypeMember, contentTypeClass)
-                            }
-
-                            hasYamlContentType -> {
-                                addStatement(
-                                    "%M(%T(%S, %S))",
-                                    contentTypeMember,
-                                    contentTypeClass,
-                                    "application",
-                                    "yaml",
-                                )
-                            }
-                        }
-                    }
-                }
-            }.endControlFlow()
-            .beginControlFlow("return when (response.status.value)")
-            .apply {
-                responseEntries.forEach { entry ->
-                    val codesLiteral = entry.statusCodes.joinToString()
-                    if (entry.bodyTypeName == null) {
-                        addStatement("%L -> %N", codesLiteral, entry.type)
-                    } else {
-                        addStatement(
-                            "%L -> %N(response.%M<%T>())",
-                            codesLiteral,
-                            entry.type,
-                            bodyMember,
-                            entry.bodyTypeName,
+                    requestBodyCtx.hasYamlContentType -> {
+                        builder.addStatement(
+                            "%M(%T(%S, %S))",
+                            contentTypeMember,
+                            contentTypeClass,
+                            "application",
+                            "yaml",
                         )
                     }
                 }
-                addStatement("else -> %L(%L)", "${responseBaseName}ResponseUnknownFailure", "response.status.value")
-            }.endControlFlow()
-            .endControlFlow()
-            .beginControlFlow("catch(e: Exception)")
-            .addStatement("%L(%L)", "configuration.exceptionLogger", "e")
-            .addStatement("return %L(%L)", "${responseBaseName}ResponseUnknownFailure", InternalServerError.value)
-            .endControlFlow()
-            .build()
+            }
+        }
+    }
+
+    private fun addResponseCases(
+        builder: CodeBlock.Builder,
+        responseCtx: ResponseBuildContext,
+        responseBaseName: String,
+    ) {
+        responseCtx.entries.forEach { entry ->
+            val codesLiteral = entry.statusCodes.joinToString()
+            if (entry.bodyTypeName == null) {
+                builder.addStatement("%L -> %N", codesLiteral, entry.type)
+            } else {
+                builder.addStatement(
+                    "%L -> %N(response.%M<%T>())",
+                    codesLiteral,
+                    entry.type,
+                    bodyMember,
+                    entry.bodyTypeName,
+                )
+            }
+        }
+        builder.addStatement("else -> %L(%L)", "${responseBaseName}ResponseUnknownFailure", "response.status.value")
+    }
 
     private fun buildMultipartFormData(requestBody: RequestBodySpec): CodeBlock {
         val builder = CodeBlock.builder()

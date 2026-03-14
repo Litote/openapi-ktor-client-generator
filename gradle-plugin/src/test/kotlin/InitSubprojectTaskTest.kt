@@ -679,15 +679,24 @@ internal class InitSubprojectTaskTest {
     fun `GIVEN buildSharedGroupGradleKtsContent without otherGroups THEN contains api shared dependency`() {
         val content =
             InitSubprojectTask.buildSharedGroupGradleKtsContent(
-                specNameWithoutExt = "myapi",
-                specRelativePath = "../myapi.json",
-                basePackage = "com.example.sharedOrderUser",
-                topBasePackage = "com.example",
-                targetSharedGroup = "OrderClient,UserClient",
-                kotlinVersion = "2.0.0",
-                ktorVersion = "3.0.0",
-                coroutinesVersion = "1.8.0",
-                serializationVersion = "1.6.0",
+                spec =
+                    InitSubprojectTask.SpecConfig(
+                        nameWithoutExt = "myapi",
+                        relativePath = "../myapi.json",
+                        basePackage = "com.example.sharedOrderUser",
+                    ),
+                groupConfig =
+                    InitSubprojectTask.SharedGroupConfig(
+                        topBasePackage = "com.example",
+                        targetSharedGroup = "OrderClient,UserClient",
+                    ),
+                versions =
+                    InitSubprojectTask.DependencyVersions(
+                        kotlinVersion = "2.0.0",
+                        ktorVersion = "3.0.0",
+                        coroutinesVersion = "1.8.0",
+                        serializationVersion = "1.6.0",
+                    ),
             )
         assertContains(content, """api(project(":shared"))""")
     }
@@ -699,17 +708,26 @@ internal class InitSubprojectTaskTest {
         // additionalSharedGroupPackages is for generator import resolution only, not for Gradle deps.
         val content =
             InitSubprojectTask.buildSharedGroupGradleKtsContent(
-                specNameWithoutExt = "myapi",
-                specRelativePath = "../myapi.json",
-                basePackage = "com.example.sharedOrderUser",
-                topBasePackage = "com.example",
-                targetSharedGroup = "OrderClient,UserClient",
-                additionalSharedGroupPackages =
-                    mapOf("OrderClient,ProductClient" to "com.example.sharedOrderProduct"),
-                kotlinVersion = "2.0.0",
-                ktorVersion = "3.0.0",
-                coroutinesVersion = "1.8.0",
-                serializationVersion = "1.6.0",
+                spec =
+                    InitSubprojectTask.SpecConfig(
+                        nameWithoutExt = "myapi",
+                        relativePath = "../myapi.json",
+                        basePackage = "com.example.sharedOrderUser",
+                    ),
+                groupConfig =
+                    InitSubprojectTask.SharedGroupConfig(
+                        topBasePackage = "com.example",
+                        targetSharedGroup = "OrderClient,UserClient",
+                        additionalSharedGroupPackages =
+                            mapOf("OrderClient,ProductClient" to "com.example.sharedOrderProduct"),
+                    ),
+                versions =
+                    InitSubprojectTask.DependencyVersions(
+                        kotlinVersion = "2.0.0",
+                        ktorVersion = "3.0.0",
+                        coroutinesVersion = "1.8.0",
+                        serializationVersion = "1.6.0",
+                    ),
             )
         assertContains(content, """api(project(":shared"))""")
         assertFalse(
@@ -787,16 +805,25 @@ internal class InitSubprojectTaskTest {
     fun `GIVEN buildSharedGroupGradleKtsContent with directGroupDeps THEN deps are included in build file`() {
         val content =
             InitSubprojectTask.buildSharedGroupGradleKtsContent(
-                specNameWithoutExt = "myapi",
-                specRelativePath = "../myapi.json",
-                basePackage = "com.example.sharedAB",
-                topBasePackage = "com.example",
-                targetSharedGroup = "AlphaClient,BetaClient",
-                directGroupDeps = listOf("shared-alpha-client-beta-client-gamma-client"),
-                kotlinVersion = "2.0.0",
-                ktorVersion = "3.0.0",
-                coroutinesVersion = "1.8.0",
-                serializationVersion = "1.6.0",
+                spec =
+                    InitSubprojectTask.SpecConfig(
+                        nameWithoutExt = "myapi",
+                        relativePath = "../myapi.json",
+                        basePackage = "com.example.sharedAB",
+                    ),
+                groupConfig =
+                    InitSubprojectTask.SharedGroupConfig(
+                        topBasePackage = "com.example",
+                        targetSharedGroup = "AlphaClient,BetaClient",
+                        directGroupDeps = listOf("shared-alpha-client-beta-client-gamma-client"),
+                    ),
+                versions =
+                    InitSubprojectTask.DependencyVersions(
+                        kotlinVersion = "2.0.0",
+                        ktorVersion = "3.0.0",
+                        coroutinesVersion = "1.8.0",
+                        serializationVersion = "1.6.0",
+                    ),
             )
         assertContains(content, """api(project(":shared"))""")
         assertContains(content, """api(project(":shared-alpha-client-beta-client-gamma-client"))""")
@@ -1283,11 +1310,14 @@ internal class SettingsUpdaterTest {
             InitSubprojectTask.buildGradleKtsContent(
                 generatorName = "petstore",
                 openApiFileName = "petstore.yaml",
-                kotlinVersion = DEFAULT_KOTLIN_VERSION,
-                ktorVersion = DEFAULT_KTOR_VERSION,
-                coroutinesVersion = DEFAULT_COROUTINES_VERSION,
-                serializationVersion = DEFAULT_SERIALIZATION_VERSION,
-                multiplatform = true,
+                versions =
+                    InitSubprojectTask.DependencyVersions(
+                        kotlinVersion = DEFAULT_KOTLIN_VERSION,
+                        ktorVersion = DEFAULT_KTOR_VERSION,
+                        coroutinesVersion = DEFAULT_COROUTINES_VERSION,
+                        serializationVersion = DEFAULT_SERIALIZATION_VERSION,
+                    ),
+                options = InitSubprojectTask.GeneratorOptions(multiplatform = true),
             )
 
         assertContains(content, """kotlin("multiplatform") version "${DEFAULT_KOTLIN_VERSION}"""")
@@ -1302,11 +1332,14 @@ internal class SettingsUpdaterTest {
             InitSubprojectTask.buildGradleKtsContent(
                 generatorName = "petstore",
                 openApiFileName = "petstore.yaml",
-                kotlinVersion = DEFAULT_KOTLIN_VERSION,
-                ktorVersion = DEFAULT_KTOR_VERSION,
-                coroutinesVersion = DEFAULT_COROUTINES_VERSION,
-                serializationVersion = DEFAULT_SERIALIZATION_VERSION,
-                multiplatform = false,
+                versions =
+                    InitSubprojectTask.DependencyVersions(
+                        kotlinVersion = DEFAULT_KOTLIN_VERSION,
+                        ktorVersion = DEFAULT_KTOR_VERSION,
+                        coroutinesVersion = DEFAULT_COROUTINES_VERSION,
+                        serializationVersion = DEFAULT_SERIALIZATION_VERSION,
+                    ),
+                options = InitSubprojectTask.GeneratorOptions(multiplatform = false),
             )
 
         assertContains(content, """kotlin("jvm") version "${DEFAULT_KOTLIN_VERSION}"""")
@@ -1320,14 +1353,20 @@ internal class SettingsUpdaterTest {
             InitSubprojectTask.buildClientGradleKtsContent(
                 clientName = "UserClient",
                 subprojectDirName = "user-client",
-                specNameWithoutExt = "spec",
-                specRelativePath = "../src/main/openapi/spec.yaml",
-                basePackage = "org.example",
-                kotlinVersion = DEFAULT_KOTLIN_VERSION,
-                ktorVersion = DEFAULT_KTOR_VERSION,
-                coroutinesVersion = DEFAULT_COROUTINES_VERSION,
-                serializationVersion = DEFAULT_SERIALIZATION_VERSION,
-                multiplatform = true,
+                spec =
+                    InitSubprojectTask.SpecConfig(
+                        nameWithoutExt = "spec",
+                        relativePath = "../src/main/openapi/spec.yaml",
+                        basePackage = "org.example",
+                    ),
+                versions =
+                    InitSubprojectTask.DependencyVersions(
+                        kotlinVersion = DEFAULT_KOTLIN_VERSION,
+                        ktorVersion = DEFAULT_KTOR_VERSION,
+                        coroutinesVersion = DEFAULT_COROUTINES_VERSION,
+                        serializationVersion = DEFAULT_SERIALIZATION_VERSION,
+                    ),
+                options = InitSubprojectTask.GeneratorOptions(multiplatform = true),
             )
 
         assertContains(content, """kotlin("multiplatform")""")
@@ -1343,15 +1382,24 @@ internal class SettingsUpdaterTest {
             InitSubprojectTask.buildClientGradleKtsContent(
                 clientName = "UserClient",
                 subprojectDirName = "user-client",
-                specNameWithoutExt = "spec",
-                specRelativePath = "../src/main/openapi/spec.yaml",
-                basePackage = "org.example",
-                kotlinVersion = DEFAULT_KOTLIN_VERSION,
-                ktorVersion = DEFAULT_KTOR_VERSION,
-                coroutinesVersion = DEFAULT_COROUTINES_VERSION,
-                serializationVersion = DEFAULT_SERIALIZATION_VERSION,
-                buildScriptTemplate = template,
-                multiplatform = true,
+                spec =
+                    InitSubprojectTask.SpecConfig(
+                        nameWithoutExt = "spec",
+                        relativePath = "../src/main/openapi/spec.yaml",
+                        basePackage = "org.example",
+                    ),
+                versions =
+                    InitSubprojectTask.DependencyVersions(
+                        kotlinVersion = DEFAULT_KOTLIN_VERSION,
+                        ktorVersion = DEFAULT_KTOR_VERSION,
+                        coroutinesVersion = DEFAULT_COROUTINES_VERSION,
+                        serializationVersion = DEFAULT_SERIALIZATION_VERSION,
+                    ),
+                options =
+                    InitSubprojectTask.GeneratorOptions(
+                        buildScriptTemplate = template,
+                        multiplatform = true,
+                    ),
             )
 
         assertContains(content, "kotlin {")
@@ -1366,18 +1414,30 @@ internal class SettingsUpdaterTest {
         val template = "plugins { kotlin(\"multiplatform\") }"
         val content =
             InitSubprojectTask.buildSharedGroupGradleKtsContent(
-                specNameWithoutExt = "spec",
-                specRelativePath = "../src/main/openapi/spec.yaml",
-                basePackage = "org.example.group",
-                topBasePackage = "org.example",
-                targetSharedGroup = "groupA",
-                directGroupDeps = listOf("shared-other-group"),
-                kotlinVersion = DEFAULT_KOTLIN_VERSION,
-                ktorVersion = DEFAULT_KTOR_VERSION,
-                coroutinesVersion = DEFAULT_COROUTINES_VERSION,
-                serializationVersion = DEFAULT_SERIALIZATION_VERSION,
-                buildScriptTemplate = template,
-                multiplatform = true,
+                spec =
+                    InitSubprojectTask.SpecConfig(
+                        nameWithoutExt = "spec",
+                        relativePath = "../src/main/openapi/spec.yaml",
+                        basePackage = "org.example.group",
+                    ),
+                groupConfig =
+                    InitSubprojectTask.SharedGroupConfig(
+                        topBasePackage = "org.example",
+                        targetSharedGroup = "groupA",
+                        directGroupDeps = listOf("shared-other-group"),
+                    ),
+                versions =
+                    InitSubprojectTask.DependencyVersions(
+                        kotlinVersion = DEFAULT_KOTLIN_VERSION,
+                        ktorVersion = DEFAULT_KTOR_VERSION,
+                        coroutinesVersion = DEFAULT_COROUTINES_VERSION,
+                        serializationVersion = DEFAULT_SERIALIZATION_VERSION,
+                    ),
+                options =
+                    InitSubprojectTask.GeneratorOptions(
+                        buildScriptTemplate = template,
+                        multiplatform = true,
+                    ),
             )
 
         assertContains(content, "kotlin {")

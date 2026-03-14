@@ -1,6 +1,14 @@
 # OpenAPI Ktor Client Generator
 
 ![Plugin Version](https://img.shields.io/gradle-plugin-portal/v/org.litote.openapi.ktor.client.generator.gradle)
+[![Quality Gate Status](https://sonarcloud.io/api/project_badges/measure?project=Litote_openapi-ktor-client-generator&metric=alert_status)](https://sonarcloud.io/summary/new_code?id=Litote_openapi-ktor-client-generator)
+[![Coverage](https://sonarcloud.io/api/project_badges/measure?project=Litote_openapi-ktor-client-generator&metric=coverage)](https://sonarcloud.io/summary/new_code?id=Litote_openapi-ktor-client-generator)
+[![Bugs](https://sonarcloud.io/api/project_badges/measure?project=Litote_openapi-ktor-client-generator&metric=bugs)](https://sonarcloud.io/summary/new_code?id=Litote_openapi-ktor-client-generator)
+[![Vulnerabilities](https://sonarcloud.io/api/project_badges/measure?project=Litote_openapi-ktor-client-generator&metric=vulnerabilities)](https://sonarcloud.io/summary/new_code?id=Litote_openapi-ktor-client-generator)
+[![Code Smells](https://sonarcloud.io/api/project_badges/measure?project=Litote_openapi-ktor-client-generator&metric=code_smells)](https://sonarcloud.io/summary/new_code?id=Litote_openapi-ktor-client-generator)
+[![Maintainability Rating](https://sonarcloud.io/api/project_badges/measure?project=Litote_openapi-ktor-client-generator&metric=sqale_rating)](https://sonarcloud.io/summary/new_code?id=Litote_openapi-ktor-client-generator)
+[![Reliability Rating](https://sonarcloud.io/api/project_badges/measure?project=Litote_openapi-ktor-client-generator&metric=reliability_rating)](https://sonarcloud.io/summary/new_code?id=Litote_openapi-ktor-client-generator)
+[![Security Rating](https://sonarcloud.io/api/project_badges/measure?project=Litote_openapi-ktor-client-generator&metric=security_rating)](https://sonarcloud.io/summary/new_code?id=Litote_openapi-ktor-client-generator)
 [![Apache2 license](https://img.shields.io/badge/license-Apache%20License%202.0-blue.svg?style=flat)](https://www.apache.org/licenses/LICENSE-2.0)
 
 A Gradle plugin that transforms OpenAPI v3 specifications into production-ready Kotlin Ktor client code.
