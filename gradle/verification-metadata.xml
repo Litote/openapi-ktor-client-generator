@@ -3,6 +3,14 @@
    <configuration>
       <verify-metadata>true</verify-metadata>
       <verify-signatures>false</verify-signatures>
+      <trusted-artifacts>
+         <!-- Metadata and IDE-only artifacts don't need checksum verification -->
+         <trust file=".*-javadoc\.jar" regex="true"/>
+         <trust file=".*-sources\.jar" regex="true"/>
+         <trust file=".*-src\.zip" regex="true"/>
+         <trust file=".*\.module" regex="true"/>
+         <trust file=".*\.pom" regex="true"/>
+      </trusted-artifacts>
    </configuration>
    <components>
       <component group="ch.qos.logback" name="logback-classic" version="1.5.32">

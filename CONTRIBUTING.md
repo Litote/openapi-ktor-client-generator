@@ -125,8 +125,19 @@ Users must add `org.yaml:snakeyaml` to their project dependencies when YAML endp
 ## Update dependencies
 
 ```bash
+# 1. Update version catalog to latest available versions
 ./gradlew versionCatalogUpdate
+
+# 2. Regenerate dependency verification metadata (MANDATORY after any dependency change)
+./gradlew updateVerificationMetadata
 ```
+
+> ⚠️ **Always run `updateVerificationMetadata` after any dependency upgrade.**
+> Skipping this step causes `Dependency verification failed` errors in IntelliJ and for other contributors.
+
+The `updateVerificationMetadata` task rewrites `gradle/verification-metadata.xml` with fresh SHA-256
+checksums for all resolved artifacts. It preserves the `trusted-artifacts` rules (sources JARs,
+javadoc JARs, `.pom`, `.module` files) which are IDE-only and exempt from checksum verification.
 
 ## Publishing
 

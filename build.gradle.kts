@@ -1,3 +1,11 @@
+import groovy.json.JsonSlurper
+import org.jetbrains.kotlin.gradle.dsl.KotlinJvmProjectExtension
+import org.sonarqube.gradle.SonarExtension
+import java.net.URI
+import java.net.http.HttpClient
+import java.net.http.HttpRequest
+import java.net.http.HttpResponse
+
 plugins {
     id("project-convention")
     alias(libs.plugins.version.catalog.update)
@@ -17,7 +25,7 @@ val jacocoAggregatedReport by tasks.registering(JacocoReport::class) {
 
     sourceDirectories.setFrom(
         subprojects.flatMap { sub ->
-            sub.extensions.findByType(org.jetbrains.kotlin.gradle.dsl.KotlinJvmProjectExtension::class)
+            sub.extensions.findByType(KotlinJvmProjectExtension::class)
                 ?.sourceSets?.getByName("main")?.kotlin?.srcDirs
                 ?: emptyList<File>()
         },
@@ -49,15 +57,38 @@ sonar {
     }
 }
 
-val aggregatedReportPath = layout.buildDirectory
+val aggregatedReportPath: String = layout.buildDirectory
     .file("reports/jacoco/jacocoAggregatedReport/jacocoAggregatedReport.xml")
     .get().asFile.absolutePath
 
 subprojects {
     afterEvaluate {
-        extensions.findByType(org.sonarqube.gradle.SonarExtension::class)?.properties {
+        extensions.findByType(SonarExtension::class)?.properties {
             property("sonar.coverage.jacoco.xmlReportPaths", aggregatedReportPath)
         }
+    }
+}
+
+/**
+ * Regenerates gradle/verification-metadata.xml after dependency upgrades.
+ *
+ * Run this after every `versionCatalogUpdate` or manual dependency change:
+ *   ./gradlew updateVerificationMetadata
+ */
+tasks.register("updateVerificationMetadata") {
+    group = "verification"
+    description = "Regenerates gradle/verification-metadata.xml after dependency upgrades. Run after every versionCatalogUpdate."
+    doLast {
+        val result = ProcessBuilder(
+            "${rootDir}/gradlew",
+            "--write-verification-metadata", "sha256",
+            "dependencies", "check",
+        )
+            .directory(rootDir)
+            .inheritIO()
+            .start()
+            .waitFor()
+        check(result == 0) { "updateVerificationMetadata failed with exit code $result" }
     }
 }
 
@@ -80,16 +111,16 @@ tasks.register("sonarCheck") {
             ?: error("sonar.token not set. Add systemProp.sonar.token=<token> to ~/.gradle/gradle.properties")
 
         val projectKey = "Litote_openapi-ktor-client-generator"
-        val client = java.net.http.HttpClient.newHttpClient()
-        val slurper = groovy.json.JsonSlurper()
+        val client = HttpClient.newHttpClient()
+        val slurper = JsonSlurper()
 
         fun fetch(url: String): Any {
-            val req = java.net.http.HttpRequest.newBuilder()
-                .uri(java.net.URI.create(url))
+            val req = HttpRequest.newBuilder()
+                .uri(URI.create(url))
                 .header("Authorization", "Bearer $token")
                 .GET()
                 .build()
-            val resp = client.send(req, java.net.http.HttpResponse.BodyHandlers.ofString())
+            val resp = client.send(req, HttpResponse.BodyHandlers.ofString())
             check(resp.statusCode() == 200) {
                 "SonarCloud API error ${resp.statusCode()}: ${resp.body()}"
             }
