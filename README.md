@@ -91,7 +91,7 @@ The generator accepts OpenAPI V3 specification files in both **JSON** and **YAML
 | `outputDirectory`  | Target directory for generated sources (`src/main/kotlin` is appended automatically)    | `file("build/api-${name}")`             | Any relative directory                            |
 | `basePackage`      | Base package for all generated classes                                                   | `org.example`                           | Any valid package name                            |
 | `allowedPaths`     | Restrict generation to a subset of OpenAPI paths                                         | empty (all paths generated)             | Any subset of paths defined in the spec           |
-| `modulesIds`       | Optional generation modules to enable                                                    | empty                                   | `UnknownEnumValueModule`, `LoggingSl4jModule`     |
+| `modulesIds`       | Optional generation modules to enable                                                    | empty                                   | `UnknownEnumValueModule`, `LoggingSl4jModule`, `LoggingKotlinModule`     |
 | `skip`             | Skip this generator                                                                      | `false`                                 | Boolean                                           |
 | `splitByClient`    | Enable split-by-client mode — see [PROJECT_GENERATION.md](PROJECT_GENERATION.md)        | `false`                                 | Boolean                                           |
 | `targetClientName` | In split mode: name of the client to generate (`null` = shared subproject)              | `null`                                  | Any tag-derived client name from the spec         |

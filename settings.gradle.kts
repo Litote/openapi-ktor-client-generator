@@ -25,5 +25,6 @@ include(
     "generator:adapter-renderer",
     "gradle-plugin",
     "module:unknown-enum-value",
-    "module:logging-sl4j"
+    "module:logging-sl4j",
+    "module:logging-kotlin"
 )

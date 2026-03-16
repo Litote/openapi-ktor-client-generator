@@ -36,6 +36,7 @@ generator/                      → Composition root — wires all sub-modules t
 gradle-plugin/                  → Gradle integration (GeneratorPlugin, tasks)
 module/unknown-enum-value/      → Handles unmapped enum values
 module/logging-sl4j/            → SLF4J logging in generated clients
+module/logging-kotlin/          → kotlin-logging (oshai) logging in generated clients
 convention/                     → Build convention plugins
 e2e/                            → End-to-end tests (separate Gradle project)
 ```

@@ -13,7 +13,8 @@ openapi-ktor-client-generator/
 ├── gradle-plugin/                → Gradle plugin integration layer
 ├── module/
 │   ├── unknown-enum-value/       → Optional module: unknown enum value handling
-│   └── logging-sl4j/             → Optional module: SLF4J logging
+│   ├── logging-sl4j/             → Optional module: SLF4J logging
+│   └── logging-kotlin/           → Optional module: kotlin-logging (oshai) logging
 ├── convention/                   → Build convention plugins
 ├── e2e/                          → End-to-end test project
 ├── settings.gradle.kts
@@ -311,6 +312,7 @@ Used by both `generator/` and `gradle-plugin/`.
 Optional modules loaded via `ApiGeneratorModule.getModule(id)`:
 - `"UnknownEnumValueModule"` — adds `UNKNOWN` default value to enums
 - `"LoggingSl4jModule"` — adds SLF4J logging to generated clients
+- `"LoggingKotlinModule"` — adds kotlin-logging (oshai) logging to generated clients
 
 Modules implement hooks on `ApiConfigurationGeneratorConfig`, `ApiClientGeneratorConfig`, `ApiModelGeneratorConfig`.
 
