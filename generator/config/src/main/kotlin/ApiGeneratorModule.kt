@@ -1,22 +1,22 @@
 package org.litote.openapi.ktor.client.generator
 
-import org.litote.openapi.ktor.client.generator.port.ClientGeneratorConfig
-import org.litote.openapi.ktor.client.generator.port.ConfigurationGeneratorConfig
-import org.litote.openapi.ktor.client.generator.port.ModelGeneratorConfig
+import org.litote.openapi.ktor.client.generator.port.ApiClientGeneratorConfig
+import org.litote.openapi.ktor.client.generator.port.ApiConfigurationGeneratorConfig
+import org.litote.openapi.ktor.client.generator.port.ApiModelGeneratorConfig
 import java.util.ServiceLoader
 
 public interface ApiGeneratorModule {
     public val id: String get() = this::class.simpleName ?: error("Module must have a simple class name")
 
-    public fun process(generator: ConfigurationGeneratorConfig) {
+    public fun process(generator: ApiConfigurationGeneratorConfig) {
         // Module hook — no-op by default.
     }
 
-    public fun process(generator: ClientGeneratorConfig) {
+    public fun process(generator: ApiClientGeneratorConfig) {
         // Module hook — no-op by default.
     }
 
-    public fun process(generator: ModelGeneratorConfig) {
+    public fun process(generator: ApiModelGeneratorConfig) {
         // Module hook — no-op by default.
     }
 

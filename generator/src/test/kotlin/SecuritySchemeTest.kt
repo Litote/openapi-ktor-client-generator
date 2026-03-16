@@ -17,7 +17,7 @@
 package org.litote.openapi.ktor.client.generator
 
 import org.litote.openapi.ktor.client.generator.adapter.parser.OpenApiSpecificationParser
-import org.litote.openapi.ktor.client.generator.domain.SecuritySchemeLocation
+import org.litote.openapi.ktor.client.generator.domain.SecuritySchemeLocationSpec
 import kotlin.test.Test
 import kotlin.test.assertEquals
 import kotlin.test.assertTrue
@@ -36,12 +36,12 @@ class SecuritySchemeTest {
 
         assertEquals(2, spec.clientConfiguration.apiKeySchemes.size, "Should have 2 API key security schemes")
 
-        val headerScheme = spec.clientConfiguration.apiKeySchemes.find { it.location == SecuritySchemeLocation.HEADER }
+        val headerScheme = spec.clientConfiguration.apiKeySchemes.find { it.location == SecuritySchemeLocationSpec.HEADER }
         assertTrue(headerScheme != null, "Should have a header API key scheme")
         assertEquals("api_key_header", headerScheme.name)
         assertEquals("X-Api-Key", headerScheme.keyName)
 
-        val queryScheme = spec.clientConfiguration.apiKeySchemes.find { it.location == SecuritySchemeLocation.QUERY }
+        val queryScheme = spec.clientConfiguration.apiKeySchemes.find { it.location == SecuritySchemeLocationSpec.QUERY }
         assertTrue(queryScheme != null, "Should have a query API key scheme")
         assertEquals("api_key_query_param", queryScheme.name)
         assertEquals("api_key", queryScheme.keyName)

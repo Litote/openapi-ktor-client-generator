@@ -1,6 +1,6 @@
 ## Prerequisites
 
-- JDK 25
+- JDK 17+
 - Gradle 9.4.0+
 
 ## Quick Reference
@@ -50,30 +50,52 @@ a **compile error**, not just a lint warning.
 
 ### Gradle Dependency Graph (enforced at compile time)
 
-```
-generator:domain         → :shared
-generator:port           → generator:domain
-generator:config         → generator:domain + generator:port
-generator:application    → generator:domain + generator:port
-generator:adapter-writer → generator:domain + generator:port
-generator:adapter-parser → generator:domain + generator:port + generator:config
-generator:adapter-renderer → generator:domain + generator:port + generator:config + generator:adapter-writer
-generator (root)         → generator:config + generator:application + generator:adapter-parser
-                           + generator:adapter-renderer + generator:adapter-writer
+```mermaid
+graph TD
+    shared[":shared"]
+    domain["generator:domain"]
+    port["generator:port"]
+    config["generator:config"]
+    app["generator:application"]
+    writer["generator:adapter-writer"]
+    parser["generator:adapter-parser"]
+    renderer["generator:adapter-renderer"]
+    root["generator (root)"]
+
+    domain --> shared
+    port --> domain
+    config --> domain
+    config --> port
+    app --> domain
+    app --> port
+    writer --> domain
+    writer --> port
+    parser --> domain
+    parser --> port
+    parser --> config
+    renderer --> domain
+    renderer --> port
+    renderer --> config
+    renderer --> writer
+    root --> config
+    root --> app
+    root --> parser
+    root --> renderer
+    root --> writer
 ```
 
 ### Sub-module Contents
 
-| Sub-module | Package(s) | Contents |
+| Sub-module | Root package | Key classes |
 |---|---|---|
-| `generator:domain` | `*.domain` + `*.generator` (enums) | `GenerationSpec`, `ClientSpec`, `ModelSpec`, all domain types; `SplitGranularity`, `SharedModelGranularity` |
-| `generator:port` | `*.port` | `SpecificationParser`, `ClientRenderer`, `ModelRenderer`, `ConfigurationRenderer`, `FileSystemWriter`, `*GeneratorConfig` interfaces |
-| `generator:config` | `*.generator` | `ApiGeneratorConfiguration`, `ApiGeneratorModule`, `GenerationResult` |
+| `generator:domain` | `*.domain` | `GenerationSpec`, `ClientSpec`, `ModelSpec`, all domain `*Spec` types |
+| `generator:port` | `*.port` | `ApiSpecificationParser`, `ApiClientRenderer`, `ApiModelRenderer`, `ApiConfigurationRenderer`, `ApiFileSystemWriter`, `Api*GeneratorConfig` interfaces |
+| `generator:config` | `*.generator` | `ApiGeneratorConfiguration`, `ApiGeneratorModule`, `GenerationResult`, `SplitGranularity`, `SharedModelGranularity` |
 | `generator:application` | `*.application` | `GenerateCodeService`, `GenerationSpecPartitioner` |
 | `generator:adapter-writer` | `*.adapter.writer` | `KotlinPoetFileWriter` |
 | `generator:adapter-parser` | `*.adapter.parser` | `OpenApiSpecificationParser`, `ApiModel`, `TypeNameConverter`, helpers |
 | `generator:adapter-renderer` | `*.adapter.renderer` | `ApiClientGenerator`, `ApiModelGenerator`, `ApiClientConfigurationGenerator`, builders, helpers |
-| `generator` (root) | `*.generator` | `ApiGenerator.kt` (composition root — the only file that imports all layers) |
+| `generator` (root) | `*.generator` | `ApiGenerator.kt` — the only file that imports all layers |
 
 ### Key Architectural Invariants (Gradle-enforced)
 
@@ -84,9 +106,9 @@ generator (root)         → generator:config + generator:application + generato
 - **`generator:adapter-renderer`** cannot see parser code (no `generator:adapter-parser` dep)
 - The composition root `generator` is the **only** module that can wire all layers together
 
-### `SpecificationParser` Port Design
+### `ApiSpecificationParser` Port Design
 
-`SpecificationParser.parse(operationFilter)` receives **only** a domain-typed filter.
+`ApiSpecificationParser.parse(operationFilter)` receives **only** a domain-typed filter.
 The full `ApiGeneratorConfiguration` is injected into `OpenApiSpecificationParser` at
 **construction time** in the composition root, keeping the port free of config types.
 
@@ -121,6 +143,44 @@ The `YamlContentConverter` bridges YAML ↔ `kotlinx.serialization` via SnakeYAM
 Users must add `org.yaml:snakeyaml` to their project dependencies when YAML endpoints are used.
 
 ---
+
+## Coding conventions
+
+### Follow [official kotlin conventions](https://kotlinlang.org/docs/coding-conventions.html)
+
+### Directory structure mirrors package structure
+
+Each **Gradle module** defines its own root package. Following the [Kotlin recommendation](https://kotlinlang.org/docs/coding-conventions.html#directory-structure), the module's root package is the *common root package* and is omitted from the directory path — all source files live directly under `src/main/kotlin/`.
+
+| Module | Root package | Source files location |
+|---|---|---|
+| `generator:domain` | `org.litote.openapi.ktor.client.generator.domain` | `src/main/kotlin/` |
+| `generator:port` | `org.litote.openapi.ktor.client.generator.port` | `src/main/kotlin/` |
+| `generator:adapter-renderer` | `org.litote.openapi.ktor.client.generator.adapter.renderer` | `src/main/kotlin/` |
+| `gradle-plugin` | `org.litote.openapi.ktor.client.generator.plugin` | `src/main/kotlin/` |
+| `shared` | `org.litote.openapi.ktor.client.generator.shared` | `src/main/kotlin/` |
+
+Sub-packages within a module are reflected as subdirectories only if the module itself contains files from multiple packages.
+
+### [Choose good names](https://kotlinlang.org/docs/coding-conventions.html#choose-good-names) for classes
+
+- do not suffix names with `Impl` or `ImplBase`, ou `Util`
+- use `Api` prefix for interfaces
+- use `Client` prefix for client classes
+- use `Configuration` prefix for configuration classes
+- use `Spec` prefix for domain types
+- use `Builder` suffix for builders
+- use `Converter` suffix for converters
+- use `Generator` suffix for generators
+- use `Parser` suffix for parsers
+- use `Renderer` suffix for renderers
+- for Util classes prefer `Files.kt` to `FileUtils.kt`
+
+### Prefer top-level function to stateless object declaration
+
+### Be consistant
+
+If you use Spec suffix for domain types, use it for all domain types
 
 ## Update dependencies
 

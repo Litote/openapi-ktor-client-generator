@@ -9,9 +9,9 @@ import org.litote.openapi.ktor.client.generator.application.GenerateCodeService
 import org.litote.openapi.ktor.client.generator.application.GenerationSpecPartitioner
 import org.litote.openapi.ktor.client.generator.domain.GenerationSpec
 import org.litote.openapi.ktor.client.generator.domain.computeGroupDeps
-import org.litote.openapi.ktor.client.generator.port.ClientRenderer
-import org.litote.openapi.ktor.client.generator.port.ConfigurationRenderer
-import org.litote.openapi.ktor.client.generator.port.ModelRenderer
+import org.litote.openapi.ktor.client.generator.port.ApiClientRenderer
+import org.litote.openapi.ktor.client.generator.port.ApiConfigurationRenderer
+import org.litote.openapi.ktor.client.generator.port.ApiModelRenderer
 import org.litote.openapi.ktor.client.generator.shared.toSharedGroupDirName
 
 /**
@@ -174,7 +174,7 @@ public fun generate(configuration: ApiGeneratorConfiguration): GenerationResult 
             ApiClientGenerator(configuration)
                 .apply { configuration.modules.forEach { it.process(this) } }
         val clientRenderer =
-            ClientRenderer { clientSpec ->
+            ApiClientRenderer { clientSpec ->
                 val context = clientGen.buildClient(clientSpec)
                 clientGen.writeFile(context)
             }
@@ -187,7 +187,7 @@ public fun generate(configuration: ApiGeneratorConfiguration): GenerationResult 
                 fallbackModelPackage = configuration.resolvedModelPackage,
             ).apply { configuration.modules.forEach { it.process(this) } }
         val modelRenderer =
-            ModelRenderer { modelSpec ->
+            ApiModelRenderer { modelSpec ->
                 val typeSpec = modelGen.buildModel(modelSpec)
                 modelGen.writeFile(modelSpec.name, typeSpec)
             }
@@ -197,7 +197,7 @@ public fun generate(configuration: ApiGeneratorConfiguration): GenerationResult 
                 val configRenderer =
                     ApiClientConfigurationGenerator(spec.clientConfiguration, configuration)
                         .apply { configuration.modules.forEach { it.process(this) } }
-                Triple(spec, configRenderer as ConfigurationRenderer, clientRenderer)
+                Triple(spec, configRenderer as ApiConfigurationRenderer, clientRenderer)
             } else {
                 val partitioned = GenerationSpecPartitioner().partition(spec)
                 val targetName = configuration.targetClientName
@@ -212,7 +212,7 @@ public fun generate(configuration: ApiGeneratorConfiguration): GenerationResult 
                                     IllegalArgumentException("Client '$targetName' not found"),
                                     "Client '$targetName' not found in spec ${configuration.openApiFile}",
                                 )
-                        val noopConfigRenderer = ConfigurationRenderer { }
+                        val noopConfigRenderer = ApiConfigurationRenderer { }
                         Triple(perClientSpec.spec, noopConfigRenderer, clientRenderer)
                     }
 
@@ -224,8 +224,8 @@ public fun generate(configuration: ApiGeneratorConfiguration): GenerationResult 
                                     IllegalArgumentException("Shared group '$targetSharedGroup' not found"),
                                     "Shared group '$targetSharedGroup' not found in spec ${configuration.openApiFile}",
                                 )
-                        val noopConfigRenderer = ConfigurationRenderer { }
-                        val noopClientRenderer = ClientRenderer { }
+                        val noopConfigRenderer = ApiConfigurationRenderer { }
+                        val noopClientRenderer = ApiClientRenderer { }
                         Triple(groupSpec.spec, noopConfigRenderer, noopClientRenderer)
                     }
 
@@ -235,8 +235,8 @@ public fun generate(configuration: ApiGeneratorConfiguration): GenerationResult 
                         val configRenderer =
                             ApiClientConfigurationGenerator(spec.clientConfiguration, configuration)
                                 .apply { configuration.modules.forEach { it.process(this) } }
-                        val noopClientRenderer = ClientRenderer { }
-                        Triple(sharedSpec, configRenderer as ConfigurationRenderer, noopClientRenderer)
+                        val noopClientRenderer = ApiClientRenderer { }
+                        Triple(sharedSpec, configRenderer as ApiConfigurationRenderer, noopClientRenderer)
                     }
                 }
             }

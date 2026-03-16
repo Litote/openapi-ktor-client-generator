@@ -17,7 +17,7 @@
 package org.litote.openapi.ktor.client.generator
 
 import org.litote.openapi.ktor.client.generator.adapter.parser.OpenApiSpecificationParser
-import org.litote.openapi.ktor.client.generator.domain.DomainType
+import org.litote.openapi.ktor.client.generator.domain.DomainTypeSpec
 import org.litote.openapi.ktor.client.generator.domain.GenerationSpec
 import org.litote.openapi.ktor.client.generator.domain.ModelSpec
 import kotlin.test.Test
@@ -65,8 +65,8 @@ class ApiModelTest {
         val idProp = testResponse.properties.first { it.originalName == "id" }
         val nameProp = testResponse.properties.first { it.originalName == "name" }
 
-        assertEquals(DomainType.Primitive(DomainType.Primitive.Kind.LONG), idProp.type)
-        assertEquals(DomainType.Primitive(DomainType.Primitive.Kind.STRING), nameProp.type)
+        assertEquals(DomainTypeSpec.PrimitiveSpec(DomainTypeSpec.PrimitiveSpec.KindSpec.LONG), idProp.type)
+        assertEquals(DomainTypeSpec.PrimitiveSpec(DomainTypeSpec.PrimitiveSpec.KindSpec.STRING), nameProp.type)
     }
 
     @Test
@@ -77,6 +77,6 @@ class ApiModelTest {
         val requestBody = operation.requestBody
         assertNotNull(requestBody)
 
-        assertEquals(DomainType.ModelReference("TestRequest"), requestBody.type)
+        assertEquals(DomainTypeSpec.ModelReferenceSpec("TestRequest"), requestBody.type)
     }
 }

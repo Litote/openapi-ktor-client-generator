@@ -29,29 +29,50 @@ compile errors, not just warnings.
 
 ### Gradle Dependency Graph
 
-```
-generator:domain         → :shared
-generator:port           → generator:domain
-generator:config         → generator:domain + generator:port
-generator:application    → generator:domain + generator:port
-generator:adapter-writer → generator:domain + generator:port
-generator:adapter-parser → generator:domain + generator:port + generator:config
-generator:adapter-renderer → generator:domain + generator:port + generator:config + generator:adapter-writer
-generator (root)         → generator:config + generator:application + generator:adapter-parser
-                           + generator:adapter-renderer + generator:adapter-writer
+```mermaid
+graph TD
+    shared[":shared"]
+    domain["generator:domain"]
+    port["generator:port"]
+    config["generator:config"]
+    app["generator:application"]
+    writer["generator:adapter-writer"]
+    parser["generator:adapter-parser"]
+    renderer["generator:adapter-renderer"]
+    root["generator (root)"]
+
+    domain --> shared
+    port --> domain
+    config --> domain
+    config --> port
+    app --> domain
+    app --> port
+    writer --> domain
+    writer --> port
+    parser --> domain
+    parser --> port
+    parser --> config
+    renderer --> domain
+    renderer --> port
+    renderer --> config
+    renderer --> writer
+    root --> config
+    root --> app
+    root --> parser
+    root --> renderer
+    root --> writer
 ```
 
 ### Sub-module Contents
 
-| Sub-module | Package | Contents |
+| Sub-module | Root package | Key classes |
 |---|---|---|
-| `generator:domain` | `*.domain` | `GenerationSpec`, `ClientSpec`, `OperationSpec`, `ModelSpec` (sealed), `DomainType` (sealed), `ModelProperty`, `OperationParameter`, `RequestBodySpec`, `ResponseEntry`, `FormFieldSpec`, `ClientConfigurationSpec`, `SecuritySchemeSpec`, `ComponentParameterSpec`, `DefaultValue`, `OperationMeta`, `ParameterLocation`, `ModelUsageAnalyzer`, `PartitionedGenerationSpec`, `PerClientGenerationSpec`, `SharedGroupSpec`, `GeneratedFile` |
-| `generator:domain` | `*.generator` (enums) | `SplitGranularity`, `SharedModelGranularity` (same package as root, different module) |
-| `generator:port` | `*.port` | `SpecificationParser` (parse takes only `operationFilter`), `ConfigurationRenderer`, `ClientRenderer`, `ModelRenderer`, `FileSystemWriter`, `ConfigurationGeneratorConfig`, `ClientGeneratorConfig`, `ModelGeneratorConfig` |
-| `generator:config` | `*.generator` | `ApiGeneratorConfiguration`, `ApiGeneratorModule`, `GenerationResult` |
+| `generator:domain` | `*.domain` | `GenerationSpec`, `ClientSpec`, `OperationSpec`, `ModelSpec` (sealed), `DomainTypeSpec` (sealed), `ModelPropertySpec`, `OperationParameterSpec`, `RequestBodySpec`, `ResponseEntrySpec`, `FormFieldSpec`, `ClientConfigurationSpec`, `SecuritySchemeSpec`, `ComponentParameterSpec`, `DefaultValueSpec`, `OperationMetaSpec`, `ParameterLocationSpec`, `ModelUsageAnalyzer` (top-level fns), `PartitionedGenerationSpec`, `PerClientGenerationSpec`, `SharedGroupSpec`, `GeneratedFileSpec` |
+| `generator:port` | `*.port` | `ApiSpecificationParser` (parse takes only `operationFilter`), `ApiConfigurationRenderer`, `ApiClientRenderer`, `ApiModelRenderer`, `ApiFileSystemWriter`, `ApiConfigurationGeneratorConfig`, `ApiClientGeneratorConfig`, `ApiModelGeneratorConfig` |
+| `generator:config` | `*.generator` | `ApiGeneratorConfiguration`, `ApiGeneratorModule`, `GenerationResult`, `SplitGranularity`, `SharedModelGranularity` |
 | `generator:application` | `*.application` | `GenerateCodeService`, `GenerationSpecPartitioner` |
 | `generator:adapter-writer` | `*.adapter.writer` | `KotlinPoetFileWriter` |
-| `generator:adapter-parser` | `*.adapter.parser` | `OpenApiSpecificationParser(configuration)`, `ApiModel`, `TypeNameConverter`, `ParserNameUtils`, `ParserTypeUtils`, `ApiOperation`, `ApiClassProperty` |
+| `generator:adapter-parser` | `*.adapter.parser` | `OpenApiSpecificationParser(configuration)`, `ApiModel`, `TypeNameConverter`, `ParserNames`, `ParserTypes`, `ApiOperation`, `ApiClassProperty` |
 | `generator:adapter-renderer` | `*.adapter.renderer` | `ApiClientGenerator`, `ApiModelGenerator`, `ApiClientConfigurationGenerator`, `YamlContentConverterGenerator`, `OperationBuilder`, `ResponseBuilder`, `KotlinPoets`, `KtorPoets` |
 | `generator` (root) | `*.generator` | `ApiGenerator.kt` — composition root, the ONLY file importing all layers |
 
@@ -64,7 +85,7 @@ generator (root)         → generator:config + generator:application + generato
 - **`generator:adapter-renderer`**: cannot see parser code
 - `ApiGenerator.kt` is the **only** place that imports all layers
 
-### SpecificationParser Port Design
+### ApiSpecificationParser Port Design
 
 `parse(operationFilter)` takes only a domain-typed filter. `ApiGeneratorConfiguration` is
 injected at **construction time** of `OpenApiSpecificationParser` in the composition root:
@@ -97,7 +118,7 @@ data class ApiGeneratorConfiguration(
     val openApiFile: String,
     val outputDirectory: String,
     val basePackage: String = "org.example",
-    val operationFilter: (OperationMeta) -> Boolean = { true },
+    val operationFilter: (OperationMetaSpec) -> Boolean = { true },
     val modelPackage: String = "$basePackage.model",
     val clientPackage: String = "$basePackage.client",
     val modules: List<ApiGeneratorModule> = emptyList(),
@@ -168,15 +189,26 @@ Map of model name → package to use when generating type references. Applied in
 
 ### Plugin flow
 
-```
-GeneratorPlugin.apply(project)
-├── Creates ApiClientGeneratorsExtension ("apiClientGenerator")
-├── Registers initApiClientSubproject task
-└── afterEvaluate: for each generator
-    ├── initConventions(project)
-    ├── Registers generateX task (GenerateTask)
-    ├── Wires srcDir: outputDirectory/src/main/kotlin → kotlin.jvm or kotlin.multiplatform commonMain
-    └── Makes KotlinCompile, Jar, lintKotlin depend on generateX
+```mermaid
+flowchart TD
+    A["GeneratorPlugin.apply(project)"]
+    B["create ApiClientGeneratorsExtension"]
+    C["register initApiClientSubproject task"]
+    D["afterEvaluate: for each generator"]
+    E["register GenerateTask"]
+    F["wire outputDirectory as Kotlin source set\n(jvm or commonMain)"]
+    G["make compile / lint tasks depend on GenerateTask"]
+    H["GenerateTask.execute()"]
+    I["ApiGenerator.generate(configuration)"]
+
+    A --> B
+    A --> C
+    A --> D
+    D --> E
+    D --> F
+    D --> G
+    E --> H
+    H --> I
 ```
 
 ### Generated output layout
@@ -280,7 +312,7 @@ Optional modules loaded via `ApiGeneratorModule.getModule(id)`:
 - `"UnknownEnumValueModule"` — adds `UNKNOWN` default value to enums
 - `"LoggingSl4jModule"` — adds SLF4J logging to generated clients
 
-Modules implement hooks on `ConfigurationGeneratorConfig`, `ClientGeneratorConfig`, `ModelGeneratorConfig`.
+Modules implement hooks on `ApiConfigurationGeneratorConfig`, `ApiClientGeneratorConfig`, `ApiModelGeneratorConfig`.
 
 ---
 
@@ -336,25 +368,39 @@ systemProp.sonar.token=<your-token>
 
 ---
 
-```
-GenerationSpec
-├── clientConfiguration: ClientConfigurationSpec
-├── clients: List<ClientSpec>
-│   └── ClientSpec.operations: List<OperationSpec>
-│       ├── parameters: List<OperationParameter>   → type: DomainType (may be ModelReference/InlineType)
-│       ├── requestBody: RequestBodySpec?           → type: DomainType, inlineModels: List<ModelSpec>
-│       ├── responses: List<ResponseEntry>          → bodyType: DomainType?
-│       └── inlineModels: List<ModelSpec>
-└── models: List<ModelSpec>
-    ├── DataClassSpec.properties: List<ModelProperty>
-    │   └── ModelProperty.type: DomainType (ModelReference = link to another model)
-    │   └── ModelProperty.nestedModels: List<ModelSpec>
-    ├── SealedClassSpec (discriminator)
-    ├── DataClassSpec/ObjectSpec with sealedParentName → child of a SealedClass
-    └── EnumSpec, AliasSpec
+## Domain Model — `GenerationSpec` Structure
+
+```mermaid
+graph TD
+    GS["GenerationSpec"]
+    CC["ClientConfigurationSpec"]
+    CS["ClientSpec"]
+    OS["OperationSpec"]
+    OP["OperationParameterSpec"]
+    RB["RequestBodySpec"]
+    RE["ResponseEntrySpec"]
+    IL["ModelSpec (inline)"]
+    MS["ModelSpec\n(DataClassSpec | SealedClassSpec\n| EnumSpec | AliasSpec | ObjectSpec)"]
+    MP["ModelPropertySpec"]
+    DT["DomainTypeSpec\n(PrimitiveSpec | ListTypeSpec | SetTypeSpec\n| MapTypeSpec | ModelReferenceSpec\n| InlineTypeSpec | JsonTypeSpec)"]
+
+    GS -->|clientConfiguration| CC
+    GS -->|clients| CS
+    GS -->|models| MS
+    CS -->|operations| OS
+    OS -->|parameters| OP
+    OS -->|requestBody| RB
+    OS -->|responses| RE
+    OS -->|inlineModels| IL
+    MS -->|properties| MP
+    IL -->|properties| MP
+    MP -->|type| DT
+    OP -->|type| DT
+    RB -->|type| DT
+    RE -->|bodyType| DT
 ```
 
-**`DomainType.ModelReference(name)` is the link between clients/models and named model classes.**
+**`DomainTypeSpec.ModelReferenceSpec(name)`** is the link between operations/models and named model classes generated in the model package.
 
 ---
 

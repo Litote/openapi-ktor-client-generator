@@ -3,12 +3,12 @@ package org.litote.openapi.ktor.client.generator
 import org.litote.openapi.ktor.client.generator.application.GenerationSpecPartitioner
 import org.litote.openapi.ktor.client.generator.domain.ClientConfigurationSpec
 import org.litote.openapi.ktor.client.generator.domain.ClientSpec
-import org.litote.openapi.ktor.client.generator.domain.DomainType
+import org.litote.openapi.ktor.client.generator.domain.DomainTypeSpec
 import org.litote.openapi.ktor.client.generator.domain.GenerationSpec
-import org.litote.openapi.ktor.client.generator.domain.ModelProperty
+import org.litote.openapi.ktor.client.generator.domain.ModelPropertySpec
 import org.litote.openapi.ktor.client.generator.domain.ModelSpec
 import org.litote.openapi.ktor.client.generator.domain.OperationSpec
-import org.litote.openapi.ktor.client.generator.domain.ResponseEntry
+import org.litote.openapi.ktor.client.generator.domain.ResponseEntrySpec
 import kotlin.test.Test
 import kotlin.test.assertEquals
 import kotlin.test.assertTrue
@@ -29,9 +29,9 @@ class GenerationSpecPartitionerTest {
             parameters = emptyList(),
             responses =
                 listOf(
-                    ResponseEntry(
+                    ResponseEntrySpec(
                         statusCodes = listOf(200),
-                        bodyType = DomainType.ModelReference(modelName),
+                        bodyType = DomainTypeSpec.ModelReferenceSpec(modelName),
                         isSuccess = true,
                     ),
                 ),
@@ -43,7 +43,7 @@ class GenerationSpecPartitionerTest {
             path = "/ping",
             method = "GET",
             parameters = emptyList(),
-            responses = listOf(ResponseEntry(statusCodes = listOf(200), bodyType = null, isSuccess = true)),
+            responses = listOf(ResponseEntrySpec(statusCodes = listOf(200), bodyType = null, isSuccess = true)),
         )
 
     @Test
@@ -156,10 +156,10 @@ class GenerationSpecPartitionerTest {
                 sealedParentName = "SealedParent",
                 properties =
                     listOf(
-                        ModelProperty(
+                        ModelPropertySpec(
                             originalName = "history",
                             camelCaseName = "history",
-                            type = DomainType.ListType(DomainType.ModelReference("TagHistory")),
+                            type = DomainTypeSpec.ListTypeSpec(DomainTypeSpec.ModelReferenceSpec("TagHistory")),
                             needsSerialName = false,
                         ),
                     ),

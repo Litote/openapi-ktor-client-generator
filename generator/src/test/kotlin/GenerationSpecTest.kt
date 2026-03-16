@@ -2,11 +2,11 @@ package org.litote.openapi.ktor.client.generator
 
 import org.litote.openapi.ktor.client.generator.adapter.parser.OpenApiSpecificationParser
 import org.litote.openapi.ktor.client.generator.domain.ClientConfigurationSpec
-import org.litote.openapi.ktor.client.generator.domain.DomainType
+import org.litote.openapi.ktor.client.generator.domain.DomainTypeSpec
 import org.litote.openapi.ktor.client.generator.domain.GenerationSpec
 import org.litote.openapi.ktor.client.generator.domain.ModelSpec
-import org.litote.openapi.ktor.client.generator.domain.ParameterLocation
-import org.litote.openapi.ktor.client.generator.domain.SecuritySchemeLocation
+import org.litote.openapi.ktor.client.generator.domain.ParameterLocationSpec
+import org.litote.openapi.ktor.client.generator.domain.SecuritySchemeLocationSpec
 import kotlin.test.Test
 import kotlin.test.assertEquals
 import kotlin.test.assertIs
@@ -60,8 +60,8 @@ class GenerationSpecTest {
         val idProp = testResponse.properties.first { it.originalName == "id" }
         val nameProp = testResponse.properties.first { it.originalName == "name" }
 
-        assertEquals(DomainType.Primitive(DomainType.Primitive.Kind.LONG), idProp.type)
-        assertEquals(DomainType.Primitive(DomainType.Primitive.Kind.STRING), nameProp.type)
+        assertEquals(DomainTypeSpec.PrimitiveSpec(DomainTypeSpec.PrimitiveSpec.KindSpec.LONG), idProp.type)
+        assertEquals(DomainTypeSpec.PrimitiveSpec(DomainTypeSpec.PrimitiveSpec.KindSpec.STRING), nameProp.type)
     }
 
     @Test
@@ -76,11 +76,11 @@ class GenerationSpecTest {
 
         assertEquals(2, spec.clientConfiguration.apiKeySchemes.size)
 
-        val headerScheme = spec.clientConfiguration.apiKeySchemes.first { it.location == SecuritySchemeLocation.HEADER }
+        val headerScheme = spec.clientConfiguration.apiKeySchemes.first { it.location == SecuritySchemeLocationSpec.HEADER }
         assertEquals("api_key_header", headerScheme.name)
         assertEquals("X-Api-Key", headerScheme.keyName)
 
-        val queryScheme = spec.clientConfiguration.apiKeySchemes.first { it.location == SecuritySchemeLocation.QUERY }
+        val queryScheme = spec.clientConfiguration.apiKeySchemes.first { it.location == SecuritySchemeLocationSpec.QUERY }
         assertEquals("api_key_query_param", queryScheme.name)
         assertEquals("api_key", queryScheme.keyName)
     }
@@ -112,7 +112,7 @@ class GenerationSpecTest {
         val operation = client.operations.first()
 
         // testId path param
-        val pathParam = operation.parameters.firstOrNull { it.location == ParameterLocation.PATH }
+        val pathParam = operation.parameters.firstOrNull { it.location == ParameterLocationSpec.PATH }
         assertNotNull(pathParam, "Should have a path parameter")
         assertEquals("testId", pathParam.originalName)
     }
@@ -140,21 +140,21 @@ class GenerationSpecTest {
     }
 
     @Test
-    fun `GIVEN DomainType WHEN asNullable called THEN returns nullable variant`() {
-        val stringType = DomainType.Primitive(DomainType.Primitive.Kind.STRING)
+    fun `GIVEN DomainTypeSpec WHEN asNullable called THEN returns nullable variant`() {
+        val stringType = DomainTypeSpec.PrimitiveSpec(DomainTypeSpec.PrimitiveSpec.KindSpec.STRING)
         val nullableString = stringType.asNullable()
 
         assertTrue(nullableString.nullable)
-        assertEquals(DomainType.Primitive(DomainType.Primitive.Kind.STRING, nullable = true), nullableString)
+        assertEquals(DomainTypeSpec.PrimitiveSpec(DomainTypeSpec.PrimitiveSpec.KindSpec.STRING, nullable = true), nullableString)
     }
 
     @Test
-    fun `GIVEN DomainType ModelReference WHEN asNullable called THEN returns nullable variant`() {
-        val ref = DomainType.ModelReference("TestResponse")
+    fun `GIVEN DomainTypeSpec ModelReference WHEN asNullable called THEN returns nullable variant`() {
+        val ref = DomainTypeSpec.ModelReferenceSpec("TestResponse")
         val nullableRef = ref.asNullable()
 
         assertTrue(nullableRef.nullable)
-        assertEquals(DomainType.ModelReference("TestResponse", nullable = true), nullableRef)
+        assertEquals(DomainTypeSpec.ModelReferenceSpec("TestResponse", nullable = true), nullableRef)
     }
 
     @Test

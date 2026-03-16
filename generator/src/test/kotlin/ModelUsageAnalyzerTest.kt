@@ -2,14 +2,14 @@ package org.litote.openapi.ktor.client.generator
 
 import org.litote.openapi.ktor.client.generator.domain.ClientConfigurationSpec
 import org.litote.openapi.ktor.client.generator.domain.ClientSpec
-import org.litote.openapi.ktor.client.generator.domain.DomainType
+import org.litote.openapi.ktor.client.generator.domain.DomainTypeSpec
 import org.litote.openapi.ktor.client.generator.domain.GenerationSpec
-import org.litote.openapi.ktor.client.generator.domain.ModelProperty
+import org.litote.openapi.ktor.client.generator.domain.ModelPropertySpec
 import org.litote.openapi.ktor.client.generator.domain.ModelSpec
-import org.litote.openapi.ktor.client.generator.domain.OperationParameter
+import org.litote.openapi.ktor.client.generator.domain.OperationParameterSpec
 import org.litote.openapi.ktor.client.generator.domain.OperationSpec
-import org.litote.openapi.ktor.client.generator.domain.ParameterLocation
-import org.litote.openapi.ktor.client.generator.domain.ResponseEntry
+import org.litote.openapi.ktor.client.generator.domain.ParameterLocationSpec
+import org.litote.openapi.ktor.client.generator.domain.ResponseEntrySpec
 import org.litote.openapi.ktor.client.generator.domain.analyzeModelUsage
 import kotlin.test.Test
 import kotlin.test.assertEquals
@@ -31,9 +31,9 @@ class ModelUsageAnalyzerTest {
             parameters = emptyList(),
             responses =
                 listOf(
-                    ResponseEntry(
+                    ResponseEntrySpec(
                         statusCodes = listOf(200),
-                        bodyType = DomainType.ModelReference(modelName),
+                        bodyType = DomainTypeSpec.ModelReferenceSpec(modelName),
                         isSuccess = true,
                     ),
                 ),
@@ -86,7 +86,7 @@ class ModelUsageAnalyzerTest {
                             path = "/other",
                             method = "GET",
                             parameters = emptyList(),
-                            responses = listOf(ResponseEntry(statusCodes = listOf(200), bodyType = null, isSuccess = true)),
+                            responses = listOf(ResponseEntrySpec(statusCodes = listOf(200), bodyType = null, isSuccess = true)),
                         ),
                     ),
             )
@@ -115,7 +115,7 @@ class ModelUsageAnalyzerTest {
                             path = "/ping",
                             method = "GET",
                             parameters = emptyList(),
-                            responses = listOf(ResponseEntry(statusCodes = listOf(200), bodyType = null, isSuccess = true)),
+                            responses = listOf(ResponseEntrySpec(statusCodes = listOf(200), bodyType = null, isSuccess = true)),
                         ),
                     ),
             )
@@ -173,10 +173,10 @@ class ModelUsageAnalyzerTest {
                 name = "MiddleModel",
                 properties =
                     listOf(
-                        ModelProperty(
+                        ModelPropertySpec(
                             originalName = "leaf",
                             camelCaseName = "leaf",
-                            type = DomainType.ModelReference("LeafModel"),
+                            type = DomainTypeSpec.ModelReferenceSpec("LeafModel"),
                             needsSerialName = false,
                         ),
                     ),
@@ -186,10 +186,10 @@ class ModelUsageAnalyzerTest {
                 name = "TopModel",
                 properties =
                     listOf(
-                        ModelProperty(
+                        ModelPropertySpec(
                             originalName = "middle",
                             camelCaseName = "middle",
-                            type = DomainType.ModelReference("MiddleModel"),
+                            type = DomainTypeSpec.ModelReferenceSpec("MiddleModel"),
                             needsSerialName = false,
                         ),
                     ),
@@ -205,15 +205,15 @@ class ModelUsageAnalyzerTest {
                             method = "GET",
                             parameters =
                                 listOf(
-                                    OperationParameter(
+                                    OperationParameterSpec(
                                         originalName = "topParam",
                                         camelCaseName = "topParam",
-                                        type = DomainType.ModelReference("TopModel"),
-                                        location = ParameterLocation.QUERY,
+                                        type = DomainTypeSpec.ModelReferenceSpec("TopModel"),
+                                        location = ParameterLocationSpec.QUERY,
                                         required = false,
                                     ),
                                 ),
-                            responses = listOf(ResponseEntry(statusCodes = listOf(200), bodyType = null, isSuccess = true)),
+                            responses = listOf(ResponseEntrySpec(statusCodes = listOf(200), bodyType = null, isSuccess = true)),
                         ),
                     ),
             )
