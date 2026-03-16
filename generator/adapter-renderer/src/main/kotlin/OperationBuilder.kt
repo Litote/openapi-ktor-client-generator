@@ -304,7 +304,7 @@ internal class OperationBuilder(
                 sseMember,
                 trimmedPath,
             )
-            addSseHeaderParams(builder, headerParameters)
+            addRegularHeaderParams(builder, headerParameters)
             addQueryParams(builder, queryParameters)
             builder.endControlFlow()
             builder.beginControlFlow(")")
@@ -323,49 +323,6 @@ internal class OperationBuilder(
         builder.addStatement("%L(%L)", "configuration.exceptionLogger", "e")
         builder.endControlFlow()
         return builder.build()
-    }
-
-    private fun addSseHeaderParams(
-        builder: CodeBlock.Builder,
-        headerParameters: List<OperationParameterSpec>,
-    ) {
-        headerParameters.forEach { param ->
-            if (param.constName != null) {
-                if (param.isOptional) {
-                    builder.beginControlFlow(IF_NOT_NULL, param.camelCaseName)
-                    builder.addStatement(
-                        "$ALIAS_HEADER(%T.%L, %N)",
-                        clientConfigurationClass,
-                        param.constName,
-                        param.camelCaseName,
-                    )
-                    builder.endControlFlow()
-                } else {
-                    builder.addStatement(
-                        "$ALIAS_HEADER(%T.%L, %N)",
-                        clientConfigurationClass,
-                        param.constName,
-                        param.camelCaseName,
-                    )
-                }
-            } else {
-                if (param.isOptional) {
-                    builder.beginControlFlow(IF_NOT_NULL, param.camelCaseName)
-                    builder.addStatement(
-                        "$ALIAS_HEADER(%S, %N)",
-                        param.originalName,
-                        param.camelCaseName,
-                    )
-                    builder.endControlFlow()
-                } else {
-                    builder.addStatement(
-                        "$ALIAS_HEADER(%S, %N)",
-                        param.originalName,
-                        param.camelCaseName,
-                    )
-                }
-            }
-        }
     }
 
     private fun addQueryParams(

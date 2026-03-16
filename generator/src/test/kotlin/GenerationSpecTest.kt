@@ -158,6 +158,54 @@ class GenerationSpecTest {
     }
 
     @Test
+    fun `GIVEN DomainTypeSpec WHEN asNonNullable called THEN returns non-nullable variant for all subtypes`() {
+        val cases =
+            listOf(
+                DomainTypeSpec.PrimitiveSpec(DomainTypeSpec.PrimitiveSpec.KindSpec.STRING, nullable = true),
+                DomainTypeSpec.ListTypeSpec(DomainTypeSpec.PrimitiveSpec(DomainTypeSpec.PrimitiveSpec.KindSpec.INT), nullable = true),
+                DomainTypeSpec.SetTypeSpec(DomainTypeSpec.PrimitiveSpec(DomainTypeSpec.PrimitiveSpec.KindSpec.INT), nullable = true),
+                DomainTypeSpec.MapTypeSpec(DomainTypeSpec.PrimitiveSpec(DomainTypeSpec.PrimitiveSpec.KindSpec.STRING), nullable = true),
+                DomainTypeSpec.ModelReferenceSpec("Foo", nullable = true),
+                DomainTypeSpec.InlineTypeSpec("Bar", nullable = true),
+                DomainTypeSpec.JsonTypeSpec(nullable = true),
+            )
+        cases.forEach { spec ->
+            val result = spec.asNonNullable()
+            assertTrue(!result.nullable, "Expected non-nullable for $spec")
+        }
+    }
+
+    @Test
+    fun `GIVEN DomainTypeSpec WHEN asNullable called on all subtypes THEN all return nullable`() {
+        val cases =
+            listOf(
+                DomainTypeSpec.ListTypeSpec(DomainTypeSpec.PrimitiveSpec(DomainTypeSpec.PrimitiveSpec.KindSpec.INT)),
+                DomainTypeSpec.SetTypeSpec(DomainTypeSpec.PrimitiveSpec(DomainTypeSpec.PrimitiveSpec.KindSpec.DOUBLE)),
+                DomainTypeSpec.MapTypeSpec(DomainTypeSpec.PrimitiveSpec(DomainTypeSpec.PrimitiveSpec.KindSpec.STRING)),
+                DomainTypeSpec.InlineTypeSpec("MyEnum", isEnum = true),
+                DomainTypeSpec.JsonTypeSpec(),
+            )
+        cases.forEach { spec ->
+            val result = spec.asNullable()
+            assertTrue(result.nullable, "Expected nullable for $spec")
+        }
+    }
+
+    @Test
+    fun `GIVEN DomainTypeSpec WHEN isString and isPrimitive checked THEN correct values returned`() {
+        val stringSpec = DomainTypeSpec.PrimitiveSpec(DomainTypeSpec.PrimitiveSpec.KindSpec.STRING)
+        val intSpec = DomainTypeSpec.PrimitiveSpec(DomainTypeSpec.PrimitiveSpec.KindSpec.INT)
+        val modelRef = DomainTypeSpec.ModelReferenceSpec("Foo")
+
+        assertTrue(stringSpec.isString)
+        assertTrue(stringSpec.isPrimitive)
+        assertTrue(!intSpec.isString)
+        assertTrue(intSpec.isPrimitive)
+        assertTrue(!modelRef.isString)
+        assertTrue(!modelRef.isPrimitive)
+    }
+
+    @Test
     fun `GIVEN ClientConfigurationSpec WHEN created THEN holds correct data`() {
         val spec =
             ClientConfigurationSpec(

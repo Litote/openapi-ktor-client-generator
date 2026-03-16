@@ -96,6 +96,8 @@ tasks.register("updateVerificationMetadata") {
  * Fetches quality gate status and open issues from SonarCloud.
  * Fails the build if the gate is not OK or any issue/hotspot remains.
  *
+ * Waits for SonarCloud to finish processing the analysis (async CE task) before checking.
+ *
  * Prerequisites: run `./gradlew check jacocoAggregatedReport sonar` first to push the analysis.
  * Token: set `systemProp.sonar.token=<token>` in ~/.gradle/gradle.properties
  *
@@ -105,6 +107,8 @@ tasks.register("updateVerificationMetadata") {
 tasks.register("sonarCheck") {
     group = "verification"
     description = "Verifies SonarCloud quality gate: fails if gate != OK, issues > 0, or hotspots > 0."
+    mustRunAfter("sonar")
+    notCompatibleWithConfigurationCache("Reads sonar/report-task.txt generated at execution time")
     doLast {
         val token = System.getProperty("sonar.token")
             ?: System.getenv("SONAR_TOKEN")
@@ -125,6 +129,37 @@ tasks.register("sonarCheck") {
                 "SonarCloud API error ${resp.statusCode()}: ${resp.body()}"
             }
             return slurper.parseText(resp.body())
+        }
+
+        val reportTaskFile = layout.buildDirectory.file("sonar/report-task.txt").get().asFile
+        if (reportTaskFile.exists()) {
+            val props = java.util.Properties().also { it.load(reportTaskFile.inputStream()) }
+            val ceTaskId = props.getProperty("ceTaskId")
+            if (ceTaskId != null) {
+                logger.lifecycle("⏳ Waiting for SonarCloud analysis (task $ceTaskId) to complete…")
+                val maxWaitMs = 120_000L
+                val pollIntervalMs = 5_000L
+                val start = System.currentTimeMillis()
+                while (true) {
+                    @Suppress("UNCHECKED_CAST")
+                    val taskData = fetch("https://sonarcloud.io/api/ce/task?id=$ceTaskId") as Map<String, Any>
+                    @Suppress("UNCHECKED_CAST")
+                    val taskStatus = (taskData["task"] as Map<String, Any>)["status"] as String
+                    when (taskStatus) {
+                        "SUCCESS" -> {
+                            logger.lifecycle("✅ Analysis processing complete.")
+                            break
+                        }
+                        "FAILED", "CANCELLED" -> error("SonarCloud analysis task $ceTaskId ended with status: $taskStatus")
+                        else -> {
+                            check(System.currentTimeMillis() - start < maxWaitMs) {
+                                "Timed out waiting for SonarCloud analysis task $ceTaskId (status: $taskStatus)"
+                            }
+                            Thread.sleep(pollIntervalMs)
+                        }
+                    }
+                }
+            }
         }
 
         @Suppress("UNCHECKED_CAST")
