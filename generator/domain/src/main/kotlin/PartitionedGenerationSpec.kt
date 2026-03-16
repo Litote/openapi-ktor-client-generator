@@ -10,7 +10,7 @@ public data class PartitionedGenerationSpec(
 ) {
     /**
      * Backward-compatible view: union of all shared groups' models into a single [GenerationSpec].
-     * Used by [org.litote.openapi.ktor.client.generator.SharedModelGranularity.SHARED_ALL].
+     * Used by `SharedModelGranularity.SHARED_ALL`.
      */
     public val shared: GenerationSpec
         get() {

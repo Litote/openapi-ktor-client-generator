@@ -1,6 +1,6 @@
 package org.litote.openapi.ktor.client.generator.port
 
-/** Configuration hook for the client configuration generator, exposed to [org.litote.openapi.ktor.client.generator.ApiGeneratorModule] implementors. */
+/** Configuration hook for the client configuration generator, exposed to `ApiGeneratorModule` implementors. */
 public interface ApiConfigurationGeneratorConfig {
     /** Json properties added to the default Json configuration in the generated ClientConfiguration. */
     public val jsonDefaultValueProperties: MutableMap<String, String>
