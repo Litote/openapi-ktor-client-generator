@@ -207,3 +207,43 @@ javadoc JARs, `.pom`, `.module` files) which are IDE-only and exempt from checks
 # Gradle portal 
 ./gradlew publishPlugins
 ```
+
+---
+
+## CI / CD
+
+Three GitHub Actions workflows are defined under `.github/workflows/`:
+
+| Workflow | Trigger | What it does |
+|---|---|---|
+| `ci.yml` | Pull request → `master` | Format check, tests, Jacoco, SonarCloud analysis + quality gate |
+| `snapshot.yml` | Push → `master` | Same as CI + deploys SNAPSHOT to Maven Central |
+| `release.yml` | Manual (`workflow_dispatch`) | Bumps version, tests, SonarCloud, publishes to Maven Central + Gradle Plugin Portal, signs and pushes git tag |
+
+### Signing
+
+- **Artifact signing** (Maven Central): uses in-memory GPG signing in CI via `ORG_GRADLE_PROJECT_signingInMemoryKey*` env vars. Locally, uses `gpg --use-agent` (`useGpgCmd()`). Convention: `convention/src/main/kotlin/kotlin-convention.gradle.kts`.
+- **Commit signing** (release only): handled by `crazy-max/ghaction-import-gpg@v6` using a dedicated CI GPG key registered on the `litote-bot` GitHub machine user account.
+
+### GitHub Secrets required
+
+GitHub Secrets are always uppercased by GitHub. The workflow YAML maps each secret to the exact env var name expected by Gradle/vanniktech.
+
+| GitHub Secret (what you type) | Env var injected by workflow | Used by                                                   |
+|---|---|-----------------------------------------------------------|
+| `SONAR_TOKEN` | `SONAR_TOKEN` | all workflows                                             |
+| `MAVEN_CENTRAL_USERNAME` | `ORG_GRADLE_PROJECT_mavenCentralUsername` | snapshot, release                                         |
+| `MAVEN_CENTRAL_PASSWORD` | `ORG_GRADLE_PROJECT_mavenCentralPassword` | snapshot, release                                         |
+| `SIGNING_IN_MEMORY_KEY` | `ORG_GRADLE_PROJECT_signingInMemoryKey` | snapshot, release (key 1 — `release@litote.org`)          |
+| `SIGNING_IN_MEMORY_KEY_ID` | `ORG_GRADLE_PROJECT_signingInMemoryKeyId` | snapshot, release                                         |
+| `SIGNING_IN_MEMORY_KEY_PASSWORD` | `ORG_GRADLE_PROJECT_signingInMemoryKeyPassword` | snapshot, release                                         |
+| `GRADLE_PUBLISH_KEY` | `-Pgradle.publish.key` | release                                                   |
+| `GRADLE_PUBLISH_SECRET` | `-Pgradle.publish.secret` | release                                                   |
+| `BOT_GPG_PRIVATE_KEY` | `gpg --import` | release (key 2 — `github-bot@litote.org`, commit signing) |
+| `BOT_GPG_PASSWORD` | gpg passphrase | release                                                   |
+
+### Triggering a release
+
+Go to **Actions → Release → Run workflow**, enter the version (e.g. `0.3.0`).
+The workflow will strip `-SNAPSHOT`, run full quality checks, publish, then commit + tag `v0.3.0` signed by `litote-bot`.
+
