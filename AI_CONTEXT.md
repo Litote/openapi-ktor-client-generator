@@ -425,8 +425,8 @@ Three GitHub Actions workflows in `.github/workflows/`:
 |---|---|---|
 | `ci.yml` | PR → main | PR title (Conventional Commits) + full QA |
 | `ci.yml` | push → main | Same + deploy `main-SNAPSHOT` to Maven Central |
-| `release-please.yml` | push → main | Runs release-please (GitHub App): creates Release PR with CHANGELOG, then GitHub Release + tag on merge |
-| `release.yml` | GitHub Release published | Full QA → Maven Central → Gradle Plugin Portal |
+| `release-please.yml` | push → main | Runs release-please (GitHub App): creates Release PR with CHANGELOG, then GitHub Release + tag on merge. Chains to `publish` job on release created |
+| `release-please.yml` (`publish` job) | After release-please creates a release (or `workflow_dispatch`) | Full QA → Maven Central → Gradle Plugin Portal |
 
 ### Release flow
 
@@ -436,9 +436,8 @@ feat/fix PR merged → main
     (CHANGELOG.md, .release-please-manifest.json)
   → Release PR merged
     → release-please creates tag vX.Y.Z + GitHub Release
-      → release.yml triggers
+      → publish job triggers (release_created=true)
         → Sets VERSION_NAME=X.Y.Z, builds, publishes
-        → Bumps to X.Y.(Z+1)-SNAPSHOT, git commit [skip ci]
 ```
 
 ### Versioning

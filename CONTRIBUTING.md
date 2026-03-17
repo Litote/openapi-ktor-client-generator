@@ -219,8 +219,8 @@ Three GitHub Actions workflows are defined under `.github/workflows/`:
 |---|---|---|
 | `ci.yml` | Pull request → `main` | PR title (Conventional Commits), runs tests + Jacoco + SonarCloud PR analysis + quality gate |
 | `ci.yml` | Push → `main` | Same as above (branch analysis) + deploys SNAPSHOT to Maven Central |
-| `release-please.yml` | Push → `main` | Runs release-please: creates/updates the Release PR (CHANGELOG + manifest bump), then creates the GitHub Release + tag when the Release PR is merged |
-| `release.yml` | GitHub Release published | Checks out tag, sets `VERSION_NAME` locally, runs full QA, publishes to Maven Central + Gradle Plugin Portal (no commit) |
+| `release-please.yml` | Push → `main` | Runs release-please: creates/updates the Release PR (CHANGELOG + manifest bump), then creates the GitHub Release + tag when the Release PR is merged. On release created, chains to the `publish` job |
+| `release-please.yml` (`publish` job) | After release-please creates a release (or `workflow_dispatch`) | Checks out tag, sets `VERSION_NAME` locally, runs full QA, publishes to Maven Central + Gradle Plugin Portal (no commit) |
 
 ### Conventional Commits
 
@@ -251,7 +251,7 @@ Release PR merged
         ↓
 release-please creates tag vX.Y.Z + GitHub Release
         ↓
-release.yml triggers (on: release published)
+publish job triggers (release_created=true)
 → Checks out tag, sets VERSION_NAME=X.Y.Z locally
 → Full QA → Maven Central → Gradle Plugin Portal
 (no commit — version lives only in the tag)
@@ -280,7 +280,7 @@ GitHub Secrets are always uppercased by GitHub. The workflow YAML maps each secr
 
 ### release-please GitHub App setup
 
-release-please requires a GitHub App so that the tag it creates triggers the `release.yml` workflow (GitHub's loop prevention blocks `GITHUB_TOKEN`-created tags from triggering workflows).
+release-please requires a GitHub App so that the `publish` job can be triggered reliably (GitHub's loop prevention blocks `GITHUB_TOKEN`-created events from triggering workflows).
 
 1. Create a GitHub App with permissions: **Contents** (read & write), **Pull requests** (read & write)
 2. Install it on the repository
