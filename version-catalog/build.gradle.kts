@@ -19,3 +19,9 @@ publishing {
 tasks.withType<AbstractPublishToMaven>().configureEach {
     dependsOn(tasks.withType<Sign>())
 }
+
+mavenPublishing {
+    pom {
+        description = "Version Catalog for openapi ktor generator"
+    }
+}
