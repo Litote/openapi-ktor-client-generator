@@ -1,7 +1,7 @@
 [versions]
 coroutines = "1.10.2"
 gradle-publish = "2.1.0"
-kotlin = "2.3.10"
+kotlin = "2.3.20"
 kotlin-poet = "2.2.0"
 kotlinx-serialization = "1.10.0"
 ktlint = "5.4.2"
