@@ -110,8 +110,9 @@ tasks.register("sonarCheck") {
     mustRunAfter("sonar")
     notCompatibleWithConfigurationCache("Reads sonar/report-task.txt generated at execution time")
     doLast {
-        val token = System.getProperty("sonar.token")
-            ?: System.getenv("SONAR_TOKEN")
+        val token = project.providers.systemProperty("sonar.token")
+            .orElse(project.providers.environmentVariable("SONAR_TOKEN"))
+            .orNull
             ?: error("sonar.token not set. Add systemProp.sonar.token=<token> to ~/.gradle/gradle.properties")
 
         val projectKey = "Litote_openapi-ktor-client-generator"
