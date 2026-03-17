@@ -72,6 +72,14 @@ jobs:
           SONAR_TOKEN: ${{ secrets.SONAR_TOKEN }}
         run: ./gradlew sonarCheck
 
+      - name: Upload configuration cache report
+        if: always()
+        uses: actions/upload-artifact@ea165f8d65b6e75b540449e92b4886f43607fa02 # v4.6.2
+        with:
+          name: configuration-cache-report
+          path: build/reports/configuration-cache/
+          if-no-files-found: ignore
+
       - name: Publish SNAPSHOT to Maven Central
         if: github.event_name == 'push'
         env:
