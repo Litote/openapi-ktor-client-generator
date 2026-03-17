@@ -42,6 +42,11 @@ jobs:
         with:
           cache-encryption-key: ${{ secrets.GRADLE_ENCRYPTION_KEY }}
           cache-cleanup: never
+          dependency-graph: disabled
+          build-scan-publish: false
+
+      - name: Warm up convention build
+        run: ./gradlew :convention:assemble --no-configuration-cache
 
       - name: Build & test
         run: ./gradlew check
