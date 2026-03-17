@@ -48,6 +48,7 @@ jobs:
           PR_NUMBER: ${{ github.event.pull_request.number }}
           PR_BRANCH: ${{ github.head_ref }}
           PR_BASE: ${{ github.base_ref }}
+        if: env.SONAR_TOKEN != ''
         run: |
           if [[ "${{ github.event_name }}" == "pull_request" ]]; then
             ./gradlew sonar \
@@ -59,6 +60,7 @@ jobs:
           fi
 
       - name: SonarCloud quality gate
+        if: env.SONAR_TOKEN != ''
         env:
           SONAR_TOKEN: ${{ secrets.SONAR_TOKEN }}
         run: ./gradlew sonarCheck
