@@ -48,7 +48,7 @@ jobs:
         run: ./gradlew :convention:assemble --no-configuration-cache
 
       - name: Build & test
-        run: ./gradlew check
+        run: ./gradlew check --info 2>&1 | grep -E "Build cache key|FROM-CACHE|cache miss|cache hit|Stored entry|Loaded entry|not cacheable|Cacheability" || true
 
       - name: Jacoco aggregated report
         run: ./gradlew jacocoAggregatedReport
