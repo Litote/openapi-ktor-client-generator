@@ -217,8 +217,8 @@ Three GitHub Actions workflows are defined under `.github/workflows/`:
 
 | Workflow | Trigger | What it does |
 |---|---|---|
-| `ci.yml` | Pull request → `main` | PR title (Conventional Commits), runs full QA |
-| `ci.yml` | Push → `main` | Same as above + deploys SNAPSHOT to Maven Central |
+| `ci.yml` | Pull request → `main` | PR title (Conventional Commits), runs tests + Jacoco + SonarCloud PR analysis + quality gate |
+| `ci.yml` | Push → `main` | Same as above (branch analysis) + deploys SNAPSHOT to Maven Central |
 | `release-please.yml` | Push → `main` | Runs release-please: creates/updates the Release PR (CHANGELOG + manifest bump), then creates the GitHub Release + tag when the Release PR is merged |
 | `release.yml` | GitHub Release published | Checks out tag, sets `VERSION_NAME` locally, runs full QA, publishes to Maven Central + Gradle Plugin Portal (no commit) |
 
