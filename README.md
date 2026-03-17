@@ -117,6 +117,32 @@ Do not use this module in KMP projects targeting non-JVM platforms.
 
 ## Advanced usage
 
+### Using the Version Catalog
+
+A version catalog is published to Maven Central alongside the plugin. It exposes all library versions used by the generator (Ktor, kotlinx.serialization, coroutines, etc.), which you can use to align your own dependencies.
+
+In your `settings.gradle.kts`:
+
+```kotlin
+dependencyResolutionManagement {
+    versionCatalogs {
+        create("openapiKtor") {
+            from("org.litote.openapi.ktor.client.generator:version-catalog:<last version>")
+        }
+    }
+}
+```
+
+Then reference compatible versions in your `build.gradle.kts`:
+
+```kotlin
+dependencies {
+    implementation(openapiKtor.bundles.ktor)
+    implementation(openapiKtor.serialization)
+    implementation(openapiKtor.coroutines)
+}
+```
+
 ### YAML support
 
 If your OpenAPI spec uses `application/yaml` or `application/x-yaml` content types, the generator automatically:

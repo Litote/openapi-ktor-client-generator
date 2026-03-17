@@ -14,6 +14,7 @@ dependencyResolutionManagement {
 
 rootProject.name = "openapi-ktor-client-generator"
 include(
+    "version-catalog",
     "shared",
     "generator",
     "generator:domain",

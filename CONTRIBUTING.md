@@ -213,38 +213,81 @@ javadoc JARs, `.pom`, `.module` files) which are IDE-only and exempt from checks
 
 ## CI / CD
 
-Three GitHub Actions workflows are defined under `.github/workflows/`:
+Four GitHub Actions workflows are defined under `.github/workflows/`:
 
-| Workflow | Trigger | What it does |
-|---|---|---|
-| `ci.yml` | Pull request → `master` | Format check, tests, Jacoco, SonarCloud analysis + quality gate |
-| `snapshot.yml` | Push → `master` | Same as CI + deploys SNAPSHOT to Maven Central |
-| `release.yml` | Manual (`workflow_dispatch`) | Bumps version, tests, SonarCloud, publishes to Maven Central + Gradle Plugin Portal, signs and pushes git tag |
+| Workflow | Trigger | What it does                                                                                                                                         |
+|---|---|------------------------------------------------------------------------------------------------------------------------------------------------------|
+| `ci.yml` | Pull request → `main` | Validates PR title (Conventional Commits), format check, tests, Jacoco, SonarCloud analysis + quality gate                                           |
+| `snapshot.yml` | Push → `main` | Same as CI + deploys SNAPSHOT to Maven Central |
+| `release-please.yml` | Push → `main` | Runs release-please: creates/updates the Release PR (CHANGELOG + manifest bump), then creates the GitHub Release + tag when the Release PR is merged |
+| `release.yml` | GitHub Release published | Checks out tag, sets `VERSION_NAME` locally, runs full QA, publishes to Maven Central + Gradle Plugin Portal|                                         |
+
+### Conventional Commits
+
+All PR titles **must** follow the [Conventional Commits](https://www.conventionalcommits.org/) specification.
+This is enforced automatically via `amannn/action-semantic-pull-request` in `ci.yml`.
+
+| Type | Version bump | When to use |
+|------|-------------|-------------|
+| `feat:` | Minor (`0.3.0` → `0.4.0`) | New user-facing feature |
+| `fix:` | Patch (`0.3.0` → `0.3.1`) | Bug fix |
+| `perf:` | Patch | Performance improvement |
+| `feat!:` / `BREAKING CHANGE:` | Major (`0.3.0` → `1.0.0`) | Breaking API change |
+| `chore:`, `docs:`, `test:`, `refactor:`, `ci:` | No release | Internal changes |
+
+> **Note:** While the major version is `0`, `feat:` commits bump the minor version (not major). This is controlled by `bump-minor-pre-major: true` in `release-please-config.json`.
+
+### Release flow (automated)
+
+```
+feat/fix commit merged → main
+        ↓
+release-please.yml analyses commits
+        ↓
+Creates / updates the "Release PR"
+(CHANGELOG.md update + manifest bump)
+        ↓
+Release PR merged
+        ↓
+release-please creates tag vX.Y.Z + GitHub Release
+        ↓
+release.yml triggers (on: release published)
+→ Checks out tag, sets VERSION_NAME=X.Y.Z locally
+→ Full QA → Maven Central → Gradle Plugin Portal
+(no commit — version lives only in the tag)
+```
 
 ### Signing
 
 - **Artifact signing** (Maven Central): uses in-memory GPG signing in CI via `ORG_GRADLE_PROJECT_signingInMemoryKey*` env vars. Locally, uses `gpg --use-agent` (`useGpgCmd()`). Convention: `convention/src/main/kotlin/kotlin-convention.gradle.kts`.
-- **Commit signing** (release only): handled by `crazy-max/ghaction-import-gpg@v6` using a dedicated CI GPG key registered on the `litote-bot` GitHub machine user account.
 
 ### GitHub Secrets required
 
 GitHub Secrets are always uppercased by GitHub. The workflow YAML maps each secret to the exact env var name expected by Gradle/vanniktech.
 
-| GitHub Secret (what you type) | Env var injected by workflow | Used by                                                   |
-|---|---|-----------------------------------------------------------|
-| `SONAR_TOKEN` | `SONAR_TOKEN` | all workflows                                             |
-| `MAVEN_CENTRAL_USERNAME` | `ORG_GRADLE_PROJECT_mavenCentralUsername` | snapshot, release                                         |
-| `MAVEN_CENTRAL_PASSWORD` | `ORG_GRADLE_PROJECT_mavenCentralPassword` | snapshot, release                                         |
-| `SIGNING_IN_MEMORY_KEY` | `ORG_GRADLE_PROJECT_signingInMemoryKey` | snapshot, release (key 1 — `release@litote.org`)          |
-| `SIGNING_IN_MEMORY_KEY_ID` | `ORG_GRADLE_PROJECT_signingInMemoryKeyId` | snapshot, release                                         |
-| `SIGNING_IN_MEMORY_KEY_PASSWORD` | `ORG_GRADLE_PROJECT_signingInMemoryKeyPassword` | snapshot, release                                         |
-| `GRADLE_PUBLISH_KEY` | `-Pgradle.publish.key` | release                                                   |
-| `GRADLE_PUBLISH_SECRET` | `-Pgradle.publish.secret` | release                                                   |
-| `BOT_GPG_PRIVATE_KEY` | `gpg --import` | release (key 2 — `github-bot@litote.org`, commit signing) |
-| `BOT_GPG_PASSWORD` | gpg passphrase | release                                                   |
+| GitHub Secret (what you type) | Env var injected by workflow | Used by |
+|---|---|---|
+| `SONAR_TOKEN` | `SONAR_TOKEN` | ci, snapshot, release |
+| `MAVEN_CENTRAL_USERNAME` | `ORG_GRADLE_PROJECT_mavenCentralUsername` | snapshot, release |
+| `MAVEN_CENTRAL_PASSWORD` | `ORG_GRADLE_PROJECT_mavenCentralPassword` | snapshot, release |
+| `SIGNING_IN_MEMORY_KEY` | `ORG_GRADLE_PROJECT_signingInMemoryKey` | snapshot, release (key 1 — `release@litote.org`) |
+| `SIGNING_IN_MEMORY_KEY_ID` | `ORG_GRADLE_PROJECT_signingInMemoryKeyId` | snapshot, release |
+| `SIGNING_IN_MEMORY_KEY_PASSWORD` | `ORG_GRADLE_PROJECT_signingInMemoryKeyPassword` | snapshot, release |
+| `GRADLE_PUBLISH_KEY` | `-Pgradle.publish.key` | release |
+| `GRADLE_PUBLISH_SECRET` | `-Pgradle.publish.secret` | release |
+| `RELEASE_PLEASE_APP_ID` | GitHub App ID | release-please |
+| `RELEASE_PLEASE_APP_PRIVATE_KEY` | GitHub App private key | release-please |
+
+### release-please GitHub App setup
+
+release-please requires a GitHub App so that the tag it creates triggers the `release.yml` workflow (GitHub's loop prevention blocks `GITHUB_TOKEN`-created tags from triggering workflows).
+
+1. Create a GitHub App with permissions: **Contents** (read & write), **Pull requests** (read & write)
+2. Install it on the repository
+3. Add `RELEASE_PLEASE_APP_ID` and `RELEASE_PLEASE_APP_PRIVATE_KEY` as repository secrets
 
 ### Triggering a release
 
-Go to **Actions → Release → Run workflow**, enter the version (e.g. `0.3.0`).
-The workflow will strip `-SNAPSHOT`, run full quality checks, publish, then commit + tag `v0.3.0` signed by `litote-bot`.
+Releases are **fully automated**. Merge PRs with Conventional Commits titles to `main`.
+release-please accumulates commits and creates a Release PR. Merge the Release PR to trigger the release.
 

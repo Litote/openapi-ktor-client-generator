@@ -414,3 +414,40 @@ Generated at build time from `gradle/libs.versions.toml` into `GeneratorPlugin.k
 - `DEFAULT_COROUTINES_VERSION`
 - `DEFAULT_SERIALIZATION_VERSION`
 - `PLUGIN_VERSION`
+
+---
+
+## CI / CD
+
+Four GitHub Actions workflows in `.github/workflows/`:
+
+| Workflow | Trigger | Purpose |
+|---|---|---|
+| `ci.yml` | PR → main | PR title validation (Conventional Commits) + full QA |
+| `snapshot.yml` | push → main | Deploy `-SNAPSHOT` to Maven Central (guarded: skips if `VERSION_NAME` is not a SNAPSHOT) |
+| `release-please.yml` | push → main | Runs release-please (GitHub App): creates Release PR with CHANGELOG, then GitHub Release + tag on merge |
+| `release.yml` | GitHub Release published | Full QA → Maven Central → Gradle Plugin Portal → bump next SNAPSHOT |
+
+### Release flow
+
+```
+feat/fix PR merged → main
+  → release-please.yml: creates/updates Release PR
+    (CHANGELOG.md, .release-please-manifest.json)
+  → Release PR merged
+    → release-please creates tag vX.Y.Z + GitHub Release
+      → release.yml triggers
+        → Sets VERSION_NAME=X.Y.Z, builds, publishes
+        → Bumps to X.Y.(Z+1)-SNAPSHOT, git commit [skip ci]
+```
+
+### Versioning
+
+- **Source of truth for last released version:** `.release-please-manifest.json`
+- **Conventional Commits types:** `feat:` → minor bump, `fix:`/`perf:` → patch, `feat!:`/`BREAKING CHANGE:` → major
+- **Pre-major behaviour (`0.x`):** `feat:` bumps minor (not major) — `bump-minor-pre-major: true`
+- **Config:** `release-please-config.json`
+
+### Secrets
+
+`RELEASE_PLEASE_APP_ID` + `RELEASE_PLEASE_APP_PRIVATE_KEY` (GitHub App), `SONAR_TOKEN`, `MAVEN_CENTRAL_*`, `SIGNING_IN_MEMORY_KEY*`, `GRADLE_PUBLISH_KEY/SECRET`.

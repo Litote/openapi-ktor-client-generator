@@ -17,7 +17,7 @@
 | **Dependencies** | Add/upgrade dependencies without explicit request, change version catalogs       |
 | **Security**     | Log secrets/API keys, expose environment variables, commit credentials           |
 | **Scope**        | Mass refactors, rename symbols unnecessarily, formatting-only changes            |
-| **Deploy**       | ./gradlew deploy, ./gradlew deployPlugins                                        |
+| **Deploy**       | `./gradlew deploy`, `./gradlew deployPlugins`, triggering releases manually      |
 | **Commit**       | NEVER commit changes if you are not in a Pull Request Context                    |
 
 ### ALWAYS Do
@@ -25,7 +25,7 @@
 | Category                   | Required Actions                                                                                          |
 |----------------------------|-----------------------------------------------------------------------------------------------------------|
 | **Validation**             | Run `./gradlew formatKotlin && ./gradlew check` after every change                                        |
-| **Quality Gate**           | Run `./gradlew check jacocoAggregatedReport sonar sonarCheck` before finalizing **every** task — **`sonarCheck` must pass (0 issues, gate OK)** |
+| **Quality Gate**           | Run `./gradlew check jacocoAggregatedReport sonar sonarCheck` before finalizing **every** task — **`sonarCheck` must pass (0 issues, 0 hotspots, gate OK)**. This includes changes to `.github/workflows/` YAML files, which are analysed by Sonar for security issues (e.g. pinned action hashes, permissions at job level). Changes to `.md` files only do **not** require running Sonar. |
 | **Testing**                | When you try to fix a bug, start by adding the test and THEN fix the bug. Add tests for all logic changes |
 | **Imports**                | Use single imports only                                                                                   |
 | **Language**               | Write all code, comments, and documentation in English                                                    |

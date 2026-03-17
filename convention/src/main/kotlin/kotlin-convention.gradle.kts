@@ -51,6 +51,11 @@ tasks.jacocoTestReport {
     }
 }
 
+tasks.withType<Jar>().configureEach {
+    isPreserveFileTimestamps = false
+    isReproducibleFileOrder = true
+}
+
 signing {
     val inMemoryKey = providers.gradleProperty("signingInMemoryKey").orNull
     if (inMemoryKey != null) {
