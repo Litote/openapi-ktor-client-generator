@@ -419,14 +419,14 @@ Generated at build time from `gradle/libs.versions.toml` into `GeneratorPlugin.k
 
 ## CI / CD
 
-Four GitHub Actions workflows in `.github/workflows/`:
+Three GitHub Actions workflows in `.github/workflows/`:
 
 | Workflow | Trigger | Purpose |
 |---|---|---|
-| `ci.yml` | PR → main | PR title validation (Conventional Commits) + full QA |
-| `snapshot.yml` | push → main | Deploy `-SNAPSHOT` to Maven Central (guarded: skips if `VERSION_NAME` is not a SNAPSHOT) |
+| `ci.yml` | PR → main | PR title (Conventional Commits) + full QA |
+| `ci.yml` | push → main | Same + deploy `main-SNAPSHOT` to Maven Central |
 | `release-please.yml` | push → main | Runs release-please (GitHub App): creates Release PR with CHANGELOG, then GitHub Release + tag on merge |
-| `release.yml` | GitHub Release published | Full QA → Maven Central → Gradle Plugin Portal → bump next SNAPSHOT |
+| `release.yml` | GitHub Release published | Full QA → Maven Central → Gradle Plugin Portal |
 
 ### Release flow
 

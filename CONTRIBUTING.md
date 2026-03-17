@@ -213,14 +213,14 @@ javadoc JARs, `.pom`, `.module` files) which are IDE-only and exempt from checks
 
 ## CI / CD
 
-Four GitHub Actions workflows are defined under `.github/workflows/`:
+Three GitHub Actions workflows are defined under `.github/workflows/`:
 
-| Workflow | Trigger | What it does                                                                                                                                         |
-|---|---|------------------------------------------------------------------------------------------------------------------------------------------------------|
-| `ci.yml` | Pull request → `main` | Validates PR title (Conventional Commits), format check, tests, Jacoco, SonarCloud analysis + quality gate                                           |
-| `snapshot.yml` | Push → `main` | Same as CI + deploys SNAPSHOT to Maven Central |
+| Workflow | Trigger | What it does |
+|---|---|---|
+| `ci.yml` | Pull request → `main` | PR title (Conventional Commits), runs full QA |
+| `ci.yml` | Push → `main` | Same as above + deploys SNAPSHOT to Maven Central |
 | `release-please.yml` | Push → `main` | Runs release-please: creates/updates the Release PR (CHANGELOG + manifest bump), then creates the GitHub Release + tag when the Release PR is merged |
-| `release.yml` | GitHub Release published | Checks out tag, sets `VERSION_NAME` locally, runs full QA, publishes to Maven Central + Gradle Plugin Portal|                                         |
+| `release.yml` | GitHub Release published | Checks out tag, sets `VERSION_NAME` locally, runs full QA, publishes to Maven Central + Gradle Plugin Portal (no commit) |
 
 ### Conventional Commits
 
