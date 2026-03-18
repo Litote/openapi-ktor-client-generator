@@ -41,7 +41,11 @@ jobs:
         uses: gradle/actions/setup-gradle@0723195856401067f7a2779048b490ace7a47d7c # v5.0.2
         with:
           cache-encryption-key: ${{ secrets.GRADLE_ENCRYPTION_KEY }}
-          cache-cleanup: never
+          dependency-graph: disabled
+          build-scan-publish: false
+
+      - name: Warm up convention build
+        run: ./gradlew :convention:assemble --no-configuration-cache
 
       - name: Build & test
         run: ./gradlew check
