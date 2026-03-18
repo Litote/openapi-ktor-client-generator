@@ -227,6 +227,24 @@ Three GitHub Actions workflows are defined under `.github/workflows/`:
 All PR titles **must** follow the [Conventional Commits](https://www.conventionalcommits.org/) specification.
 This is enforced automatically via `amannn/action-semantic-pull-request` in `ci.yml`.
 
+#### Branch naming
+
+PR branches should mirror the PR title using the same Conventional Commits type as prefix:
+
+```
+<type>/<short-kebab-description>
+
+# Examples:
+feat/yaml-content-type-support
+fix/enum-null-value-parsing
+chore/update-ktor-version
+docs/contributing-branch-naming
+refactor/split-renderer-module
+```
+
+Use the same types as for PR titles (`feat`, `fix`, `perf`, `chore`, `docs`, `test`, `refactor`, `ci`).
+The description should be short, lowercase, and hyphen-separated.
+
 | Type | Version bump | When to use |
 |------|-------------|-------------|
 | `feat:` | Minor (`0.3.0` → `0.4.0`) | New user-facing feature |
