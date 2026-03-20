@@ -1,5 +1,13 @@
 # Changelog
 
+## [0.4.1](https://github.com/Litote/openapi-ktor-client-generator/compare/v0.4.0...v0.4.1) (2026-03-20)
+
+
+### Bug Fixes
+
+* allOf inheritance ([ec950e2](https://github.com/Litote/openapi-ktor-client-generator/commit/ec950e285d32fbae98a475bd712f04ac02827102))
+* oneOf response ([eebb0ca](https://github.com/Litote/openapi-ktor-client-generator/commit/eebb0ca8c9cb13347f8fc73169c0c954cb618dc2))
+
 ## [0.4.0](https://github.com/Litote/openapi-ktor-client-generator/compare/v0.3.0...v0.4.0) (2026-03-20)
 
 
