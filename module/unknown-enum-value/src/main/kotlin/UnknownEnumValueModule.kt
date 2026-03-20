@@ -5,11 +5,11 @@ import org.litote.openapi.ktor.client.generator.port.ApiConfigurationGeneratorCo
 import org.litote.openapi.ktor.client.generator.port.ApiModelGeneratorConfig
 
 internal class UnknownEnumValueModule : ApiGeneratorModule {
-    override fun process(generator: ApiConfigurationGeneratorConfig) {
+    override fun processConfiguration(generator: ApiConfigurationGeneratorConfig) {
         generator.jsonDefaultValueProperties["coerceInputValues"] = "true"
     }
 
-    override fun process(generator: ApiModelGeneratorConfig) {
+    override fun processModel(generator: ApiModelGeneratorConfig) {
         generator.defaultEnumValue = "UNKNOWN_"
     }
 }

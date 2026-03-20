@@ -85,16 +85,17 @@ The generator accepts OpenAPI V3 specification files in both **JSON** and **YAML
 
 ### Generator properties
 
-| Property           | Description                                                                              | Default value                           | Allowed values                                    |
-|--------------------|------------------------------------------------------------------------------------------|------------------------------------------|---------------------------------------------------|
-| `openApiFile`      | OpenAPI v3 source file                                                                   | `file("src/main/openapi/${name}.json")` | Any existing OpenAPI file                         |
-| `outputDirectory`  | Target directory for generated sources (`src/main/kotlin` is appended automatically)    | `file("build/api-${name}")`             | Any relative directory                            |
-| `basePackage`      | Base package for all generated classes                                                   | `org.example`                           | Any valid package name                            |
-| `allowedPaths`     | Restrict generation to a subset of OpenAPI paths                                         | empty (all paths generated)             | Any subset of paths defined in the spec           |
-| `modulesIds`       | Optional generation modules to enable                                                    | empty                                   | `UnknownEnumValueModule`, `LoggingSl4jModule`, `LoggingKotlinModule`     |
-| `skip`             | Skip this generator                                                                      | `false`                                 | Boolean                                           |
-| `splitByClient`    | Enable split-by-client mode — see [PROJECT_GENERATION.md](PROJECT_GENERATION.md)        | `false`                                 | Boolean                                           |
-| `targetClientName` | In split mode: name of the client to generate (`null` = shared subproject)              | `null`                                  | Any tag-derived client name from the spec         |
+| Property           | Description                                                                              | Default value                           | Allowed values                            |
+|--------------------|------------------------------------------------------------------------------------------|------------------------------------------|-------------------------------------------|
+| `openApiFile`      | OpenAPI v3 source file                                                                   | `file("src/main/openapi/${name}.json")` | Any existing OpenAPI file                 |
+| `outputDirectory`  | Target directory for generated sources (`src/main/kotlin` is appended automatically)    | `file("build/api-${name}")`             | Any relative directory                    |
+| `basePackage`      | Base package for all generated classes                                                   | `org.example`                           | Any valid package name                    |
+| `allowedPaths`     | Restrict generation to a subset of OpenAPI paths                                         | empty (all paths generated)             | Any subset of paths defined in the spec   |
+| `modulesIds`       | Built-in module IDs to enable (loaded from classpath via SPI)                            | empty                                   | `UnknownEnumValueModule`, `LoggingSl4jModule`, `LoggingKotlinModule` |
+| `customModules`    | Custom module instances defined inline in the build script                               | empty                                   | Any `ApiGeneratorModule` implementation (see advanced usage)         |
+| `skip`             | Skip this generator                                                                      | `false`                                 | Boolean                                   |
+| `splitByClient`    | Enable split-by-client mode — see [PROJECT_GENERATION.md](PROJECT_GENERATION.md)        | `false`                                 | Boolean                                   |
+| `targetClientName` | In split mode: name of the client to generate (`null` = shared subproject)              | `null`                                  | Any tag-derived client name from the spec |
 
 ## Generating a new subproject
 
@@ -116,6 +117,100 @@ The `LoggingSl4jModule` generates code that uses `org.slf4j.LoggerFactory`, whic
 Do not use this module in KMP projects targeting non-JVM platforms.
 
 ## Advanced usage
+
+### Modules
+
+Modules extend the code generator with additional behaviour. They are activated by adding their ID to `modulesIds` in the generator configuration:
+
+```kotlin
+apiClientGenerator {
+    generators {
+        create("openapi") {
+            openApiFile = file("src/main/openapi/openapi.json")
+            basePackage = "com.example.api"
+            modulesIds.add("UnknownEnumValueModule")
+            modulesIds.add("LoggingKotlinModule")
+        }
+    }
+}
+```
+
+#### Built-in modules
+
+| Module ID | Effect |
+|---|---|---|
+| `UnknownEnumValueModule` | Adds an `UNKNOWN_` fallback constant to every generated enum and enables `coerceInputValues = true` in the Json configuration, so unknown server values never cause a deserialization error |
+| `LoggingSl4jModule` | Configures the `ClientConfiguration` exception logger to use SLF4J (`LoggerFactory.getLogger(…).error(…)`). **JVM-only** — do not use in KMP projects targeting non-JVM platforms |
+| `LoggingKotlinModule` | Configures the `ClientConfiguration` exception logger to use kotlin-logging / oshai (`KotlinLogging.logger(…).error(…)`) |
+
+#### Custom module at runtime
+
+You can define a module inline in your `build.gradle.kts` without publishing a separate artifact. Implement `ApiGeneratorModule` and pass it via `customModules`:
+
+```kotlin
+import org.litote.openapi.ktor.client.generator.ApiGeneratorModule
+import org.litote.openapi.ktor.client.generator.domain.ClientSpec
+import org.litote.openapi.ktor.client.generator.domain.GeneratedFileSpec
+
+val copyrightModule = object : ApiGeneratorModule {
+    // Prepend a copyright header to every generated file
+    override fun transformFile(file: GeneratedFileSpec): GeneratedFileSpec =
+        file.copy(content = "// Copyright 2026 Acme Corp — do not edit\n" + file.content)
+
+    // Keep only GET operations in every client
+    override fun transformClientSpec(spec: ClientSpec): ClientSpec =
+        spec.copy(operations = spec.operations.filter { it.method == "GET" })
+}
+
+apiClientGenerator {
+    generators {
+        create("openapi") {
+            openApiFile = file("src/main/openapi/openapi.json")
+            basePackage = "com.example.api"
+            customModules.add(copyrightModule)
+        }
+    }
+}
+```
+
+> **Configuration cache compatibility:** anonymous module instances are not serializable, so tasks that use `customModules` are not compatible with the Gradle configuration cache. Three alternatives:
+>
+> - **`buildSrc` or a convention plugin** — define the module as a named class there; Gradle can serialize it and the task stays configuration cache compatible:
+>
+>   ```kotlin
+>   // buildSrc/src/main/kotlin/CopyrightModule.kt
+>   import org.litote.openapi.ktor.client.generator.ApiGeneratorModule
+>   import org.litote.openapi.ktor.client.generator.domain.GeneratedFileSpec
+>
+>   class CopyrightModule : ApiGeneratorModule {
+>       override fun transformFile(file: GeneratedFileSpec): GeneratedFileSpec =
+>           file.copy(content = "// Copyright 2026 Acme Corp\n" + file.content)
+>   }
+>   ```
+>
+>   ```kotlin
+>   // build.gradle.kts
+>   customModules.add(CopyrightModule())
+>   ```
+>
+> - **SPI via `modulesIds`** — package the module as a library with a `META-INF/services/org.litote.openapi.ktor.client.generator.ApiGeneratorModule` entry, add it to the buildscript classpath, and reference it by ID. The built-in modules (`UnknownEnumValueModule`, `LoggingSl4jModule`, `LoggingKotlinModule`) follow exactly this pattern and can serve as implementation examples.
+>
+> - **Disable the configuration cache** — if neither approach suits your project, set `org.gradle.configuration-cache=false` in `gradle.properties` (this is the default value).
+
+#### What modules can do
+
+A module can implement any combination of the following hooks — all are no-ops by default:
+
+| Hook | Called when | Can do |
+|---|---|---|
+| `processConfiguration(ApiConfigurationGeneratorConfig)` | Before `ClientConfiguration` is rendered | Set custom Json properties (`coerceInputValues`, etc.), override the exception-logging lambda |
+| `processClient(ApiClientGeneratorConfig)` | Before any client class is rendered | Configure client-level rendering options (reserved for future use) |
+| `processModel(ApiModelGeneratorConfig)` | Before any model class is rendered | Set a fallback enum constant (`defaultEnumValue`) |
+| `transformClientSpec(ClientSpec): ClientSpec` | For each client, before KotlinPoet rendering | Add, remove or rewrite operations; rename the client; change parameters or response types |
+| `transformModelSpec(ModelSpec): ModelSpec` | For each model, before KotlinPoet rendering | Add, remove or rewrite properties; change the model kind (data class, enum, sealed…) |
+| `transformFile(GeneratedFileSpec): GeneratedFileSpec` | After KotlinPoet rendering, before writing to disk | Add a file header, rewrite imports, inject code at the text level |
+
+Hooks are applied in the order the modules are listed. `transform*` hooks receive an immutable domain object and must return the (possibly modified) replacement — the original is never mutated.
 
 ### Using the Version Catalog
 

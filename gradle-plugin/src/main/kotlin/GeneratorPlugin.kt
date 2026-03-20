@@ -70,6 +70,7 @@ public class GeneratorPlugin : Plugin<Project> {
                         task.basePackage.set(generatorExtension.basePackage)
                         task.allowedPaths.set(generatorExtension.allowedPaths)
                         task.modulesIds.set(generatorExtension.modulesIds)
+                        task.customModules.addAll(generatorExtension.customModules)
                         task.splitByClient.set(generatorExtension.splitByClient)
                         task.targetClientName.set(generatorExtension.targetClientName)
                         task.sharedBasePackage.set(generatorExtension.sharedBasePackage)

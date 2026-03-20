@@ -7,11 +7,11 @@ import kotlin.test.Test
 
 class LoggingKotlinModuleTest {
     @Test
-    fun `GIVEN LoggingKotlinModule WHEN process THEN sets exceptionLoggingDefaultValue using kotlin-logging`() {
+    fun `GIVEN LoggingKotlinModule WHEN processConfiguration THEN sets exceptionLoggingDefaultValue using kotlin-logging`() {
         val config = mockk<ApiConfigurationGeneratorConfig>(relaxed = true)
         val module = LoggingKotlinModule()
 
-        module.process(config)
+        module.processConfiguration(config)
 
         verify {
             config.exceptionLoggingDefaultValue =

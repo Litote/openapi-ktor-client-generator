@@ -9,12 +9,14 @@ import org.gradle.api.provider.SetProperty
 import org.gradle.api.tasks.CacheableTask
 import org.gradle.api.tasks.Input
 import org.gradle.api.tasks.InputFile
+import org.gradle.api.tasks.Internal
 import org.gradle.api.tasks.Optional
 import org.gradle.api.tasks.OutputDirectory
 import org.gradle.api.tasks.PathSensitive
 import org.gradle.api.tasks.PathSensitivity
 import org.gradle.api.tasks.TaskAction
 import org.litote.openapi.ktor.client.generator.ApiGeneratorConfiguration
+import org.litote.openapi.ktor.client.generator.ApiGeneratorModule
 import org.litote.openapi.ktor.client.generator.ApiGeneratorModule.Companion.getModule
 import org.litote.openapi.ktor.client.generator.GenerationResult
 import org.litote.openapi.ktor.client.generator.SharedModelGranularity
@@ -54,6 +56,13 @@ public abstract class GenerateTask : DefaultTask() {
      */
     @get:Input
     public abstract val modulesIds: SetProperty<String>
+
+    /**
+     * Custom module instances defined directly in the build script.
+     * Tasks using custom modules are excluded from the Gradle configuration cache.
+     */
+    @get:Internal
+    public val customModules: MutableList<ApiGeneratorModule> = mutableListOf()
 
     @get:Input
     public abstract val skip: Property<Boolean>
@@ -137,7 +146,13 @@ public abstract class GenerateTask : DefaultTask() {
                 modules =
                     modulesIds
                         .get()
-                        .map { moduleId -> checkNotNull(getModule(moduleId)) { "Module identifier $moduleId not found" } },
+                        .mapNotNull { moduleId ->
+                            getModule(moduleId)
+                                ?: run {
+                                    logger.warn("Module identifier $moduleId not found on classpath — skipping")
+                                    null
+                                }
+                        } + customModules,
                 splitByClient = splitByClient.get(),
                 targetClientName = targetClientName.orNull,
                 sharedBasePackage = sharedBasePackage.orNull,

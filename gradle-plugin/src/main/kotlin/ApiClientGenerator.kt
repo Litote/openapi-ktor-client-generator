@@ -8,6 +8,7 @@ import org.gradle.api.model.ObjectFactory
 import org.gradle.api.provider.MapProperty
 import org.gradle.api.provider.Property
 import org.gradle.api.provider.SetProperty
+import org.litote.openapi.ktor.client.generator.ApiGeneratorModule
 import javax.inject.Inject
 
 public abstract class ApiClientGenerator
@@ -39,6 +40,13 @@ public abstract class ApiClientGenerator
          * List of allowed additional modules used to generate code.
          */
         public val modulesIds: SetProperty<String> = objects.setProperty(String::class.java)
+
+        /**
+         * Custom module instances to use during generation.
+         * Use this to pass inline module implementations defined directly in the build script.
+         * Note: tasks using custom modules are excluded from the Gradle configuration cache.
+         */
+        public val customModules: MutableList<ApiGeneratorModule> = mutableListOf()
 
         public val skip: Property<Boolean> = objects.property(Boolean::class.java)
 

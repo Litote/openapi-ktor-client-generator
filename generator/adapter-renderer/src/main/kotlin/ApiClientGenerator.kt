@@ -34,7 +34,8 @@ public class ApiClientGenerator public constructor(
      * Builds a client class for the given spec (name and operations).
      */
     public fun buildClient(spec: ClientSpec): ClientFileContext {
-        val clientName = spec.name
+        val transformedSpec = configuration.modules.fold(spec) { acc, m -> m.transformClientSpec(acc) }
+        val clientName = transformedSpec.name
 
         val clientBuilder =
             TypeSpec
@@ -61,15 +62,17 @@ public class ApiClientGenerator public constructor(
         val context =
             ClientGenerationContext(
                 name = clientName,
-                operations = spec.operations,
+                operations = transformedSpec.operations,
             )
 
         val modelGenerator =
             ApiModelGenerator(
                 configuration.generationModelPackage,
                 configuration.outputDirectory,
+                fileSystemWriter = fileSystemWriter,
                 modelPackageOverrides = configuration.modelPackageOverrides,
                 fallbackModelPackage = configuration.resolvedModelPackage,
+                modules = configuration.modules,
             )
         val operationBuilder =
             OperationBuilder(
@@ -85,7 +88,7 @@ public class ApiClientGenerator public constructor(
         // Group by base name (pre-rename) to preserve the old ordering where all types with the
         // same base name (e.g. "ExcludeTypes") were grouped together.
         val allParamsWithAdditionalModels =
-            spec.operations.flatMap { op ->
+            transformedSpec.operations.flatMap { op ->
                 op.parameters.mapNotNull { p ->
                     p.additionalModel?.let { Triple(p.additionalModelBaseName ?: it.name, it.name, it) }
                 }
@@ -103,7 +106,7 @@ public class ApiClientGenerator public constructor(
             .forEach { clientBuilder.addType(it) }
 
         // Then build all operations
-        spec.operations.forEach { op ->
+        transformedSpec.operations.forEach { op ->
             operationBuilder.buildOperation(context, op, clientBuilder, clientName)
         }
 

@@ -5,12 +5,14 @@ import org.litote.openapi.ktor.client.generator.adapter.parser.OpenApiSpecificat
 import org.litote.openapi.ktor.client.generator.adapter.renderer.ApiClientConfigurationGenerator
 import org.litote.openapi.ktor.client.generator.adapter.renderer.ApiClientGenerator
 import org.litote.openapi.ktor.client.generator.adapter.renderer.ApiModelGenerator
+import org.litote.openapi.ktor.client.generator.adapter.writer.KotlinPoetFileWriter
 import org.litote.openapi.ktor.client.generator.application.GenerateCodeService
 import org.litote.openapi.ktor.client.generator.application.GenerationSpecPartitioner
 import org.litote.openapi.ktor.client.generator.domain.GenerationSpec
 import org.litote.openapi.ktor.client.generator.domain.computeGroupDeps
 import org.litote.openapi.ktor.client.generator.port.ApiClientRenderer
 import org.litote.openapi.ktor.client.generator.port.ApiConfigurationRenderer
+import org.litote.openapi.ktor.client.generator.port.ApiFileSystemWriter
 import org.litote.openapi.ktor.client.generator.port.ApiModelRenderer
 import org.litote.openapi.ktor.client.generator.shared.toSharedGroupDirName
 
@@ -170,9 +172,16 @@ public fun generate(configuration: ApiGeneratorConfiguration): GenerationResult 
         val parser = OpenApiSpecificationParser(configuration)
         val spec = parser.parse(configuration.operationFilter)
 
+        val baseWriter = KotlinPoetFileWriter()
+        val writer =
+            ApiFileSystemWriter { file, outputDir ->
+                val transformed = configuration.modules.fold(file) { acc, m -> m.transformFile(acc) }
+                baseWriter.write(transformed, outputDir)
+            }
+
         val clientGen =
-            ApiClientGenerator(configuration)
-                .apply { configuration.modules.forEach { it.process(this) } }
+            ApiClientGenerator(configuration, fileSystemWriter = writer)
+                .apply { configuration.modules.forEach { it.processClient(this) } }
         val clientRenderer =
             ApiClientRenderer { clientSpec ->
                 val context = clientGen.buildClient(clientSpec)
@@ -183,9 +192,11 @@ public fun generate(configuration: ApiGeneratorConfiguration): GenerationResult 
             ApiModelGenerator(
                 configuration.generationModelPackage,
                 configuration.outputDirectory,
+                fileSystemWriter = writer,
                 modelPackageOverrides = configuration.modelPackageOverrides,
                 fallbackModelPackage = configuration.resolvedModelPackage,
-            ).apply { configuration.modules.forEach { it.process(this) } }
+                modules = configuration.modules,
+            ).apply { configuration.modules.forEach { it.processModel(this) } }
         val modelRenderer =
             ApiModelRenderer { modelSpec ->
                 val typeSpec = modelGen.buildModel(modelSpec)
@@ -195,8 +206,8 @@ public fun generate(configuration: ApiGeneratorConfiguration): GenerationResult 
         val (activeSpec, activeConfigRenderer, activeClientRenderer) =
             if (!configuration.splitByClient) {
                 val configRenderer =
-                    ApiClientConfigurationGenerator(spec.clientConfiguration, configuration)
-                        .apply { configuration.modules.forEach { it.process(this) } }
+                    ApiClientConfigurationGenerator(spec.clientConfiguration, configuration, fileSystemWriter = writer)
+                        .apply { configuration.modules.forEach { it.processConfiguration(this) } }
                 Triple(spec, configRenderer as ApiConfigurationRenderer, clientRenderer)
             } else {
                 val partitioned = GenerationSpecPartitioner().partition(spec)
@@ -233,8 +244,8 @@ public fun generate(configuration: ApiGeneratorConfiguration): GenerationResult 
                         // Shared mode: generate ClientConfiguration + shared models
                         val sharedSpec = resolveSharedSpec(spec, partitioned, configuration)
                         val configRenderer =
-                            ApiClientConfigurationGenerator(spec.clientConfiguration, configuration)
-                                .apply { configuration.modules.forEach { it.process(this) } }
+                            ApiClientConfigurationGenerator(spec.clientConfiguration, configuration, fileSystemWriter = writer)
+                                .apply { configuration.modules.forEach { it.processConfiguration(this) } }
                         val noopClientRenderer = ApiClientRenderer { }
                         Triple(sharedSpec, configRenderer as ApiConfigurationRenderer, noopClientRenderer)
                     }

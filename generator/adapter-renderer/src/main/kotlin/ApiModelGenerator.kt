@@ -15,6 +15,7 @@ import com.squareup.kotlinpoet.TypeSpec
 import com.squareup.kotlinpoet.TypeSpec.Companion.anonymousClassBuilder
 import kotlinx.serialization.SerialName
 import kotlinx.serialization.Serializable
+import org.litote.openapi.ktor.client.generator.ApiGeneratorModule
 import org.litote.openapi.ktor.client.generator.adapter.writer.KotlinPoetFileWriter
 import org.litote.openapi.ktor.client.generator.domain.ModelPropertySpec
 import org.litote.openapi.ktor.client.generator.domain.ModelSpec
@@ -34,6 +35,7 @@ public class ApiModelGenerator public constructor(
      * resolve to the correct package and generate the correct import statement.
      */
     private val fallbackModelPackage: String = modelPackage,
+    private val modules: List<ApiGeneratorModule> = emptyList(),
 ) : ApiModelGeneratorConfig {
     private companion object {
         val serializerName: MemberName = MemberName("kotlinx.serialization.builtins", "serializer")
@@ -52,14 +54,16 @@ public class ApiModelGenerator public constructor(
      */
     override var defaultEnumValue: String? = null
 
-    public fun buildModel(spec: ModelSpec): TypeSpec? =
-        when (spec) {
-            is ModelSpec.EnumSpec -> buildEnumClass(spec.name, spec.values)
-            is ModelSpec.DataClassSpec -> buildDataClass(spec)
-            is ModelSpec.ObjectSpec -> buildObjectClass(spec)
-            is ModelSpec.SealedClassSpec -> buildSealedClass(spec)
+    public fun buildModel(spec: ModelSpec): TypeSpec? {
+        val transformedSpec = modules.fold(spec) { acc, m -> m.transformModelSpec(acc) }
+        return when (transformedSpec) {
+            is ModelSpec.EnumSpec -> buildEnumClass(transformedSpec.name, transformedSpec.values)
+            is ModelSpec.DataClassSpec -> buildDataClass(transformedSpec)
+            is ModelSpec.ObjectSpec -> buildObjectClass(transformedSpec)
+            is ModelSpec.SealedClassSpec -> buildSealedClass(transformedSpec)
             is ModelSpec.AliasSpec -> null
         }
+    }
 
     private fun buildEnumClass(
         name: String,
