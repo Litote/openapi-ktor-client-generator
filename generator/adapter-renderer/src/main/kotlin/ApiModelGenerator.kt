@@ -62,6 +62,7 @@ public class ApiModelGenerator public constructor(
             is ModelSpec.ObjectSpec -> buildObjectClass(transformedSpec)
             is ModelSpec.SealedClassSpec -> buildSealedClass(transformedSpec)
             is ModelSpec.AliasSpec -> null
+            is ModelSpec.InterfaceSpec -> buildInterfaceClass(transformedSpec)
         }
     }
 
@@ -111,6 +112,16 @@ public class ApiModelGenerator public constructor(
                 }
             }.build()
 
+    private fun buildInterfaceClass(spec: ModelSpec.InterfaceSpec): TypeSpec =
+        TypeSpec
+            .interfaceBuilder(spec.name)
+            .apply {
+                spec.properties.forEach { property ->
+                    val typeName = property.type.toTypeName(fallbackModelPackage, modelPackageOverrides)
+                    addProperty(PropertySpec.builder(property.camelCaseName, typeName).build())
+                }
+            }.build()
+
     private fun buildSealedClass(spec: ModelSpec.SealedClassSpec): TypeSpec =
         TypeSpec
             .classBuilder(spec.name)
@@ -145,6 +156,11 @@ public class ApiModelGenerator public constructor(
                                 .build(),
                         )
                     }
+                }
+                spec.interfaceParentNames.forEach { interfaceName ->
+                    addSuperinterface(
+                        ClassName(modelPackageOverrides.getOrDefault(interfaceName, fallbackModelPackage), interfaceName),
+                    )
                 }
             }.primaryConstructor(
                 FunSpec
@@ -221,6 +237,7 @@ public class ApiModelGenerator public constructor(
             .builder(property.camelCaseName, typeName)
             .initializer(property.camelCaseName)
             .apply {
+                if (property.isOverride) addModifiers(KModifier.OVERRIDE)
                 if (property.needsSerialName) {
                     addAnnotation(
                         AnnotationSpec

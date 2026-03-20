@@ -59,6 +59,15 @@ public fun collectModelRefs(model: ModelSpec): Set<String> =
             refs
         }
 
+        is ModelSpec.InterfaceSpec -> {
+            val refs = mutableSetOf<String>()
+            model.properties.forEach { prop ->
+                refs.addAll(collectModelRefs(prop.type))
+                prop.nestedModels.forEach { nested -> refs.addAll(collectModelRefs(nested)) }
+            }
+            refs
+        }
+
         is ModelSpec.EnumSpec,
         is ModelSpec.SealedClassSpec,
         is ModelSpec.AliasSpec,

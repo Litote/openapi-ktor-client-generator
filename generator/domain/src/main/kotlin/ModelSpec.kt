@@ -9,6 +9,7 @@ package org.litote.openapi.ktor.client.generator.domain
  * - [SealedClassSpec] → `sealed class`
  * - [ObjectSpec] → `object`
  * - [AliasSpec] → type alias to `JsonObject`
+ * - [InterfaceSpec] → `interface` (for allOf-only composition schemas)
  */
 public sealed class ModelSpec {
     public abstract val name: String
@@ -20,6 +21,8 @@ public sealed class ModelSpec {
         val sealedParentName: String? = null,
         /** Value for `@SerialName` when this is a sealed subtype. */
         val discriminatorValue: String? = null,
+        /** Names of interfaces this class implements (from allOf $ref to interface-only schemas). */
+        val interfaceParentNames: List<String> = emptyList(),
     ) : ModelSpec()
 
     public data class EnumSpec(
@@ -43,5 +46,15 @@ public sealed class ModelSpec {
     /** Schema with no properties and no enum values → alias to `JsonObject`. */
     public data class AliasSpec(
         override val name: String,
+    ) : ModelSpec()
+
+    /**
+     * Schema referenced only via `allOf` in other schemas — generated as a Kotlin `interface`.
+     * This allows implementing classes to also extend a sealed parent (e.g. from `oneOf`),
+     * preserving the composition relationship without conflicting with Kotlin single inheritance.
+     */
+    public data class InterfaceSpec(
+        override val name: String,
+        val properties: List<ModelPropertySpec>,
     ) : ModelSpec()
 }

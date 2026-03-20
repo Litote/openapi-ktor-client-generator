@@ -572,6 +572,13 @@ public class OpenApiSpecificationParser(
         apiModel: ApiModel,
         configuration: ApiGeneratorConfiguration,
     ): ModelSpec? {
+        // Schemas referenced only via allOf become interfaces so that implementing classes
+        // can simultaneously extend a sealed parent (from oneOf) without Kotlin inheritance conflict.
+        if (name in apiModel.allOfOnlySchemas) {
+            val properties = buildModelProperties(schema, apiModel, configuration)
+            return ModelSpec.InterfaceSpec(name = name, properties = properties)
+        }
+
         val oneOfRefs = schema.oneOf?.filterIsInstance<OpenAPIV3Reference>()
         if (oneOfRefs != null && oneOfRefs.size >= 2) {
             return ModelSpec.SealedClassSpec(
@@ -580,7 +587,26 @@ public class OpenApiSpecificationParser(
             )
         }
 
-        val allOfParts: List<OpenAPIV3Schema> = schema.allOf?.mapNotNull { it as? OpenAPIV3Schema } ?: emptyList()
+        val interfaceParentNames: List<String> =
+            schema.allOf
+                ?.mapNotNull { part ->
+                    (part as? OpenAPIV3Reference)
+                        ?.ref
+                        ?.value
+                        ?.substringAfterLast("/")
+                        ?.takeIf { it in apiModel.allOfOnlySchemas }
+                }
+                ?: emptyList()
+
+        val interfacePropertyNames: Set<String> =
+            interfaceParentNames
+                .flatMap { refName ->
+                    (apiModel.components?.schemas?.get(refName) as? OpenAPIV3Schema)
+                        ?.properties
+                        ?.keys ?: emptyList()
+                }.toSet()
+
+        val allOfParts: List<OpenAPIV3Schema> = schema.allOf?.mapNotNull { apiModel.resolveSchema(it) } ?: emptyList()
         val mergedProperties =
             (schema.properties ?: emptyMap()) +
                 allOfParts.flatMap { it.properties?.entries ?: emptyList() }.associate { it.key to it.value }
@@ -596,7 +622,11 @@ public class OpenApiSpecificationParser(
                 schema
             }
 
-        val properties = buildModelProperties(effectiveSchema, apiModel, configuration)
+        val properties =
+            buildModelProperties(effectiveSchema, apiModel, configuration)
+                .map { prop ->
+                    if (prop.originalName in interfacePropertyNames) prop.copy(isOverride = true) else prop
+                }
 
         return when {
             properties.isEmpty() && effectiveSchema.enum.isNullOrEmpty() -> {
@@ -631,6 +661,7 @@ public class OpenApiSpecificationParser(
                     properties = properties,
                     sealedParentName = sealedParentName,
                     discriminatorValue = discriminatorValue,
+                    interfaceParentNames = interfaceParentNames,
                 )
             }
         }
@@ -783,4 +814,5 @@ private fun renameModelSpec(
         is ModelSpec.ObjectSpec -> model.copy(name = newName)
         is ModelSpec.SealedClassSpec -> model.copy(name = newName)
         is ModelSpec.AliasSpec -> model.copy(name = newName)
+        is ModelSpec.InterfaceSpec -> model.copy(name = newName)
     }

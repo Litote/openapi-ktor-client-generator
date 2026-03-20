@@ -20,4 +20,6 @@ public data class ModelPropertySpec(
      * e.g. an inline enum class or an inline nested data class.
      */
     val nestedModels: List<ModelSpec> = emptyList(),
+    /** True when this property overrides an interface property. */
+    val isOverride: Boolean = false,
 )

@@ -264,6 +264,64 @@ internal class ApiModel private constructor(
             ).filterKeys { set.contains(it) }
         }
 
+    /**
+     * Schema names that are referenced exclusively via `allOf` entries in other schemas —
+     * never used directly as a property type, oneOf subtype, request body, or response.
+     * These are candidates to be generated as Kotlin `interface` instead of `data class`.
+     */
+    internal val allOfOnlySchemas: Set<String> =
+        run {
+            val allOfRefs = mutableSetOf<String>()
+            val directRefs = mutableSetOf<String>()
+
+            components?.schemas?.values?.forEach { schemaOrRef ->
+                val schema = schemaOrRef as? OpenAPIV3Schema ?: return@forEach
+                schema.allOf?.forEach { part ->
+                    when (part) {
+                        is OpenAPIV3Reference -> {
+                            allOfRefs.add(getRefClassName(part))
+                        }
+
+                        is OpenAPIV3Schema -> {
+                            part.properties
+                                ?.values
+                                ?.filterIsInstance<OpenAPIV3Reference>()
+                                ?.forEach { directRefs.add(getRefClassName(it)) }
+                            (part.items as? OpenAPIV3Reference)?.let { directRefs.add(getRefClassName(it)) }
+                        }
+                    }
+                }
+                schema.oneOf
+                    ?.filterIsInstance<OpenAPIV3Reference>()
+                    ?.forEach { directRefs.add(getRefClassName(it)) }
+                schema.anyOf
+                    ?.filterIsInstance<OpenAPIV3Reference>()
+                    ?.forEach { directRefs.add(getRefClassName(it)) }
+                schema.properties
+                    ?.values
+                    ?.filterIsInstance<OpenAPIV3Reference>()
+                    ?.forEach { directRefs.add(getRefClassName(it)) }
+                (schema.items as? OpenAPIV3Reference)?.let { directRefs.add(getRefClassName(it)) }
+                (schema.not as? OpenAPIV3Reference)?.let { directRefs.add(getRefClassName(it)) }
+                (schema.additionalProperties as? OpenAPIV3Reference)?.let { directRefs.add(getRefClassName(it)) }
+            }
+
+            model.paths.values.forEach { pathItem ->
+                listOfNotNull(
+                    pathItem.get,
+                    pathItem.post,
+                    pathItem.put,
+                    pathItem.delete,
+                    pathItem.patch,
+                    pathItem.options,
+                    pathItem.head,
+                    pathItem.trace,
+                ).forEach { op -> op.allReferences().forEach { directRefs.add(getRefClassName(it)) } }
+            }
+
+            allOfRefs - directRefs
+        }
+
     val componentParameters: List<OpenAPIV3Parameter> =
         components
             ?.parameters

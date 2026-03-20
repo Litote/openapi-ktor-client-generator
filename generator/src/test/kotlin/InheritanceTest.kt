@@ -92,6 +92,68 @@ class InheritanceTest {
         assertTrue(subtypeNames.containsAll(listOf("TextStatus", "MediaStatus", "PollStatus")))
     }
 
+    @Test
+    fun `GIVEN allOf schema with ref WHEN building model THEN merges properties from referenced schema`() {
+        val (_, generationSpec) = loadSpec("allof-inheritance.json")
+
+        val textStatusModel = generationSpec.models.first { it.name == "TextStatus" }
+        assertIs<ModelSpec.DataClassSpec>(textStatusModel)
+
+        val propertyNames = textStatusModel.properties.map { it.originalName }
+        assertTrue(propertyNames.contains("status"), "Should have own property 'status'")
+        assertTrue(propertyNames.contains("language"), "Should have BaseStatus property 'language'")
+        assertTrue(propertyNames.contains("sensitive"), "Should have BaseStatus property 'sensitive'")
+    }
+
+    @Test
+    fun `GIVEN allOf schema with ref and sealed parent WHEN building model THEN extends sealed parent`() {
+        val (_, generationSpec) = loadSpec("allof-inheritance.json")
+
+        val textStatusModel = generationSpec.models.first { it.name == "TextStatus" }
+        assertIs<ModelSpec.DataClassSpec>(textStatusModel)
+
+        assertEquals(
+            "CreateStatusRequest",
+            textStatusModel.sealedParentName,
+            "TextStatus should extend CreateStatusRequest (from oneOf in request body)",
+        )
+    }
+
+    @Test
+    fun `GIVEN schema referenced only via allOf WHEN building model THEN generates interface`() {
+        val (_, generationSpec) = loadSpec("allof-inheritance.json")
+
+        val baseStatusModel = generationSpec.models.first { it.name == "BaseStatus" }
+        assertIs<ModelSpec.InterfaceSpec>(baseStatusModel)
+    }
+
+    @Test
+    fun `GIVEN DataClass implementing interface via allOf WHEN building model THEN interface is listed as parent`() {
+        val (_, generationSpec) = loadSpec("allof-inheritance.json")
+
+        val textStatusModel = generationSpec.models.first { it.name == "TextStatus" }
+        assertIs<ModelSpec.DataClassSpec>(textStatusModel)
+        assertTrue(
+            textStatusModel.interfaceParentNames.contains("BaseStatus"),
+            "TextStatus should implement BaseStatus interface",
+        )
+    }
+
+    @Test
+    fun `GIVEN DataClass implementing interface via allOf WHEN building model THEN interface properties are marked override`() {
+        val (_, generationSpec) = loadSpec("allof-inheritance.json")
+
+        val textStatusModel = generationSpec.models.first { it.name == "TextStatus" }
+        assertIs<ModelSpec.DataClassSpec>(textStatusModel)
+
+        val overrideProps = textStatusModel.properties.filter { it.isOverride }.map { it.originalName }
+        assertTrue(overrideProps.contains("language"), "'language' should be override (from BaseStatus)")
+        assertTrue(overrideProps.contains("sensitive"), "'sensitive' should be override (from BaseStatus)")
+
+        val ownProps = textStatusModel.properties.filter { !it.isOverride }.map { it.originalName }
+        assertTrue(ownProps.contains("status"), "'status' should NOT be override (own property)")
+    }
+
     private fun loadSpec(
         fileName: String,
     ): Pair<ApiGeneratorConfiguration, org.litote.openapi.ktor.client.generator.domain.GenerationSpec> {

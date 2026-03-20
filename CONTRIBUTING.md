@@ -128,6 +128,27 @@ ApiGenerator.kt (root)
 | `YamlContentConverterGenerator`   | Generates `YamlContentConverter.kt` — bridges YAML ↔ JSON via SnakeYAML |
 | `OperationBuilder`                | Builds per-operation methods with correct `contentType()` headers |
 
+## allOf with $ref — Property Flattening
+
+When a schema uses `allOf` containing `$ref` entries, the parser resolves the referenced schemas
+and merges their properties into the current schema (property flattening):
+
+```json
+"TextStatus": {
+  "allOf": [
+    { "$ref": "#/components/schemas/BaseStatus" },
+    { "type": "object", "required": ["status"], "properties": { "status": { "type": "string" } } }
+  ]
+}
+```
+
+Generates a `TextStatus` data class that includes both its own properties **and** all properties
+from `BaseStatus`. If `TextStatus` is also a sealed class subtype (via a `oneOf` request body),
+it still extends the sealed parent — Kotlin single-inheritance is respected via flattening rather
+than class inheritance from the `$ref` target.
+
+---
+
 ## YAML Support
 
 When an OpenAPI spec contains `application/yaml` or `application/x-yaml` content types (in request bodies or responses), the generator automatically:

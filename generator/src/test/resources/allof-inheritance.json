@@ -1,0 +1,92 @@
+{
+  "openapi": "3.0.0",
+  "info": {
+    "title": "AllOf Inheritance API",
+    "version": "1.0.0"
+  },
+  "paths": {
+    "/status": {
+      "post": {
+        "operationId": "createStatus",
+        "tags": ["status"],
+        "responses": {
+          "200": {
+            "description": "OK"
+          }
+        },
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "oneOf": [
+                  {
+                    "$ref": "#/components/schemas/TextStatus"
+                  },
+                  {
+                    "$ref": "#/components/schemas/MediaStatus"
+                  }
+                ]
+              }
+            }
+          }
+        }
+      }
+    }
+  },
+  "components": {
+    "schemas": {
+      "BaseStatus": {
+        "type": "object",
+        "properties": {
+          "language": {
+            "type": "string"
+          },
+          "sensitive": {
+            "type": "boolean",
+            "default": false
+          }
+        }
+      },
+      "TextStatus": {
+        "allOf": [
+          {
+            "$ref": "#/components/schemas/BaseStatus"
+          },
+          {
+            "type": "object",
+            "required": [
+              "status"
+            ],
+            "properties": {
+              "status": {
+                "type": "string"
+              }
+            }
+          }
+        ]
+      },
+      "MediaStatus": {
+        "allOf": [
+          {
+            "$ref": "#/components/schemas/BaseStatus"
+          },
+          {
+            "type": "object",
+            "required": [
+              "media_ids"
+            ],
+            "properties": {
+              "media_ids": {
+                "type": "array",
+                "items": {
+                  "type": "string"
+                }
+              }
+            }
+          }
+        ]
+      }
+    }
+  }
+}
