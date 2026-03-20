@@ -147,6 +147,63 @@ from `BaseStatus`. If `TextStatus` is also a sealed class subtype (via a `oneOf`
 it still extends the sealed parent — Kotlin single-inheritance is respected via flattening rather
 than class inheritance from the `$ref` target.
 
+### allOf-only schemas → Kotlin `interface`
+
+A schema referenced **exclusively via `allOf`** in other schemas (never as a standalone type, property, `oneOf` member, or request/response body) is generated as a Kotlin `interface` instead of a `data class`. This preserves the composition relationship while allowing implementing classes to also extend a sealed class from `oneOf`.
+
+- Detection: `ApiModel.allOfOnlySchemas` (set difference of allOf refs minus direct refs)
+- Domain: `ModelSpec.InterfaceSpec`
+- Renderer: `ApiModelGenerator.buildInterfaceClass`
+- Implementing classes gain `interfaceParentNames`, and inherited properties get `isOverride = true`
+
+Example result for `BaseStatus` (allOf-only) and `TextStatus`:
+```kotlin
+public interface BaseStatus { val language: String?; val sensitive: Boolean? }
+@Serializable
+public data class TextStatus(
+    override val language: String? = null,
+    override val sensitive: Boolean? = false,
+    val status: String,
+) : CreateStatusRequest(), BaseStatus
+```
+
+---
+
+## Response `oneOf` — Polymorphic Sealed Classes
+
+When an operation response body contains an inline `oneOf` with 2+ `$ref` entries, the generator synthesises a virtual sealed class `{OperationId}Response`:
+
+- The sealed class is created, and each `$ref` subtype extends it
+- A `JsonContentPolymorphicSerializer` companion object is generated to select the correct subtype at runtime by inspecting which required JSON properties are present
+
+### Detection
+
+`ApiModel.responseSealedParents` scans all operations and collects response bodies with inline `oneOf` with 2+ refs. The map key is the synthesised sealed class name (e.g. `createStatus` → `CreateStatusResponse`).
+
+### Subtype selection logic
+
+The companion `selectDeserializer` checks subtypes in descending order of required property count. The first subtype whose entire `required` list is present in the JSON keys is selected; the last subtype is the fallback:
+
+```kotlin
+@Serializable(with = CreateStatusResponse.Companion::class)
+sealed class CreateStatusResponse {
+    companion object : JsonContentPolymorphicSerializer<CreateStatusResponse>(CreateStatusResponse::class) {
+        override fun selectDeserializer(element: JsonElement): DeserializationStrategy<CreateStatusResponse> {
+            val keys = (element as? JsonObject)?.keys ?: emptySet()
+            return when {
+                listOf("account", "content", ...).all { it in keys } -> Status.serializer()
+                else -> ScheduledStatus.serializer()
+            }
+        }
+    }
+}
+```
+
+### Domain
+
+- `SubtypeHint(subtypeName, requiredSerialNames)` — carries required property names for each subtype
+- `ModelSpec.SealedClassSpec.subtypeHints: List<SubtypeHint>?` — when non-null, triggers companion generation
+
 ---
 
 ## YAML Support

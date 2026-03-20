@@ -11,7 +11,21 @@
         "tags": ["status"],
         "responses": {
           "200": {
-            "description": "OK"
+            "description": "OK",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "oneOf": [
+                    {
+                      "$ref": "#/components/schemas/ConfirmedStatus"
+                    },
+                    {
+                      "$ref": "#/components/schemas/PendingStatus"
+                    }
+                  ]
+                }
+              }
+            }
           }
         },
         "requestBody": {
@@ -45,6 +59,33 @@
           "sensitive": {
             "type": "boolean",
             "default": false
+          }
+        }
+      },
+      "ConfirmedStatus": {
+        "type": "object",
+        "required": ["id", "published_at"],
+        "properties": {
+          "id": {
+            "type": "string"
+          },
+          "published_at": {
+            "type": "string"
+          },
+          "text": {
+            "type": "string"
+          }
+        }
+      },
+      "PendingStatus": {
+        "type": "object",
+        "required": ["scheduled_at"],
+        "properties": {
+          "scheduled_at": {
+            "type": "string"
+          },
+          "text": {
+            "type": "string"
           }
         }
       },

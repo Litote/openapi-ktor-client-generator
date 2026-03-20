@@ -154,6 +154,76 @@ class InheritanceTest {
         assertTrue(ownProps.contains("status"), "'status' should NOT be override (own property)")
     }
 
+    @Test
+    fun `GIVEN response with inline oneOf WHEN building model THEN generates sealed class with subtypeHints`() {
+        val (_, generationSpec) = loadSpec("allof-inheritance.json")
+
+        val responseParent = generationSpec.models.firstOrNull { it.name == "CreateStatusResponse" }
+        assertNotNull(responseParent, "CreateStatusResponse sealed class should be generated")
+        assertIs<ModelSpec.SealedClassSpec>(responseParent)
+        assertNotNull(responseParent.subtypeHints, "Should have subtypeHints for polymorphic deserialization")
+        val hintNames = responseParent.subtypeHints!!.map { it.subtypeName }
+        assertTrue(hintNames.contains("ConfirmedStatus"), "Should have ConfirmedStatus hint")
+        assertTrue(hintNames.contains("PendingStatus"), "Should have PendingStatus hint")
+    }
+
+    @Test
+    fun `GIVEN response with inline oneOf WHEN building model THEN subtypeHints contain required properties`() {
+        val (_, generationSpec) = loadSpec("allof-inheritance.json")
+
+        val responseParent = generationSpec.models.first { it.name == "CreateStatusResponse" }
+        assertIs<ModelSpec.SealedClassSpec>(responseParent)
+        val confirmedHint = responseParent.subtypeHints!!.first { it.subtypeName == "ConfirmedStatus" }
+        assertTrue(
+            confirmedHint.requiredSerialNames.containsAll(listOf("id", "published_at")),
+            "ConfirmedStatus hint should include its required properties",
+        )
+    }
+
+    @Test
+    fun `GIVEN response sealed class with subtypeHints WHEN rendering THEN generates JsonContentPolymorphicSerializer companion`() {
+        val (config, generationSpec) = loadSpec("allof-inheritance.json")
+        val responseParent = generationSpec.models.first { it.name == "CreateStatusResponse" }
+        val generator = ApiModelGenerator(config.modelPackage, "build/openapi-test")
+
+        val typeSpec = generator.buildModel(responseParent)
+
+        assertNotNull(typeSpec)
+        assertTrue(typeSpec.modifiers.contains(KModifier.SEALED))
+        val companion = typeSpec.typeSpecs.firstOrNull { it.isCompanion }
+        assertNotNull(companion, "Should generate a companion object")
+        val superclassName =
+            (companion.superclass as? com.squareup.kotlinpoet.ParameterizedTypeName)
+                ?.rawType
+                ?.simpleName
+        assertEquals(
+            "JsonContentPolymorphicSerializer",
+            superclassName,
+            "Companion should extend JsonContentPolymorphicSerializer",
+        )
+    }
+
+    @Test
+    fun `GIVEN response subtypes WHEN building models THEN they extend the response sealed class`() {
+        val (_, generationSpec) = loadSpec("allof-inheritance.json")
+
+        val confirmedStatus = generationSpec.models.first { it.name == "ConfirmedStatus" }
+        assertIs<ModelSpec.DataClassSpec>(confirmedStatus)
+        assertEquals(
+            "CreateStatusResponse",
+            confirmedStatus.sealedParentName,
+            "ConfirmedStatus should extend CreateStatusResponse",
+        )
+
+        val pendingStatus = generationSpec.models.first { it.name == "PendingStatus" }
+        assertIs<ModelSpec.DataClassSpec>(pendingStatus)
+        assertEquals(
+            "CreateStatusResponse",
+            pendingStatus.sealedParentName,
+            "PendingStatus should extend CreateStatusResponse",
+        )
+    }
+
     private fun loadSpec(
         fileName: String,
     ): Pair<ApiGeneratorConfiguration, org.litote.openapi.ktor.client.generator.domain.GenerationSpec> {

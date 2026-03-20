@@ -68,7 +68,7 @@ graph TD
 
 | Sub-module | Root package | Key classes |
 |---|---|---|
-| `generator:domain` | `*.domain` | `GenerationSpec`, `ClientSpec`, `OperationSpec`, `ModelSpec` (sealed), `DomainTypeSpec` (sealed), `ModelPropertySpec`, `OperationParameterSpec`, `RequestBodySpec`, `ResponseEntrySpec`, `FormFieldSpec`, `ClientConfigurationSpec`, `SecuritySchemeSpec`, `ComponentParameterSpec`, `DefaultValueSpec`, `OperationMetaSpec`, `ParameterLocationSpec`, `ModelUsageAnalyzer` (top-level fns), `PartitionedGenerationSpec`, `PerClientGenerationSpec`, `SharedGroupSpec`, `GeneratedFileSpec` |
+| `generator:domain` | `*.domain` | `GenerationSpec`, `ClientSpec`, `OperationSpec`, `ModelSpec` (sealed), `SubtypeHint`, `DomainTypeSpec` (sealed), `ModelPropertySpec`, `OperationParameterSpec`, `RequestBodySpec`, `ResponseEntrySpec`, `FormFieldSpec`, `ClientConfigurationSpec`, `SecuritySchemeSpec`, `ComponentParameterSpec`, `DefaultValueSpec`, `OperationMetaSpec`, `ParameterLocationSpec`, `ModelUsageAnalyzer` (top-level fns), `PartitionedGenerationSpec`, `PerClientGenerationSpec`, `SharedGroupSpec`, `GeneratedFileSpec` |
 | `generator:port` | `*.port` | `ApiSpecificationParser` (parse takes only `operationFilter`), `ApiConfigurationRenderer`, `ApiClientRenderer`, `ApiModelRenderer`, `ApiFileSystemWriter`, `ApiConfigurationGeneratorConfig`, `ApiClientGeneratorConfig`, `ApiModelGeneratorConfig` |
 | `generator:config` | `*.generator` | `ApiGeneratorConfiguration`, `ApiGeneratorModule`, `GenerationResult`, `SplitGranularity`, `SharedModelGranularity` |
 | `generator:application` | `*.application` | `GenerateCodeService`, `GenerationSpecPartitioner` |
@@ -382,7 +382,7 @@ graph TD
     RB["RequestBodySpec"]
     RE["ResponseEntrySpec"]
     IL["ModelSpec (inline)"]
-    MS["ModelSpec\n(DataClassSpec | SealedClassSpec\n| EnumSpec | AliasSpec | ObjectSpec)"]
+    MS["ModelSpec\n(DataClassSpec | SealedClassSpec\n| EnumSpec | AliasSpec | ObjectSpec | InterfaceSpec)"]
     MP["ModelPropertySpec"]
     DT["DomainTypeSpec\n(PrimitiveSpec | ListTypeSpec | SetTypeSpec\n| MapTypeSpec | ModelReferenceSpec\n| InlineTypeSpec | JsonTypeSpec)"]
 
@@ -403,6 +403,34 @@ graph TD
 ```
 
 **`DomainTypeSpec.ModelReferenceSpec(name)`** is the link between operations/models and named model classes generated in the model package.
+
+---
+
+## allOf with `$ref` — Interface Generation
+
+Schemas referenced **only via `allOf`** in other schemas (never directly as property types, `oneOf` members, or request/response bodies) are generated as Kotlin `interface` instead of `data class`:
+
+- Detection: `ApiModel.allOfOnlySchemas` (allOf refs minus all direct refs from schemas + operations)
+- Domain: `ModelSpec.InterfaceSpec(name, properties)`
+- Implementing classes get `interfaceParentNames: List<String>` and inherited properties marked `isOverride = true`
+- Renderer: `ApiModelGenerator.buildInterfaceClass` generates `TypeSpec.interfaceBuilder`
+
+This allows a class to `extend` a sealed parent (from `oneOf`) AND `implement` a shared interface (from `allOf`), respecting Kotlin single-inheritance.
+
+---
+
+## Response `oneOf` — Polymorphic Sealed Classes
+
+When a response body contains an inline `oneOf` with 2+ `$ref` entries, the parser synthesises:
+
+1. **Sealed class** `{OperationId}Response` — added to `ApiModel.responseSealedParents` (and merged into `sealedParents`)
+2. **Subtypes** (`$ref` targets) gain `sealedParentName = "{OperationId}Response"` via `sealedSubTypes`
+3. **`SubtypeHint`** per subtype — stores `requiredSerialNames` (required JSON property names, allOf-resolved)
+4. **`ModelSpec.SealedClassSpec.subtypeHints`** — when non-null, renderer generates a `JsonContentPolymorphicSerializer` companion
+
+The companion `selectDeserializer` sorts subtypes by required-count descending, checks each (except last) with `listOf(...).all { it in keys }`, and falls back to the last subtype.
+
+Key classes: `SubtypeHint` (domain), `ApiModel.responseSealedParents`, `ApiModelGenerator.buildPolymorphicSerializerCompanion`.
 
 ---
 

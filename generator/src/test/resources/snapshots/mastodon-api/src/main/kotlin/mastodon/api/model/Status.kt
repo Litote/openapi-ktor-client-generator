@@ -55,7 +55,7 @@ public data class Status(
   public val uri: String,
   public val url: String? = null,
   public val visibility: StatusVisibilityEnum,
-) {
+) : CreateStatusResponse() {
   @Serializable
   public data class Application(
     public val name: String,

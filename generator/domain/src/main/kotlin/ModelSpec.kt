@@ -1,6 +1,18 @@
 package org.litote.openapi.ktor.client.generator.domain
 
 /**
+ * Hints used by a [ModelSpec.SealedClassSpec] to generate a `JsonContentPolymorphicSerializer`
+ * that selects the correct subtype based on JSON key presence.
+ *
+ * @param subtypeName name of the sealed subtype class
+ * @param requiredSerialNames JSON property names that are required in the subtype's schema
+ */
+public data class SubtypeHint(
+    val subtypeName: String,
+    val requiredSerialNames: List<String>,
+)
+
+/**
  * Domain representation of a generated model class.
  *
  * The sealed hierarchy mirrors the different kinds of Kotlin code that can be produced:
@@ -35,6 +47,12 @@ public sealed class ModelSpec {
         override val name: String,
         /** Property name used as the JSON discriminator key. */
         val discriminatorPropertyName: String? = null,
+        /**
+         * When non-null, a `JsonContentPolymorphicSerializer` companion is generated that selects
+         * the correct subtype by inspecting which required JSON properties are present.
+         * Used for response bodies with inline `oneOf` that have no discriminator property.
+         */
+        val subtypeHints: List<SubtypeHint>? = null,
     ) : ModelSpec()
 
     public data class ObjectSpec(

@@ -8,9 +8,11 @@ import com.squareup.kotlinpoet.FunSpec
 import com.squareup.kotlinpoet.KModifier
 import com.squareup.kotlinpoet.MemberName
 import com.squareup.kotlinpoet.ParameterSpec
+import com.squareup.kotlinpoet.ParameterizedTypeName.Companion.parameterizedBy
 import com.squareup.kotlinpoet.PropertySpec
 import com.squareup.kotlinpoet.STRING
 import com.squareup.kotlinpoet.TypeAliasSpec
+import com.squareup.kotlinpoet.TypeName
 import com.squareup.kotlinpoet.TypeSpec
 import com.squareup.kotlinpoet.TypeSpec.Companion.anonymousClassBuilder
 import kotlinx.serialization.SerialName
@@ -19,6 +21,7 @@ import org.litote.openapi.ktor.client.generator.ApiGeneratorModule
 import org.litote.openapi.ktor.client.generator.adapter.writer.KotlinPoetFileWriter
 import org.litote.openapi.ktor.client.generator.domain.ModelPropertySpec
 import org.litote.openapi.ktor.client.generator.domain.ModelSpec
+import org.litote.openapi.ktor.client.generator.domain.SubtypeHint
 import org.litote.openapi.ktor.client.generator.domain.enumFieldName
 import org.litote.openapi.ktor.client.generator.port.ApiFileSystemWriter
 import org.litote.openapi.ktor.client.generator.port.ApiModelGeneratorConfig
@@ -38,11 +41,16 @@ public class ApiModelGenerator public constructor(
     private val modules: List<ApiGeneratorModule> = emptyList(),
 ) : ApiModelGeneratorConfig {
     private companion object {
+        private const val KSJ_PACKAGE = "kotlinx.serialization.json"
+
         val serializerName: MemberName = MemberName("kotlinx.serialization.builtins", "serializer")
-        val jsonObject: ClassName = ClassName("kotlinx.serialization.json", "JsonObject")
-        val jsonClassDiscriminator: ClassName = ClassName("kotlinx.serialization.json", "JsonClassDiscriminator")
+        val jsonObject: ClassName = ClassName(KSJ_PACKAGE, "JsonObject")
+        val jsonClassDiscriminator: ClassName = ClassName(KSJ_PACKAGE, "JsonClassDiscriminator")
         val experimentalSerializationApi: ClassName = ClassName("kotlinx.serialization", "ExperimentalSerializationApi")
         val optIn: ClassName = ClassName("kotlin", "OptIn")
+        val jsonContentPolymorphicSerializer: ClassName = ClassName(KSJ_PACKAGE, "JsonContentPolymorphicSerializer")
+        val jsonElement: ClassName = ClassName(KSJ_PACKAGE, "JsonElement")
+        val deserializationStrategy: ClassName = ClassName("kotlinx.serialization", "DeserializationStrategy")
     }
 
     /**
@@ -122,11 +130,19 @@ public class ApiModelGenerator public constructor(
                 }
             }.build()
 
-    private fun buildSealedClass(spec: ModelSpec.SealedClassSpec): TypeSpec =
-        TypeSpec
+    private fun buildSealedClass(spec: ModelSpec.SealedClassSpec): TypeSpec {
+        val sealedClassName = ClassName(modelPackage, spec.name)
+        val serializableAnnotation =
+            if (spec.subtypeHints != null) {
+                val companionClass = ClassName(modelPackage, spec.name, "Companion")
+                AnnotationSpec.builder(Serializable::class).addMember("with = %T::class", companionClass).build()
+            } else {
+                AnnotationSpec.builder(Serializable::class).build()
+            }
+        return TypeSpec
             .classBuilder(spec.name)
             .addModifiers(KModifier.SEALED)
-            .addAnnotation(AnnotationSpec.builder(Serializable::class).build())
+            .addAnnotation(serializableAnnotation)
             .apply {
                 spec.discriminatorPropertyName?.let { discriminatorProp ->
                     addAnnotation(
@@ -136,7 +152,57 @@ public class ApiModelGenerator public constructor(
                             .build(),
                     )
                 }
+                spec.subtypeHints?.let { hints ->
+                    addType(buildPolymorphicSerializerCompanion(sealedClassName, hints))
+                }
             }.build()
+    }
+
+    private fun buildPolymorphicSerializerCompanion(
+        sealedClassName: ClassName,
+        subtypeHints: List<SubtypeHint>,
+    ): TypeSpec {
+        val superclass = jsonContentPolymorphicSerializer.parameterizedBy(sealedClassName)
+        val returnType: TypeName = deserializationStrategy.parameterizedBy(sealedClassName)
+        val selectFun =
+            FunSpec
+                .builder("selectDeserializer")
+                .addModifiers(KModifier.OVERRIDE)
+                .addParameter("element", jsonElement)
+                .returns(returnType)
+                .addCode(buildSelectDeserializerBody(subtypeHints))
+                .build()
+        return TypeSpec
+            .companionObjectBuilder()
+            .superclass(superclass)
+            .addSuperclassConstructorParameter("%T::class", sealedClassName)
+            .addFunction(selectFun)
+            .build()
+    }
+
+    private fun buildSelectDeserializerBody(subtypeHints: List<SubtypeHint>): CodeBlock {
+        val sorted = subtypeHints.sortedByDescending { it.requiredSerialNames.size }
+        val code = CodeBlock.builder()
+        code.addStatement("val keys = (element as? %T)?.keys ?: emptySet()", jsonObject)
+        code.beginControlFlow("return when")
+        for (i in sorted.indices) {
+            val hint = sorted[i]
+            val subtypeClass =
+                ClassName(modelPackageOverrides.getOrDefault(hint.subtypeName, fallbackModelPackage), hint.subtypeName)
+            if (i < sorted.size - 1) {
+                val placeholders = hint.requiredSerialNames.joinToString(", ") { "%S" }
+                val args: Array<Any> = (hint.requiredSerialNames + listOf(subtypeClass)).toTypedArray()
+                code.addStatement(
+                    "listOf($placeholders).all·{·it·in·keys·}·->·%T.serializer()",
+                    *args,
+                )
+            } else {
+                code.addStatement("else -> %T.serializer()", subtypeClass)
+            }
+        }
+        code.endControlFlow()
+        return code.build()
+    }
 
     private fun buildDataClass(spec: ModelSpec.DataClassSpec): TypeSpec =
         TypeSpec

@@ -15,7 +15,7 @@ public data class ScheduledStatus(
   public val params: Params,
   @SerialName("scheduled_at")
   public val scheduledAt: String,
-) {
+) : CreateStatusResponse() {
   @Serializable
   public data class Params(
     public val idempotency: String? = null,

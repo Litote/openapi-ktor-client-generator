@@ -30,6 +30,7 @@ import org.litote.openapi.ktor.client.generator.domain.OperationSpec
 import org.litote.openapi.ktor.client.generator.domain.ParameterLocationSpec
 import org.litote.openapi.ktor.client.generator.domain.RequestBodySpec
 import org.litote.openapi.ktor.client.generator.domain.ResponseEntrySpec
+import org.litote.openapi.ktor.client.generator.domain.SubtypeHint
 import org.litote.openapi.ktor.client.generator.port.ApiSpecificationParser
 import org.litote.openapi.ktor.client.generator.shared.capitalize
 import org.litote.openapi.ktor.client.generator.shared.sanitizeToIdentifier
@@ -563,7 +564,28 @@ public class OpenApiSpecificationParser(
         apiModel.requestBodySealedParents.keys.forEach { name ->
             specs.add(ModelSpec.SealedClassSpec(name = name, discriminatorPropertyName = null))
         }
+        apiModel.responseSealedParents.forEach { (name, subtypeNames) ->
+            val subtypeHints =
+                subtypeNames.map { subtypeName ->
+                    val resolvedRequired = resolveRequiredProperties(subtypeName, apiModel)
+                    SubtypeHint(subtypeName = subtypeName, requiredSerialNames = resolvedRequired)
+                }
+            specs.add(ModelSpec.SealedClassSpec(name = name, discriminatorPropertyName = null, subtypeHints = subtypeHints))
+        }
         return specs.toList()
+    }
+
+    /**
+     * Returns the merged list of required JSON property names for a named schema,
+     * following `allOf` references to include inherited required properties.
+     */
+    private fun resolveRequiredProperties(
+        name: String,
+        apiModel: ApiModel,
+    ): List<String> {
+        val schema = apiModel.components?.schemas?.get(name) as? OpenAPIV3Schema ?: return emptyList()
+        val allOfParts = schema.allOf?.mapNotNull { apiModel.resolveSchema(it) } ?: emptyList()
+        return ((schema.required ?: emptyList()) + allOfParts.flatMap { it.required ?: emptyList() }).distinct()
     }
 
     internal fun buildModelSpecFromSchema(

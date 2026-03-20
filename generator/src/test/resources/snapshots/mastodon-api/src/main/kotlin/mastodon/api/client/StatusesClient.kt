@@ -72,7 +72,7 @@ public class StatusesClient(
         contentType(ContentType.Application.Json)
       }
       return when (response.status.value) {
-        200 -> CreateStatusResponseSuccess(response.body<JsonElement>())
+        200 -> CreateStatusResponseSuccess(response.body<mastodon.api.model.CreateStatusResponse>())
         401, 404, 422, 429, 503 -> CreateStatusResponseFailure401(response.body<Error>())
         410 -> CreateStatusResponseFailure
         else -> CreateStatusResponseUnknownFailure(response.status.value)
@@ -642,7 +642,7 @@ public class StatusesClient(
 
   @Serializable
   public data class CreateStatusResponseSuccess(
-    public val body: JsonElement,
+    public val body: mastodon.api.model.CreateStatusResponse,
   ) : CreateStatusResponse()
 
   @Serializable

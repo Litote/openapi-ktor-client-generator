@@ -216,9 +216,50 @@ internal class ApiModel private constructor(
             }.toMap()
 
     /**
+     * Maps sealed class parent names (derived from operation response bodies with inline `oneOf`)
+     * to their ordered list of sub-type ref names.
+     *
+     * These are "virtual" sealed classes synthesised from operations whose response body contains
+     * an inline `oneOf` with 2+ `$ref` entries.
+     *
+     * Naming convention: `{operationId.capitalize()}Response` (e.g. `createStatus` → `CreateStatusResponse`).
+     */
+    internal val responseSealedParents: Map<String, List<String>> =
+        model.paths
+            .values
+            .flatMap { pathItem ->
+                listOfNotNull(
+                    pathItem.get,
+                    pathItem.post,
+                    pathItem.put,
+                    pathItem.delete,
+                    pathItem.patch,
+                    pathItem.options,
+                    pathItem.head,
+                    pathItem.trace,
+                ).mapNotNull { op ->
+                    val opId = op.operationId ?: return@mapNotNull null
+                    val refs =
+                        op.responses?.values?.firstNotNullOfOrNull { responseOrRef ->
+                            val response = responseOrRef as? OpenAPIV3Response ?: return@firstNotNullOfOrNull null
+                            response.content?.values?.firstNotNullOfOrNull { mediaType ->
+                                val schema = mediaType.schema as? OpenAPIV3Schema ?: return@firstNotNullOfOrNull null
+                                val oneOfRefs =
+                                    schema.oneOf?.filterIsInstance<OpenAPIV3Reference>()
+                                        ?: return@firstNotNullOfOrNull null
+                                if (oneOfRefs.size >= 2) oneOfRefs else null
+                            }
+                        } ?: return@mapNotNull null
+                    val sealedName = "${opId.snakeToCamelCase().capitalize()}Response"
+                    sealedName to refs.map { getRefClassName(it) }
+                }
+            }.toMap()
+
+    /**
      * Maps sealed class parent names to their ordered list of sub-type names.
      * A schema qualifies as a sealed parent when its `oneOf` contains at least 2 `$ref` entries.
-     * Also includes virtual sealed parents synthesised from inline request body `oneOf` schemas.
+     * Also includes virtual sealed parents synthesised from inline request body and response body
+     * `oneOf` schemas.
      */
     val sealedParents: Map<String, List<String>> =
         (
@@ -232,7 +273,7 @@ internal class ApiModel private constructor(
                     name to refs.map { getRefClassName(it) }
                 }?.toMap()
                 ?: emptyMap()
-        ) + requestBodySealedParents
+        ) + requestBodySealedParents + responseSealedParents
 
     /** Reverse of [sealedParents]: maps each sub-type name to its sealed parent name. */
     val sealedSubTypes: Map<String, String> =
@@ -570,7 +611,7 @@ internal class ApiModel private constructor(
     private fun resolveMultiRefUnionType(refs: List<OpenAPIV3Reference>): TypeName {
         val refNames = refs.map { getRefClassName(it) }
         val parentName =
-            requestBodySealedParents.entries
+            sealedParents.entries
                 .firstOrNull { it.value.toSet() == refNames.toSet() }
                 ?.key
         return if (parentName != null) {
