@@ -49,6 +49,7 @@ dependencies {
     implementation(project(":generator"))
 
     implementation(project(":module:unknown-enum-value"))
+    implementation(project(":module:logging-kotlin"))
     implementation(project(":module:logging-sl4j"))
 }
 
