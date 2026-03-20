@@ -1,5 +1,18 @@
 # Changelog
 
+## [0.4.0](https://github.com/Litote/openapi-ktor-client-generator/compare/v0.3.0...v0.4.0) (2026-03-20)
+
+
+### Features
+
+* add custom modules ([8292e00](https://github.com/Litote/openapi-ktor-client-generator/commit/8292e00227a56fa392349f4e5595b26f4bc197bb))
+
+
+### Bug Fixes
+
+* add logging-kotlin module dependency in gradle-plugin ([f211e9f](https://github.com/Litote/openapi-ktor-client-generator/commit/f211e9fb883ac39cb0ed11578c0c325baf201f98))
+* do not use kotlin-logging-jvm dependency but kotlin-logging ([6c37d9a](https://github.com/Litote/openapi-ktor-client-generator/commit/6c37d9a760eb18a3ef12d69dc4ff523c53349f46))
+
 ## [0.3.0](https://github.com/Litote/openapi-ktor-client-generator/compare/v0.2.0...v0.3.0) (2026-03-17)
 
 
