@@ -30,6 +30,8 @@ internal class InitSubprojectTaskTest {
         sharedModelGranularity: String? = null,
         subprojectRootDirectory: String? = null,
         multiplatform: Boolean? = null,
+        additionalDependencies: List<String> = emptyList(),
+        additionalTargets: List<String> = emptyList(),
     ): InitSubprojectTask {
         val project = ProjectBuilder.builder().withProjectDir(tempDir).build()
         val task =
@@ -51,6 +53,8 @@ internal class InitSubprojectTaskTest {
         sharedModelGranularity?.let { task.sharedModelGranularity.set(it) }
         subprojectRootDirectory?.let { task.subprojectRootDirectory.set(it) }
         multiplatform?.let { task.multiplatform.set(it) }
+        if (additionalDependencies.isNotEmpty()) task.additionalDependencies.set(additionalDependencies)
+        if (additionalTargets.isNotEmpty()) task.additionalTargets.set(additionalTargets)
         return task
     }
 
@@ -992,6 +996,75 @@ internal class InitSubprojectTaskTest {
         assertContains(clientContent, "commonMain.dependencies")
         assertContains(clientContent, """api(project(":shared"))""")
     }
+
+    @Test
+    fun `GIVEN additionalDependencies WHEN initSubproject single module THEN build file contains extra dep`() {
+        val openApiFile = tempDir.resolve("petstore.yaml").also { it.writeText("openapi: 3.0.0") }
+        val task =
+            buildTask(
+                openApiFile = openApiFile.absolutePath,
+                subprojectName = "petstore",
+                additionalDependencies = listOf("io.github.oshai:kotlin-logging:7.0.0"),
+            )
+
+        task.initSubproject()
+
+        val content = tempDir.resolve("petstore/build.gradle.kts").readText()
+        assertContains(content, "io.github.oshai:kotlin-logging:7.0.0")
+    }
+
+    @Test
+    fun `GIVEN additionalDependencies and splitByClient=true WHEN initSubproject THEN all generated build files contain extra dep`() {
+        val openApiFile =
+            tempDir.resolve("spec.yaml").also {
+                it.writeText(
+                    """
+                    openapi: 3.0.0
+                    info:
+                      title: Test
+                      version: 1.0.0
+                    paths:
+                      /users:
+                        get:
+                          tags: [user]
+                          operationId: getUsers
+                          responses:
+                            '200':
+                              description: ok
+                    """.trimIndent(),
+                )
+            }
+        val task =
+            buildTask(
+                openApiFile = openApiFile.absolutePath,
+                splitByClient = true,
+                additionalDependencies = listOf("io.github.oshai:kotlin-logging:7.0.0"),
+            )
+
+        task.initSubproject()
+
+        val sharedContent = tempDir.resolve("shared/build.gradle.kts").readText()
+        assertContains(sharedContent, "io.github.oshai:kotlin-logging:7.0.0")
+        val clientContent = tempDir.resolve("user-client/build.gradle.kts").readText()
+        assertContains(clientContent, "io.github.oshai:kotlin-logging:7.0.0")
+    }
+
+    @Test
+    fun `GIVEN additionalTargets and multiplatform=true WHEN initSubproject THEN build file contains extra target`() {
+        val openApiFile = tempDir.resolve("petstore.yaml").also { it.writeText("openapi: 3.0.0") }
+        val task =
+            buildTask(
+                openApiFile = openApiFile.absolutePath,
+                subprojectName = "petstore",
+                multiplatform = true,
+                additionalTargets = listOf("js(IR) { browser() }"),
+            )
+
+        task.initSubproject()
+
+        val content = tempDir.resolve("petstore/build.gradle.kts").readText()
+        assertContains(content, "js(IR) { browser() }")
+    }
 }
 
 internal class GeneratorPluginTest {
@@ -1622,5 +1695,95 @@ internal class SettingsUpdaterTest {
             "ktor-client-cio must be in commonMain.dependencies — CIO supports JVM, Native, JS and WasmJs since Ktor 3.x",
         )
         assertFalse(content.contains("jvmMain.dependencies"), "Should not need a jvmMain block for ktor-client-cio")
+    }
+
+    @Test
+    fun `GIVEN additionalDependencies WHEN buildGradleKtsContent THEN extra dep is included`() {
+        val content =
+            InitSubprojectTask.buildGradleKtsContent(
+                generatorName = "petstore",
+                openApiFileName = "petstore.yaml",
+                versions =
+                    InitSubprojectTask.DependencyVersions(
+                        kotlinVersion = DEFAULT_KOTLIN_VERSION,
+                        ktorVersion = DEFAULT_KTOR_VERSION,
+                        coroutinesVersion = DEFAULT_COROUTINES_VERSION,
+                        serializationVersion = DEFAULT_SERIALIZATION_VERSION,
+                    ),
+                options =
+                    InitSubprojectTask.GeneratorOptions(
+                        additionalDependencies = listOf("io.github.oshai:kotlin-logging:7.0.0"),
+                    ),
+            )
+
+        assertContains(content, "io.github.oshai:kotlin-logging:7.0.0")
+    }
+
+    @Test
+    fun `GIVEN no additionalDependencies WHEN buildGradleKtsContent THEN no extra deps in output`() {
+        val content =
+            InitSubprojectTask.buildGradleKtsContent(
+                generatorName = "petstore",
+                openApiFileName = "petstore.yaml",
+                versions =
+                    InitSubprojectTask.DependencyVersions(
+                        kotlinVersion = DEFAULT_KOTLIN_VERSION,
+                        ktorVersion = DEFAULT_KTOR_VERSION,
+                        coroutinesVersion = DEFAULT_COROUTINES_VERSION,
+                        serializationVersion = DEFAULT_SERIALIZATION_VERSION,
+                    ),
+                options = InitSubprojectTask.GeneratorOptions(),
+            )
+
+        assertFalse(content.contains("kotlin-logging"), "No extra dependency should appear when additionalDependencies is empty")
+    }
+
+    @Test
+    fun `GIVEN additionalDependencies and multiplatform=true WHEN buildGradleKtsContent THEN extra dep is in commonMain`() {
+        val content =
+            InitSubprojectTask.buildGradleKtsContent(
+                generatorName = "petstore",
+                openApiFileName = "petstore.yaml",
+                versions =
+                    InitSubprojectTask.DependencyVersions(
+                        kotlinVersion = DEFAULT_KOTLIN_VERSION,
+                        ktorVersion = DEFAULT_KTOR_VERSION,
+                        coroutinesVersion = DEFAULT_COROUTINES_VERSION,
+                        serializationVersion = DEFAULT_SERIALIZATION_VERSION,
+                    ),
+                options =
+                    InitSubprojectTask.GeneratorOptions(
+                        multiplatform = true,
+                        additionalDependencies = listOf("io.github.oshai:kotlin-logging:7.0.0"),
+                    ),
+            )
+
+        assertTrue(
+            content.substringAfter("commonMain.dependencies").contains("io.github.oshai:kotlin-logging:7.0.0"),
+            "Extra dependency must be inside commonMain.dependencies in multiplatform mode",
+        )
+    }
+
+    @Test
+    fun `GIVEN additionalTargets and multiplatform=true WHEN buildGradleKtsContent THEN extra target is in kotlin block`() {
+        val content =
+            InitSubprojectTask.buildGradleKtsContent(
+                generatorName = "petstore",
+                openApiFileName = "petstore.yaml",
+                versions =
+                    InitSubprojectTask.DependencyVersions(
+                        kotlinVersion = DEFAULT_KOTLIN_VERSION,
+                        ktorVersion = DEFAULT_KTOR_VERSION,
+                        coroutinesVersion = DEFAULT_COROUTINES_VERSION,
+                        serializationVersion = DEFAULT_SERIALIZATION_VERSION,
+                    ),
+                options =
+                    InitSubprojectTask.GeneratorOptions(
+                        multiplatform = true,
+                        additionalTargets = listOf("js(IR) { browser() }"),
+                    ),
+            )
+
+        assertContains(content, "js(IR) { browser() }")
     }
 }

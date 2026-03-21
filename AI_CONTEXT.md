@@ -16,10 +16,52 @@ openapi-ktor-client-generator/
 │   ├── logging-sl4j/             → Optional module: SLF4J logging
 │   └── logging-kotlin/           → Optional module: kotlin-logging (oshai) logging
 ├── convention/                   → Build convention plugins
-├── e2e/                          → End-to-end test project
+├── e2e/                          → End-to-end test project (single-module, inline generation)
+├── e2e-split/                    → E2E test for initApiClientSubproject (split-by-client mode)
 ├── settings.gradle.kts
 └── build.gradle.kts
 ```
+
+---
+
+## `e2e-split/` — Split-by-client E2E Smoke Test
+
+A standalone Gradle project that verifies the full `initApiClientSubproject` + compile flow for
+split-by-client mode with `SHARED_PER_GROUP` granularity.
+
+**Key files:**
+- `src/main/openapi/sample.json` — minimal two-tag spec (`user`, `order`) with 4 operations and
+  shared response models (`UserResponse`, `OrderResponse`) to exercise per-group shared subprojects.
+- `settings.gradle.kts` — includes `mavenLocal()` in `pluginManagement` so generated submodules
+  resolve the plugin version published locally.
+- `build.gradle.kts` — applies the generator plugin (`version "main-SNAPSHOT"`) to register
+  the `initApiClientSubproject` task. Also declares `kotlin("jvm") apply false` to register the
+  Kotlin JVM plugin version for subprojects (avoids classpath conflict in multi-project builds).
+
+**How to run locally:**
+```bash
+# 1. Publish plugin to Maven Local
+./gradlew publishToMavenLocal
+
+# 2. Generate split subproject (creates client/ directory with all submodules)
+cd e2e-split
+./gradlew initApiClientSubproject \
+  -PopenApiFile=src/main/openapi/sample.json \
+  -PsplitByClient=true \
+  -PbasePackage=org.litote.sample \
+  -PsplitGranularity=BY_TAG_AND_OPERATION \
+  -PsharedModelGranularity=SHARED_PER_GROUP \
+  -PsubprojectRootDirectory=client
+
+# 3. Build generated subproject (compiles all generated modules)
+./gradlew build
+```
+
+**What the init task generates (inside `client/`):**
+- `client/shared/` — `ClientConfiguration`
+- `client/shared-<group>/` — models shared between a specific pair of operation clients
+  (e.g. `UserResponse` shared between `UserGetUsersClient` and `UserPostUsersClient`)
+- `client/<operation>-client/` — one module per operation (BY_TAG_AND_OPERATION)
 
 ---
 
@@ -446,12 +488,31 @@ Key classes: `SubtypeHint` (domain), `ApiModel.responseSealedParents`, `ApiModel
 
 ## Version Constants for initApiClientSubproject gradle task
 
-Generated at build time from `gradle/libs.versions.toml` into `GeneratorPlugin.kt`:
+Generated at build time from `gradle/libs.versions.toml` into `PluginVersion.kt`:
 - `DEFAULT_KOTLIN_VERSION`
 - `DEFAULT_KTOR_VERSION`
 - `DEFAULT_COROUTINES_VERSION`
 - `DEFAULT_SERIALIZATION_VERSION`
 - `PLUGIN_VERSION`
+
+### Extra dependencies and KMP targets in generated build scripts
+
+`InitSubprojectExtension` (and `InitSubprojectTask`) expose two generic list properties:
+- `additionalDependencies: ListProperty<String>` — each entry is a `group:artifact:version` coordinate
+  added as an `implementation(...)` entry in all generated `build.gradle.kts` files.
+- `additionalTargets: ListProperty<String>` — each entry is a raw Kotlin DSL expression (e.g.
+  `"js(IR) { browser() }"`) added inside the `kotlin { }` block when `multiplatform = true`.
+
+Example — adding `kotlin-logging` for use with `LoggingKotlinModule`:
+```kotlin
+apiClientGenerator {
+    initSubproject {
+        multiplatform.set(true)
+        generatorConfigExtra.set("""modulesIds = setOf("LoggingKotlinModule")""")
+        additionalDependencies.add("io.github.oshai:kotlin-logging:7.0.3")
+    }
+}
+```
 
 ---
 
@@ -461,7 +522,7 @@ Three GitHub Actions workflows in `.github/workflows/`:
 
 | Workflow | Trigger | Purpose |
 |---|---|---|
-| `ci.yml` | PR → main | PR title (Conventional Commits) + full QA |
+| `ci.yml` | PR → main | PR title (Conventional Commits) + full QA (jobs: `check`, `e2e`, `e2e-split`) |
 | `ci.yml` | push → main | Same + deploy `main-SNAPSHOT` to Maven Central |
 | `release-please.yml` | push → main | Runs release-please (GitHub App): creates Release PR with CHANGELOG, then GitHub Release + tag on merge. Chains to `publish` job on release created |
 | `release-please.yml` (`publish` job) | After release-please creates a release (or `workflow_dispatch`) | Full QA → Maven Central → Gradle Plugin Portal |

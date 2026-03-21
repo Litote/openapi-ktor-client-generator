@@ -15,7 +15,7 @@ class LoggingKotlinModuleTest {
 
         verify {
             config.exceptionLoggingDefaultValue =
-                "{ io.github.oshai.kotlinlogging.KotlinLogging.logger(ClientConfiguration::class.qualifiedName ?: \"ClientConfiguration\").error(this) { \"error\" } }"
+                "{ io.github.oshai.kotlinlogging.KotlinLogging.logger(\"ClientConfiguration\").error(this) { \"error\" } }"
         }
     }
 }

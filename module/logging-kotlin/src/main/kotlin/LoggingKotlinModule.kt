@@ -6,6 +6,6 @@ import org.litote.openapi.ktor.client.generator.port.ApiConfigurationGeneratorCo
 internal class LoggingKotlinModule : ApiGeneratorModule {
     override fun processConfiguration(generator: ApiConfigurationGeneratorConfig) {
         generator.exceptionLoggingDefaultValue =
-            "{ io.github.oshai.kotlinlogging.KotlinLogging.logger(ClientConfiguration::class.qualifiedName ?: \"ClientConfiguration\").error(this) { \"error\" } }"
+            "{ io.github.oshai.kotlinlogging.KotlinLogging.logger(\"ClientConfiguration\").error(this) { \"error\" } }"
     }
 }

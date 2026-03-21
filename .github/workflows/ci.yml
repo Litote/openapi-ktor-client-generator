@@ -103,8 +103,8 @@ jobs:
           ORG_GRADLE_PROJECT_signingInMemoryKeyPassword: ${{ secrets.SIGNING_IN_MEMORY_KEY_PASSWORD }}
         run: ./gradlew publishToMavenCentral
 
-  kmp-compat:
-    name: KMP Compatibility
+  e2e-split:
+    name: E2E Split-by-client
     runs-on: macos-latest
     permissions:
       contents: read
@@ -126,7 +126,7 @@ jobs:
           cache-encryption-key: ${{ secrets.GRADLE_ENCRYPTION_KEY }}
           build-scan-publish: false
 
-      - name: Detect relevant changes
+      - name: Detect code changes
         id: detect-changes
         run: |
           if [[ "${{ github.event_name }}" == "pull_request" ]]; then
@@ -134,14 +134,86 @@ jobs:
           else
             CHANGED=$(git diff --name-only HEAD~1..HEAD 2>/dev/null || echo "")
           fi
-          if echo "$CHANGED" | grep -qE '^(kmp-compat-test/|gradle/libs\.versions\.toml)'; then
-            echo "has_kmp_changes=true" >> $GITHUB_OUTPUT
+          if echo "$CHANGED" | grep -qE '\.(kt|kts|gradle|yml|yaml|toml)$'; then
+            echo "has_code_changes=true" >> $GITHUB_OUTPUT
           else
-            echo "has_kmp_changes=false" >> $GITHUB_OUTPUT
+            echo "has_code_changes=false" >> $GITHUB_OUTPUT
           fi
 
-      - name: Build KMP compat test
-        if: steps.detect-changes.outputs.has_kmp_changes == 'true'
-        working-directory: kmp-compat-test
+      - name: Publish plugin to Maven Local
+        if: steps.detect-changes.outputs.has_code_changes == 'true'
+        run: ./gradlew publishToMavenLocal
+
+      - name: Generate split-by-client subproject
+        if: steps.detect-changes.outputs.has_code_changes == 'true'
+        working-directory: e2e-split
+        run: >
+          ./gradlew initApiClientSubproject
+          -PopenApiFile=src/main/openapi/sample.json
+          -PsplitByClient=true
+          -PbasePackage=org.litote.sample
+          -PsplitGranularity=BY_TAG_AND_OPERATION
+          -PsharedModelGranularity=SHARED_PER_GROUP
+          -PsubprojectRootDirectory=client
+
+      - name: Build generated subproject
+        if: steps.detect-changes.outputs.has_code_changes == 'true'
+        working-directory: e2e-split
         run: ./gradlew build
+
+
+  e2e:
+    name: E2E
+    runs-on: ubuntu-latest
+    permissions:
+      contents: read
+
+    steps:
+      - uses: actions/checkout@de0fac2e4500dabe0009e67214ff5f5447ce83dd # v6
+        with:
+          fetch-depth: 0
+
+      - name: Set up JDK 25
+        uses: actions/setup-java@be666c2fcd27ec809703dec50e508c2fdc7f6654 # v5
+        with:
+          java-version: '25'
+          distribution: 'temurin'
+
+      - name: Set up Gradle
+        uses: gradle/actions/setup-gradle@0723195856401067f7a2779048b490ace7a47d7c # v5.0.2
+        with:
+          cache-encryption-key: ${{ secrets.GRADLE_ENCRYPTION_KEY }}
+          build-scan-publish: false
+
+      - name: Detect code changes
+        id: detect-changes
+        run: |
+          if [[ "${{ github.event_name }}" == "pull_request" ]]; then
+            CHANGED=$(git diff --name-only origin/${{ github.base_ref }}...HEAD)
+          else
+            CHANGED=$(git diff --name-only HEAD~1..HEAD 2>/dev/null || echo "")
+          fi
+          if echo "$CHANGED" | grep -qE '\.(kt|kts|gradle|yml|yaml|toml)$'; then
+            echo "has_code_changes=true" >> $GITHUB_OUTPUT
+          else
+            echo "has_code_changes=false" >> $GITHUB_OUTPUT
+          fi
+
+      - name: Publish plugin to Maven Local
+        if: steps.detect-changes.outputs.has_code_changes == 'true'
+        run: ./gradlew publishToMavenLocal
+
+      - name: Build e2e project
+        if: steps.detect-changes.outputs.has_code_changes == 'true'
+        working-directory: e2e
+        run: ./gradlew build
+
+      - name: Verify generated code is up-to-date
+        if: steps.detect-changes.outputs.has_code_changes == 'true'
+        run: |
+          git diff --exit-code -- e2e/ || {
+            echo "Generated code in e2e/ is out of date. Run ./gradlew build in e2e/ and commit the result."
+            git diff -- e2e/
+            exit 1
+          }
 

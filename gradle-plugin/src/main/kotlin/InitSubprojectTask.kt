@@ -3,6 +3,7 @@ package org.litote.openapi.ktor.client.generator.plugin
 import org.gradle.api.DefaultTask
 import org.gradle.api.GradleException
 import org.gradle.api.file.DirectoryProperty
+import org.gradle.api.provider.ListProperty
 import org.gradle.api.provider.Property
 import org.gradle.api.tasks.Input
 import org.gradle.api.tasks.Internal
@@ -32,6 +33,8 @@ public abstract class InitSubprojectTask : DefaultTask() {
         val generatorConfigExtra: String? = null,
         val splitGranularity: SplitGranularity = SplitGranularity.BY_TAG,
         val multiplatform: Boolean = false,
+        val additionalDependencies: List<String> = emptyList(),
+        val additionalTargets: List<String> = emptyList(),
     )
 
     /** Groups spec identification fields shared across multi-module build-file generators. */
@@ -160,6 +163,24 @@ public abstract class InitSubprojectTask : DefaultTask() {
     @get:Optional
     public abstract val multiplatform: Property<Boolean>
 
+    /**
+     * Extra dependency coordinates (group:artifact:version) added as `implementation(...)` entries
+     * in all generated `build.gradle.kts` files.
+     * Example: `"io.github.oshai:kotlin-logging:8.0.01"`.
+     */
+    @get:Input
+    @get:Optional
+    public abstract val additionalDependencies: ListProperty<String>
+
+    /**
+     * Extra Kotlin Multiplatform target declarations added inside the `kotlin { }` block of
+     * generated `build.gradle.kts` files when [multiplatform] is true.
+     * Each entry is a raw Kotlin DSL expression, e.g. `"js(IR) { browser() }"`.
+     */
+    @get:Input
+    @get:Optional
+    public abstract val additionalTargets: ListProperty<String>
+
     @TaskAction
     public fun initSubproject() {
         val openApiFilePathValue =
@@ -224,6 +245,8 @@ public abstract class InitSubprojectTask : DefaultTask() {
                         buildScriptTemplate = buildScriptTemplate.orNull,
                         generatorConfigExtra = generatorConfigExtra.orNull,
                         multiplatform = multiplatform.getOrElse(false),
+                        additionalDependencies = additionalDependencies.getOrElse(emptyList()),
+                        additionalTargets = additionalTargets.getOrElse(emptyList()),
                     ),
             ),
         )
@@ -270,6 +293,8 @@ public abstract class InitSubprojectTask : DefaultTask() {
                     generatorConfigExtra = generatorConfigExtra.orNull,
                     splitGranularity = granularity,
                     multiplatform = multiplatform.getOrElse(false),
+                    additionalDependencies = additionalDependencies.getOrElse(emptyList()),
+                    additionalTargets = additionalTargets.getOrElse(emptyList()),
                 ),
             subprojectRootDirectory = subprojectRootDirectoryValue,
         )
@@ -468,7 +493,7 @@ public abstract class InitSubprojectTask : DefaultTask() {
         ): String {
             val header =
                 options.buildScriptTemplate?.trimEnd()
-                    ?: defaultHeader(versions, options.multiplatform)
+                    ?: defaultHeader(versions, options.multiplatform, options.additionalDependencies, options.additionalTargets)
             val generatorBlock =
                 buildGeneratorContent(
                     generatorName = generatorName,
@@ -486,7 +511,7 @@ public abstract class InitSubprojectTask : DefaultTask() {
         ): String {
             val header =
                 options.buildScriptTemplate?.trimEnd()
-                    ?: defaultHeader(versions, options.multiplatform)
+                    ?: defaultHeader(versions, options.multiplatform, options.additionalDependencies, options.additionalTargets)
             val properties =
                 buildList {
                     add("""openApiFile = file("${spec.relativePath}")""")
@@ -532,6 +557,8 @@ public abstract class InitSubprojectTask : DefaultTask() {
                         sharedProjectRef,
                         groupProjectRef,
                         options.multiplatform,
+                        options.additionalDependencies,
+                        options.additionalTargets,
                     )
                 }
             val properties =
@@ -576,7 +603,13 @@ public abstract class InitSubprojectTask : DefaultTask() {
                     val depsBlock = buildProjectDepsBlock(listOf("""    api(project("$sharedProjectRef"))"""), options.multiplatform)
                     "${options.buildScriptTemplate.trimEnd()}\n\n$depsBlock"
                 } else {
-                    defaultClientHeader(versions, sharedProjectRef, options.multiplatform)
+                    defaultClientHeader(
+                        versions,
+                        sharedProjectRef,
+                        options.multiplatform,
+                        options.additionalDependencies,
+                        options.additionalTargets,
+                    )
                 }
             val properties =
                 buildList {
@@ -640,6 +673,8 @@ public abstract class InitSubprojectTask : DefaultTask() {
                                     ?.let { groupProjectRef(it) } ?: groupKey
                             },
                         multiplatform = options.multiplatform,
+                        additionalDependencies = options.additionalDependencies,
+                        additionalTargets = options.additionalTargets,
                     )
                 }
             val additionalGroupPackages =
@@ -675,8 +710,13 @@ public abstract class InitSubprojectTask : DefaultTask() {
         private fun defaultHeader(
             versions: DependencyVersions,
             multiplatform: Boolean = false,
+            additionalDependencies: List<String> = emptyList(),
+            additionalTargets: List<String> = emptyList(),
         ): String {
             val (kotlinVersion, ktorVersion, coroutinesVersion, serializationVersion) = versions
+            val extraDepsMp = extraDepsForMp(additionalDependencies)
+            val extraDepsJvm = extraDepsForJvm(additionalDependencies)
+            val extraTargets = extraTargetsBlock(additionalTargets)
             return if (multiplatform) {
                 """
                 plugins {
@@ -686,8 +726,7 @@ public abstract class InitSubprojectTask : DefaultTask() {
                 }
 
                 kotlin {
-                    jvm()
-                    // Add your targets: iosArm64(), js(IR) { browser() }, linuxX64(), etc.
+                    jvm()$extraTargets
 
                     sourceSets {
                         commonMain.dependencies {
@@ -697,7 +736,7 @@ public abstract class InitSubprojectTask : DefaultTask() {
                             implementation("io.ktor:ktor-client-content-negotiation:$ktorVersion")
                             implementation("io.ktor:ktor-client-core:$ktorVersion")
                             implementation("io.ktor:ktor-serialization-kotlinx-json:$ktorVersion")
-                            implementation("io.ktor:ktor-client-logging:$ktorVersion")
+                            implementation("io.ktor:ktor-client-logging:$ktorVersion")$extraDepsMp
                         }
                     }
                 }
@@ -717,7 +756,7 @@ public abstract class InitSubprojectTask : DefaultTask() {
                     implementation("io.ktor:ktor-client-content-negotiation:$ktorVersion")
                     implementation("io.ktor:ktor-client-core:$ktorVersion")
                     implementation("io.ktor:ktor-serialization-kotlinx-json:$ktorVersion")
-                    implementation("io.ktor:ktor-client-logging:$ktorVersion")
+                    implementation("io.ktor:ktor-client-logging:$ktorVersion")$extraDepsJvm
                 }
                 """.trimIndent()
             }
@@ -729,6 +768,8 @@ public abstract class InitSubprojectTask : DefaultTask() {
             sharedProjectRef: String = SHARED_PROJECT_REF,
             groupProjectRef: (String) -> String = { ":$it" },
             multiplatform: Boolean = false,
+            additionalDependencies: List<String> = emptyList(),
+            additionalTargets: List<String> = emptyList(),
         ): String {
             val (kotlinVersion, ktorVersion, coroutinesVersion, serializationVersion) = versions
             val groupDeps = directGroupDeps.joinToString("\n") { ref -> """    api(project("${groupProjectRef(ref)}"))""" }
@@ -738,6 +779,9 @@ public abstract class InitSubprojectTask : DefaultTask() {
                 } else {
                     """    api(project("$sharedProjectRef"))""" + "\n$groupDeps"
                 }
+            val extraDepsMp = extraDepsForMp(additionalDependencies)
+            val extraDepsJvm = extraDepsForJvm(additionalDependencies)
+            val extraTargets = extraTargetsBlock(additionalTargets)
             return if (multiplatform) {
                 val indentedDeps = allDeps.lines().joinToString("\n") { "        $it" }
                 """
@@ -748,8 +792,7 @@ public abstract class InitSubprojectTask : DefaultTask() {
                 }
 
                 kotlin {
-                    jvm()
-                    // Add your targets: iosArm64(), js(IR) { browser() }, linuxX64(), etc.
+                    jvm()$extraTargets
 
                     sourceSets {
                         commonMain.dependencies {
@@ -760,7 +803,7 @@ public abstract class InitSubprojectTask : DefaultTask() {
                             implementation("io.ktor:ktor-client-content-negotiation:$ktorVersion")
                             implementation("io.ktor:ktor-client-core:$ktorVersion")
                             implementation("io.ktor:ktor-serialization-kotlinx-json:$ktorVersion")
-                            implementation("io.ktor:ktor-client-logging:$ktorVersion")
+                            implementation("io.ktor:ktor-client-logging:$ktorVersion")$extraDepsMp
                         }
                     }
                 }
@@ -781,7 +824,7 @@ public abstract class InitSubprojectTask : DefaultTask() {
                     implementation("io.ktor:ktor-client-content-negotiation:$ktorVersion")
                     implementation("io.ktor:ktor-client-core:$ktorVersion")
                     implementation("io.ktor:ktor-serialization-kotlinx-json:$ktorVersion")
-                    implementation("io.ktor:ktor-client-logging:$ktorVersion")
+                    implementation("io.ktor:ktor-client-logging:$ktorVersion")$extraDepsJvm
                 }
                 """.trimIndent()
             }
@@ -791,8 +834,13 @@ public abstract class InitSubprojectTask : DefaultTask() {
             versions: DependencyVersions,
             sharedProjectRef: String = SHARED_PROJECT_REF,
             multiplatform: Boolean = false,
+            additionalDependencies: List<String> = emptyList(),
+            additionalTargets: List<String> = emptyList(),
         ): String {
             val (kotlinVersion, ktorVersion, coroutinesVersion, serializationVersion) = versions
+            val extraDepsMp = extraDepsForMp(additionalDependencies)
+            val extraDepsJvm = extraDepsForJvm(additionalDependencies)
+            val extraTargets = extraTargetsBlock(additionalTargets)
             return if (multiplatform) {
                 """
                 plugins {
@@ -802,8 +850,7 @@ public abstract class InitSubprojectTask : DefaultTask() {
                 }
 
                 kotlin {
-                    jvm()
-                    // Add your targets: iosArm64(), js(IR) { browser() }, linuxX64(), etc.
+                    jvm()$extraTargets
 
                     sourceSets {
                         commonMain.dependencies {
@@ -814,7 +861,7 @@ public abstract class InitSubprojectTask : DefaultTask() {
                             implementation("io.ktor:ktor-client-content-negotiation:$ktorVersion")
                             implementation("io.ktor:ktor-client-core:$ktorVersion")
                             implementation("io.ktor:ktor-serialization-kotlinx-json:$ktorVersion")
-                            implementation("io.ktor:ktor-client-logging:$ktorVersion")
+                            implementation("io.ktor:ktor-client-logging:$ktorVersion")$extraDepsMp
                         }
                     }
                 }
@@ -835,7 +882,7 @@ public abstract class InitSubprojectTask : DefaultTask() {
                     implementation("io.ktor:ktor-client-content-negotiation:$ktorVersion")
                     implementation("io.ktor:ktor-client-core:$ktorVersion")
                     implementation("io.ktor:ktor-serialization-kotlinx-json:$ktorVersion")
-                    implementation("io.ktor:ktor-client-logging:$ktorVersion")
+                    implementation("io.ktor:ktor-client-logging:$ktorVersion")$extraDepsJvm
                 }
                 """.trimIndent()
             }
@@ -846,12 +893,17 @@ public abstract class InitSubprojectTask : DefaultTask() {
             sharedProjectRef: String = SHARED_PROJECT_REF,
             groupProjectRefs: List<String>,
             multiplatform: Boolean = false,
+            additionalDependencies: List<String> = emptyList(),
+            additionalTargets: List<String> = emptyList(),
         ): String {
             val (kotlinVersion, ktorVersion, coroutinesVersion, serializationVersion) = versions
             val groupDeps =
                 groupProjectRefs.joinToString("\n") { ref ->
                     """    api(project("$ref"))"""
                 }
+            val extraDepsMp = extraDepsForMp(additionalDependencies)
+            val extraDepsJvm = extraDepsForJvm(additionalDependencies)
+            val extraTargets = extraTargetsBlock(additionalTargets)
             return if (multiplatform) {
                 val indentedGroupDeps = groupDeps.lines().joinToString("\n") { "        $it" }
                 """
@@ -862,8 +914,7 @@ public abstract class InitSubprojectTask : DefaultTask() {
                 }
 
                 kotlin {
-                    jvm()
-                    // Add your targets: iosArm64(), js(IR) { browser() }, linuxX64(), etc.
+                    jvm()$extraTargets
 
                     sourceSets {
                         commonMain.dependencies {
@@ -875,7 +926,7 @@ public abstract class InitSubprojectTask : DefaultTask() {
                             implementation("io.ktor:ktor-client-content-negotiation:$ktorVersion")
                             implementation("io.ktor:ktor-client-core:$ktorVersion")
                             implementation("io.ktor:ktor-serialization-kotlinx-json:$ktorVersion")
-                            implementation("io.ktor:ktor-client-logging:$ktorVersion")
+                            implementation("io.ktor:ktor-client-logging:$ktorVersion")$extraDepsMp
                         }
                     }
                 }
@@ -897,11 +948,44 @@ public abstract class InitSubprojectTask : DefaultTask() {
                     implementation("io.ktor:ktor-client-content-negotiation:$ktorVersion")
                     implementation("io.ktor:ktor-client-core:$ktorVersion")
                     implementation("io.ktor:ktor-serialization-kotlinx-json:$ktorVersion")
-                    implementation("io.ktor:ktor-client-logging:$ktorVersion")
+                    implementation("io.ktor:ktor-client-logging:$ktorVersion")$extraDepsJvm
                 }
                 """.trimIndent()
             }
         }
+
+        /**
+         * Returns a newline-prefixed block of extra `implementation(...)` lines for the multiplatform template
+         * (indented to match the surrounding `commonMain.dependencies { }` block at source level).
+         */
+        private fun extraDepsForMp(deps: List<String>): String =
+            if (deps.isEmpty()) {
+                ""
+            } else {
+                deps.joinToString("") { dep -> "\n                            implementation(\"$dep\")" }
+            }
+
+        /**
+         * Returns a newline-prefixed block of extra `implementation(...)` lines for the JVM template
+         * (indented to match the surrounding `dependencies { }` block at source level).
+         */
+        private fun extraDepsForJvm(deps: List<String>): String =
+            if (deps.isEmpty()) {
+                ""
+            } else {
+                deps.joinToString("") { dep -> "\n                    implementation(\"$dep\")" }
+            }
+
+        /**
+         * Returns a newline-prefixed block of extra KMP target declarations for the `kotlin { }` block.
+         * Each entry is a raw DSL expression, e.g. `"js(IR) { browser() }"`.
+         */
+        private fun extraTargetsBlock(targets: List<String>): String =
+            if (targets.isEmpty()) {
+                ""
+            } else {
+                targets.joinToString("") { target -> "\n                    $target" }
+            }
 
         /**
          * Builds a `dependencies {}` or `sourceSets { commonMain.dependencies {} }` block

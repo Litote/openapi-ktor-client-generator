@@ -6,7 +6,6 @@ import org.gradle.api.Task
 import org.gradle.jvm.tasks.Jar
 import org.jetbrains.kotlin.gradle.dsl.KotlinJvmProjectExtension
 import org.jetbrains.kotlin.gradle.dsl.KotlinMultiplatformExtension
-import org.jetbrains.kotlin.gradle.tasks.KotlinCompile
 import org.litote.openapi.ktor.client.generator.shared.capitalize
 
 public class GeneratorPlugin : Plugin<Project> {
@@ -48,6 +47,8 @@ public class GeneratorPlugin : Plugin<Project> {
                     (project.findProperty("multiplatformTargets") as String?)?.toBoolean()
                         ?: extension.initSubproject.multiplatform.orNull,
                 )
+                task.additionalDependencies.set(extension.initSubproject.additionalDependencies)
+                task.additionalTargets.set(extension.initSubproject.additionalTargets)
             }
         }
 

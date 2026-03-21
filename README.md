@@ -85,17 +85,17 @@ The generator accepts OpenAPI V3 specification files in both **JSON** and **YAML
 
 ### Generator properties
 
-| Property           | Description                                                                              | Default value                           | Allowed values                            |
-|--------------------|------------------------------------------------------------------------------------------|------------------------------------------|-------------------------------------------|
-| `openApiFile`      | OpenAPI v3 source file                                                                   | `file("src/main/openapi/${name}.json")` | Any existing OpenAPI file                 |
-| `outputDirectory`  | Target directory for generated sources (`src/main/kotlin` is appended automatically)    | `file("build/api-${name}")`             | Any relative directory                    |
-| `basePackage`      | Base package for all generated classes                                                   | `org.example`                           | Any valid package name                    |
-| `allowedPaths`     | Restrict generation to a subset of OpenAPI paths                                         | empty (all paths generated)             | Any subset of paths defined in the spec   |
-| `modulesIds`       | Built-in module IDs to enable (loaded from classpath via SPI)                            | empty                                   | `UnknownEnumValueModule`, `LoggingSl4jModule`, `LoggingKotlinModule` |
-| `customModules`    | Custom module instances defined inline in the build script                               | empty                                   | Any `ApiGeneratorModule` implementation (see advanced usage)         |
-| `skip`             | Skip this generator                                                                      | `false`                                 | Boolean                                   |
-| `splitByClient`    | Enable split-by-client mode — see [PROJECT_GENERATION.md](PROJECT_GENERATION.md)        | `false`                                 | Boolean                                   |
-| `targetClientName` | In split mode: name of the client to generate (`null` = shared subproject)              | `null`                                  | Any tag-derived client name from the spec |
+| Property           | Description                                                                          | Default value                           | Allowed values                            |
+|--------------------|--------------------------------------------------------------------------------------|------------------------------------------|-------------------------------------------|
+| `openApiFile`      | OpenAPI v3 source file                                                               | `file("src/main/openapi/${name}.json")` | Any existing OpenAPI file                 |
+| `outputDirectory`  | Target directory for generated sources (`src/main/kotlin` is appended automatically) | `file("build/api-${name}")`             | Any relative directory                    |
+| `basePackage`      | Base package for all generated classes                                               | `org.example`                           | Any valid package name                    |
+| `allowedPaths`     | Restrict generation to a subset of OpenAPI paths                                     | empty (all paths generated)             | Any subset of paths defined in the spec   |
+| `modulesIds`       | Built-in module IDs to enable (loaded from classpath via SPI)                        | empty                                   | `UnknownEnumValueModule`, `LoggingSl4jModule`, `LoggingKotlinModule` |
+| `customModules`    | Custom module instances defined inline in the build script                           | empty                                   | Any `ApiGeneratorModule` implementation (see advanced usage)         |
+| `skip`             | Skip this generator                                                                  | `false`                                 | Boolean                                   |
+| `splitByClient`    | Enable split-by-client mode — see [PROJECT_GENERATION.md](PROJECT_GENERATION.md)     | `false`                                 | Boolean                                   |
+| `targetClientName` | In split mode: name of the client to generate (`null` = shared subproject) — see [PROJECT_GENERATION.md](PROJECT_GENERATION.md) | `null`                                  | Any tag-derived client name from the spec |
 
 ## Generating a new subproject
 

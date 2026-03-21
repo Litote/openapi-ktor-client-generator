@@ -254,15 +254,17 @@ apiClientGenerator {
 }
 ```
 
-| Property               | Description                                                                                                                                | Default value             | Allowed values               |
-|------------------------|--------------------------------------------------------------------------------------------------------------------------------------------|---------------------------|------------------------------|
-| `kotlinVersion`        | Kotlin version in the generated `build.gradle.kts`                                                                                        | from `libs.versions.toml` | Any valid version            |
-| `ktorVersion`          | Ktor version in the generated `build.gradle.kts`                                                                                          | from `libs.versions.toml` | Any valid version            |
-| `coroutinesVersion`    | `kotlinx-coroutines` version in the generated `build.gradle.kts`                                                                          | from `libs.versions.toml` | Any valid version            |
-| `serializationVersion` | `kotlinx-serialization` version in the generated `build.gradle.kts`                                                                       | from `libs.versions.toml` | Any valid version            |
-| `buildScriptTemplate`  | Replaces the entire auto-generated `plugins {}` + `dependencies {}` block. Use this when your project has a Gradle version catalog.       | `null` (auto-generated)   | Any Gradle Kotlin DSL string |
-| `generatorConfigExtra` | Extra lines appended inside every `create("...") { }` block. Use this to enable modules or set shared properties across all subprojects.  | `null` (nothing appended) | Any Gradle Kotlin DSL lines  |
-| `multiplatform`        | When `true`, generated `build.gradle.kts` files use `kotlin("multiplatform")` with a `commonMain.dependencies {}` block.                 | `false`                   | `Boolean`                    |
+| Property                  | Description                                                                                                                                | Default value             | Allowed values               |
+|---------------------------|--------------------------------------------------------------------------------------------------------------------------------------------|---------------------------|------------------------------|
+| `kotlinVersion`           | Kotlin version in the generated `build.gradle.kts`                                                                                        | from `libs.versions.toml` | Any valid version            |
+| `ktorVersion`             | Ktor version in the generated `build.gradle.kts`                                                                                          | from `libs.versions.toml` | Any valid version            |
+| `coroutinesVersion`       | `kotlinx-coroutines` version in the generated `build.gradle.kts`                                                                          | from `libs.versions.toml` | Any valid version            |
+| `serializationVersion`    | `kotlinx-serialization` version in the generated `build.gradle.kts`                                                                       | from `libs.versions.toml` | Any valid version            |
+| `buildScriptTemplate`     | Replaces the entire auto-generated `plugins {}` + `dependencies {}` block. Use this when your project has a Gradle version catalog.       | `null` (auto-generated)   | Any Gradle Kotlin DSL string |
+| `generatorConfigExtra`    | Extra lines appended inside every `create("...") { }` block. Use this to enable modules or set shared properties across all subprojects.  | `null` (nothing appended) | Any Gradle Kotlin DSL lines  |
+| `multiplatform`           | When `true`, generated `build.gradle.kts` files use `kotlin("multiplatform")` with a `commonMain.dependencies {}` block.                 | `false`                   | `Boolean`                    |
+| `additionalDependencies`  | Extra `implementation(...)` entries added to every generated `build.gradle.kts`. Each entry is a `group:artifact:version` coordinate.    | `[]` (empty)              | `List<String>`               |
+| `additionalTargets`       | Extra KMP target declarations added inside the `kotlin { }` block of every generated `build.gradle.kts` when `multiplatform` is `true`. Each entry is a raw Kotlin DSL expression. | `[]` (empty) | `List<String>` |
 
 ### Overriding dependency versions
 
@@ -325,6 +327,52 @@ apiClientGenerator {
 }
 ```
 
+### Adding extra dependencies
+
+Use `additionalDependencies` to inject `implementation(...)` entries into every generated
+`build.gradle.kts` — useful when an optional module requires a runtime dependency not included
+by default (e.g. `LoggingKotlinModule` needs `kotlin-logging`):
+
+```kotlin
+apiClientGenerator {
+    initSubproject {
+        generatorConfigExtra = """modulesIds.add("LoggingKotlinModule")"""
+        additionalDependencies.add("io.github.oshai:kotlin-logging:7.0.3")
+    }
+}
+```
+
+Multiple coordinates can be added:
+
+```kotlin
+additionalDependencies.add("io.github.oshai:kotlin-logging:7.0.3")
+additionalDependencies.add("com.example:my-extra-lib:1.0.0")
+```
+
+In KMP mode, entries are placed inside `commonMain.dependencies {}`. In JVM mode, they go in the
+top-level `dependencies {}` block.
+
+### Adding extra KMP targets
+
+When `multiplatform = true`, use `additionalTargets` to declare extra Kotlin Multiplatform targets
+inside the `kotlin { }` block of every generated `build.gradle.kts`. Each entry is a raw Kotlin
+DSL expression:
+
+```kotlin
+apiClientGenerator {
+    initSubproject {
+        multiplatform.set(true)
+        additionalTargets.add("iosArm64()")
+        additionalTargets.add("iosSimulatorArm64()")
+        additionalTargets.add("js(IR) { browser(); nodejs() }")
+        additionalTargets.add("""
+            @OptIn(org.jetbrains.kotlin.gradle.ExperimentalWasmDsl::class)
+            wasmJs { browser(); nodejs() }
+        """.trimIndent())
+    }
+}
+```
+
 ## Kotlin Multiplatform (KMP) support
 
 The generated code (clients, models, `ClientConfiguration.kt`) is fully **Kotlin Multiplatform
@@ -364,7 +412,6 @@ plugins {
 
 kotlin {
     jvm()
-    // Add your targets: iosArm64(), js(IR) { browser() }, linuxX64(), etc.
 
     sourceSets {
         commonMain.dependencies {
@@ -384,15 +431,8 @@ kotlin {
 
 ### Adding KMP targets
 
-The generated project declares only `jvm()` as a target. Add other targets in the `kotlin {}` block:
-
-```kotlin
-kotlin {
-    jvm()
-    iosArm64()
-    iosSimulatorArm64()
-    js(IR) { browser() }
-    // ...
-}
-```
+The generated project declares only `jvm()` as a target by default. Use `additionalTargets` in the
+`initSubproject { }` DSL to inject additional targets into every generated `build.gradle.kts`
+(see [Adding extra KMP targets](#adding-extra-kmp-targets) above), or edit the generated files
+directly after generation.
 

@@ -1,6 +1,7 @@
 package org.litote.openapi.ktor.client.generator.plugin
 
 import org.gradle.api.model.ObjectFactory
+import org.gradle.api.provider.ListProperty
 import org.gradle.api.provider.Property
 import org.gradle.api.tasks.Input
 import org.gradle.api.tasks.Optional
@@ -75,4 +76,22 @@ public abstract class InitSubprojectExtension
         @get:Input
         @get:Optional
         public val multiplatform: Property<Boolean> = objects.property(Boolean::class.java)
+
+        /**
+         * Extra dependency coordinates (group:artifact:version) added as `implementation(...)` entries
+         * in all generated `build.gradle.kts` files. Useful for module-specific runtime dependencies
+         * such as `"io.github.oshai:kotlin-logging:8.0.01"`.
+         */
+        @get:Input
+        @get:Optional
+        public val additionalDependencies: ListProperty<String> = objects.listProperty(String::class.java)
+
+        /**
+         * Extra Kotlin Multiplatform target declarations added inside the `kotlin { }` block of
+         * generated `build.gradle.kts` files when [multiplatform] is true.
+         * Each entry is a raw Kotlin DSL expression, e.g. `"js(IR) { browser() }"` or `"iosArm64()"`.
+         */
+        @get:Input
+        @get:Optional
+        public val additionalTargets: ListProperty<String> = objects.listProperty(String::class.java)
     }
