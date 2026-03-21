@@ -46,6 +46,7 @@ public fun collectModelRefs(model: ModelSpec): Set<String> =
         is ModelSpec.DataClassSpec -> {
             val refs = mutableSetOf<String>()
             model.sealedParentName?.let { refs.add(it) }
+            refs.addAll(model.interfaceParentNames)
             model.properties.forEach { prop ->
                 refs.addAll(collectModelRefs(prop.type))
                 prop.nestedModels.forEach { nested -> refs.addAll(collectModelRefs(nested)) }

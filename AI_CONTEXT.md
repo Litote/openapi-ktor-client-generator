@@ -417,6 +417,16 @@ Schemas referenced **only via `allOf`** in other schemas (never directly as prop
 
 This allows a class to `extend` a sealed parent (from `oneOf`) AND `implement` a shared interface (from `allOf`), respecting Kotlin single-inheritance.
 
+> ⚠️ **`ModelUsageAnalyzer.kt` — `collectModelRefs(DataClassSpec)` maintenance rule**
+>
+> Every relationship stored in `DataClassSpec` that points to another named model **must** be listed in `collectModelRefs(DataClassSpec)` (in `ModelUsageAnalyzer.kt`). If a new field referencing another model is added to `DataClassSpec`, add it here too — otherwise the referenced model will have an empty client set, be treated as an orphan, and never generated in split-by-client mode, causing "Unresolved reference" compile errors.
+>
+> Current relationships collected:
+> - `sealedParentName` — the sealed class this data class extends
+> - `interfaceParentNames` — the interfaces this data class implements (via `allOf $ref`)
+> - property types (via `collectModelRefs(DomainTypeSpec)`)
+> - nested model types inside properties
+
 ---
 
 ## Response `oneOf` — Polymorphic Sealed Classes

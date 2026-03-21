@@ -332,16 +332,22 @@ class SharedModelGranularityTest {
     }
 
     @Test
-    fun `GIVEN mastodon spec WHEN partition THEN BaseStatus orphan model is not generated`() {
+    fun `GIVEN mastodon spec WHEN partition THEN BaseStatus interface is co-located with StatusesClient`() {
         val config = ApiGeneratorConfiguration(openApiFile = "src/test/resources/mastodon.json")
         val spec = OpenApiSpecificationParser(config).parse(config.operationFilter)
         val partitioned = GenerationSpecPartitioner().partition(spec)
 
         val inAnyGroup = partitioned.sharedGroups.any { group -> group.spec.models.any { it.name == "BaseStatus" } }
-        val inAnyClient = partitioned.perClient.any { client -> client.spec.models.any { it.name == "BaseStatus" } }
+        val inStatusesClient =
+            partitioned.perClient.any { client ->
+                client.clientName == "StatusesClient" && client.spec.models.any { it.name == "BaseStatus" }
+            }
 
-        assertFalse(inAnyGroup, "BaseStatus is orphan (0 clients) — must not appear in any shared group")
-        assertFalse(inAnyClient, "BaseStatus is orphan (0 clients) — must not appear in any per-client module")
+        assertFalse(inAnyGroup, "BaseStatus must not be in any shared group — it is private to StatusesClient")
+        assertTrue(
+            inStatusesClient,
+            "BaseStatus interface must be co-located with StatusesClient (TextStatus/MediaStatus/PollStatus implement it)",
+        )
     }
 
     @Test
@@ -611,5 +617,70 @@ class IntraGroupImportTest {
             content.contains("import $TOP_PKG.model.ListRepliesPolicyEnum"),
             "Without intra-group overrides, List.kt incorrectly imports from fallback package, got:\n$content",
         )
+    }
+}
+
+/**
+ * Regression test for allOf interface co-location in split-by-client mode.
+ *
+ * Bug: when splitting by client, a schema referenced only via `allOf` becomes an `InterfaceSpec`.
+ * Its implementing classes (`DataClassSpec.interfaceParentNames`) were not included in
+ * `collectModelRefs()`, so the interface was treated as an orphan (0 clients) and never generated.
+ * Classes that implement it then failed to compile with "Unresolved reference".
+ *
+ * Fix: `collectModelRefs(DataClassSpec)` now includes `interfaceParentNames` in the reference set,
+ * ensuring the interface follows its implementing classes into the correct subproject.
+ *
+ * Spec: `allof-inheritance.json`
+ * - `BaseStatus` → allOf-only schema → `InterfaceSpec`
+ * - `TextStatus`, `MediaStatus` → implement `BaseStatus` via `allOf $ref`
+ * - Both used in the request body of POST /status (tag: "status") → `StatusClient`
+ */
+class AllOfInterfaceSplitTest {
+    @TempDir
+    lateinit var tempDir: File
+
+    private fun generatedFileNames(): List<String> =
+        tempDir
+            .walkTopDown()
+            .filter { it.isFile && it.extension == "kt" }
+            .map { it.name }
+            .sorted()
+            .toList()
+
+    @Test
+    fun `GIVEN allOf interface spec WHEN splitByClient generates StatusClient THEN BaseStatus interface is generated`() {
+        generate(
+            ApiGeneratorConfiguration(
+                openApiFile = "src/test/resources/allof-inheritance.json",
+                outputDirectory = tempDir.absolutePath,
+                basePackage = "com.example.allof",
+                splitByClient = true,
+                targetClientName = "StatusClient",
+            ),
+        )
+
+        val files = generatedFileNames()
+        assertTrue(
+            files.contains("BaseStatus.kt"),
+            "BaseStatus interface must be generated alongside TextStatus/MediaStatus that implement it: $files",
+        )
+    }
+
+    @Test
+    fun `GIVEN allOf interface spec WHEN splitByClient generates StatusClient THEN TextStatus and MediaStatus are generated`() {
+        generate(
+            ApiGeneratorConfiguration(
+                openApiFile = "src/test/resources/allof-inheritance.json",
+                outputDirectory = tempDir.absolutePath,
+                basePackage = "com.example.allof",
+                splitByClient = true,
+                targetClientName = "StatusClient",
+            ),
+        )
+
+        val files = generatedFileNames()
+        assertTrue(files.contains("TextStatus.kt"), "TextStatus must be generated: $files")
+        assertTrue(files.contains("MediaStatus.kt"), "MediaStatus must be generated: $files")
     }
 }

@@ -166,6 +166,37 @@ class ModelUsageAnalyzerTest {
     }
 
     @Test
+    fun `GIVEN spec with DataClass implementing interface WHEN analyzeModelUsage THEN interface is attributed to same client`() {
+        val interfaceModel = ModelSpec.InterfaceSpec(name = "BaseInterface", properties = emptyList())
+        val implementingClass =
+            ModelSpec.DataClassSpec(
+                name = "ConcreteClass",
+                properties = emptyList(),
+                interfaceParentNames = listOf("BaseInterface"),
+            )
+        val client =
+            ClientSpec(
+                name = "Client1",
+                operations = listOf(operationWithResponse("ConcreteClass")),
+            )
+        val spec =
+            GenerationSpec(
+                clientConfiguration = minimalConfig(),
+                clients = listOf(client),
+                models = listOf(interfaceModel, implementingClass),
+            )
+
+        val usage = analyzeModelUsage(spec)
+
+        assertEquals(setOf("Client1"), usage["ConcreteClass"])
+        assertEquals(
+            setOf("Client1"),
+            usage["BaseInterface"],
+            "Interface must be attributed to the same client as its implementing class",
+        )
+    }
+
+    @Test
     fun `GIVEN spec with model having transitive deps WHEN analyzeModelUsage THEN transitive deps are included`() {
         val leaf = ModelSpec.DataClassSpec(name = "LeafModel", properties = emptyList())
         val middle =
