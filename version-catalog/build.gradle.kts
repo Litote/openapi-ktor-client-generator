@@ -8,19 +8,8 @@ catalog {
     }
 }
 
-publishing {
-    publications {
-        create<MavenPublication>("catalog") {
-            from(components["versionCatalog"])
-        }
-    }
-}
-
-tasks.withType<AbstractPublishToMaven>().configureEach {
-    dependsOn(tasks.withType<Sign>())
-}
-
 mavenPublishing {
+    configure(com.vanniktech.maven.publish.VersionCatalog())
     pom {
         description = "Version Catalog for openapi ktor generator"
     }
