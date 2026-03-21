@@ -7,9 +7,6 @@ import org.gradle.jvm.tasks.Jar
 import org.jetbrains.kotlin.gradle.dsl.KotlinJvmProjectExtension
 import org.jetbrains.kotlin.gradle.dsl.KotlinMultiplatformExtension
 import org.jetbrains.kotlin.gradle.tasks.KotlinCompile
-import org.jetbrains.kotlin.gradle.tasks.KotlinCompileCommon
-import org.jetbrains.kotlin.gradle.tasks.KotlinJvmCompile
-import org.jetbrains.kotlin.gradle.tasks.KotlinNativeCompile
 import org.litote.openapi.ktor.client.generator.shared.capitalize
 
 public class GeneratorPlugin : Plugin<Project> {
@@ -96,15 +93,6 @@ public class GeneratorPlugin : Plugin<Project> {
                                 ),
                             )
                         }
-                        project.tasks.withType(KotlinCompileCommon::class.java).configureEach {
-                            it.dependsOn(task.get())
-                        }
-                        project.tasks.withType(KotlinNativeCompile::class.java).configureEach {
-                            it.dependsOn(task.get())
-                        }
-                        project.tasks.withType(KotlinJvmCompile::class.java).configureEach {
-                            it.dependsOn(task.get())
-                        }
                     }
                 }
                 project.pluginManager.withPlugin("org.jetbrains.kotlin.jvm") {
@@ -112,13 +100,17 @@ public class GeneratorPlugin : Plugin<Project> {
                         it.kotlin.srcDir(generatorExtension.outputDirectory.dir("src/main/kotlin"))
                     }
                 }
-                project.tasks.withType(KotlinCompile::class.java).configureEach {
-                    it.dependsOn(task.get())
-                }
+                // Wire ALL Kotlin compile tasks: covers JVM (compileKotlin), KMP-JS (compileKotlinJs),
+                // KMP-Native (compileKotlinLinuxX64, …), common metadata (compileCommonMainKotlinMetadata),
+                // and any other compile*Kotlin* variant. Using name-based matching instead of
+                // withType(KotlinCompile) because Kotlin2JsCompile and KotlinCompileCommon do not
+                // extend KotlinCompile — type-based matching misses those tasks.
+                project.tasks
+                    .named { it.startsWith("compile") && it.contains("Kotlin") }
+                    .configureEach { it.dependsOn(task.get()) }
                 project.tasks.withType(Jar::class.java).configureEach {
                     it.dependsOn(task.get())
                 }
-
                 project.tasks
                     .named {
                         it.startsWith("lintKotlin")

@@ -999,6 +999,68 @@ internal class GeneratorPluginTest {
     lateinit var rootDir: File
 
     @Test
+    fun `GIVEN project with compileKotlinJs task WHEN generator configured THEN compileKotlinJs depends on generate task`() {
+        val project =
+            ProjectBuilder
+                .builder()
+                .withProjectDir(rootDir)
+                .build()
+        project.plugins.apply(GeneratorPlugin::class.java)
+
+        val ext = project.extensions.getByType(ApiClientGeneratorsExtension::class.java)
+        val openApiFile = rootDir.resolve("spec.json").also { it.writeText("{}") }
+        ext.generators.create("api") {
+            it.openApiFile.set(openApiFile)
+            it.outputDirectory.set(rootDir.resolve("output"))
+            it.basePackage.set("com.example")
+        }
+
+        // Register a task simulating what the Kotlin KMP JS target would register
+        val fakeCompileJs = project.tasks.register("compileKotlinJs")
+
+        // Trigger afterEvaluate (where the generator wires compile task dependencies)
+        (project as org.gradle.api.internal.project.ProjectInternal).evaluate()
+
+        val generateTask = project.tasks.named("generateApi").get()
+        val deps = fakeCompileJs.get().taskDependencies.getDependencies(fakeCompileJs.get())
+        assertTrue(
+            deps.contains(generateTask),
+            "compileKotlinJs must depend on the generate task — consumer should not need to wire this manually",
+        )
+    }
+
+    @Test
+    fun `GIVEN project with compileCommonMainKotlinMetadata task WHEN generator configured THEN it depends on generate task`() {
+        val project =
+            ProjectBuilder
+                .builder()
+                .withProjectDir(rootDir)
+                .build()
+        project.plugins.apply(GeneratorPlugin::class.java)
+
+        val ext = project.extensions.getByType(ApiClientGeneratorsExtension::class.java)
+        val openApiFile = rootDir.resolve("spec.json").also { it.writeText("{}") }
+        ext.generators.create("api") {
+            it.openApiFile.set(openApiFile)
+            it.outputDirectory.set(rootDir.resolve("output"))
+            it.basePackage.set("com.example")
+        }
+
+        // Register a task simulating what the Kotlin KMP common metadata compilation registers
+        val fakeCompileMetadata = project.tasks.register("compileCommonMainKotlinMetadata")
+
+        // Trigger afterEvaluate (where the generator wires compile task dependencies)
+        (project as org.gradle.api.internal.project.ProjectInternal).evaluate()
+
+        val generateTask = project.tasks.named("generateApi").get()
+        val deps = fakeCompileMetadata.get().taskDependencies.getDependencies(fakeCompileMetadata.get())
+        assertTrue(
+            deps.contains(generateTask),
+            "compileCommonMainKotlinMetadata must depend on the generate task — consumer should not need to wire this manually",
+        )
+    }
+
+    @Test
     fun `GIVEN plugin applied to root project WHEN tasks listed THEN initApiClientSubproject is registered`() {
         val rootProject =
             ProjectBuilder
@@ -1327,6 +1389,29 @@ internal class SettingsUpdaterTest {
     }
 
     @Test
+    fun `GIVEN multiplatform=true WHEN buildGradleKtsContent THEN ktor-client-cio is in commonMain`() {
+        val content =
+            InitSubprojectTask.buildGradleKtsContent(
+                generatorName = "petstore",
+                openApiFileName = "petstore.yaml",
+                versions =
+                    InitSubprojectTask.DependencyVersions(
+                        kotlinVersion = DEFAULT_KOTLIN_VERSION,
+                        ktorVersion = DEFAULT_KTOR_VERSION,
+                        coroutinesVersion = DEFAULT_COROUTINES_VERSION,
+                        serializationVersion = DEFAULT_SERIALIZATION_VERSION,
+                    ),
+                options = InitSubprojectTask.GeneratorOptions(multiplatform = true),
+            )
+
+        assertTrue(
+            content.substringAfter("commonMain.dependencies").contains("io.ktor:ktor-client-cio:${DEFAULT_KTOR_VERSION}"),
+            "ktor-client-cio must be in commonMain.dependencies — CIO supports JVM, Native, JS and WasmJs since Ktor 3.x",
+        )
+        assertFalse(content.contains("jvmMain.dependencies"), "Should not need a jvmMain block for ktor-client-cio")
+    }
+
+    @Test
     fun `GIVEN multiplatform=false WHEN buildGradleKtsContent THEN uses kotlin jvm plugin`() {
         val content =
             InitSubprojectTask.buildGradleKtsContent(
@@ -1345,6 +1430,35 @@ internal class SettingsUpdaterTest {
         assertContains(content, """kotlin("jvm") version "${DEFAULT_KOTLIN_VERSION}"""")
         assertFalse(content.contains("kotlin(\"multiplatform\")"), "Should not contain multiplatform plugin")
         assertFalse(content.contains("commonMain.dependencies"), "Should not contain KMP source sets")
+    }
+
+    @Test
+    fun `GIVEN multiplatform=true WHEN buildClientGradleKtsContent THEN ktor-client-cio is in commonMain`() {
+        val content =
+            InitSubprojectTask.buildClientGradleKtsContent(
+                clientName = "UserClient",
+                subprojectDirName = "user-client",
+                spec =
+                    InitSubprojectTask.SpecConfig(
+                        nameWithoutExt = "spec",
+                        relativePath = "../src/main/openapi/spec.yaml",
+                        basePackage = "org.example",
+                    ),
+                versions =
+                    InitSubprojectTask.DependencyVersions(
+                        kotlinVersion = DEFAULT_KOTLIN_VERSION,
+                        ktorVersion = DEFAULT_KTOR_VERSION,
+                        coroutinesVersion = DEFAULT_COROUTINES_VERSION,
+                        serializationVersion = DEFAULT_SERIALIZATION_VERSION,
+                    ),
+                options = InitSubprojectTask.GeneratorOptions(multiplatform = true),
+            )
+
+        assertTrue(
+            content.substringAfter("commonMain.dependencies").contains("io.ktor:ktor-client-cio:${DEFAULT_KTOR_VERSION}"),
+            "ktor-client-cio must be in commonMain.dependencies — CIO supports JVM, Native, JS and WasmJs since Ktor 3.x",
+        )
+        assertFalse(content.contains("jvmMain.dependencies"), "Should not need a jvmMain block for ktor-client-cio")
     }
 
     @Test
@@ -1446,5 +1560,67 @@ internal class SettingsUpdaterTest {
         assertContains(content, """api(project(":shared"))""")
         assertContains(content, """api(project(":shared-other-group"))""")
         assertFalse(content.contains("\ndependencies {"), "Should not contain top-level dependencies block")
+    }
+
+    @Test
+    fun `GIVEN multiplatform=true WHEN buildSharedGroupGradleKtsContent THEN ktor-client-cio is in commonMain`() {
+        val content =
+            InitSubprojectTask.buildSharedGroupGradleKtsContent(
+                spec =
+                    InitSubprojectTask.SpecConfig(
+                        nameWithoutExt = "spec",
+                        relativePath = "../src/main/openapi/spec.yaml",
+                        basePackage = "org.example.group",
+                    ),
+                groupConfig =
+                    InitSubprojectTask.SharedGroupConfig(
+                        topBasePackage = "org.example",
+                        targetSharedGroup = "groupA",
+                    ),
+                versions =
+                    InitSubprojectTask.DependencyVersions(
+                        kotlinVersion = DEFAULT_KOTLIN_VERSION,
+                        ktorVersion = DEFAULT_KTOR_VERSION,
+                        coroutinesVersion = DEFAULT_COROUTINES_VERSION,
+                        serializationVersion = DEFAULT_SERIALIZATION_VERSION,
+                    ),
+                options = InitSubprojectTask.GeneratorOptions(multiplatform = true),
+            )
+
+        assertTrue(
+            content.substringAfter("commonMain.dependencies").contains("io.ktor:ktor-client-cio:${DEFAULT_KTOR_VERSION}"),
+            "ktor-client-cio must be in commonMain.dependencies — CIO supports JVM, Native, JS and WasmJs since Ktor 3.x",
+        )
+        assertFalse(content.contains("jvmMain.dependencies"), "Should not need a jvmMain block for ktor-client-cio")
+    }
+
+    @Test
+    fun `GIVEN multiplatform=true WHEN buildClientPerGroupGradleKtsContent THEN ktor-client-cio is in commonMain`() {
+        val content =
+            InitSubprojectTask.buildClientPerGroupGradleKtsContent(
+                clientName = "UserClient",
+                subprojectDirName = "user-client",
+                spec =
+                    InitSubprojectTask.SpecConfig(
+                        nameWithoutExt = "spec",
+                        relativePath = "../src/main/openapi/spec.yaml",
+                        basePackage = "org.example",
+                    ),
+                clientGroups = mapOf("UserClient,OrderClient" to "org.example.sharedOrderUser.model"),
+                versions =
+                    InitSubprojectTask.DependencyVersions(
+                        kotlinVersion = DEFAULT_KOTLIN_VERSION,
+                        ktorVersion = DEFAULT_KTOR_VERSION,
+                        coroutinesVersion = DEFAULT_COROUTINES_VERSION,
+                        serializationVersion = DEFAULT_SERIALIZATION_VERSION,
+                    ),
+                options = InitSubprojectTask.GeneratorOptions(multiplatform = true),
+            )
+
+        assertTrue(
+            content.substringAfter("commonMain.dependencies").contains("io.ktor:ktor-client-cio:${DEFAULT_KTOR_VERSION}"),
+            "ktor-client-cio must be in commonMain.dependencies — CIO supports JVM, Native, JS and WasmJs since Ktor 3.x",
+        )
+        assertFalse(content.contains("jvmMain.dependencies"), "Should not need a jvmMain block for ktor-client-cio")
     }
 }
