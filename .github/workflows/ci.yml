@@ -156,6 +156,37 @@ jobs:
           -PsharedModelGranularity=SHARED_PER_GROUP
           -PsubprojectRootDirectory=client
 
+      - name: Verify generated structure
+        if: steps.detect-changes.outputs.has_code_changes == 'true'
+        working-directory: e2e-split
+        run: |
+          EXPECTED_DIRS=(
+            "client/shared"
+            "client/shared-userusersget-useruserspost"
+            "client/shared-orderordersget-orderorderspost"
+            "client/user-users-get-client"
+            "client/user-users-post-client"
+            "client/order-orders-get-client"
+            "client/order-orders-post-client"
+          )
+          for dir in "${EXPECTED_DIRS[@]}"; do
+            if [ ! -d "$dir" ]; then
+              echo "Missing expected directory: $dir"
+              exit 1
+            fi
+            echo "OK: $dir"
+          done
+          if ! grep -q 'openapi-ktor-generated-includes' settings.gradle.kts; then
+            echo "settings.gradle.kts is missing the generated includes marker"
+            exit 1
+          fi
+          if ! grep -q 'include(' settings.gradle.kts; then
+            echo "settings.gradle.kts is missing include() statements"
+            exit 1
+          fi
+          echo "settings.gradle.kts includes:"
+          grep 'include(' settings.gradle.kts
+
       - name: Build generated subproject
         if: steps.detect-changes.outputs.has_code_changes == 'true'
         working-directory: e2e-split
