@@ -1,5 +1,20 @@
 # Changelog
 
+## [0.5.0](https://github.com/Litote/openapi-ktor-client-generator/compare/v0.4.1...v0.5.0) (2026-03-22)
+
+
+### Features
+
+* add more configuration options for project generation ([31b3830](https://github.com/Litote/openapi-ktor-client-generator/commit/31b3830c810092e5b1194ff2bb6f72b9c3cf851d))
+
+
+### Bug Fixes
+
+* inheritance interfaces not collected when splitting generated builds ([dc0f70a](https://github.com/Litote/openapi-ktor-client-generator/commit/dc0f70accaf40adf88786fb4f9349e1dea2fa79b))
+* js target compile dependency ([c9f36b8](https://github.com/Litote/openapi-ktor-client-generator/commit/c9f36b8374323244c5274f268e18096010315ee2))
+* LoggingKotlinModule is not KMP compatible ([e36a88c](https://github.com/Litote/openapi-ktor-client-generator/commit/e36a88c9dc5daa02db925098e6c9edd924ac1fb4))
+* MultiPartFormDataContent does not work - mission ContentDisposition ([83802ce](https://github.com/Litote/openapi-ktor-client-generator/commit/83802ce370537d5c2486817c86179608982bb2ec))
+
 ## [0.4.1](https://github.com/Litote/openapi-ktor-client-generator/compare/v0.4.0...v0.4.1) (2026-03-20)
 
 
