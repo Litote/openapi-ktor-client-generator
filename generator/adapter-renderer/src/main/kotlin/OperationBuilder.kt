@@ -9,6 +9,7 @@ import com.squareup.kotlinpoet.LambdaTypeName
 import com.squareup.kotlinpoet.MemberName
 import com.squareup.kotlinpoet.ParameterSpec
 import com.squareup.kotlinpoet.PropertySpec
+import com.squareup.kotlinpoet.STRING
 import com.squareup.kotlinpoet.TypeSpec
 import com.squareup.kotlinpoet.UNIT
 import io.ktor.http.HttpStatusCode.Companion.InternalServerError
@@ -61,7 +62,7 @@ internal class OperationBuilder(
         val formDataContentClass = ClassName(KTOR_FORMS, "FormDataContent")
         val multiPartFormDataContentClass = ClassName(KTOR_FORMS, "MultiPartFormDataContent")
         val parametersClass = ClassName(KTOR_HTTP, "Parameters")
-        val headersOfMember = MemberName(KTOR_HTTP, "headersOf")
+        val headersClass = ClassName(KTOR_HTTP, "Headers")
         val httpHeadersClass = ClassName(KTOR_HTTP, "HttpHeaders")
         val sseMember = MemberName("io.ktor.client.plugins.sse", "sse")
         val clientSseSessionClass = ClassName("io.ktor.client.plugins.sse", "ClientSSESession")
@@ -241,7 +242,12 @@ internal class OperationBuilder(
                     .constructorBuilder()
                     .addParameter("bytes", BYTE_ARRAY)
                     .addParameter("contentType", contentTypeClass)
-                    .build(),
+                    .addParameter(
+                        ParameterSpec
+                            .builder("filename", STRING)
+                            .defaultValue("%S", "upload")
+                            .build(),
+                    ).build(),
             ).addProperty(
                 PropertySpec
                     .builder("bytes", BYTE_ARRAY)
@@ -251,6 +257,11 @@ internal class OperationBuilder(
                 PropertySpec
                     .builder("contentType", contentTypeClass)
                     .initializer("contentType")
+                    .build(),
+            ).addProperty(
+                PropertySpec
+                    .builder("filename", STRING)
+                    .initializer("filename")
                     .build(),
             ).build()
 
@@ -556,14 +567,18 @@ internal class OperationBuilder(
         valueReference: String,
     ) {
         if (field.isBinary) {
-            builder.addStatement(
-                "append(%S, %L.bytes, %M(%T.ContentType, %L.contentType.toString()))",
-                field.originalName,
-                valueReference,
-                headersOfMember,
-                httpHeadersClass,
-                valueReference,
-            )
+            builder
+                .add("append(%S, %L.bytes, %T.build {\n", field.originalName, valueReference, headersClass)
+                .indent()
+                .addStatement("append(%T.ContentType, %L.contentType.toString())", httpHeadersClass, valueReference)
+                .addStatement(
+                    "append(%T.ContentDisposition, %S + %L.filename + %S)",
+                    httpHeadersClass,
+                    "form-data; name=\"${field.originalName}\"; filename=\"",
+                    valueReference,
+                    "\"",
+                ).unindent()
+                .add("})\n")
         } else {
             val typeName = field.type.toTypeName(modelPackage, modelPackageOverrides)
             if (typeName.isString()) {

@@ -9,9 +9,9 @@ import io.ktor.client.request.post
 import io.ktor.client.request.put
 import io.ktor.client.request.setBody
 import io.ktor.http.ContentType
+import io.ktor.http.Headers
 import io.ktor.http.HttpHeaders
 import io.ktor.http.encodeURLPathPart
-import io.ktor.http.headersOf
 import kotlin.ByteArray
 import kotlin.Int
 import kotlin.String
@@ -31,7 +31,10 @@ public class MediaClient(
     try {
       val response = configuration.client.post("api/v1/media") {
         setBody(MultiPartFormDataContent(formData {
-        append("file", form.file.bytes, headersOf(HttpHeaders.ContentType, form.file.contentType.toString()))
+        append("file", form.file.bytes, Headers.build {
+          append(HttpHeaders.ContentType, form.file.contentType.toString())
+          append(HttpHeaders.ContentDisposition, "form-data; name=\"file\"; filename=\"" + form.file.filename + "\"")
+        })
         form.description?.let { value ->
           append("description", value)
         }
@@ -39,7 +42,10 @@ public class MediaClient(
           append("focus", value)
         }
         form.thumbnail?.let { value ->
-          append("thumbnail", value.bytes, headersOf(HttpHeaders.ContentType, value.contentType.toString()))
+          append("thumbnail", value.bytes, Headers.build {
+            append(HttpHeaders.ContentType, value.contentType.toString())
+            append(HttpHeaders.ContentDisposition, "form-data; name=\"thumbnail\"; filename=\"" + value.filename + "\"")
+          })
         }
         }))
       }
@@ -91,7 +97,10 @@ public class MediaClient(
           append("focus", value)
         }
         form.thumbnail?.let { value ->
-          append("thumbnail", value.bytes, headersOf(HttpHeaders.ContentType, value.contentType.toString()))
+          append("thumbnail", value.bytes, Headers.build {
+            append(HttpHeaders.ContentType, value.contentType.toString())
+            append(HttpHeaders.ContentDisposition, "form-data; name=\"thumbnail\"; filename=\"" + value.filename + "\"")
+          })
         }
         }))
       }
@@ -136,7 +145,10 @@ public class MediaClient(
     try {
       val response = configuration.client.post("api/v2/media") {
         setBody(MultiPartFormDataContent(formData {
-        append("file", form.file.bytes, headersOf(HttpHeaders.ContentType, form.file.contentType.toString()))
+        append("file", form.file.bytes, Headers.build {
+          append(HttpHeaders.ContentType, form.file.contentType.toString())
+          append(HttpHeaders.ContentDisposition, "form-data; name=\"file\"; filename=\"" + form.file.filename + "\"")
+        })
         form.description?.let { value ->
           append("description", value)
         }
@@ -144,7 +156,10 @@ public class MediaClient(
           append("focus", value)
         }
         form.thumbnail?.let { value ->
-          append("thumbnail", value.bytes, headersOf(HttpHeaders.ContentType, value.contentType.toString()))
+          append("thumbnail", value.bytes, Headers.build {
+            append(HttpHeaders.ContentType, value.contentType.toString())
+            append(HttpHeaders.ContentDisposition, "form-data; name=\"thumbnail\"; filename=\"" + value.filename + "\"")
+          })
         }
         }))
       }
@@ -171,6 +186,7 @@ public class MediaClient(
   public data class CreateMediaFormFile(
     public val bytes: ByteArray,
     public val contentType: ContentType,
+    public val filename: String = "upload",
   )
 
   @Serializable
@@ -227,6 +243,7 @@ public class MediaClient(
   public data class UpdateMediaFormFile(
     public val bytes: ByteArray,
     public val contentType: ContentType,
+    public val filename: String = "upload",
   )
 
   @Serializable
@@ -284,6 +301,7 @@ public class MediaClient(
   public data class CreateMediaV2FormFile(
     public val bytes: ByteArray,
     public val contentType: ContentType,
+    public val filename: String = "upload",
   )
 
   @Serializable
