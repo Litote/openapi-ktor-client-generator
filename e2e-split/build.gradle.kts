@@ -1,8 +1,8 @@
 plugins {
     // Declare Kotlin plugin versions so subprojects can use them without classpath conflict.
     // These versions must match DEFAULT_KOTLIN_VERSION baked into the generator plugin.
-    kotlin("jvm") version "2.3.20" apply false
-    kotlin("multiplatform") version "2.3.20" apply false
+    alias(e2e.plugins.kotlin.jvm) apply false
+    alias(e2e.plugins.kotlin.multiplatform) apply false
     id("org.litote.openapi.ktor.client.generator.gradle") version "main-SNAPSHOT"
 }
 
@@ -32,6 +32,6 @@ apiClientGenerator {
             "linuxArm64()",
             "mingwX64()",
         )
-        additionalDependencies.add("io.github.oshai:kotlin-logging:7.0.3")
+        additionalDependencies.add("io.github.oshai:kotlin-logging:${e2e.versions.logging.get()}")
     }
 }
