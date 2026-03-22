@@ -3,7 +3,7 @@
 ## Prerequisites
 
 - JDK 17+
-- Gradle 9.4.0+
+- Gradle 9+
 
 ## Quick Reference
 
@@ -26,6 +26,81 @@ cd e2e-split && ./gradlew build
 ./gradlew build --info
 ```
 
+## Coding conventions
+
+### Follow [official kotlin conventions](https://kotlinlang.org/docs/coding-conventions.html)
+
+
+## Conventional Commits
+
+All PR titles **must** follow the [Conventional Commits](https://www.conventionalcommits.org/) specification.
+This is enforced automatically via `amannn/action-semantic-pull-request` in `ci.yml`.
+
+### Branch naming
+
+PR branches should mirror the PR title using the same Conventional Commits type as prefix:
+
+```
+<type>/<short-kebab-description>
+
+# Examples:
+feat/yaml-content-type-support
+fix/enum-null-value-parsing
+chore/update-ktor-version
+docs/contributing-branch-naming
+refactor/split-renderer-module
+```
+
+Use the same types as for PR titles (`feat`, `fix`, `perf`, `chore`, `docs`, `test`, `refactor`, `ci`).
+The description should be short, lowercase, and hyphen-separated.
+
+| Type | Version bump | When to use |
+|------|-------------|-------------|
+| `feat:` | Minor (`0.3.0` → `0.4.0`) | New user-facing feature |
+| `fix:` | Patch (`0.3.0` → `0.3.1`) | Bug fix |
+| `perf:` | Patch | Performance improvement |
+| `feat!:` / `BREAKING CHANGE:` | Major (`0.3.0` → `1.0.0`) | Breaking API change |
+| `chore:`, `docs:`, `test:`, `refactor:`, `ci:` | No release | Internal changes |
+
+> **Note:** While the major version is `0`, `feat:` commits bump the minor version (not major). This is controlled by `bump-minor-pre-major: true` in `release-please-config.json`.
+
+
+### Directory structure mirrors package structure
+
+Each **Gradle module** defines its own root package. Following the [Kotlin recommendation](https://kotlinlang.org/docs/coding-conventions.html#directory-structure), the module's root package is the *common root package* and is omitted from the directory path — all source files live directly under `src/main/kotlin/`.
+
+| Module | Root package | Source files location |
+|---|---|---|
+| `generator:domain` | `org.litote.openapi.ktor.client.generator.domain` | `src/main/kotlin/` |
+| `generator:port` | `org.litote.openapi.ktor.client.generator.port` | `src/main/kotlin/` |
+| `generator:adapter-renderer` | `org.litote.openapi.ktor.client.generator.adapter.renderer` | `src/main/kotlin/` |
+| `gradle-plugin` | `org.litote.openapi.ktor.client.generator.plugin` | `src/main/kotlin/` |
+| `shared` | `org.litote.openapi.ktor.client.generator.shared` | `src/main/kotlin/` |
+
+Sub-packages within a module are reflected as subdirectories only if the module itself contains files from multiple packages.
+
+### [Choose good names](https://kotlinlang.org/docs/coding-conventions.html#choose-good-names) for classes
+
+- do not suffix names with `Impl` or `ImplBase`, ou `Util`
+- use `Api` prefix for interfaces
+- use `Client` prefix for client classes
+- use `Configuration` prefix for configuration classes
+- use `Spec` prefix for domain types
+- use `Builder` suffix for builders
+- use `Converter` suffix for converters
+- use `Generator` suffix for generators
+- use `Parser` suffix for parsers
+- use `Renderer` suffix for renderers
+- for Util classes prefer `Files.kt` to `FileUtils.kt`
+
+### Prefer top-level function to stateless object declaration
+
+### Be consistent
+
+If you use Spec suffix for domain types, use it for all domain types
+
+---
+
 ## Module Architecture
 
 ```
@@ -44,6 +119,7 @@ module/logging-sl4j/            → SLF4J logging in generated clients
 module/logging-kotlin/          → kotlin-logging (oshai) logging in generated clients
 convention/                     → Build convention plugins
 e2e/                            → End-to-end tests (separate Gradle project)
+e2e-split/                      → End-to-end KMP and project generation tests (separate Gradle project)
 ```
 ---
 
@@ -51,8 +127,7 @@ e2e/                            → End-to-end tests (separate Gradle project)
 ## Generator Architecture
 
 The `generator` module follows a **hexagonal architecture** (ports & adapters) enforced by
-Gradle sub-module boundaries. Adding an illegal dependency (e.g. KotlinPoet in `domain`) causes
-a **compile error**, not just a lint warning.
+Gradle sub-module boundaries.
 
 ### Gradle Dependency Graph (enforced at compile time)
 
@@ -131,7 +206,7 @@ ApiGenerator.kt (root)
 |-----------|----------------|
 | `ApiClientConfigurationGenerator` | Generates `ClientConfiguration.kt` and (if YAML) `YamlContentConverter.kt` |
 | `YamlContentConverterGenerator`   | Generates `YamlContentConverter.kt` — bridges YAML ↔ JSON via SnakeYAML |
-| `OperationBuilder`                | Builds per-operation methods with correct `contentType()` headers |
+| `OperationBuilder`                | Builds per-operation methods with correct `contentType()` headers and multipart form encoding |
 
 ## allOf with $ref — Property Flattening
 
@@ -154,7 +229,9 @@ than class inheritance from the `$ref` target.
 
 ### allOf-only schemas → Kotlin `interface`
 
-A schema referenced **exclusively via `allOf`** in other schemas (never as a standalone type, property, `oneOf` member, or request/response body) is generated as a Kotlin `interface` instead of a `data class`. This preserves the composition relationship while allowing implementing classes to also extend a sealed class from `oneOf`.
+A schema referenced **exclusively via `allOf`** in other schemas (never as a standalone type, property, `oneOf` member,
+or request/response body) is generated as a Kotlin `interface` instead of a `data class`.
+This preserves the composition relationship while allowing implementing classes to also extend a sealed class from `oneOf`.
 
 - Detection: `ApiModel.allOfOnlySchemas` (set difference of allOf refs minus direct refs)
 - Domain: `ModelSpec.InterfaceSpec`
@@ -176,18 +253,21 @@ public data class TextStatus(
 
 ## Response `oneOf` — Polymorphic Sealed Classes
 
-When an operation response body contains an inline `oneOf` with 2+ `$ref` entries, the generator synthesises a virtual sealed class `{OperationId}Response`:
+When an operation response body contains an inline `oneOf` with 2+ `$ref` entries, the generator synthesises
+a virtual sealed class `{OperationId}Response`:
 
 - The sealed class is created, and each `$ref` subtype extends it
 - A `JsonContentPolymorphicSerializer` companion object is generated to select the correct subtype at runtime by inspecting which required JSON properties are present
 
 ### Detection
 
-`ApiModel.responseSealedParents` scans all operations and collects response bodies with inline `oneOf` with 2+ refs. The map key is the synthesised sealed class name (e.g. `createStatus` → `CreateStatusResponse`).
+`ApiModel.responseSealedParents` scans all operations and collects response bodies with inline `oneOf` with 2+ refs.
+The map key is the synthesised sealed class name (e.g. `createStatus` → `CreateStatusResponse`).
 
 ### Subtype selection logic
 
-The companion `selectDeserializer` checks subtypes in descending order of required property count. The first subtype whose entire `required` list is present in the JSON keys is selected; the last subtype is the fallback:
+The companion `selectDeserializer` checks subtypes in descending order of required property count.
+The first subtype whose entire `required` list is present in the JSON keys is selected; the last subtype is the fallback:
 
 ```kotlin
 @Serializable(with = CreateStatusResponse.Companion::class)
@@ -213,7 +293,8 @@ sealed class CreateStatusResponse {
 
 ## YAML Support
 
-When an OpenAPI spec contains `application/yaml` or `application/x-yaml` content types (in request bodies or responses), the generator automatically:
+When an OpenAPI spec contains `application/yaml` or `application/x-yaml` content types (in request bodies or responses),
+the generator automatically:
 
 1. Sets `ClientConfigurationSpec.hasYamlContentType = true` (detected in `OpenApiSpecificationParser`)
 2. Generates `YamlContentConverter.kt` in the client package (`YamlContentConverterGenerator`)
@@ -228,45 +309,9 @@ Users must add `org.yaml:snakeyaml` to their project dependencies when YAML endp
 
 ---
 
-## Coding conventions
-
-### Follow [official kotlin conventions](https://kotlinlang.org/docs/coding-conventions.html)
-
-### Directory structure mirrors package structure
-
-Each **Gradle module** defines its own root package. Following the [Kotlin recommendation](https://kotlinlang.org/docs/coding-conventions.html#directory-structure), the module's root package is the *common root package* and is omitted from the directory path — all source files live directly under `src/main/kotlin/`.
-
-| Module | Root package | Source files location |
-|---|---|---|
-| `generator:domain` | `org.litote.openapi.ktor.client.generator.domain` | `src/main/kotlin/` |
-| `generator:port` | `org.litote.openapi.ktor.client.generator.port` | `src/main/kotlin/` |
-| `generator:adapter-renderer` | `org.litote.openapi.ktor.client.generator.adapter.renderer` | `src/main/kotlin/` |
-| `gradle-plugin` | `org.litote.openapi.ktor.client.generator.plugin` | `src/main/kotlin/` |
-| `shared` | `org.litote.openapi.ktor.client.generator.shared` | `src/main/kotlin/` |
-
-Sub-packages within a module are reflected as subdirectories only if the module itself contains files from multiple packages.
-
-### [Choose good names](https://kotlinlang.org/docs/coding-conventions.html#choose-good-names) for classes
-
-- do not suffix names with `Impl` or `ImplBase`, ou `Util`
-- use `Api` prefix for interfaces
-- use `Client` prefix for client classes
-- use `Configuration` prefix for configuration classes
-- use `Spec` prefix for domain types
-- use `Builder` suffix for builders
-- use `Converter` suffix for converters
-- use `Generator` suffix for generators
-- use `Parser` suffix for parsers
-- use `Renderer` suffix for renderers
-- for Util classes prefer `Files.kt` to `FileUtils.kt`
-
-### Prefer top-level function to stateless object declaration
-
-### Be consistent
-
-If you use Spec suffix for domain types, use it for all domain types
-
 ## Update dependencies
+
+ALWAYS use version catalog for dependencies version management.
 
 ```bash
 # 1. Update version catalog to latest available versions
@@ -283,15 +328,6 @@ The `updateVerificationMetadata` task rewrites `gradle/verification-metadata.xml
 checksums for all resolved artifacts. It preserves the `trusted-artifacts` rules (sources JARs,
 javadoc JARs, `.pom`, `.module` files) which are IDE-only and exempt from checksum verification.
 
-## Publishing
-
-```bash
-# Maven 
-./gradlew publish
-# Gradle portal 
-./gradlew publishPlugins
-```
-
 ---
 
 ## CI / CD
@@ -304,39 +340,6 @@ Three GitHub Actions workflows are defined under `.github/workflows/`:
 | `ci.yml` | Push → `main` | Same as above (branch analysis) + deploys SNAPSHOT to Maven Central |
 | `release-please.yml` | Push → `main` | Runs release-please: creates/updates the Release PR (CHANGELOG + manifest bump), then creates the GitHub Release + tag when the Release PR is merged. On release created, chains to the `publish` job |
 | `release-please.yml` (`publish` job) | After release-please creates a release (or `workflow_dispatch`) | Checks out tag, sets `VERSION_NAME` locally, runs full QA, publishes to Maven Central + Gradle Plugin Portal (no commit) |
-
-### Conventional Commits
-
-All PR titles **must** follow the [Conventional Commits](https://www.conventionalcommits.org/) specification.
-This is enforced automatically via `amannn/action-semantic-pull-request` in `ci.yml`.
-
-#### Branch naming
-
-PR branches should mirror the PR title using the same Conventional Commits type as prefix:
-
-```
-<type>/<short-kebab-description>
-
-# Examples:
-feat/yaml-content-type-support
-fix/enum-null-value-parsing
-chore/update-ktor-version
-docs/contributing-branch-naming
-refactor/split-renderer-module
-```
-
-Use the same types as for PR titles (`feat`, `fix`, `perf`, `chore`, `docs`, `test`, `refactor`, `ci`).
-The description should be short, lowercase, and hyphen-separated.
-
-| Type | Version bump | When to use |
-|------|-------------|-------------|
-| `feat:` | Minor (`0.3.0` → `0.4.0`) | New user-facing feature |
-| `fix:` | Patch (`0.3.0` → `0.3.1`) | Bug fix |
-| `perf:` | Patch | Performance improvement |
-| `feat!:` / `BREAKING CHANGE:` | Major (`0.3.0` → `1.0.0`) | Breaking API change |
-| `chore:`, `docs:`, `test:`, `refactor:`, `ci:` | No release | Internal changes |
-
-> **Note:** While the major version is `0`, `feat:` commits bump the minor version (not major). This is controlled by `bump-minor-pre-major: true` in `release-please-config.json`.
 
 ### Release flow (automated)
 

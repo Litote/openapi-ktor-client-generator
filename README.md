@@ -102,20 +102,6 @@ The generator accepts OpenAPI V3 specification files in both **JSON** and **YAML
 The plugin provides an `initApiClientSubproject` task to generate a ready-to-use Gradle subproject.
 See **[PROJECT_GENERATION.md](PROJECT_GENERATION.md)** for the full documentation: single/multi-module, version catalog support, extra generator configuration, and Kotlin Multiplatform (KMP) support.
 
-## KMP limitations
-
-### YAML content type
-
-The `YamlContentConverter` (see below) generated when your API uses `application/yaml` content types depends on
-[SnakeYAML](https://bitbucket.org/snakeyaml/snakeyaml), which is a **JVM-only** library. If you
-target non-JVM platforms, place the SnakeYAML dependency in a `jvmMain` source set and implement a
-platform-specific YAML converter for other targets.
-
-### `LoggingSl4jModule` and KMP
-
-The `LoggingSl4jModule` generates code that uses `org.slf4j.LoggerFactory`, which is JVM-only.
-Do not use this module in KMP projects targeting non-JVM platforms.
-
 ## Advanced usage
 
 ### Modules
@@ -255,7 +241,19 @@ dependencies {
 
 The latest SnakeYAML version can be found in the [published version catalog](README.md#using-the-version-catalog) (`openapiKtor.versions.snakeyaml`).
 
+### KMP limitations
 
+#### YAML content type
+
+The `YamlContentConverter` (see below) generated when your API uses `application/yaml` content types depends on
+[SnakeYAML](https://bitbucket.org/snakeyaml/snakeyaml), which is a **JVM-only** library. If you
+target non-JVM platforms, place the SnakeYAML dependency in a `jvmMain` source set and implement a
+platform-specific YAML converter for other targets.
+
+#### `LoggingSl4jModule` and KMP
+
+The `LoggingSl4jModule` generates code that uses `org.slf4j.LoggerFactory`, which is JVM-only.
+Do not use this module in KMP projects targeting non-JVM platforms.
 
 ## Troubleshooting
 

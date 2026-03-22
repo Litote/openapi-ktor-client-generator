@@ -2,7 +2,7 @@
 
 > **Purpose**: Instructions for AI agents working on this codebase.
 > For installation, configuration, and usage, see [`README.md`](README.md) and [`PROJECT_GENERATION.md`](PROJECT_GENERATION.md).
-> For contributing guildelines and project architecture, see (MANDATORY!) [`CONTRIBUTING.md`](CONTRIBUTING.md).
+> For contributing guidelines and project architecture, see (MANDATORY!) [`CONTRIBUTING.md`](CONTRIBUTING.md).
 > For a project analysis, see (MANDATORY!) [`AI_CONTEXT.md`](AI_CONTEXT.md).
 ---
 
@@ -18,21 +18,22 @@
 | **Security**     | Log secrets/API keys, expose environment variables, commit credentials           |
 | **Scope**        | Mass refactors, rename symbols unnecessarily, formatting-only changes            |
 | **Deploy**       | `./gradlew deploy`, `./gradlew deployPlugins`, triggering releases manually      |
-| **Commit**       | NEVER commit changes if you are not in a Pull Request Context                    |
+| **Commit**       | Commit unless the user explicitly asks for a commit or a PR                      |
+| **Generated**    | Edit `PluginVersion.kt` manually (generated at build time from `libs.versions.toml`); modify files under `e2e/build/` or `e2e-split/client/` |
 
 ### ALWAYS Do
 
 | Category                   | Required Actions                                                                                          |
 |----------------------------|-----------------------------------------------------------------------------------------------------------|
-| **Validation**             | Run `./gradlew formatKotlin && ./gradlew check` after every change                                        |
-| **Quality Gate**           | Run `./gradlew check jacocoAggregatedReport sonar sonarCheck` before finalizing **every** task — **`sonarCheck` must pass (0 issues, 0 hotspots, gate OK)**. This includes changes to `.github/workflows/` YAML files, which are analysed by Sonar for security issues (e.g. pinned action hashes, permissions at job level). Changes to `.md` files only do **not** require running Sonar. |
+| **Validation**             | Run `./gradlew formatKotlin && ./gradlew check` after every iteration                                     |
+| **Quality Gate**           | Run `./gradlew check jacocoAggregatedReport sonar sonarCheck` before finalizing **every** task — **`sonarCheck` must pass (0 issues, 0 hotspots, gate OK)**. Requires `systemProp.sonar.token` in `~/.gradle/gradle.properties`. If the token is unavailable locally, note it explicitly and let CI validate. This includes `.github/workflows/` YAML files (analysed by Sonar for security). `.md`-only changes do **not** require Sonar. |
 | **Testing**                | When you try to fix a bug, start by adding the test and THEN fix the bug. Add tests for all logic changes |
 | **Imports**                | Use single imports only                                                                                   |
 | **Language**               | Write all code, comments, and documentation in English                                                    |
 | **Visibility**             | Prefer `internal` visibility by default                                                                   |
 | **Immutability**           | Prefer `val` over `var`, use immutable data structures                                                    |
-| **Document**               | After applied the changes, document them in CONTRIBUTING.md or README.md                                  |
-| **Keep AI doc up-to-date** | Update AI_CONTEXT.md and AGENTS.md                                                                        |
+| **Document**               | User-facing changes → `README.md`; contributor/architecture changes → `CONTRIBUTING.md`; agent-relevant changes → `AI_CONTEXT.md` + `AGENTS.md` |
+| **Keep AI doc up-to-date** | Update `AI_CONTEXT.md` when adding/removing domain types, changing public API, or making architectural decisions. Update `AGENTS.md` when rules or workflows change. |
 ---
 
 ## Module Architecture
@@ -134,15 +135,37 @@ A change is complete when:
 
 ---
 
+## Typical Change Workflow
+
+### Adding support for a new OpenAPI construct
+
+1. **Domain** (`generator:domain`) — add or extend a `*Spec` type
+2. **Parser** (`generator:adapter-parser/OpenApiSpecificationParser`) — translate the OpenAPI input to the new domain type
+3. **Renderer** (`generator:adapter-renderer`) — generate Kotlin code from the new domain type
+4. **Test** (`generator/src/test/kotlin/`) — add a test in the root generator module (integration-level: covers parser + renderer together)
+5. **Update** `AI_CONTEXT.md` if the domain model changed
+
+### Fixing a bug in generated code
+
+1. Add a failing test in `generator/src/test/kotlin/` that reproduces the bug
+2. Identify which layer is wrong (parser? domain? renderer?)
+3. Fix only that layer
+4. Re-run `./gradlew check` to confirm the test passes
+
+---
+
 ## Debugging
 
 ```bash
 # Verbose build output
 ./gradlew build --info
 
-# Inspect generated files
-find build/openapi/src/main/kotlin -name "*.kt" | head -20
-cat build/openapi/src/main/kotlin/com/example/api/client/Client.kt
+# Inspect files generated by the e2e project
+find e2e/build/generated -name "*.kt" | head -20
+cat e2e/build/generated/src/main/kotlin/org/example/client/ClientConfiguration.kt
+
+# Run a single test class
+./gradlew :generator:test --tests "*.SomeTestClass"
 ```
 
 ---
