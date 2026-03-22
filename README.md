@@ -32,7 +32,7 @@ plugins {
 }
 ```
 
-Where `<last version>` is ![Plugin Version](https://img.shields.io/gradle-plugin-portal/v/org.litote.openapi.ktor.client.generator.gradle)
+Replace `<last version>` with the latest release: ![Plugin Version](https://img.shields.io/gradle-plugin-portal/v/org.litote.openapi.ktor.client.generator.gradle)
 
 ## Configuration
 
@@ -138,7 +138,7 @@ apiClientGenerator {
 #### Built-in modules
 
 | Module ID | Effect |
-|---|---|---|
+|---|---|
 | `UnknownEnumValueModule` | Adds an `UNKNOWN_` fallback constant to every generated enum and enables `coerceInputValues = true` in the Json configuration, so unknown server values never cause a deserialization error |
 | `LoggingSl4jModule` | Configures the `ClientConfiguration` exception logger to use SLF4J (`LoggerFactory.getLogger(…).error(…)`). **JVM-only** — do not use in KMP projects targeting non-JVM platforms |
 | `LoggingKotlinModule` | Configures the `ClientConfiguration` exception logger to use kotlin-logging / oshai (`KotlinLogging.logger(…).error(…)`) |
@@ -252,6 +252,8 @@ dependencies {
     implementation("org.yaml:snakeyaml:<latest version>")
 }
 ```
+
+The latest SnakeYAML version can be found in the [published version catalog](README.md#using-the-version-catalog) (`openapiKtor.versions.snakeyaml`).
 
 
 

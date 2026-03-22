@@ -47,19 +47,19 @@ The generated `build.gradle.kts` looks like:
 
 ```kotlin
 plugins {
-    kotlin("jvm") version "2.3.10"
-    kotlin("plugin.serialization") version "2.3.10"
-    id("org.litote.openapi.ktor.client.generator.gradle") version "0.1.9"
+    kotlin("jvm") version "<kotlin-version>"
+    kotlin("plugin.serialization") version "<kotlin-version>"
+    id("org.litote.openapi.ktor.client.generator.gradle") version "<plugin-version>"
 }
 
 dependencies {
-    implementation("org.jetbrains.kotlinx:kotlinx-serialization-json:1.10.0")
-    implementation("org.jetbrains.kotlinx:kotlinx-coroutines-core:1.10.2")
-    implementation("io.ktor:ktor-client-cio:3.4.1")
-    implementation("io.ktor:ktor-client-content-negotiation:3.4.1")
-    implementation("io.ktor:ktor-client-core:3.4.1")
-    implementation("io.ktor:ktor-serialization-kotlinx-json:3.4.1")
-    implementation("io.ktor:ktor-client-logging:3.4.1")
+    implementation("org.jetbrains.kotlinx:kotlinx-serialization-json:<serialization-version>")
+    implementation("org.jetbrains.kotlinx:kotlinx-coroutines-core:<coroutines-version>")
+    implementation("io.ktor:ktor-client-cio:<ktor-version>")
+    implementation("io.ktor:ktor-client-content-negotiation:<ktor-version>")
+    implementation("io.ktor:ktor-client-core:<ktor-version>")
+    implementation("io.ktor:ktor-serialization-kotlinx-json:<ktor-version>")
+    implementation("io.ktor:ktor-client-logging:<ktor-version>")
 }
 
 apiClientGenerator {
@@ -337,7 +337,7 @@ by default (e.g. `LoggingKotlinModule` needs `kotlin-logging`):
 apiClientGenerator {
     initSubproject {
         generatorConfigExtra = """modulesIds.add("LoggingKotlinModule")"""
-        additionalDependencies.add("io.github.oshai:kotlin-logging:7.0.3")
+        additionalDependencies.add("io.github.oshai:kotlin-logging:<version>")
     }
 }
 ```
@@ -345,7 +345,7 @@ apiClientGenerator {
 Multiple coordinates can be added:
 
 ```kotlin
-additionalDependencies.add("io.github.oshai:kotlin-logging:7.0.3")
+additionalDependencies.add("io.github.oshai:kotlin-logging:<version>")
 additionalDependencies.add("com.example:my-extra-lib:1.0.0")
 ```
 

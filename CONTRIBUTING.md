@@ -1,3 +1,5 @@
+# Contributing
+
 ## Prerequisites
 
 - JDK 17+
@@ -7,15 +9,18 @@
 
 ```bash
 # MANDATORY after every code change:
-./gradlew clean formatKotlin && ./gradlew check
+./gradlew formatKotlin && ./gradlew check
 
 # Run specific tests:
 ./gradlew :generator:test
 ./gradlew :generator:test --tests "*.ParsingTests"
 
-# E2E testing (separate project):
+# E2E testing (separate projects):
 ./gradlew publishToMavenLocal
 cd e2e && ./gradlew build
+# Split-by-client E2E:
+cd e2e-split && ./gradlew initApiClientSubproject -PopenApiFile=src/main/openapi/sample.json -PsplitByClient=true -PbasePackage=org.litote.sample -PsplitGranularity=BY_TAG_AND_OPERATION -PsharedModelGranularity=SHARED_PER_GROUP -PsubprojectRootDirectory=client
+cd e2e-split && ./gradlew build
 
 # Debug:
 ./gradlew build --info
@@ -257,7 +262,7 @@ Sub-packages within a module are reflected as subdirectories only if the module 
 
 ### Prefer top-level function to stateless object declaration
 
-### Be consistant
+### Be consistent
 
 If you use Spec suffix for domain types, use it for all domain types
 

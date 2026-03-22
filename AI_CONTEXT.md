@@ -33,7 +33,11 @@ split-by-client mode with `SHARED_PER_GROUP` granularity.
 - `src/main/openapi/sample.json` — minimal two-tag spec (`user`, `order`) with 4 operations and
   shared response models (`UserResponse`, `OrderResponse`) to exercise per-group shared subprojects.
 - `settings.gradle.kts` — includes `mavenLocal()` in `pluginManagement` so generated submodules
-  resolve the plugin version published locally.
+  resolve the plugin version published locally. The `// <openapi-ktor-generated-includes>` marker
+  block is committed **empty** (no `include(...)` inside). Gradle 9.4+ requires included project
+  directories to exist at configuration time; since `initApiClientSubproject` creates those
+  directories at task-execution time, committing pre-filled includes would fail on a fresh checkout.
+  The task writes the `include(...)` statement into the marker block after creating the directories.
 - `build.gradle.kts` — applies the generator plugin (`version "main-SNAPSHOT"`) to register
   the `initApiClientSubproject` task. Also declares `kotlin("jvm") apply false` to register the
   Kotlin JVM plugin version for subprojects (avoids classpath conflict in multi-project builds).
