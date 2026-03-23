@@ -42,6 +42,7 @@ public class ApiClientConfigurationGenerator public constructor(
                 returnType = UNIT,
             )
         val loggingClass: ClassName = ClassName("io.ktor.client.plugins.logging", "Logging")
+        val logLevelClass: ClassName = ClassName("io.ktor.client.plugins.logging", "LogLevel")
         val contentNegotiationClass: ClassName =
             ClassName("io.ktor.client.plugins.contentnegotiation", "ContentNegotiation")
         val jsonMember: MemberName = MemberName("io.ktor.serialization.kotlinx.json", "json")
@@ -69,7 +70,9 @@ public class ApiClientConfigurationGenerator public constructor(
             CodeBlock
                 .builder()
                 .beginControlFlow("{")
-                .addStatement("install(%T)", loggingClass)
+                .beginControlFlow("install(%T)", loggingClass)
+                .addStatement("level = %N", "logLevel")
+                .endControlFlow()
                 .beginControlFlow("install(%T)", contentNegotiationClass)
                 .addStatement("%M(%N)", jsonMember, "json")
 
@@ -129,6 +132,7 @@ public class ApiClientConfigurationGenerator public constructor(
                 .builder("defaultHttpClientConfig")
                 .addParameter("baseUrl", String::class)
                 .addParameter("json", Json::class)
+                .addParameter("logLevel", logLevelClass)
 
         clientConfiguration.apiKeySchemes.forEach { scheme ->
             funBuilder.addParameter(
@@ -155,6 +159,7 @@ public class ApiClientConfigurationGenerator public constructor(
     override var exceptionLoggingDefaultValue: String = "{ printStackTrace() }"
     override var httpClientAuthorizationDefaultValue: String = "{}"
     override val additionalStringParameters: MutableList<String> = mutableListOf()
+    override var logLevelDefaultValue: String = "LogLevel.HEADERS"
     // end mutable properties for modules
 
     private val jsonDefaultValue: CodeBlock
@@ -182,6 +187,11 @@ public class ApiClientConfigurationGenerator public constructor(
                     ParameterSpec
                         .builder("baseUrl", String::class)
                         .defaultValue("%S", clientConfiguration.serverUrl)
+                        .build(),
+                ).addParameter(
+                    ParameterSpec
+                        .builder("logLevel", logLevelClass)
+                        .defaultValue("%L", logLevelDefaultValue)
                         .build(),
                 )
 
@@ -230,7 +240,14 @@ public class ApiClientConfigurationGenerator public constructor(
                 append("%N")
             }
         val httpClientConfigDefaultValue =
-            CodeBlock.of("%N(%N, %N, $extraParams)", "defaultHttpClientConfig", "baseUrl", "json", "httpClientAuthorization")
+            CodeBlock.of(
+                "%N(%N, %N, %N, $extraParams)",
+                "defaultHttpClientConfig",
+                "baseUrl",
+                "json",
+                "logLevel",
+                "httpClientAuthorization",
+            )
 
         builder
             .addParameter(
@@ -296,6 +313,11 @@ public class ApiClientConfigurationGenerator public constructor(
                     PropertySpec
                         .builder("baseUrl", String::class)
                         .initializer("baseUrl")
+                        .build(),
+                ).addProperty(
+                    PropertySpec
+                        .builder("logLevel", logLevelClass)
+                        .initializer("logLevel")
                         .build(),
                 )
 

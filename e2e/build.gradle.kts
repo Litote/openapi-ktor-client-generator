@@ -1,6 +1,6 @@
 plugins {
     alias(e2e.plugins.kotlin.multiplatform)
-    id("org.litote.openapi.ktor.client.generator.gradle") version "+"
+    id("org.litote.openapi.ktor.client.generator.gradle") version "main-SNAPSHOT"
     alias(e2e.plugins.serialization)
 }
 

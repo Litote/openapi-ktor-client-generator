@@ -6,6 +6,7 @@ import io.ktor.client.engine.HttpClientEngineFactory
 import io.ktor.client.engine.cio.CIO
 import io.ktor.client.plugins.contentnegotiation.ContentNegotiation
 import io.ktor.client.plugins.defaultRequest
+import io.ktor.client.plugins.logging.LogLevel
 import io.ktor.client.plugins.logging.Logging
 import io.ktor.serialization.kotlinx.json.json
 import kotlin.String
@@ -15,27 +16,37 @@ import kotlinx.serialization.json.Json
 
 public class ClientConfiguration(
   public val baseUrl: String = "http://localhost:8080/",
+  public val logLevel: LogLevel = LogLevel.HEADERS,
   public val engine: HttpClientEngineFactory<*> = CIO,
   public val json: Json = Json { 
       ignoreUnknownKeys = true
       coerceInputValues = true
        },
+  public val httpClientAuthorization: HttpClientConfig<*>.() -> Unit = {},
   public val httpClientConfig:
-      HttpClientConfig<*>.() -> Unit = defaultHttpClientConfig(baseUrl, json),
+      HttpClientConfig<*>.() -> Unit = defaultHttpClientConfig(baseUrl, json, logLevel, httpClientAuthorization),
   public val client: HttpClient = HttpClient(engine) { httpClientConfig() },
   public val exceptionLogger: Throwable.() -> Unit = { printStackTrace() },
 ) {
   public companion object {
     public val defaultClientConfiguration: ClientConfiguration by lazy { ClientConfiguration() }
 
-    public fun defaultHttpClientConfig(baseUrl: String, json: Json): HttpClientConfig<*>.() -> Unit = {
-      install(Logging)
+    public fun defaultHttpClientConfig(
+      baseUrl: String,
+      json: Json,
+      logLevel: LogLevel,
+      httpClientAuthorization: HttpClientConfig<*>.() -> Unit,
+    ): HttpClientConfig<*>.() -> Unit = {
+      install(Logging) {
+        level = logLevel
+      }
       install(ContentNegotiation) {
         json(json)
       }
       defaultRequest {
         url(baseUrl)
       }
+      httpClientAuthorization()
     }
 
   }

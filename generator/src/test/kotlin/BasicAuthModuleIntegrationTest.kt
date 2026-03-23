@@ -39,8 +39,8 @@ class BasicAuthModuleIntegrationTest {
             assertTrue(content.contains("httpClientAuthorization:"), "ClientConfiguration should have httpClientAuthorization parameter")
             assertTrue(content.contains("\"Bearer \""), "httpClientAuthorization default should contain Bearer token logic")
             assertTrue(
-                content.contains("defaultHttpClientConfig(baseUrl, json, httpClientAuthorization)"),
-                "httpClientConfig default should reference httpClientAuthorization",
+                content.contains("defaultHttpClientConfig(baseUrl, json, logLevel, httpClientAuthorization)"),
+                "httpClientConfig default should reference logLevel and httpClientAuthorization",
             )
             assertTrue(
                 content.contains("httpClientAuthorization()"),

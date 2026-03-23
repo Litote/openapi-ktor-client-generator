@@ -352,6 +352,7 @@ Hooks are declared on `ApiConfigurationGeneratorConfig`, `ApiClientGeneratorConf
 - `exceptionLoggingDefaultValue: String` — replace the exception logger lambda
 - `httpClientAuthorizationDefaultValue: String` — lambda body for the `httpClientAuthorization` constructor parameter (default `"{}"`)
 - `additionalStringParameters: MutableList<String>` — param names (type `String?`, default `null`) injected before `httpClientAuthorization` in the constructor; referenced by name inside `httpClientAuthorizationDefaultValue` lambdas
+- `logLevelDefaultValue: String` — default value for the `logLevel: LogLevel` constructor parameter (default `"LogLevel.HEADERS"`, matching Ktor's own default)
 
 `BasicAuthModule` adds `accessToken: String?` and sets `httpClientAuthorization` to `{ accessToken?.let { token -> defaultRequest { header("Authorization", "Bearer " + token) } } }`.
 

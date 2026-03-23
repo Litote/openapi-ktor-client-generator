@@ -73,6 +73,50 @@ The generated code is placed in the configured `outputDirectory`. You also need 
 
 The generator accepts OpenAPI V3 specification files in both **JSON** and **YAML** format.
 
+## Using the generated client
+
+After generation, each API tag produces a client class (e.g. `UserClient`, `PetClient`).
+All clients share by default a single `ClientConfiguration` instance.
+
+### Minimal example
+
+```kotlin
+val config = ClientConfiguration()
+val client = UserClient(config) // UserClient() uses default ClientConfiguration()
+
+val users = client.getUsers()
+```
+
+### Customised example
+
+```kotlin
+val config = ClientConfiguration(
+    baseUrl = "https://api.example.com/v1/",
+    logLevel = LogLevel.NONE,           // silence HTTP logs
+    httpClientAuthorization = {
+        defaultRequest { header("Authorization", "Bearer $token") }
+    },
+)
+val client = UserClient(config)
+```
+
+### `ClientConfiguration` parameters
+
+All parameters have sensible defaults — only override what you need.
+
+| Parameter | Type | Default | Description |
+|---|---|---|---|
+| `baseUrl` | `String` | value from spec | Base URL prepended to every request |
+| `logLevel` | `LogLevel` | `LogLevel.HEADERS` | Ktor logging verbosity (`ALL`, `HEADERS`, `BODY`, `INFO`, `NONE`) |
+| `engine` | `HttpClientEngineFactory<*>` | `CIO` | Ktor engine (swap for `MockEngine` in tests, `OkHttp` on Android, etc.) |
+| `json` | `Json` | `Json { ignoreUnknownKeys = true }` | kotlinx.serialization `Json` instance |
+| `httpClientAuthorization` | `HttpClientConfig<*>.() -> Unit` | `{}` | Hook to inject auth headers or other per-request config |
+| `httpClientConfig` | `HttpClientConfig<*>.() -> Unit` | `defaultHttpClientConfig(…)` | Full Ktor client config — override to replace the default setup entirely |
+| `client` | `HttpClient` | built from `engine` + `httpClientConfig` | Pre-built `HttpClient` — inject a mock in tests |
+| `exceptionLogger` | `Throwable.() -> Unit` | `{ printStackTrace() }` | Called when a client catches an unexpected exception |
+
+> **Tip:** inject `client = mockClient` in unit tests to avoid any network call.
+
 ## Configuration Properties
 
 ### Root properties

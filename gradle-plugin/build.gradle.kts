@@ -65,6 +65,7 @@ gradlePlugin {
             website = "https://github.com/Litote/openapi-ktor-client-generator"
             vcsUrl = "https://github.com/Litote/openapi-ktor-client-generator.git"
             tags.set(listOf("openapi", "ktor", "client", "generator"))
+            @Suppress("UnstableApiUsage")
             compatibility {
                 features {
                     configurationCache = true

@@ -78,10 +78,11 @@ subprojects {
 tasks.register("updateVerificationMetadata") {
     group = "verification"
     description = "Regenerates gradle/verification-metadata.xml after dependency upgrades. Run after every versionCatalogUpdate."
+    notCompatibleWithConfigurationCache("Spawns a Gradle subprocess that writes verification-metadata.xml")
     doLast {
         val result = ProcessBuilder(
             "${rootDir}/gradlew",
-            "--write-verification-metadata", "sha256",
+            "--write-verification-metadata", "sha256", "--refresh-dependencies",
             "dependencies", "check",
         )
             .directory(rootDir)

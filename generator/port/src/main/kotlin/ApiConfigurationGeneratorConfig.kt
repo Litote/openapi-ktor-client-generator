@@ -21,4 +21,11 @@ public interface ApiConfigurationGeneratorConfig {
      * `String?` with a default value of `null`.
      */
     public val additionalStringParameters: MutableList<String>
+
+    /**
+     * Default value for the `logLevel` parameter in the generated ClientConfiguration.
+     * The value must be a valid `LogLevel` expression (e.g. `"LogLevel.HEADERS"`).
+     * Default is `"LogLevel.HEADERS"`, which matches the Ktor default.
+     */
+    public var logLevelDefaultValue: String
 }
