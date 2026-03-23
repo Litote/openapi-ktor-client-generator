@@ -134,11 +134,16 @@ fun parseClientNames(openApiFilePath: String, splitGranularity: SplitGranularity
 // Returns all shared client groups (models shared between a specific set of clients)
 fun parseSharedClientGroups(openApiFilePath: String, splitGranularity: SplitGranularity = BY_TAG): List<SharedClientGroup>
 
+// Computes the direct Gradle compile-time dependency graph between per-group shared subprojects
+fun computeSharedGroupDependencies(openApiFilePath: String, splitGranularity: SplitGranularity = BY_TAG): Map<SharedClientGroup, Set<SharedClientGroup>>
+
 data class SharedClientGroup(
     val clientGroup: Set<String>,          // exact set of clients sharing these models
-    val directoryName: String,             // e.g. "shared-order-user"
-    val packageSuffix: String,             // e.g. "sharedOrderUser"
-)
+    val modelNames: Set<String>,           // names of all model classes in this group
+) {
+    val directoryName: String              // computed: e.g. "shared-order-user"
+    val packageSuffix: String             // computed: e.g. "sharedOrderUser"
+}
 
 data class ApiGeneratorConfiguration(
     val openApiFile: String,
@@ -337,8 +342,18 @@ Used by both `generator/` and `gradle-plugin/`.
 
 See [README.md — Modules](README.md#modules) for the full module documentation and hook reference.
 
-Built-in module IDs: `"UnknownEnumValueModule"`, `"LoggingSl4jModule"`, `"LoggingKotlinModule"`.
+Built-in module IDs: `"UnknownEnumValueModule"`, `"LoggingSl4jModule"`, `"LoggingKotlinModule"`, `"BasicAuthModule"`.
 Hooks are declared on `ApiConfigurationGeneratorConfig`, `ApiClientGeneratorConfig`, `ApiModelGeneratorConfig`.
+
+> ⚠️ **Every new module must be added as an `implementation` dependency in `gradle-plugin/build.gradle.kts`** — otherwise the SPI `ServiceLoader` cannot find it at runtime when the plugin is applied. Currently declared: `module:unknown-enum-value`, `module:logging-kotlin`, `module:logging-sl4j`, `module:basic-auth`.
+
+`ApiConfigurationGeneratorConfig` exposes:
+- `jsonDefaultValueProperties: MutableMap<String, String>` — add/modify Json builder properties
+- `exceptionLoggingDefaultValue: String` — replace the exception logger lambda
+- `httpClientAuthorizationDefaultValue: String` — lambda body for the `httpClientAuthorization` constructor parameter (default `"{}"`)
+- `additionalStringParameters: MutableList<String>` — param names (type `String?`, default `null`) injected before `httpClientAuthorization` in the constructor; referenced by name inside `httpClientAuthorizationDefaultValue` lambdas
+
+`BasicAuthModule` adds `accessToken: String?` and sets `httpClientAuthorization` to `{ accessToken?.let { token -> defaultRequest { header("Authorization", "Bearer " + token) } } }`.
 
 ---
 

@@ -27,5 +27,6 @@ include(
     "gradle-plugin",
     "module:unknown-enum-value",
     "module:logging-sl4j",
-    "module:logging-kotlin"
+    "module:logging-kotlin",
+    "module:basic-auth"
 )

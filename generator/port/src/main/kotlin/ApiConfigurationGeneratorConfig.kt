@@ -7,4 +7,18 @@ public interface ApiConfigurationGeneratorConfig {
 
     /** Default lambda body for exception logging in the generated ClientConfiguration. */
     public var exceptionLoggingDefaultValue: String
+
+    /**
+     * Default lambda body for the `httpClientAuthorization` parameter in the generated ClientConfiguration.
+     * The lambda type is `HttpClientConfig<*>.() -> Unit`.
+     * Default is `{}` (no-op). Modules can override this to inject authorization logic.
+     */
+    public var httpClientAuthorizationDefaultValue: String
+
+    /**
+     * Additional nullable `String` parameters to inject into the ClientConfiguration constructor,
+     * placed before `httpClientAuthorization`. Each entry is a parameter name; the type is always
+     * `String?` with a default value of `null`.
+     */
+    public val additionalStringParameters: MutableList<String>
 }

@@ -20,15 +20,20 @@ public class ClientConfiguration(
   public val json: Json = Json { 
       ignoreUnknownKeys = true
        },
+  public val httpClientAuthorization: HttpClientConfig<*>.() -> Unit = {},
   public val httpClientConfig:
-      HttpClientConfig<*>.() -> Unit = defaultHttpClientConfig(baseUrl, json),
+      HttpClientConfig<*>.() -> Unit = defaultHttpClientConfig(baseUrl, json, httpClientAuthorization),
   public val client: HttpClient = HttpClient(engine) { httpClientConfig() },
   public val exceptionLogger: Throwable.() -> Unit = { printStackTrace() },
 ) {
   public companion object {
     public val defaultClientConfiguration: ClientConfiguration by lazy { ClientConfiguration() }
 
-    public fun defaultHttpClientConfig(baseUrl: String, json: Json): HttpClientConfig<*>.() -> Unit = {
+    public fun defaultHttpClientConfig(
+      baseUrl: String,
+      json: Json,
+      httpClientAuthorization: HttpClientConfig<*>.() -> Unit,
+    ): HttpClientConfig<*>.() -> Unit = {
       install(Logging)
       install(ContentNegotiation) {
         json(json)
@@ -38,6 +43,7 @@ public class ClientConfiguration(
       defaultRequest {
         url(baseUrl)
       }
+      httpClientAuthorization()
     }
 
   }

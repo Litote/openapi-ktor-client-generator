@@ -36,28 +36,6 @@
 | **Keep AI doc up-to-date** | Update `AI_CONTEXT.md` when adding/removing domain types, changing public API, or making architectural decisions. Update `AGENTS.md` when rules or workflows change. |
 ---
 
-## Module Architecture
-
-The `generator` module is split into Gradle sub-modules that **enforce hexagonal architecture at compile time**:
-
-```
-generator:domain         → :shared                    (pure domain, zero external deps)
-generator:port           → generator:domain           (port interfaces only)
-generator:config         → generator:domain + port    (ApiGeneratorConfiguration, ApiGeneratorModule, GenerationResult)
-generator:application    → generator:domain + port    (orchestration, no adapter imports)
-generator:adapter-writer → generator:domain + port    (file writer)
-generator:adapter-parser → domain + port + config     (OpenAPI parser)
-generator:adapter-renderer → domain + port + config + adapter-writer  (KotlinPoet renderer)
-generator (root)         → config + application + all adapters  (composition root)
-```
-
-**Boundary Rules:**
-- Do NOT move classes between modules
-- Do NOT introduce cross-module circular dependencies
-- Respect the Gradle dependency graph above — violations cause **compile errors**
-
----
-
 ## Code Style
 
 ### Kotlin Conventions

@@ -117,6 +117,7 @@ public class ApiClientConfigurationGenerator public constructor(
 
         builder
             .endControlFlow()
+            .addStatement("%N()", "httpClientAuthorization")
             .endControlFlow()
 
         return builder.build()
@@ -137,6 +138,12 @@ public class ApiClientConfigurationGenerator public constructor(
             )
         }
 
+        funBuilder.addParameter(
+            ParameterSpec
+                .builder("httpClientAuthorization", httpClientConfigType)
+                .build(),
+        )
+
         return funBuilder
             .returns(httpClientConfigType)
             .addStatement("return %L", buildDefaultConfigLambda())
@@ -146,6 +153,8 @@ public class ApiClientConfigurationGenerator public constructor(
     // mutable properties for modules
     override val jsonDefaultValueProperties: MutableMap<String, String> = mutableMapOf("ignoreUnknownKeys" to "true")
     override var exceptionLoggingDefaultValue: String = "{ printStackTrace() }"
+    override var httpClientAuthorizationDefaultValue: String = "{}"
+    override val additionalStringParameters: MutableList<String> = mutableListOf()
     // end mutable properties for modules
 
     private val jsonDefaultValue: CodeBlock
@@ -185,6 +194,15 @@ public class ApiClientConfigurationGenerator public constructor(
             )
         }
 
+        additionalStringParameters.forEach { paramName ->
+            builder.addParameter(
+                ParameterSpec
+                    .builder(paramName, String::class.asTypeName().copy(nullable = true))
+                    .defaultValue("null")
+                    .build(),
+            )
+        }
+
         builder
             .addParameter(
                 ParameterSpec
@@ -196,16 +214,23 @@ public class ApiClientConfigurationGenerator public constructor(
                     .builder("json", Json::class)
                     .defaultValue(jsonDefaultValue)
                     .build(),
+            ).addParameter(
+                ParameterSpec
+                    .builder("httpClientAuthorization", httpClientConfigType)
+                    .defaultValue("%L", httpClientAuthorizationDefaultValue)
+                    .build(),
             )
 
-        val httpClientConfigDefaultValue =
-            if (hasApiKeys) {
-                val apiKeyParams =
-                    clientConfiguration.apiKeySchemes.joinToString(", ") { it.paramName }
-                CodeBlock.of("%N(%N, %N, $apiKeyParams)", "defaultHttpClientConfig", "baseUrl", "json")
-            } else {
-                CodeBlock.of("%N(%N, %N)", "defaultHttpClientConfig", "baseUrl", "json")
+        val extraParams =
+            buildString {
+                if (hasApiKeys) {
+                    append(clientConfiguration.apiKeySchemes.joinToString(", ") { it.paramName })
+                    append(", ")
+                }
+                append("%N")
             }
+        val httpClientConfigDefaultValue =
+            CodeBlock.of("%N(%N, %N, $extraParams)", "defaultHttpClientConfig", "baseUrl", "json", "httpClientAuthorization")
 
         builder
             .addParameter(
@@ -283,6 +308,15 @@ public class ApiClientConfigurationGenerator public constructor(
             )
         }
 
+        additionalStringParameters.forEach { paramName ->
+            builder.addProperty(
+                PropertySpec
+                    .builder(paramName, String::class.asTypeName().copy(nullable = true))
+                    .initializer(paramName)
+                    .build(),
+            )
+        }
+
         builder
             .addProperty(
                 PropertySpec
@@ -293,6 +327,11 @@ public class ApiClientConfigurationGenerator public constructor(
                 PropertySpec
                     .builder("json", Json::class)
                     .initializer("json")
+                    .build(),
+            ).addProperty(
+                PropertySpec
+                    .builder("httpClientAuthorization", httpClientConfigType)
+                    .initializer("httpClientAuthorization")
                     .build(),
             ).addProperty(
                 PropertySpec

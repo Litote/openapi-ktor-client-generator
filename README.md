@@ -91,7 +91,7 @@ The generator accepts OpenAPI V3 specification files in both **JSON** and **YAML
 | `outputDirectory`  | Target directory for generated sources (`src/main/kotlin` is appended automatically) | `file("build/api-${name}")`             | Any relative directory                    |
 | `basePackage`      | Base package for all generated classes                                               | `org.example`                           | Any valid package name                    |
 | `allowedPaths`     | Restrict generation to a subset of OpenAPI paths                                     | empty (all paths generated)             | Any subset of paths defined in the spec   |
-| `modulesIds`       | Built-in module IDs to enable (loaded from classpath via SPI)                        | empty                                   | `UnknownEnumValueModule`, `LoggingSl4jModule`, `LoggingKotlinModule` |
+| `modulesIds`       | Built-in module IDs to enable (loaded from classpath via SPI)                        | empty                                   | `UnknownEnumValueModule`, `LoggingSl4jModule`, `LoggingKotlinModule`, `BasicAuthModule` |
 | `customModules`    | Custom module instances defined inline in the build script                           | empty                                   | Any `ApiGeneratorModule` implementation (see advanced usage)         |
 | `skip`             | Skip this generator                                                                  | `false`                                 | Boolean                                   |
 | `splitByClient`    | Enable split-by-client mode — see [PROJECT_GENERATION.md](PROJECT_GENERATION.md)     | `false`                                 | Boolean                                   |
@@ -128,6 +128,7 @@ apiClientGenerator {
 | `UnknownEnumValueModule` | Adds an `UNKNOWN_` fallback constant to every generated enum and enables `coerceInputValues = true` in the Json configuration, so unknown server values never cause a deserialization error |
 | `LoggingSl4jModule` | Configures the `ClientConfiguration` exception logger to use SLF4J (`LoggerFactory.getLogger(…).error(…)`). **JVM-only** — do not use in KMP projects targeting non-JVM platforms |
 | `LoggingKotlinModule` | Configures the `ClientConfiguration` exception logger to use kotlin-logging / oshai (`KotlinLogging.logger(…).error(…)`) |
+| `BasicAuthModule` | Adds an `accessToken: String?` parameter to `ClientConfiguration` and configures `httpClientAuthorization` to inject an `Authorization: Bearer <token>` header on every request |
 
 #### Custom module at runtime
 

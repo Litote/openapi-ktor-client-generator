@@ -81,7 +81,7 @@ Sub-packages within a module are reflected as subdirectories only if the module 
 
 ### [Choose good names](https://kotlinlang.org/docs/coding-conventions.html#choose-good-names) for classes
 
-- do not suffix names with `Impl` or `ImplBase`, ou `Util`
+- do not suffix names with `Impl` or `ImplBase`, or `Util`
 - use `Api` prefix for interfaces
 - use `Client` prefix for client classes
 - use `Configuration` prefix for configuration classes
@@ -165,6 +165,11 @@ graph TD
     root --> writer
 ```
 
+**Boundary Rules:**
+- Do NOT move classes between modules
+- Do NOT introduce cross-module circular dependencies
+- Respect the Gradle dependency graph above — violations cause **compile errors**
+
 ### Sub-module Contents
 
 | Sub-module | Root package | Key classes |
@@ -186,6 +191,7 @@ graph TD
 - **`generator:adapter-parser`** cannot see renderer code (no `generator:adapter-renderer` dep)
 - **`generator:adapter-renderer`** cannot see parser code (no `generator:adapter-parser` dep)
 - The composition root `generator` is the **only** module that can wire all layers together
+
 
 ### `ApiSpecificationParser` Port Design
 

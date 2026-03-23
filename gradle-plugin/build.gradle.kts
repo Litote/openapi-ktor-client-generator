@@ -51,6 +51,7 @@ dependencies {
     implementation(project(":module:unknown-enum-value"))
     implementation(project(":module:logging-kotlin"))
     implementation(project(":module:logging-sl4j"))
+    implementation(project(":module:basic-auth"))
 }
 
 val pluginDescription = "Gradle plugin to generate OpenApi client with ktor/kotlinx.serialization"

@@ -22,8 +22,9 @@ public class ClientConfiguration(
   public val json: Json = Json { 
       ignoreUnknownKeys = true
        },
+  public val httpClientAuthorization: HttpClientConfig<*>.() -> Unit = {},
   public val httpClientConfig:
-      HttpClientConfig<*>.() -> Unit = defaultHttpClientConfig(baseUrl, json, apiKeyHeader, apiKeyQueryParam),
+      HttpClientConfig<*>.() -> Unit = defaultHttpClientConfig(baseUrl, json, apiKeyHeader, apiKeyQueryParam, httpClientAuthorization),
   public val client: HttpClient = HttpClient(engine) { httpClientConfig() },
   public val exceptionLogger: Throwable.() -> Unit = { printStackTrace() },
 ) {
@@ -35,6 +36,7 @@ public class ClientConfiguration(
       json: Json,
       apiKeyHeader: String?,
       apiKeyQueryParam: String?,
+      httpClientAuthorization: HttpClientConfig<*>.() -> Unit,
     ): HttpClientConfig<*>.() -> Unit = {
       install(Logging)
       install(ContentNegotiation) {
@@ -45,6 +47,7 @@ public class ClientConfiguration(
         apiKeyHeader?.let { setHeader("X-Api-Key", it) }
         apiKeyQueryParam?.let { url.parameters.append("api_key", it) }
       }
+      httpClientAuthorization()
     }
 
   }

@@ -27,7 +27,7 @@ val jacocoAggregatedReport by tasks.registering(JacocoReport::class) {
         subprojects.flatMap { sub ->
             sub.extensions.findByType(KotlinJvmProjectExtension::class)
                 ?.sourceSets?.getByName("main")?.kotlin?.srcDirs
-                ?: emptyList<File>()
+                ?: emptyList()
         },
     )
 
