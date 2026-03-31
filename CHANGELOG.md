@@ -1,5 +1,13 @@
 # Changelog
 
+## [0.6.0](https://github.com/Litote/openapi-ktor-client-generator/compare/v0.5.0...v0.6.0) (2026-03-31)
+
+
+### Features
+
+* add basic auth module ([74bfd7f](https://github.com/Litote/openapi-ktor-client-generator/commit/74bfd7ff283bf25654bd1c77d0bb3addff70544d))
+* add logging level in ClientConfiguration ([422aac7](https://github.com/Litote/openapi-ktor-client-generator/commit/422aac7c56b671d0941eef651e2f81a68c74da5f))
+
 ## [0.5.0](https://github.com/Litote/openapi-ktor-client-generator/compare/v0.4.1...v0.5.0) (2026-03-22)
 
 
