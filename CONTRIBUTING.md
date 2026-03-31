@@ -30,6 +30,12 @@ cd e2e-split && ./gradlew build
 
 ### Follow [official kotlin conventions](https://kotlinlang.org/docs/coding-conventions.html)
 
+## Commit signing
+
+All commits merged into `main` **must be signed**. The repository enforces this via branch protection rules.
+
+See [Signing commits](https://docs.github.com/en/authentication/managing-commit-signature-verification/signing-commits)
+
 
 ## Conventional Commits
 
