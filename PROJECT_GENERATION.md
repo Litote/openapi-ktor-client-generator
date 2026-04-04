@@ -3,6 +3,8 @@
 The plugin provides an `initApiClientSubproject` task to generate a ready-to-use Gradle subproject
 containing a pre-configured `build.gradle.kts` and your OpenAPI spec file.
 
+You can see a (complexe) usage example in  [Mastodon Ktor SDK project](https://github.com/Litote/mastodon-ktor-sdk).
+
 ```bash
 ./gradlew initApiClientSubproject \
   -PopenApiFile=<path/to/spec.yaml> \

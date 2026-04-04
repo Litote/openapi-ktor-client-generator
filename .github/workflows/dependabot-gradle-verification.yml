@@ -41,14 +41,39 @@ jobs:
 
       - name: Commit updated verification metadata
         env:
-          GH_APP_SLUG: ${{ steps.app-token.outputs.app-slug }}
-          GH_APP_USER_ID: ${{ steps.app-token.outputs.installation-id }}
+          GH_TOKEN: ${{ steps.app-token.outputs.token }}
+          OWNER: ${{ github.repository_owner }}
+          REPO: ${{ github.event.repository.name }}
+          BRANCH: ${{ github.head_ref }}
         run: |
-          git config user.name "${GH_APP_SLUG}[bot]"
-          git config user.email "${GH_APP_USER_ID}+${GH_APP_SLUG}[bot]@users.noreply.github.com"
-          git add gradle/verification-metadata.xml
-          if ! git diff --staged --quiet; then
-            git commit -m "chore: update gradle verification metadata"
-            git push
+          if git diff --quiet gradle/verification-metadata.xml; then
+            echo "No changes to commit."
+            exit 0
           fi
+          PARENT_SHA=$(git rev-parse HEAD)
+          CONTENT=$(base64 -w 0 gradle/verification-metadata.xml)
+
+          CURRENT_TREE=$(gh api "repos/$OWNER/$REPO/git/commits/$PARENT_SHA" --jq '.tree.sha')
+
+          BLOB_SHA=$(gh api "repos/$OWNER/$REPO/git/blobs" \
+            --field content="$CONTENT" \
+            --field encoding=base64 \
+            --jq '.sha')
+
+          TREE_SHA=$(gh api "repos/$OWNER/$REPO/git/trees" \
+            --input - <<EOF
+          {"base_tree":"$CURRENT_TREE","tree":[{"path":"gradle/verification-metadata.xml","mode":"100644","type":"blob","sha":"$BLOB_SHA"}]}
+          EOF
+          )
+          TREE_SHA=$(echo "$TREE_SHA" | jq -r '.sha')
+
+          COMMIT_SHA=$(gh api "repos/$OWNER/$REPO/git/commits" \
+            --field message="chore: update gradle verification metadata" \
+            --field tree="$TREE_SHA" \
+            --field "parents[]=$PARENT_SHA" \
+            --jq '.sha')
+
+          gh api "repos/$OWNER/$REPO/git/refs/heads/$BRANCH" \
+            --method PATCH \
+            --field sha="$COMMIT_SHA"
 

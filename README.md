@@ -87,7 +87,7 @@ val client = UserClient(config) // UserClient() uses default ClientConfiguration
 val users = client.getUsers()
 ```
 
-### Customised example
+### Customized example
 
 ```kotlin
 val config = ClientConfiguration(
@@ -115,9 +115,7 @@ All parameters have sensible defaults — only override what you need.
 | `client` | `HttpClient` | built from `engine` + `httpClientConfig` | Pre-built `HttpClient` — inject a mock in tests |
 | `exceptionLogger` | `Throwable.() -> Unit` | `{ printStackTrace() }` | Called when a client catches an unexpected exception |
 
-> **Tip:** inject `client = mockClient` in unit tests to avoid any network call.
-
-## Configuration Properties
+## Gradle task configuration properties
 
 ### Root properties
 
