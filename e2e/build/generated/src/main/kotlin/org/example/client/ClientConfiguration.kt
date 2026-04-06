@@ -8,6 +8,7 @@ import io.ktor.client.plugins.contentnegotiation.ContentNegotiation
 import io.ktor.client.plugins.defaultRequest
 import io.ktor.client.plugins.logging.LogLevel
 import io.ktor.client.plugins.logging.Logging
+import io.ktor.client.request.`header`
 import io.ktor.serialization.kotlinx.json.json
 import kotlin.String
 import kotlin.Throwable
@@ -17,12 +18,14 @@ import kotlinx.serialization.json.Json
 public class ClientConfiguration(
   public val baseUrl: String = "http://localhost:8080/",
   public val logLevel: LogLevel = LogLevel.HEADERS,
+  public val accessToken: String? = null,
   public val engine: HttpClientEngineFactory<*> = CIO,
   public val json: Json = Json { 
       ignoreUnknownKeys = true
       coerceInputValues = true
        },
-  public val httpClientAuthorization: HttpClientConfig<*>.() -> Unit = {},
+  public val httpClientAuthorization:
+      HttpClientConfig<*>.() -> Unit = { accessToken?.let { token -> defaultRequest { header("Authorization", "Bearer " + token) } } },
   public val httpClientConfig:
       HttpClientConfig<*>.() -> Unit = defaultHttpClientConfig(baseUrl, json, logLevel, httpClientAuthorization),
   public val client: HttpClient = HttpClient(engine) { httpClientConfig() },

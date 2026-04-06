@@ -18,6 +18,7 @@ class BasicAuthModuleIntegrationTest {
                         generator.additionalStringParameters.add("accessToken")
                         generator.httpClientAuthorizationDefaultValue =
                             """{ accessToken?.let { token -> defaultRequest { header("Authorization", "Bearer " + token) } } }"""
+                        generator.additionalImports.add("io.ktor.client.request" to "header")
                     }
                 }
             val config =
@@ -38,6 +39,10 @@ class BasicAuthModuleIntegrationTest {
             assertTrue(content.contains("accessToken: String?"), "ClientConfiguration should have accessToken parameter")
             assertTrue(content.contains("httpClientAuthorization:"), "ClientConfiguration should have httpClientAuthorization parameter")
             assertTrue(content.contains("\"Bearer \""), "httpClientAuthorization default should contain Bearer token logic")
+            assertTrue(
+                content.contains("import io.ktor.client.request.`header`"),
+                "ClientConfiguration should import io.ktor.client.request.header for the httpClientAuthorization lambda",
+            )
             assertTrue(
                 content.contains("defaultHttpClientConfig(baseUrl, json, logLevel, httpClientAuthorization)"),
                 "httpClientConfig default should reference logLevel and httpClientAuthorization",

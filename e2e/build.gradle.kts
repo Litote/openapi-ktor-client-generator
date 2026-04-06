@@ -25,7 +25,7 @@ apiClientGenerator {
         create("openapi") {
             outputDirectory = file("build/generated")
             allowedPaths = setOf("/test-status")
-            modulesIds = setOf("UnknownEnumValueModule")
+            modulesIds = setOf("UnknownEnumValueModule", "BasicAuthModule")
         }
     }
 }

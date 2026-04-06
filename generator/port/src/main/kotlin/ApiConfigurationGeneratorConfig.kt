@@ -28,4 +28,12 @@ public interface ApiConfigurationGeneratorConfig {
      * Default is `"LogLevel.HEADERS"`, which matches the Ktor default.
      */
     public var logLevelDefaultValue: String
+
+    /**
+     * Additional imports to add to the generated `ClientConfiguration.kt` file.
+     * Each entry is a `Pair<packageName, simpleName>` (e.g. `"io.ktor.client.request" to "header"`).
+     * Use this when injecting raw code strings that
+     * reference symbols KotlinPoet cannot infer imports for.
+     */
+    public val additionalImports: MutableList<Pair<String, String>>
 }

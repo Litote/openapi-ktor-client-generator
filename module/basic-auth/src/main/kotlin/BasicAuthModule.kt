@@ -8,5 +8,6 @@ internal class BasicAuthModule : ApiGeneratorModule {
         generator.additionalStringParameters.add("accessToken")
         generator.httpClientAuthorizationDefaultValue =
             """{ accessToken?.let { token -> defaultRequest { header("Authorization", "Bearer " + token) } } }"""
+        generator.additionalImports.add("io.ktor.client.request" to "header")
     }
 }

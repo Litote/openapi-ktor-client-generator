@@ -160,6 +160,7 @@ public class ApiClientConfigurationGenerator public constructor(
     override var httpClientAuthorizationDefaultValue: String = "{}"
     override val additionalStringParameters: MutableList<String> = mutableListOf()
     override var logLevelDefaultValue: String = "LogLevel.HEADERS"
+    override val additionalImports: MutableList<Pair<String, String>> = mutableListOf()
     // end mutable properties for modules
 
     private val jsonDefaultValue: CodeBlock
@@ -382,6 +383,9 @@ public class ApiClientConfigurationGenerator public constructor(
                 .apply {
                     if (headerApiKeys.isNotEmpty()) {
                         addAliasedImport(headerMember, ALIAS_HEADER)
+                    }
+                    additionalImports.forEach { (packageName, simpleName) ->
+                        addImport(packageName, simpleName)
                     }
                 }.addType(clientConfiguration)
                 .build()
