@@ -1,5 +1,12 @@
 # Changelog
 
+## [0.6.1](https://github.com/Litote/openapi-ktor-client-generator/compare/v0.6.0...v0.6.1) (2026-04-06)
+
+
+### Bug Fixes
+
+* function header is not imported in BasicAuthModule ([c0b2460](https://github.com/Litote/openapi-ktor-client-generator/commit/c0b2460843e7d7ae45a4b889d51e3c52bf46197e))
+
 ## [0.6.0](https://github.com/Litote/openapi-ktor-client-generator/compare/v0.5.0...v0.6.0) (2026-03-31)
 
 
