@@ -10,7 +10,7 @@ on:
 jobs:
   update-verification-metadata:
     name: Regenerate verification metadata
-    if: github.triggering_actor == 'dependabot[bot]'
+    if: github.event.pull_request.user.login == 'dependabot[bot]'
     runs-on: ubuntu-latest
     permissions:
       contents: write
