@@ -35,7 +35,7 @@ jobs:
           HEAD_REF: ${{ github.head_ref }}
         run: |
           git fetch origin "$HEAD_REF"
-          git checkout FETCH_HEAD -- gradle/libs.versions.toml gradle/wrapper/gradle-wrapper.properties
+          git checkout FETCH_HEAD -- gradle/libs.versions.toml gradle/wrapper/gradle-wrapper.properties gradle/verification-metadata.xml
 
       - name: Set up JDK 25
         uses: actions/setup-java@be666c2fcd27ec809703dec50e508c2fdc7f6654 # v5
