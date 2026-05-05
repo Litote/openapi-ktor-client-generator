@@ -1,12 +1,11 @@
 rules:
-  # pull_request_target is intentional here: the workflow securely checks out the trusted
-  # base branch before running any build steps, and only fetches version files from the PR.
   dangerous-triggers:
     ignore:
-      - dependabot-gradle-verification.yml
+      # pull_request_target is intentional: the workflow checks out the base
+      # branch and only cherry-picks safe version files from the PR branch.
+      - dependabot-gradle-verification.yml:3
 
-  # The checkout in this workflow uses an explicit token to push back to the PR branch.
-  # Credentials must be persisted.
-  artipacked:
+  bot-conditions:
     ignore:
-      - dependabot-gradle-verification.yml:28
+      # Restricting to dependabot[bot] is the intended guard here.
+      - dependabot-gradle-verification.yml:13
