@@ -10,7 +10,7 @@ on:
 jobs:
   update-verification-metadata:
     name: Regenerate verification metadata
-    if: github.event.pull_request.user.login == 'dependabot[bot]'
+    if: github.actor == 'dependabot[bot]'
     runs-on: ubuntu-latest
     permissions:
       contents: write
@@ -27,6 +27,7 @@ jobs:
       # fetched from the PR branch — these have safe, predictable content from dependabot.
       - uses: actions/checkout@de0fac2e4500dabe0009e67214ff5f5447ce83dd # v6
         with:
+          persist-credentials: false
           ref: ${{ github.base_ref }}
           token: ${{ steps.app-token.outputs.token }}
 
