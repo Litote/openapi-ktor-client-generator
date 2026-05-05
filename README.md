@@ -87,19 +87,6 @@ val client = UserClient(config) // UserClient is the generated client
 val users = client.getUsers() // returns a sealed class to manage errors
 ```
 
-### Customized example
-
-```kotlin
-val config = ClientConfiguration(
-    baseUrl = "https://api.example.com/v1/",
-    logLevel = LogLevel.NONE,           // silence HTTP logs
-    httpClientAuthorization = {
-        defaultRequest { header("Authorization", "Bearer $token") }
-    },
-)
-val client = UserClient(config)
-```
-
 ## Gradle task configuration properties
 
 ### Root properties
@@ -112,17 +99,17 @@ val client = UserClient(config)
 
 ### Generator properties
 
-| Property           | Description                                                                          | Default value                           | Allowed values                            |
-|--------------------|--------------------------------------------------------------------------------------|------------------------------------------|-------------------------------------------|
-| `openApiFile`      | OpenAPI v3 source file                                                               | `file("src/main/openapi/${name}.json")` | Any existing OpenAPI file                 |
-| `outputDirectory`  | Target directory for generated sources (`src/main/kotlin` is appended automatically) | `file("build/api-${name}")`             | Any relative directory                    |
-| `basePackage`      | Base package for all generated classes                                               | `org.example`                           | Any valid package name                    |
-| `allowedPaths`     | Restrict generation to a subset of OpenAPI paths                                     | empty (all paths generated)             | Any subset of paths defined in the spec   |
-| `modulesIds`       | Built-in module IDs to enable (loaded from classpath via SPI)                        | empty                                   | `UnknownEnumValueModule`, `LoggingSl4jModule`, `LoggingKotlinModule`, `BasicAuthModule` |
-| `customModules`    | Custom module instances defined inline in the build script                           | empty                                   | Any `ApiGeneratorModule` implementation (see advanced usage)         |
-| `skip`             | Skip this generator                                                                  | `false`                                 | Boolean                                   |
-| `splitByClient`    | Enable split-by-client mode — see [PROJECT_GENERATION.md](PROJECT_GENERATION.md)     | `false`                                 | Boolean                                   |
-| `targetClientName` | In split mode: name of the client to generate (`null` = shared subproject) — see [PROJECT_GENERATION.md](PROJECT_GENERATION.md) | `null`                                  | Any tag-derived client name from the spec |
+| Property           | Description                                                                          | Default value                           | Allowed values                                                          |
+|--------------------|--------------------------------------------------------------------------------------|------------------------------------------|-------------------------------------------------------------------------|
+| `openApiFile`      | OpenAPI v3 source file                                                               | `file("src/main/openapi/${name}.json")` | Any existing OpenAPI file                                               |
+| `outputDirectory`  | Target directory for generated sources (`src/main/kotlin` is appended automatically) | `file("build/api-${name}")`             | Any relative directory                                                  |
+| `basePackage`      | Base package for all generated classes                                               | `org.example`                           | Any valid package name                                                  |
+| `allowedPaths`     | Restrict generation to a subset of OpenAPI paths                                     | empty (all paths generated)             | Any subset of paths defined in the spec                                 |
+| `modulesIds`       | Built-in module IDs to enable (loaded from classpath via SPI)                        | empty                                   | Any module defined via SPI (see [ADVANCED_USAGE.md](ADVANCED_USAGE.md)) |
+| `customModules`    | Custom module instances defined inline in the build script                           | empty                                   | Any `ApiGeneratorModule` implementation (see [ADVANCED_USAGE.md](ADVANCED_USAGE.md))            |
+| `skip`             | Skip this generator                                                                  | `false`                                 | Boolean                                                                 |
+| `splitByClient`    | Enable split-by-client mode — see [PROJECT_GENERATION.md](PROJECT_GENERATION.md)     | `false`                                 | Boolean                                                                 |
+| `targetClientName` | In split mode: name of the client to generate (`null` = shared subproject) — see [PROJECT_GENERATION.md](PROJECT_GENERATION.md) | `null`                                  | Any tag-derived client name from the spec                               |
 
 ## Advanced usage and troubleshooting
 
