@@ -12,7 +12,7 @@ maven-publish = "0.36.0"
 mockk = "1.14.9"
 openapi-bindings = "0.2.2"
 snakeyaml = "2.6"
-sonarqube = "7.2.3.7755"
+sonarqube = "7.3.0.8198"
 version-catalog-update = "1.1.0"
 
 [plugins]
