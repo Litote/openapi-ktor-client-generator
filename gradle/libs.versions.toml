@@ -1,5 +1,5 @@
 [versions]
-coroutines = "1.10.2"
+coroutines = "1.11.0"
 gradle-publish = "2.1.1"
 kotlin = "2.3.21"
 kotlin-poet = "2.3.0"
