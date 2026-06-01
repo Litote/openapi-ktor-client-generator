@@ -13,23 +13,22 @@ import com.squareup.kotlinpoet.SET
 import com.squareup.kotlinpoet.STRING
 import com.squareup.kotlinpoet.TypeName
 import com.squareup.kotlinpoet.asClassName
-import community.flock.kotlinx.openapi.bindings.OpenAPIV3
-import community.flock.kotlinx.openapi.bindings.OpenAPIV3Boolean
-import community.flock.kotlinx.openapi.bindings.OpenAPIV3Components
-import community.flock.kotlinx.openapi.bindings.OpenAPIV3Model
-import community.flock.kotlinx.openapi.bindings.OpenAPIV3Operation
-import community.flock.kotlinx.openapi.bindings.OpenAPIV3Parameter
-import community.flock.kotlinx.openapi.bindings.OpenAPIV3ParameterOrReference
-import community.flock.kotlinx.openapi.bindings.OpenAPIV3Reference
-import community.flock.kotlinx.openapi.bindings.OpenAPIV3RequestBody
-import community.flock.kotlinx.openapi.bindings.OpenAPIV3Response
-import community.flock.kotlinx.openapi.bindings.OpenAPIV3Schema
-import community.flock.kotlinx.openapi.bindings.OpenAPIV3SchemaOrReference
-import community.flock.kotlinx.openapi.bindings.OpenAPIV3SecurityScheme
-import community.flock.kotlinx.openapi.bindings.OpenAPIV3SecuritySchemeType
-import community.flock.kotlinx.openapi.bindings.OpenAPIV3SingleType
-import community.flock.kotlinx.openapi.bindings.OpenAPIV3Type
-import community.flock.kotlinx.openapi.bindings.OpenAPIV3TypeArray
+import community.flock.kotlinx.openapi.bindings.OpenAPIV30Boolean
+import community.flock.kotlinx.openapi.bindings.OpenAPIV30Components
+import community.flock.kotlinx.openapi.bindings.OpenAPIV30Model
+import community.flock.kotlinx.openapi.bindings.OpenAPIV30Operation
+import community.flock.kotlinx.openapi.bindings.OpenAPIV30Parameter
+import community.flock.kotlinx.openapi.bindings.OpenAPIV30ParameterOrReference
+import community.flock.kotlinx.openapi.bindings.OpenAPIV30Reference
+import community.flock.kotlinx.openapi.bindings.OpenAPIV30RequestBody
+import community.flock.kotlinx.openapi.bindings.OpenAPIV30Response
+import community.flock.kotlinx.openapi.bindings.OpenAPIV30Schema
+import community.flock.kotlinx.openapi.bindings.OpenAPIV30SchemaOrReference
+import community.flock.kotlinx.openapi.bindings.OpenAPIV30SecurityScheme
+import community.flock.kotlinx.openapi.bindings.OpenAPIV30SecuritySchemeType
+import community.flock.kotlinx.openapi.bindings.OpenAPIV30SingleType
+import community.flock.kotlinx.openapi.bindings.OpenAPIV30Type
+import community.flock.kotlinx.openapi.bindings.OpenAPIV30TypeArray
 import io.github.oshai.kotlinlogging.KotlinLogging
 import kotlinx.serialization.json.Json
 import kotlinx.serialization.json.JsonArray
@@ -50,23 +49,21 @@ import java.nio.file.Path
 import org.yaml.snakeyaml.Yaml as SnakeYaml
 
 internal class ApiModel private constructor(
-    val model: OpenAPIV3Model,
+    val model: OpenAPIV30Model,
     val configuration: ApiGeneratorConfiguration,
 ) {
     internal companion object {
         private val logger = KotlinLogging.logger {}
 
         internal fun parseOpenApiFile(configuration: ApiGeneratorConfiguration): ApiModel {
-            val openApi =
-                OpenAPIV3(
-                    Json {
-                        ignoreUnknownKeys = true
-                    },
-                )
+            val jsonParser =
+                Json {
+                    ignoreUnknownKeys = true
+                }
             val openApiFile = configuration.openApiFile
             logger.debug { "Parsing $openApiFile" }
             val rawContent = Files.readString(Path.of(openApiFile))
-            val json =
+            val jsonContent =
                 if (openApiFile.endsWith(".yaml", ignoreCase = true) ||
                     openApiFile.endsWith(
                         ".yml",
@@ -78,7 +75,7 @@ internal class ApiModel private constructor(
                     rawContent
                 }
 
-            return ApiModel(openApi.decodeFromString(json), configuration)
+            return ApiModel(jsonParser.decodeFromString<OpenAPIV30Model>(jsonContent), configuration)
         }
 
         private fun yamlToJson(yamlContent: String): String {
@@ -132,7 +129,9 @@ internal class ApiModel private constructor(
             ?.ensureEndsWith("/") ?: "http://localhost:8080/"
 
     val pathsByTags: Map<String, List<ApiOperation>> =
-        model.paths.entries
+        model.paths
+            .orEmpty()
+            .entries
             .asSequence()
             .flatMap { (path, item) ->
                 listOfNotNull(
@@ -169,7 +168,7 @@ internal class ApiModel private constructor(
                 configuration.operationFilter(meta)
             }.groupBy(keySelector = { it.first }, valueTransform = { it.second })
 
-    val components: OpenAPIV3Components? get() = model.components
+    val components: OpenAPIV30Components? get() = model.components
 
     val schemaParentMap: Map<String, Set<String>> =
         components
@@ -188,6 +187,7 @@ internal class ApiModel private constructor(
      */
     internal val requestBodySealedParents: Map<String, List<String>> =
         model.paths
+            .orEmpty()
             .values
             .flatMap { pathItem ->
                 listOfNotNull(
@@ -202,13 +202,13 @@ internal class ApiModel private constructor(
                 ).mapNotNull { op ->
                     val opId = op.operationId ?: return@mapNotNull null
                     val schema =
-                        (op.requestBody as? OpenAPIV3RequestBody)
+                        (op.requestBody as? OpenAPIV30RequestBody)
                             ?.content
                             ?.values
                             ?.firstOrNull()
-                            ?.schema as? OpenAPIV3Schema
+                            ?.schema as? OpenAPIV30Schema
                             ?: return@mapNotNull null
-                    val refs = schema.oneOf?.filterIsInstance<OpenAPIV3Reference>() ?: return@mapNotNull null
+                    val refs = schema.oneOf?.filterIsInstance<OpenAPIV30Reference>() ?: return@mapNotNull null
                     if (refs.size < 2) return@mapNotNull null
                     val sealedName = "${opId.snakeToCamelCase().capitalize()}Request"
                     sealedName to refs.map { getRefClassName(it) }
@@ -226,6 +226,7 @@ internal class ApiModel private constructor(
      */
     internal val responseSealedParents: Map<String, List<String>> =
         model.paths
+            .orEmpty()
             .values
             .flatMap { pathItem ->
                 listOfNotNull(
@@ -241,11 +242,11 @@ internal class ApiModel private constructor(
                     val opId = op.operationId ?: return@mapNotNull null
                     val refs =
                         op.responses?.values?.firstNotNullOfOrNull { responseOrRef ->
-                            val response = responseOrRef as? OpenAPIV3Response ?: return@firstNotNullOfOrNull null
+                            val response = responseOrRef as? OpenAPIV30Response ?: return@firstNotNullOfOrNull null
                             response.content?.values?.firstNotNullOfOrNull { mediaType ->
-                                val schema = mediaType.schema as? OpenAPIV3Schema ?: return@firstNotNullOfOrNull null
+                                val schema = mediaType.schema as? OpenAPIV30Schema ?: return@firstNotNullOfOrNull null
                                 val oneOfRefs =
-                                    schema.oneOf?.filterIsInstance<OpenAPIV3Reference>()
+                                    schema.oneOf?.filterIsInstance<OpenAPIV30Reference>()
                                         ?: return@firstNotNullOfOrNull null
                                 if (oneOfRefs.size >= 2) oneOfRefs else null
                             }
@@ -267,8 +268,8 @@ internal class ApiModel private constructor(
                 ?.schemas
                 ?.entries
                 ?.mapNotNull { (name, schemaOrRef) ->
-                    val schema = schemaOrRef as? OpenAPIV3Schema ?: return@mapNotNull null
-                    val refs = schema.oneOf?.filterIsInstance<OpenAPIV3Reference>() ?: return@mapNotNull null
+                    val schema = schemaOrRef as? OpenAPIV30Schema ?: return@mapNotNull null
+                    val refs = schema.oneOf?.filterIsInstance<OpenAPIV30Reference>() ?: return@mapNotNull null
                     if (refs.size < 2) return@mapNotNull null
                     name to refs.map { getRefClassName(it) }
                 }?.toMap()
@@ -281,7 +282,7 @@ internal class ApiModel private constructor(
             .flatMap { (parent, children) -> children.map { it to parent } }
             .toMap()
 
-    val schemas: Map<String, OpenAPIV3Schema> =
+    val schemas: Map<String, OpenAPIV30Schema> =
         (
             pathsByTags
                 .values
@@ -299,8 +300,8 @@ internal class ApiModel private constructor(
             (
                 components
                     ?.schemas
-                    ?.filterValues { it is OpenAPIV3Schema }
-                    ?.mapValues { it.value as OpenAPIV3Schema }
+                    ?.filterValues { it is OpenAPIV30Schema }
+                    ?.mapValues { it.value as OpenAPIV30Schema }
                     ?: emptyMap()
             ).filterKeys { set.contains(it) }
         }
@@ -316,38 +317,38 @@ internal class ApiModel private constructor(
             val directRefs = mutableSetOf<String>()
 
             components?.schemas?.values?.forEach { schemaOrRef ->
-                val schema = schemaOrRef as? OpenAPIV3Schema ?: return@forEach
+                val schema = schemaOrRef as? OpenAPIV30Schema ?: return@forEach
                 schema.allOf?.forEach { part ->
                     when (part) {
-                        is OpenAPIV3Reference -> {
+                        is OpenAPIV30Reference -> {
                             allOfRefs.add(getRefClassName(part))
                         }
 
-                        is OpenAPIV3Schema -> {
+                        is OpenAPIV30Schema -> {
                             part.properties
                                 ?.values
-                                ?.filterIsInstance<OpenAPIV3Reference>()
+                                ?.filterIsInstance<OpenAPIV30Reference>()
                                 ?.forEach { directRefs.add(getRefClassName(it)) }
-                            (part.items as? OpenAPIV3Reference)?.let { directRefs.add(getRefClassName(it)) }
+                            (part.items as? OpenAPIV30Reference)?.let { directRefs.add(getRefClassName(it)) }
                         }
                     }
                 }
                 schema.oneOf
-                    ?.filterIsInstance<OpenAPIV3Reference>()
+                    ?.filterIsInstance<OpenAPIV30Reference>()
                     ?.forEach { directRefs.add(getRefClassName(it)) }
                 schema.anyOf
-                    ?.filterIsInstance<OpenAPIV3Reference>()
+                    ?.filterIsInstance<OpenAPIV30Reference>()
                     ?.forEach { directRefs.add(getRefClassName(it)) }
                 schema.properties
                     ?.values
-                    ?.filterIsInstance<OpenAPIV3Reference>()
+                    ?.filterIsInstance<OpenAPIV30Reference>()
                     ?.forEach { directRefs.add(getRefClassName(it)) }
-                (schema.items as? OpenAPIV3Reference)?.let { directRefs.add(getRefClassName(it)) }
-                (schema.not as? OpenAPIV3Reference)?.let { directRefs.add(getRefClassName(it)) }
-                (schema.additionalProperties as? OpenAPIV3Reference)?.let { directRefs.add(getRefClassName(it)) }
+                (schema.items as? OpenAPIV30Reference)?.let { directRefs.add(getRefClassName(it)) }
+                (schema.not as? OpenAPIV30Reference)?.let { directRefs.add(getRefClassName(it)) }
+                (schema.additionalProperties as? OpenAPIV30Reference)?.let { directRefs.add(getRefClassName(it)) }
             }
 
-            model.paths.values.forEach { pathItem ->
+            model.paths.orEmpty().values.forEach { pathItem ->
                 listOfNotNull(
                     pathItem.get,
                     pathItem.post,
@@ -363,7 +364,7 @@ internal class ApiModel private constructor(
             allOfRefs - directRefs
         }
 
-    val componentParameters: List<OpenAPIV3Parameter> =
+    val componentParameters: List<OpenAPIV30Parameter> =
         components
             ?.parameters
             ?.values
@@ -379,8 +380,8 @@ internal class ApiModel private constructor(
             ?.securitySchemes
             ?.entries
             ?.mapNotNull { (schemeName, scheme) ->
-                val securityScheme = scheme as? OpenAPIV3SecurityScheme ?: return@mapNotNull null
-                if (securityScheme.type != OpenAPIV3SecuritySchemeType.API_KEY) return@mapNotNull null
+                val securityScheme = scheme as? OpenAPIV30SecurityScheme ?: return@mapNotNull null
+                if (securityScheme.type != OpenAPIV30SecuritySchemeType.API_KEY) return@mapNotNull null
                 val keyName = securityScheme.name ?: return@mapNotNull null
                 val inValue = securityScheme.`in` ?: return@mapNotNull null
                 val location =
@@ -420,64 +421,64 @@ internal class ApiModel private constructor(
         set.addAll(existingSet)
     }
 
-    private fun OpenAPIV3Operation.allReferences(): Set<OpenAPIV3Reference> =
-        setOfNotNull(requestBody as? OpenAPIV3Reference) +
+    private fun OpenAPIV30Operation.allReferences(): Set<OpenAPIV30Reference> =
+        setOfNotNull(requestBody as? OpenAPIV30Reference) +
             (
-                (requestBody as? OpenAPIV3RequestBody)?.content?.values?.flatMap { it.schema.allReferences() }
+                (requestBody as? OpenAPIV30RequestBody)?.content?.values?.flatMap { it.schema.allReferences() }
                     ?: emptyList()
             ) +
-            (parameters?.mapNotNull { it as? OpenAPIV3Reference } ?: emptyList()) +
+            (parameters?.mapNotNull { it as? OpenAPIV30Reference } ?: emptyList()) +
             (
                 parameters?.flatMap {
-                    (it as? OpenAPIV3Parameter)?.content?.values?.flatMap { v -> v.schema.allReferences() }
+                    (it as? OpenAPIV30Parameter)?.content?.values?.flatMap { v -> v.schema.allReferences() }
                         ?: emptyList()
                 }
                     ?: emptyList()
             ) +
-            (responses?.values?.mapNotNull { it as? OpenAPIV3Reference } ?: emptyList()) +
+            (responses?.values?.mapNotNull { it as? OpenAPIV30Reference } ?: emptyList()) +
             (
                 responses
                     ?.values
                     ?.flatMap {
-                        (it as? OpenAPIV3Response)?.content?.values?.flatMap { v -> v.schema.allReferences() }
+                        (it as? OpenAPIV30Response)?.content?.values?.flatMap { v -> v.schema.allReferences() }
                             ?: emptyList()
                     } ?: emptyList()
             )
 
-    private fun OpenAPIV3SchemaOrReference?.allReferences(): Set<OpenAPIV3Reference> =
+    private fun OpenAPIV30SchemaOrReference?.allReferences(): Set<OpenAPIV30Reference> =
         when (this) {
-            is OpenAPIV3Schema -> allReferences()
-            is OpenAPIV3Reference -> setOf(this)
+            is OpenAPIV30Schema -> allReferences()
+            is OpenAPIV30Reference -> setOf(this)
             null -> emptySet()
         }
 
-    private fun OpenAPIV3Schema.allReferences(): Set<OpenAPIV3Reference> =
+    private fun OpenAPIV30Schema.allReferences(): Set<OpenAPIV30Reference> =
         setOfNotNull(
-            not as? OpenAPIV3Reference,
-            items as? OpenAPIV3Reference,
-            additionalProperties as? OpenAPIV3Reference,
+            not as? OpenAPIV30Reference,
+            items as? OpenAPIV30Reference,
+            additionalProperties as? OpenAPIV30Reference,
         ) +
-            (oneOf?.mapNotNull { it as? OpenAPIV3Reference } ?: emptyList()) +
-            (anyOf?.mapNotNull { it as? OpenAPIV3Reference } ?: emptyList()) +
-            (allOf?.mapNotNull { it as? OpenAPIV3Reference } ?: emptyList()) +
-            (properties?.values?.mapNotNull { it as? OpenAPIV3Reference } ?: emptyList()) +
+            (oneOf?.mapNotNull { it as? OpenAPIV30Reference } ?: emptyList()) +
+            (anyOf?.mapNotNull { it as? OpenAPIV30Reference } ?: emptyList()) +
+            (allOf?.mapNotNull { it as? OpenAPIV30Reference } ?: emptyList()) +
+            (properties?.values?.mapNotNull { it as? OpenAPIV30Reference } ?: emptyList()) +
             (
-                properties?.values?.flatMap { (it as? OpenAPIV3Schema)?.allReferences() ?: emptyList() }
+                properties?.values?.flatMap { (it as? OpenAPIV30Schema)?.allReferences() ?: emptyList() }
                     ?: emptyList()
             ) +
-            ((items as? OpenAPIV3Schema)?.allReferences() ?: emptyList())
+            ((items as? OpenAPIV30Schema)?.allReferences() ?: emptyList())
 
     private fun getRefClassName(refValue: String): String = refValue.substringAfterLast("/")
 
-    private fun getRefClassName(ref: OpenAPIV3Reference): String = getRefClassName(ref.ref.value)
+    private fun getRefClassName(ref: OpenAPIV30Reference): String = getRefClassName(ref.ref.value)
 
-    private fun resolveParameter(parameterOrReference: OpenAPIV3ParameterOrReference): OpenAPIV3Parameter? =
+    private fun resolveParameter(parameterOrReference: OpenAPIV30ParameterOrReference): OpenAPIV30Parameter? =
         when (parameterOrReference) {
-            is OpenAPIV3Parameter -> {
+            is OpenAPIV30Parameter -> {
                 parameterOrReference
             }
 
-            is OpenAPIV3Reference -> {
+            is OpenAPIV30Reference -> {
                 val refName = getRefClassName(parameterOrReference)
                 val resolved = components?.parameters?.get(refName)
                 if (resolved == null || resolved === parameterOrReference) {
@@ -488,28 +489,28 @@ internal class ApiModel private constructor(
             }
         }
 
-    internal fun getComponentParameter(parameterOrReference: OpenAPIV3ParameterOrReference): OpenAPIV3Parameter? =
+    internal fun getComponentParameter(parameterOrReference: OpenAPIV30ParameterOrReference): OpenAPIV30Parameter? =
         when (parameterOrReference) {
-            is OpenAPIV3Reference -> {
+            is OpenAPIV30Reference -> {
                 val refName = getRefClassName(parameterOrReference)
                 val resolved = components?.parameters?.get(refName) ?: return null
                 resolveParameter(resolved)
             }
 
-            is OpenAPIV3Parameter -> {
+            is OpenAPIV30Parameter -> {
                 parameterOrReference
             }
         }
 
-    internal fun resolveSchema(schemaOrReference: OpenAPIV3SchemaOrReference?): OpenAPIV3Schema? =
+    internal fun resolveSchema(schemaOrReference: OpenAPIV30SchemaOrReference?): OpenAPIV30Schema? =
         when (schemaOrReference) {
-            is OpenAPIV3Schema -> {
+            is OpenAPIV30Schema -> {
                 schemaOrReference
             }
 
-            is OpenAPIV3Reference -> {
+            is OpenAPIV30Reference -> {
                 val refName = getRefClassName(schemaOrReference)
-                components?.schemas?.get(refName) as? OpenAPIV3Schema
+                components?.schemas?.get(refName) as? OpenAPIV30Schema
             }
 
             null -> {
@@ -519,11 +520,11 @@ internal class ApiModel private constructor(
 
     private fun getClassName(
         name: String,
-        schemaOrReference: OpenAPIV3Schema,
-        type: OpenAPIV3Type?,
+        schemaOrReference: OpenAPIV30Schema,
+        type: OpenAPIV30Type?,
     ): TypeName =
         when (type) {
-            OpenAPIV3Type.STRING -> {
+            OpenAPIV30Type.STRING -> {
                 if (schemaOrReference.enum?.isNotEmpty() == true) {
                     ClassName("", name.sanitizeToIdentifier().snakeToCamelCase().capitalize())
                 } else {
@@ -531,25 +532,25 @@ internal class ApiModel private constructor(
                 }
             }
 
-            OpenAPIV3Type.NUMBER -> {
+            OpenAPIV30Type.NUMBER -> {
                 when (schemaOrReference.format) {
                     "float" -> FLOAT
                     else -> DOUBLE
                 }
             }
 
-            OpenAPIV3Type.INTEGER -> {
+            OpenAPIV30Type.INTEGER -> {
                 when (schemaOrReference.format) {
                     "int32" -> INT
                     else -> LONG
                 }
             }
 
-            OpenAPIV3Type.BOOLEAN -> {
+            OpenAPIV30Type.BOOLEAN -> {
                 BOOLEAN
             }
 
-            OpenAPIV3Type.ARRAY -> {
+            OpenAPIV30Type.ARRAY -> {
                 (if (schemaOrReference.uniqueItems == true) SET else LIST)
                     .parameterizedBy(
                         listOf(
@@ -561,7 +562,7 @@ internal class ApiModel private constructor(
                     )
             }
 
-            OpenAPIV3Type.OBJECT -> {
+            OpenAPIV30Type.OBJECT -> {
                 resolveObjectType(name, schemaOrReference)
             }
 
@@ -572,16 +573,16 @@ internal class ApiModel private constructor(
 
     private fun resolveObjectType(
         name: String,
-        schemaOrReference: OpenAPIV3Schema,
+        schemaOrReference: OpenAPIV30Schema,
     ): TypeName =
         schemaOrReference.additionalProperties?.let { additionalProp ->
             when (additionalProp) {
-                is OpenAPIV3Boolean -> {
+                is OpenAPIV30Boolean -> {
                     error("boolean not allowed for $schemaOrReference")
                 }
 
-                is OpenAPIV3Schema,
-                is OpenAPIV3Reference,
+                is OpenAPIV30Schema,
+                is OpenAPIV30Reference,
                 -> {
                     MAP.parameterizedBy(
                         listOf(
@@ -595,11 +596,11 @@ internal class ApiModel private constructor(
 
     private fun resolveNullableOrUnionType(
         name: String,
-        schemaOrReference: OpenAPIV3Schema,
+        schemaOrReference: OpenAPIV30Schema,
     ): TypeName {
         val oneOf = schemaOrReference.oneOf
         if (oneOf.isNullOrEmpty()) return JsonElement::class.asClassName()
-        val refs = oneOf.filterIsInstance<OpenAPIV3Reference>()
+        val refs = oneOf.filterIsInstance<OpenAPIV30Reference>()
         val hasNullSchema = oneOf.any { it.isNullSchema() }
         return when {
             refs.size == 1 && hasNullSchema -> getClassName(name, refs.first()).copy(nullable = true)
@@ -608,7 +609,7 @@ internal class ApiModel private constructor(
         }
     }
 
-    private fun resolveMultiRefUnionType(refs: List<OpenAPIV3Reference>): TypeName {
+    private fun resolveMultiRefUnionType(refs: List<OpenAPIV30Reference>): TypeName {
         val refNames = refs.map { getRefClassName(it) }
         val parentName =
             sealedParents.entries
@@ -623,10 +624,10 @@ internal class ApiModel private constructor(
 
     fun getClassName(
         name: String,
-        schemaOrReference: OpenAPIV3SchemaOrReference,
+        schemaOrReference: OpenAPIV30SchemaOrReference,
     ): TypeName =
         when (schemaOrReference) {
-            is OpenAPIV3Reference -> {
+            is OpenAPIV30Reference -> {
                 ClassName(
                     configuration.resolvedModelPackage,
                     getRefClassName(schemaOrReference).let {
@@ -639,17 +640,17 @@ internal class ApiModel private constructor(
                 )
             }
 
-            is OpenAPIV3Schema -> {
+            is OpenAPIV30Schema -> {
                 when (val type = schemaOrReference.type) {
-                    is OpenAPIV3SingleType -> {
+                    is OpenAPIV30SingleType -> {
                         getClassName(name, schemaOrReference, type.value)
                     }
 
-                    is OpenAPIV3TypeArray -> {
-                        if (type.values.size > 1 && (type.values.size > 2 || !type.values.contains(OpenAPIV3Type.NULL))) {
+                    is OpenAPIV30TypeArray -> {
+                        if (type.values.size > 1 && (type.values.size > 2 || !type.values.contains(OpenAPIV30Type.NULL))) {
                             logger.warn { "For now only first type is handled for $schemaOrReference" }
                         }
-                        getClassName(name, schemaOrReference, type.values.first { it != OpenAPIV3Type.NULL })
+                        getClassName(name, schemaOrReference, type.values.first { it != OpenAPIV30Type.NULL })
                     }
 
                     null -> {
@@ -661,8 +662,8 @@ internal class ApiModel private constructor(
 
     fun getClassProperty(
         name: String,
-        schemaOrReference: OpenAPIV3SchemaOrReference,
-        parentSchema: OpenAPIV3Schema,
+        schemaOrReference: OpenAPIV30SchemaOrReference,
+        parentSchema: OpenAPIV30Schema,
     ): ApiClassProperty =
         ApiClassProperty(
             name,
@@ -672,11 +673,11 @@ internal class ApiModel private constructor(
             schemaOrReference,
         )
 
-    private fun OpenAPIV3SchemaOrReference.isNullSchema(): Boolean =
-        this is OpenAPIV3Schema &&
+    private fun OpenAPIV30SchemaOrReference.isNullSchema(): Boolean =
+        this is OpenAPIV30Schema &&
             when (val t = type) {
-                is OpenAPIV3SingleType -> t.value == OpenAPIV3Type.NULL
-                is OpenAPIV3TypeArray -> t.values.all { it == OpenAPIV3Type.NULL }
+                is OpenAPIV30SingleType -> t.value == OpenAPIV30Type.NULL
+                is OpenAPIV30TypeArray -> t.values.all { it == OpenAPIV30Type.NULL }
                 null -> false
             }
 }

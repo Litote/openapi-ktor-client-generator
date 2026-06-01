@@ -2,14 +2,14 @@ package org.litote.openapi.ktor.client.generator.adapter.parser
 
 import com.squareup.kotlinpoet.STRING
 import community.flock.kotlinx.openapi.bindings.MediaType
-import community.flock.kotlinx.openapi.bindings.OpenAPIV3Operation
-import community.flock.kotlinx.openapi.bindings.OpenAPIV3Parameter
-import community.flock.kotlinx.openapi.bindings.OpenAPIV3ParameterLocation
-import community.flock.kotlinx.openapi.bindings.OpenAPIV3Reference
-import community.flock.kotlinx.openapi.bindings.OpenAPIV3RequestBody
-import community.flock.kotlinx.openapi.bindings.OpenAPIV3Response
-import community.flock.kotlinx.openapi.bindings.OpenAPIV3Schema
-import community.flock.kotlinx.openapi.bindings.OpenAPIV3Type
+import community.flock.kotlinx.openapi.bindings.OpenAPIV30Operation
+import community.flock.kotlinx.openapi.bindings.OpenAPIV30Parameter
+import community.flock.kotlinx.openapi.bindings.OpenAPIV30ParameterLocation
+import community.flock.kotlinx.openapi.bindings.OpenAPIV30Reference
+import community.flock.kotlinx.openapi.bindings.OpenAPIV30RequestBody
+import community.flock.kotlinx.openapi.bindings.OpenAPIV30Response
+import community.flock.kotlinx.openapi.bindings.OpenAPIV30Schema
+import community.flock.kotlinx.openapi.bindings.OpenAPIV30Type
 import io.github.oshai.kotlinlogging.KotlinLogging
 import kotlinx.serialization.json.JsonPrimitive
 import kotlinx.serialization.json.contentOrNull
@@ -95,14 +95,14 @@ public class OpenApiSpecificationParser(
         val yamlMimeTypes = setOf("application/yaml", "application/x-yaml")
         return apiModel.pathsByTags.values.flatten().any { apiOperation ->
             val requestYaml =
-                (apiOperation.operation.requestBody as? OpenAPIV3RequestBody)
+                (apiOperation.operation.requestBody as? OpenAPIV30RequestBody)
                     ?.content
                     ?.keys
                     ?.map { it.value }
                     ?.any { it.lowercase() in yamlMimeTypes } == true
             val responseYaml =
                 apiOperation.operation.responses?.values?.any { response ->
-                    (response as? OpenAPIV3Response)
+                    (response as? OpenAPIV30Response)
                         ?.content
                         ?.keys
                         ?.map { it.value }
@@ -265,7 +265,7 @@ public class OpenApiSpecificationParser(
 
         val parameters = buildParameters(operation, apiModel, configuration, modelPackage)
         val requestBodySpec =
-            (operation.requestBody as? OpenAPIV3RequestBody)?.let {
+            (operation.requestBody as? OpenAPIV30RequestBody)?.let {
                 buildRequestBodySpec(it, methodName, apiModel, configuration, modelPackage)
             }
         val responseEntries = buildResponseEntries(operation, methodName, apiModel, modelPackage)
@@ -286,7 +286,7 @@ public class OpenApiSpecificationParser(
     }
 
     private fun buildParameters(
-        operation: OpenAPIV3Operation,
+        operation: OpenAPIV30Operation,
         apiModel: ApiModel,
         configuration: ApiGeneratorConfiguration,
         modelPackage: String,
@@ -302,7 +302,7 @@ public class OpenApiSpecificationParser(
             }.toList()
 
     private fun buildOperationParameter(
-        parameter: OpenAPIV3Parameter,
+        parameter: OpenAPIV30Parameter,
         apiModel: ApiModel,
         configuration: ApiGeneratorConfiguration,
         modelPackage: String,
@@ -352,9 +352,9 @@ public class OpenApiSpecificationParser(
             type = domainTypeWithNullability,
             location =
                 when (parameter.`in`) {
-                    OpenAPIV3ParameterLocation.HEADER -> ParameterLocationSpec.HEADER
-                    OpenAPIV3ParameterLocation.PATH -> ParameterLocationSpec.PATH
-                    OpenAPIV3ParameterLocation.QUERY -> ParameterLocationSpec.QUERY
+                    OpenAPIV30ParameterLocation.HEADER -> ParameterLocationSpec.HEADER
+                    OpenAPIV30ParameterLocation.PATH -> ParameterLocationSpec.PATH
+                    OpenAPIV30ParameterLocation.QUERY -> ParameterLocationSpec.QUERY
                     else -> ParameterLocationSpec.QUERY
                 },
             required = !isOptional,
@@ -367,14 +367,14 @@ public class OpenApiSpecificationParser(
     }
 
     private fun computeAdditionalTypeName(
-        parameter: OpenAPIV3Parameter,
+        parameter: OpenAPIV30Parameter,
         parameterTypeName: com.squareup.kotlinpoet.TypeName,
         paramName: String,
     ): String? {
-        val schema = parameter.schema as? OpenAPIV3Schema ?: return null
-        val items = schema.items as? OpenAPIV3Schema
+        val schema = parameter.schema as? OpenAPIV30Schema ?: return null
+        val items = schema.items as? OpenAPIV30Schema
         return when {
-            schema.firstType == OpenAPIV3Type.ARRAY && items == null -> null
+            schema.firstType == OpenAPIV30Type.ARRAY && items == null -> null
             parameterTypeName.isPrimitive() -> null
             else -> paramName.snakeToCamelCase().capitalize()
         }
@@ -382,14 +382,14 @@ public class OpenApiSpecificationParser(
 
     private fun buildAdditionalModel(
         typeName: String,
-        parameter: OpenAPIV3Parameter,
+        parameter: OpenAPIV30Parameter,
         apiModel: ApiModel,
         configuration: ApiGeneratorConfiguration,
     ): ModelSpec? {
-        val schema = parameter.schema as? OpenAPIV3Schema ?: return null
-        val items = schema.items as? OpenAPIV3Schema
+        val schema = parameter.schema as? OpenAPIV30Schema ?: return null
+        val items = schema.items as? OpenAPIV30Schema
         val targetSchema =
-            if (schema.firstType == OpenAPIV3Type.ARRAY && items != null) items else schema
+            if (schema.firstType == OpenAPIV30Type.ARRAY && items != null) items else schema
         return buildModelSpecFromSchema(typeName, targetSchema, apiModel, configuration)
     }
 
@@ -414,7 +414,7 @@ public class OpenApiSpecificationParser(
     }
 
     private fun buildRequestBodySpec(
-        requestBody: OpenAPIV3RequestBody,
+        requestBody: OpenAPIV30RequestBody,
         operationName: String,
         apiModel: ApiModel,
         configuration: ApiGeneratorConfiguration,
@@ -429,7 +429,7 @@ public class OpenApiSpecificationParser(
 
         if (isMultipartFormData || isUrlEncodedForm) {
             val formSchema =
-                apiModel.resolveSchema(requestSchema) ?: requestSchema as? OpenAPIV3Schema ?: return null
+                apiModel.resolveSchema(requestSchema) ?: requestSchema as? OpenAPIV30Schema ?: return null
             val formFields = buildFormFields(formSchema, operationName, apiModel, modelPackage)
             val domainType = DomainTypeSpec.InlineTypeSpec("${operationName}Form")
             return RequestBodySpec(
@@ -444,7 +444,7 @@ public class OpenApiSpecificationParser(
         }
 
         val inlineObjectSchema =
-            (requestSchema as? OpenAPIV3Schema)?.takeIf {
+            (requestSchema as? OpenAPIV30Schema)?.takeIf {
                 it.oneOf.isNullOrEmpty() && !it.properties.isNullOrEmpty()
             }
 
@@ -480,7 +480,7 @@ public class OpenApiSpecificationParser(
     }
 
     private fun buildFormFields(
-        formSchema: OpenAPIV3Schema,
+        formSchema: OpenAPIV30Schema,
         operationName: String,
         apiModel: ApiModel,
         modelPackage: String,
@@ -489,9 +489,9 @@ public class OpenApiSpecificationParser(
         return formSchema.properties
             ?.map { (name, propertySchema) ->
                 val property = apiModel.getClassProperty(name, propertySchema, formSchema)
-                val resolvedSchema = apiModel.resolveSchema(propertySchema) ?: propertySchema as? OpenAPIV3Schema
+                val resolvedSchema = apiModel.resolveSchema(propertySchema) ?: propertySchema as? OpenAPIV30Schema
                 val isBinary =
-                    resolvedSchema?.firstType == OpenAPIV3Type.STRING && resolvedSchema.format == "binary"
+                    resolvedSchema?.firstType == OpenAPIV30Type.STRING && resolvedSchema.format == "binary"
                 val fieldType =
                     if (isBinary) {
                         DomainTypeSpec.InlineTypeSpec(fileClassName)
@@ -510,7 +510,7 @@ public class OpenApiSpecificationParser(
     }
 
     private fun buildResponseEntries(
-        operation: OpenAPIV3Operation,
+        operation: OpenAPIV30Operation,
         operationName: String,
         apiModel: ApiModel,
         modelPackage: String,
@@ -521,7 +521,7 @@ public class OpenApiSpecificationParser(
             responses.entries
                 .mapNotNull { (key, responseOrRef) ->
                     val code = key.value.toIntOrNull() ?: return@mapNotNull null
-                    val response = responseOrRef as? OpenAPIV3Response ?: return@mapNotNull null
+                    val response = responseOrRef as? OpenAPIV30Response ?: return@mapNotNull null
                     val schema =
                         response.content?.get(MediaType("application/json"))?.schema
                             ?: response.content?.get(MediaType("application/yaml"))?.schema
@@ -583,14 +583,14 @@ public class OpenApiSpecificationParser(
         name: String,
         apiModel: ApiModel,
     ): List<String> {
-        val schema = apiModel.components?.schemas?.get(name) as? OpenAPIV3Schema ?: return emptyList()
+        val schema = apiModel.components?.schemas?.get(name) as? OpenAPIV30Schema ?: return emptyList()
         val allOfParts = schema.allOf?.mapNotNull { apiModel.resolveSchema(it) } ?: emptyList()
         return ((schema.required ?: emptyList()) + allOfParts.flatMap { it.required ?: emptyList() }).distinct()
     }
 
     internal fun buildModelSpecFromSchema(
         name: String,
-        schema: OpenAPIV3Schema,
+        schema: OpenAPIV30Schema,
         apiModel: ApiModel,
         configuration: ApiGeneratorConfiguration,
     ): ModelSpec? {
@@ -601,7 +601,7 @@ public class OpenApiSpecificationParser(
             return ModelSpec.InterfaceSpec(name = name, properties = properties)
         }
 
-        val oneOfRefs = schema.oneOf?.filterIsInstance<OpenAPIV3Reference>()
+        val oneOfRefs = schema.oneOf?.filterIsInstance<OpenAPIV30Reference>()
         if (oneOfRefs != null && oneOfRefs.size >= 2) {
             return ModelSpec.SealedClassSpec(
                 name = name,
@@ -612,7 +612,7 @@ public class OpenApiSpecificationParser(
         val interfaceParentNames: List<String> =
             schema.allOf
                 ?.mapNotNull { part ->
-                    (part as? OpenAPIV3Reference)
+                    (part as? OpenAPIV30Reference)
                         ?.ref
                         ?.value
                         ?.substringAfterLast("/")
@@ -623,12 +623,12 @@ public class OpenApiSpecificationParser(
         val interfacePropertyNames: Set<String> =
             interfaceParentNames
                 .flatMap { refName ->
-                    (apiModel.components?.schemas?.get(refName) as? OpenAPIV3Schema)
+                    (apiModel.components?.schemas?.get(refName) as? OpenAPIV30Schema)
                         ?.properties
                         ?.keys ?: emptyList()
                 }.toSet()
 
-        val allOfParts: List<OpenAPIV3Schema> = schema.allOf?.mapNotNull { apiModel.resolveSchema(it) } ?: emptyList()
+        val allOfParts: List<OpenAPIV30Schema> = schema.allOf?.mapNotNull { apiModel.resolveSchema(it) } ?: emptyList()
         val mergedProperties =
             (schema.properties ?: emptyMap()) +
                 allOfParts.flatMap { it.properties?.entries ?: emptyList() }.associate { it.key to it.value }
@@ -690,7 +690,7 @@ public class OpenApiSpecificationParser(
     }
 
     private fun buildModelProperties(
-        schema: OpenAPIV3Schema,
+        schema: OpenAPIV30Schema,
         apiModel: ApiModel,
         configuration: ApiGeneratorConfiguration,
     ): List<ModelPropertySpec> {
@@ -699,7 +699,7 @@ public class OpenApiSpecificationParser(
             schema.properties
                 ?.asSequence()
                 ?.mapNotNull { (propName, schemaOrReference) ->
-                    if (schemaOrReference is OpenAPIV3Schema && schemaOrReference.deprecated == true) {
+                    if (schemaOrReference is OpenAPIV30Schema && schemaOrReference.deprecated == true) {
                         null
                     } else {
                         apiModel.getClassProperty(propName, schemaOrReference, schema)
@@ -711,12 +711,12 @@ public class OpenApiSpecificationParser(
             val nestedModels = mutableListOf<ModelSpec>()
             val propSchema = property.asSchema
             val propRef = property.asReference
-            val enum = propSchema?.enum ?: (propSchema?.items as? OpenAPIV3Schema)?.enum
+            val enum = propSchema?.enum ?: (propSchema?.items as? OpenAPIV30Schema)?.enum
             val isEnum =
                 !enum.isNullOrEmpty() || (propRef != null && apiModel.isEnum(property))
 
             val finalType: DomainTypeSpec
-            if (propSchema != null && propSchema.firstType == OpenAPIV3Type.OBJECT &&
+            if (propSchema != null && propSchema.firstType == OpenAPIV30Type.OBJECT &&
                 !propSchema.properties.isNullOrEmpty()
             ) {
                 val nestedName = property.camelCaseName.capitalize()
@@ -758,7 +758,7 @@ public class OpenApiSpecificationParser(
         apiModel: ApiModel,
     ): String? {
         val parentSchema =
-            apiModel.components?.schemas?.get(parentName) as? OpenAPIV3Schema ?: return null
+            apiModel.components?.schemas?.get(parentName) as? OpenAPIV30Schema ?: return null
         val discriminator = parentSchema.discriminator ?: return null
 
         discriminator.mapping
@@ -767,18 +767,18 @@ public class OpenApiSpecificationParser(
             ?.let { return it.key }
 
         val subSchema =
-            apiModel.components?.schemas?.get(subName) as? OpenAPIV3Schema ?: return null
+            apiModel.components?.schemas?.get(subName) as? OpenAPIV30Schema ?: return null
         val discriminatorProp =
-            subSchema.properties?.get(discriminator.propertyName) as? OpenAPIV3Schema
+            subSchema.properties?.get(discriminator.propertyName) as? OpenAPIV30Schema
         return discriminatorProp?.enum?.firstOrNull()?.contentOrNull
     }
 
-    private fun isSseOperation(operation: OpenAPIV3Operation): Boolean {
+    private fun isSseOperation(operation: OpenAPIV30Operation): Boolean {
         val responses = operation.responses ?: return false
         return responses.entries.any { (key, value) ->
             val code = key.value.toIntOrNull() ?: return@any false
             if (code !in 200..299) return@any false
-            val response = value as? OpenAPIV3Response ?: return@any false
+            val response = value as? OpenAPIV30Response ?: return@any false
             response.content?.containsKey(MediaType("text/event-stream")) == true
         }
     }
