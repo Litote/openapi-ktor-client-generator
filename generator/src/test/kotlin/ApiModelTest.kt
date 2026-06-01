@@ -1,6 +1,7 @@
 package org.litote.openapi.ktor.client.generator
 
 import org.litote.openapi.ktor.client.generator.adapter.parser.OpenApiSpecificationParser
+import org.litote.openapi.ktor.client.generator.domain.DefaultValueSpec
 import org.litote.openapi.ktor.client.generator.domain.DomainTypeSpec
 import org.litote.openapi.ktor.client.generator.domain.GenerationSpec
 import org.litote.openapi.ktor.client.generator.domain.ModelSpec
@@ -62,5 +63,31 @@ class ApiModelTest {
         assertNotNull(requestBody)
 
         assertEquals(DomainTypeSpec.ModelReferenceSpec("TestRequest"), requestBody.type)
+    }
+
+    @Test
+    fun `GIVEN component parameters with numeric defaults WHEN parsing THEN defaults are resolved to correct types`() {
+        val spec = loadSpec("component-params.json")
+        val params = spec.clientConfiguration.componentParameters.associateBy { it.originalName }
+
+        assertEquals(DefaultValueSpec.DoubleDefaultSpec(3.14), params["doubleParam"]?.defaultValue)
+        assertEquals(DefaultValueSpec.FloatDefaultSpec(1.5f), params["floatParam"]?.defaultValue)
+        assertEquals(DefaultValueSpec.IntDefaultSpec(10), params["intParam"]?.defaultValue)
+        assertEquals(DefaultValueSpec.LongDefaultSpec(100L), params["longParam"]?.defaultValue)
+        assertEquals(DefaultValueSpec.EnumDefaultSpec(typeName = "STATUSPARAM", enumValue = "ACTIVE"), params["statusParam"]?.defaultValue)
+    }
+
+    @Test
+    fun `GIVEN component parameters WHEN referenced in operation THEN constName and constDefaultName are set`() {
+        val spec = loadSpec("component-params.json")
+        val operation =
+            spec.clients
+                .first()
+                .operations
+                .first()
+        val intParam = operation.parameters.first { it.originalName == "intParam" }
+
+        assertEquals("PARAMETER_INTPARAM", intParam.constName)
+        assertEquals("PARAMETER_INTPARAM_DEFAULT_VALUE", intParam.constDefaultName)
     }
 }
