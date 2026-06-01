@@ -1,0 +1,79 @@
+{
+  "openapi": "3.0.3",
+  "info": {
+    "title": "Component parameters test API",
+    "version": "1.0.0"
+  },
+  "paths": {
+    "/items": {
+      "get": {
+        "operationId": "listItems",
+        "tags": ["Items"],
+        "parameters": [
+          { "$ref": "#/components/parameters/DoubleParam" },
+          { "$ref": "#/components/parameters/FloatParam" },
+          { "$ref": "#/components/parameters/IntParam" },
+          { "$ref": "#/components/parameters/LongParam" },
+          { "$ref": "#/components/parameters/EnumParam" }
+        ],
+        "responses": {
+          "200": {
+            "description": "OK",
+            "content": {
+              "application/json": {
+                "schema": { "$ref": "#/components/schemas/Item" }
+              }
+            }
+          }
+        }
+      }
+    }
+  },
+  "components": {
+    "parameters": {
+      "DoubleParam": {
+        "in": "query",
+        "name": "doubleParam",
+        "required": false,
+        "schema": { "type": "number", "default": 3.14 }
+      },
+      "FloatParam": {
+        "in": "query",
+        "name": "floatParam",
+        "required": false,
+        "schema": { "type": "number", "format": "float", "default": 1.5 }
+      },
+      "IntParam": {
+        "in": "query",
+        "name": "intParam",
+        "required": false,
+        "schema": { "type": "integer", "format": "int32", "default": 10 }
+      },
+      "LongParam": {
+        "in": "query",
+        "name": "longParam",
+        "required": false,
+        "schema": { "type": "integer", "default": 100 }
+      },
+      "EnumParam": {
+        "in": "query",
+        "name": "statusParam",
+        "required": false,
+        "schema": {
+          "type": "string",
+          "enum": ["active", "inactive"],
+          "default": "active"
+        }
+      }
+    },
+    "schemas": {
+      "Item": {
+        "type": "object",
+        "properties": {
+          "id": { "type": "string" }
+        },
+        "required": ["id"]
+      }
+    }
+  }
+}
