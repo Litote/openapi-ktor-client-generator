@@ -112,13 +112,21 @@ See [CONTRIBUTING.md — Gradle Dependency Graph](CONTRIBUTING.md#gradle-depende
 | `generator:config` | `*.generator` | `ApiGeneratorConfiguration`, `ApiGeneratorModule`, `GenerationResult`, `SplitGranularity`, `SharedModelGranularity` |
 | `generator:application` | `*.application` | `GenerateCodeService`, `GenerationSpecPartitioner` |
 | `generator:adapter-writer` | `*.adapter.writer` | `KotlinPoetFileWriter` |
-| `generator:adapter-parser` | `*.adapter.parser` | `OpenApiSpecificationParser(configuration)`, `ApiModel`, `TypeNameConverter`, `ParserNames`, `ParserTypes`, `ApiOperation`, `ApiClassProperty` |
+| `generator:adapter-parser` | `*.adapter.parser` | `OpenApiSpecificationParser(configuration)`, `ApiModel`, `SchemaAdapter` (version-agnostic extensions), `TypeNameConverter`, `ParserNames`, `ParserTypes`, `ApiOperation`, `ApiClassProperty` |
 | `generator:adapter-renderer` | `*.adapter.renderer` | `ApiClientGenerator`, `ApiModelGenerator`, `ApiClientConfigurationGenerator`, `YamlContentConverterGenerator`, `OperationBuilder`, `ResponseBuilder`, `KotlinPoets`, `KtorPoets` |
 | `generator` (root) | `*.generator` | `ApiGenerator.kt` — composition root, the ONLY file importing all layers |
 
 ### Architectural Invariants and Port Design
 
 See [CONTRIBUTING.md — Key Architectural Invariants](CONTRIBUTING.md#key-architectural-invariants-gradle-enforced) and [ApiSpecificationParser Port Design](CONTRIBUTING.md#apispecificationparser-port-design).
+
+### OpenAPI Version Support
+
+The parser supports **OpenAPI 3.0, 3.1, and 3.2** via `kotlin-openapi-bindings 0.3.0`.
+
+- `ApiModel.parseOpenApiFile()` uses `OpenAPIV3(Json { ignoreUnknownKeys = true }).decodeFromString(content)` which dispatches to `OpenAPIV30Model`, `OpenAPIV31Model`, or `OpenAPIV32Model` based on the `openapi` field.
+- `SchemaAdapter.kt` provides version-agnostic extension properties on `Schema`, `Reference`, `OpenAPIV3Model`, etc. to abstract the V30/V31/V32 type differences. All parser code works exclusively through these extensions and the library's common interfaces (`Schema`, `Operation`, `Parameter`, `RequestBody`, `Response`, `Reference`).
+- **Key V3.1/V3.2 semantic difference handled**: nullable fields can be expressed via `type: ["string", "null"]` (as opposed to V3.0's `nullable: true`). The `typeIncludesNull` extension handles both idioms so properties are correctly marked nullable.
 
 ---
 
@@ -340,7 +348,7 @@ Used by both `generator/` and `gradle-plugin/`.
 
 ## Module System (SPI)
 
-See [README.md — Modules](README.md#modules) for the full module documentation and hook reference.
+See [ADVANCED_USAGE.md — Modules](ADVANCED_USAGE.md#modules) for the full module documentation and hook reference.
 
 Built-in module IDs: `"UnknownEnumValueModule"`, `"LoggingSl4jModule"`, `"LoggingKotlinModule"`, `"BasicAuthModule"`.
 Hooks are declared on `ApiConfigurationGeneratorConfig`, `ApiClientGeneratorConfig`, `ApiModelGeneratorConfig`.

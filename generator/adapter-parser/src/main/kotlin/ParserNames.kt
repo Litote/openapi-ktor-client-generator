@@ -3,11 +3,8 @@ package org.litote.openapi.ktor.client.generator.adapter.parser
 import com.squareup.kotlinpoet.ClassName
 import com.squareup.kotlinpoet.CodeBlock
 import com.squareup.kotlinpoet.TypeName
-import community.flock.kotlinx.openapi.bindings.OpenAPIV30Schema
-import community.flock.kotlinx.openapi.bindings.OpenAPIV30SchemaOrReference
-import community.flock.kotlinx.openapi.bindings.OpenAPIV30SingleType
-import community.flock.kotlinx.openapi.bindings.OpenAPIV30Type
-import community.flock.kotlinx.openapi.bindings.OpenAPIV30TypeArray
+import community.flock.kotlinx.openapi.bindings.Schema
+import community.flock.kotlinx.openapi.bindings.SchemaOrReference
 import kotlinx.serialization.json.JsonPrimitive
 import kotlinx.serialization.json.booleanOrNull
 import kotlinx.serialization.json.contentOrNull
@@ -30,10 +27,10 @@ internal fun parameterVariableName(name: String): String {
 }
 
 internal fun parameterDefaultLiteral(
-    schemaOrReference: OpenAPIV30SchemaOrReference?,
+    schemaOrReference: SchemaOrReference?,
     typeName: TypeName,
 ): CodeBlock? {
-    val schema = schemaOrReference as? OpenAPIV30Schema ?: return null
+    val schema = schemaOrReference as? Schema ?: return null
     val defaultValue = schema.default as? JsonPrimitive ?: return null
     val isEnum = !schema.enum.isNullOrEmpty()
     return when {
@@ -47,12 +44,3 @@ internal fun parameterDefaultLiteral(
         else -> null
     }
 }
-
-internal val OpenAPIV30Schema.firstType: OpenAPIV30Type?
-    get() =
-        type?.run {
-            when (this) {
-                is OpenAPIV30SingleType -> value
-                is OpenAPIV30TypeArray -> values.first()
-            }
-        }

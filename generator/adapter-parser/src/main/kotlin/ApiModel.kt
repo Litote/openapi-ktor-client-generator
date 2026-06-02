@@ -13,22 +13,16 @@ import com.squareup.kotlinpoet.SET
 import com.squareup.kotlinpoet.STRING
 import com.squareup.kotlinpoet.TypeName
 import com.squareup.kotlinpoet.asClassName
-import community.flock.kotlinx.openapi.bindings.OpenAPIV30Boolean
-import community.flock.kotlinx.openapi.bindings.OpenAPIV30Components
-import community.flock.kotlinx.openapi.bindings.OpenAPIV30Model
-import community.flock.kotlinx.openapi.bindings.OpenAPIV30Operation
-import community.flock.kotlinx.openapi.bindings.OpenAPIV30Parameter
-import community.flock.kotlinx.openapi.bindings.OpenAPIV30ParameterOrReference
-import community.flock.kotlinx.openapi.bindings.OpenAPIV30Reference
-import community.flock.kotlinx.openapi.bindings.OpenAPIV30RequestBody
-import community.flock.kotlinx.openapi.bindings.OpenAPIV30Response
-import community.flock.kotlinx.openapi.bindings.OpenAPIV30Schema
-import community.flock.kotlinx.openapi.bindings.OpenAPIV30SchemaOrReference
-import community.flock.kotlinx.openapi.bindings.OpenAPIV30SecurityScheme
-import community.flock.kotlinx.openapi.bindings.OpenAPIV30SecuritySchemeType
-import community.flock.kotlinx.openapi.bindings.OpenAPIV30SingleType
-import community.flock.kotlinx.openapi.bindings.OpenAPIV30Type
-import community.flock.kotlinx.openapi.bindings.OpenAPIV30TypeArray
+import community.flock.kotlinx.openapi.bindings.BooleanValue
+import community.flock.kotlinx.openapi.bindings.OpenAPIV3
+import community.flock.kotlinx.openapi.bindings.OpenAPIV3Model
+import community.flock.kotlinx.openapi.bindings.Operation
+import community.flock.kotlinx.openapi.bindings.Parameter
+import community.flock.kotlinx.openapi.bindings.ParameterOrReference
+import community.flock.kotlinx.openapi.bindings.Reference
+import community.flock.kotlinx.openapi.bindings.Response
+import community.flock.kotlinx.openapi.bindings.Schema
+import community.flock.kotlinx.openapi.bindings.SchemaOrReference
 import io.github.oshai.kotlinlogging.KotlinLogging
 import kotlinx.serialization.json.Json
 import kotlinx.serialization.json.JsonArray
@@ -37,7 +31,6 @@ import kotlinx.serialization.json.JsonNull
 import kotlinx.serialization.json.JsonPrimitive
 import org.litote.openapi.ktor.client.generator.ApiGeneratorConfiguration
 import org.litote.openapi.ktor.client.generator.domain.OperationMetaSpec
-import org.litote.openapi.ktor.client.generator.domain.SecuritySchemeLocationSpec
 import org.litote.openapi.ktor.client.generator.domain.SecuritySchemeSpec
 import org.litote.openapi.ktor.client.generator.shared.capitalize
 import org.litote.openapi.ktor.client.generator.shared.ensureEndsWith
@@ -49,17 +42,14 @@ import java.nio.file.Path
 import org.yaml.snakeyaml.Yaml as SnakeYaml
 
 internal class ApiModel private constructor(
-    val model: OpenAPIV30Model,
+    val model: OpenAPIV3Model,
     val configuration: ApiGeneratorConfiguration,
 ) {
     internal companion object {
         private val logger = KotlinLogging.logger {}
+        private val openApiParser = OpenAPIV3(Json { ignoreUnknownKeys = true })
 
         internal fun parseOpenApiFile(configuration: ApiGeneratorConfiguration): ApiModel {
-            val jsonParser =
-                Json {
-                    ignoreUnknownKeys = true
-                }
             val openApiFile = configuration.openApiFile
             logger.debug { "Parsing $openApiFile" }
             val rawContent = Files.readString(Path.of(openApiFile))
@@ -75,16 +65,13 @@ internal class ApiModel private constructor(
                     rawContent
                 }
 
-            return ApiModel(jsonParser.decodeFromString<OpenAPIV30Model>(jsonContent), configuration)
+            return ApiModel(openApiParser.decodeFromString(jsonContent), configuration)
         }
 
         private fun yamlToJson(yamlContent: String): String {
             val snakeYaml = SnakeYaml()
             val parsed = snakeYaml.load<Any>(yamlContent)
-            return Json.encodeToString(
-                JsonElement.serializer(),
-                anyToJsonElement(parsed),
-            )
+            return Json.encodeToString(JsonElement.serializer(), anyToJsonElement(parsed))
         }
 
         private fun anyToJsonElement(obj: Any?): JsonElement =
@@ -123,7 +110,7 @@ internal class ApiModel private constructor(
 
     val outputDirectory: String get() = configuration.outputDirectory
     val serverUrl: String =
-        model.servers
+        model.apiServers
             ?.firstOrNull()
             ?.url
             ?.ensureEndsWith("/") ?: "http://localhost:8080/"
@@ -168,23 +155,11 @@ internal class ApiModel private constructor(
                 configuration.operationFilter(meta)
             }.groupBy(keySelector = { it.first }, valueTransform = { it.second })
 
-    val components: OpenAPIV30Components? get() = model.components
-
     val schemaParentMap: Map<String, Set<String>> =
-        components
-            ?.schemas
-            ?.mapValues { (_, v) -> v.allReferences().map { getRefClassName(it) }.toSet() }
+        model.componentSchemas
+            ?.mapValues { (_, v) -> v.allReferences().map { it.refClassName }.toSet() }
             ?: emptyMap()
 
-    /**
-     * Maps sealed class parent names (derived from operation request bodies with inline `oneOf`)
-     * to their ordered list of sub-type ref names.
-     *
-     * These are "virtual" sealed classes that do not exist in `components/schemas` but are
-     * synthesised from operations whose request body contains an inline `oneOf` with 2+ `$ref` entries.
-     *
-     * Naming convention: `{operationId.capitalize()}Request` (e.g. `createStatus` → `CreateStatusRequest`).
-     */
     internal val requestBodySealedParents: Map<String, List<String>> =
         model.paths
             .orEmpty()
@@ -202,28 +177,20 @@ internal class ApiModel private constructor(
                 ).mapNotNull { op ->
                     val opId = op.operationId ?: return@mapNotNull null
                     val schema =
-                        (op.requestBody as? OpenAPIV30RequestBody)
+                        op.requestBody
+                            ?.asRequestBody
                             ?.content
                             ?.values
                             ?.firstOrNull()
-                            ?.schema as? OpenAPIV30Schema
+                            ?.schema as? Schema
                             ?: return@mapNotNull null
-                    val refs = schema.oneOf?.filterIsInstance<OpenAPIV30Reference>() ?: return@mapNotNull null
+                    val refs = schema.oneOfSchemas?.filterIsInstance<Reference>() ?: return@mapNotNull null
                     if (refs.size < 2) return@mapNotNull null
                     val sealedName = "${opId.snakeToCamelCase().capitalize()}Request"
-                    sealedName to refs.map { getRefClassName(it) }
+                    sealedName to refs.map { it.refClassName }
                 }
             }.toMap()
 
-    /**
-     * Maps sealed class parent names (derived from operation response bodies with inline `oneOf`)
-     * to their ordered list of sub-type ref names.
-     *
-     * These are "virtual" sealed classes synthesised from operations whose response body contains
-     * an inline `oneOf` with 2+ `$ref` entries.
-     *
-     * Naming convention: `{operationId.capitalize()}Response` (e.g. `createStatus` → `CreateStatusResponse`).
-     */
     internal val responseSealedParents: Map<String, List<String>> =
         model.paths
             .orEmpty()
@@ -242,54 +209,46 @@ internal class ApiModel private constructor(
                     val opId = op.operationId ?: return@mapNotNull null
                     val refs =
                         op.responses?.values?.firstNotNullOfOrNull { responseOrRef ->
-                            val response = responseOrRef as? OpenAPIV30Response ?: return@firstNotNullOfOrNull null
-                            response.content?.values?.firstNotNullOfOrNull { mediaType ->
-                                val schema = mediaType.schema as? OpenAPIV30Schema ?: return@firstNotNullOfOrNull null
+                            if (responseOrRef !is Response) return@firstNotNullOfOrNull null
+                            responseOrRef.responseContent?.values?.firstNotNullOfOrNull { mediaType ->
+                                val schema = mediaType.schema as? Schema ?: return@firstNotNullOfOrNull null
                                 val oneOfRefs =
-                                    schema.oneOf?.filterIsInstance<OpenAPIV30Reference>()
+                                    schema.oneOfSchemas?.filterIsInstance<Reference>()
                                         ?: return@firstNotNullOfOrNull null
                                 if (oneOfRefs.size >= 2) oneOfRefs else null
                             }
                         } ?: return@mapNotNull null
                     val sealedName = "${opId.snakeToCamelCase().capitalize()}Response"
-                    sealedName to refs.map { getRefClassName(it) }
+                    sealedName to refs.map { it.refClassName }
                 }
             }.toMap()
 
-    /**
-     * Maps sealed class parent names to their ordered list of sub-type names.
-     * A schema qualifies as a sealed parent when its `oneOf` contains at least 2 `$ref` entries.
-     * Also includes virtual sealed parents synthesised from inline request body and response body
-     * `oneOf` schemas.
-     */
     val sealedParents: Map<String, List<String>> =
         (
-            components
-                ?.schemas
+            model.componentSchemas
                 ?.entries
                 ?.mapNotNull { (name, schemaOrRef) ->
-                    val schema = schemaOrRef as? OpenAPIV30Schema ?: return@mapNotNull null
-                    val refs = schema.oneOf?.filterIsInstance<OpenAPIV30Reference>() ?: return@mapNotNull null
+                    val schema = schemaOrRef as? Schema ?: return@mapNotNull null
+                    val refs = schema.oneOfSchemas?.filterIsInstance<Reference>() ?: return@mapNotNull null
                     if (refs.size < 2) return@mapNotNull null
-                    name to refs.map { getRefClassName(it) }
+                    name to refs.map { it.refClassName }
                 }?.toMap()
                 ?: emptyMap()
         ) + requestBodySealedParents + responseSealedParents
 
-    /** Reverse of [sealedParents]: maps each sub-type name to its sealed parent name. */
     val sealedSubTypes: Map<String, String> =
         sealedParents
             .flatMap { (parent, children) -> children.map { it to parent } }
             .toMap()
 
-    val schemas: Map<String, OpenAPIV30Schema> =
+    val schemas: Map<String, Schema> =
         (
             pathsByTags
                 .values
                 .flatten()
                 .distinct()
                 .flatMap { o ->
-                    o.operation.allReferences().map { getRefClassName(it) }
+                    o.operation.allReferences().map { it.refClassName }
                 }.toSet()
                 .run {
                     val set = mutableSetOf<String>()
@@ -298,54 +257,48 @@ internal class ApiModel private constructor(
                 }
         ).let { set ->
             (
-                components
-                    ?.schemas
-                    ?.filterValues { it is OpenAPIV30Schema }
-                    ?.mapValues { it.value as OpenAPIV30Schema }
+                model.componentSchemas
+                    ?.mapNotNull { (k, v) -> (v as? Schema)?.let { k to it } }
+                    ?.toMap()
                     ?: emptyMap()
             ).filterKeys { set.contains(it) }
         }
 
-    /**
-     * Schema names that are referenced exclusively via `allOf` entries in other schemas —
-     * never used directly as a property type, oneOf subtype, request body, or response.
-     * These are candidates to be generated as Kotlin `interface` instead of `data class`.
-     */
     internal val allOfOnlySchemas: Set<String> =
         run {
             val allOfRefs = mutableSetOf<String>()
             val directRefs = mutableSetOf<String>()
 
-            components?.schemas?.values?.forEach { schemaOrRef ->
-                val schema = schemaOrRef as? OpenAPIV30Schema ?: return@forEach
+            model.componentSchemas?.values?.forEach { schemaOrRef ->
+                val schema = schemaOrRef as? Schema ?: return@forEach
                 schema.allOf?.forEach { part ->
                     when (part) {
-                        is OpenAPIV30Reference -> {
-                            allOfRefs.add(getRefClassName(part))
+                        is Reference -> {
+                            allOfRefs.add(part.refClassName)
                         }
 
-                        is OpenAPIV30Schema -> {
+                        is Schema -> {
                             part.properties
                                 ?.values
-                                ?.filterIsInstance<OpenAPIV30Reference>()
-                                ?.forEach { directRefs.add(getRefClassName(it)) }
-                            (part.items as? OpenAPIV30Reference)?.let { directRefs.add(getRefClassName(it)) }
+                                ?.filterIsInstance<Reference>()
+                                ?.forEach { directRefs.add(it.refClassName) }
+                            (part.items as? Reference)?.let { directRefs.add(it.refClassName) }
                         }
                     }
                 }
-                schema.oneOf
-                    ?.filterIsInstance<OpenAPIV30Reference>()
-                    ?.forEach { directRefs.add(getRefClassName(it)) }
-                schema.anyOf
-                    ?.filterIsInstance<OpenAPIV30Reference>()
-                    ?.forEach { directRefs.add(getRefClassName(it)) }
+                schema.oneOfSchemas
+                    ?.filterIsInstance<Reference>()
+                    ?.forEach { directRefs.add(it.refClassName) }
+                schema.anyOfSchemas
+                    ?.filterIsInstance<Reference>()
+                    ?.forEach { directRefs.add(it.refClassName) }
                 schema.properties
                     ?.values
-                    ?.filterIsInstance<OpenAPIV30Reference>()
-                    ?.forEach { directRefs.add(getRefClassName(it)) }
-                (schema.items as? OpenAPIV30Reference)?.let { directRefs.add(getRefClassName(it)) }
-                (schema.not as? OpenAPIV30Reference)?.let { directRefs.add(getRefClassName(it)) }
-                (schema.additionalProperties as? OpenAPIV30Reference)?.let { directRefs.add(getRefClassName(it)) }
+                    ?.filterIsInstance<Reference>()
+                    ?.forEach { directRefs.add(it.refClassName) }
+                (schema.items as? Reference)?.let { directRefs.add(it.refClassName) }
+                (schema.notSchema as? Reference)?.let { directRefs.add(it.refClassName) }
+                (schema.additionalProperties as? Reference)?.let { directRefs.add(it.refClassName) }
             }
 
             model.paths.orEmpty().values.forEach { pathItem ->
@@ -358,54 +311,28 @@ internal class ApiModel private constructor(
                     pathItem.options,
                     pathItem.head,
                     pathItem.trace,
-                ).forEach { op -> op.allReferences().forEach { directRefs.add(getRefClassName(it)) } }
+                ).forEach { op -> op.allReferences().forEach { directRefs.add(it.refClassName) } }
             }
 
             allOfRefs - directRefs
         }
 
-    val componentParameters: List<OpenAPIV30Parameter> =
-        components
-            ?.parameters
+    val componentParameters: List<Parameter> =
+        model.componentParameters
             ?.values
             ?.mapNotNull { resolveParameter(it) }
             .orEmpty()
 
-    /**
-     * Extracts API Key security schemes from the OpenAPI specification.
-     * These are used to generate authentication configuration in the client.
-     */
     val apiKeySecuritySchemes: List<SecuritySchemeSpec> =
-        components
-            ?.securitySchemes
+        model.componentSecuritySchemes
             ?.entries
             ?.mapNotNull { (schemeName, scheme) ->
-                val securityScheme = scheme as? OpenAPIV30SecurityScheme ?: return@mapNotNull null
-                if (securityScheme.type != OpenAPIV30SecuritySchemeType.API_KEY) return@mapNotNull null
-                val keyName = securityScheme.name ?: return@mapNotNull null
-                val inValue = securityScheme.`in` ?: return@mapNotNull null
-                val location =
-                    when (inValue) {
-                        "header" -> SecuritySchemeLocationSpec.HEADER
-                        "query" -> SecuritySchemeLocationSpec.QUERY
-                        else -> return@mapNotNull null
-                    }
-                SecuritySchemeSpec(
-                    name = schemeName,
-                    keyName = keyName,
-                    location = location,
-                    paramName =
-                        schemeName
-                            .replace("_", " ")
-                            .split(" ")
-                            .mapIndexed { i, w -> if (i == 0) w.lowercase() else w.replaceFirstChar { it.uppercase() } }
-                            .joinToString(""),
-                )
+                scheme.apiKeySchemeData?.toSpec(schemeName)
             }.orEmpty()
 
     internal fun isEnum(property: ApiClassProperty): Boolean =
         (!property.asSchema?.enum.isNullOrEmpty()) ||
-            property.asReference?.let { !schemas[getRefClassName(it)]?.enum.isNullOrEmpty() } == true
+            property.asReference?.let { !schemas[it]?.enum.isNullOrEmpty() } == true
 
     private fun addChildren(
         set: MutableSet<String>,
@@ -421,96 +348,92 @@ internal class ApiModel private constructor(
         set.addAll(existingSet)
     }
 
-    private fun OpenAPIV30Operation.allReferences(): Set<OpenAPIV30Reference> =
-        setOfNotNull(requestBody as? OpenAPIV30Reference) +
+    private fun Operation.allReferences(): Set<Reference> =
+        setOfNotNull(requestBody as? Reference) +
             (
-                (requestBody as? OpenAPIV30RequestBody)?.content?.values?.flatMap { it.schema.allReferences() }
+                requestBody
+                    ?.asRequestBody
+                    ?.content
+                    ?.values
+                    ?.flatMap { it.schema.allReferences() }
                     ?: emptyList()
             ) +
-            (parameters?.mapNotNull { it as? OpenAPIV30Reference } ?: emptyList()) +
+            (parameters?.mapNotNull { it as? Reference } ?: emptyList()) +
             (
                 parameters?.flatMap {
-                    (it as? OpenAPIV30Parameter)?.content?.values?.flatMap { v -> v.schema.allReferences() }
+                    (it as? Parameter)?.parameterContent?.values?.flatMap { v -> v.schema.allReferences() }
                         ?: emptyList()
                 }
                     ?: emptyList()
             ) +
-            (responses?.values?.mapNotNull { it as? OpenAPIV30Reference } ?: emptyList()) +
+            (responses?.values?.mapNotNull { it as? Reference } ?: emptyList()) +
             (
                 responses
                     ?.values
                     ?.flatMap {
-                        (it as? OpenAPIV30Response)?.content?.values?.flatMap { v -> v.schema.allReferences() }
+                        it.responseContent?.values?.flatMap { v -> v.schema.allReferences() }
                             ?: emptyList()
                     } ?: emptyList()
             )
 
-    private fun OpenAPIV30SchemaOrReference?.allReferences(): Set<OpenAPIV30Reference> =
+    private fun SchemaOrReference?.allReferences(): Set<Reference> =
         when (this) {
-            is OpenAPIV30Schema -> allReferences()
-            is OpenAPIV30Reference -> setOf(this)
+            is Schema -> schemaAllReferences()
+            is Reference -> setOf(this)
             null -> emptySet()
         }
 
-    private fun OpenAPIV30Schema.allReferences(): Set<OpenAPIV30Reference> =
+    private fun Schema.schemaAllReferences(): Set<Reference> =
         setOfNotNull(
-            not as? OpenAPIV30Reference,
-            items as? OpenAPIV30Reference,
-            additionalProperties as? OpenAPIV30Reference,
+            notSchema as? Reference,
+            items as? Reference,
+            additionalProperties as? Reference,
         ) +
-            (oneOf?.mapNotNull { it as? OpenAPIV30Reference } ?: emptyList()) +
-            (anyOf?.mapNotNull { it as? OpenAPIV30Reference } ?: emptyList()) +
-            (allOf?.mapNotNull { it as? OpenAPIV30Reference } ?: emptyList()) +
-            (properties?.values?.mapNotNull { it as? OpenAPIV30Reference } ?: emptyList()) +
+            (oneOfSchemas?.mapNotNull { it as? Reference } ?: emptyList()) +
+            (anyOfSchemas?.mapNotNull { it as? Reference } ?: emptyList()) +
+            (allOf?.mapNotNull { it as? Reference } ?: emptyList()) +
+            (properties?.values?.mapNotNull { it as? Reference } ?: emptyList()) +
             (
-                properties?.values?.flatMap { (it as? OpenAPIV30Schema)?.allReferences() ?: emptyList() }
+                properties?.values?.flatMap { (it as? Schema)?.schemaAllReferences() ?: emptyList() }
                     ?: emptyList()
             ) +
-            ((items as? OpenAPIV30Schema)?.allReferences() ?: emptyList())
+            ((items as? Schema)?.schemaAllReferences() ?: emptyList())
 
-    private fun getRefClassName(refValue: String): String = refValue.substringAfterLast("/")
-
-    private fun getRefClassName(ref: OpenAPIV30Reference): String = getRefClassName(ref.ref.value)
-
-    private fun resolveParameter(parameterOrReference: OpenAPIV30ParameterOrReference): OpenAPIV30Parameter? =
+    private fun resolveParameter(parameterOrReference: ParameterOrReference): Parameter? =
         when (parameterOrReference) {
-            is OpenAPIV30Parameter -> {
+            is Parameter -> {
                 parameterOrReference
             }
 
-            is OpenAPIV30Reference -> {
-                val refName = getRefClassName(parameterOrReference)
-                val resolved = components?.parameters?.get(refName)
-                if (resolved == null || resolved === parameterOrReference) {
-                    null
-                } else {
-                    resolveParameter(resolved)
-                }
+            is Reference -> {
+                val refName = parameterOrReference.refClassName
+                val resolved = model.componentParameters?.get(refName)
+                if (resolved == null || resolved === parameterOrReference) null else resolveParameter(resolved)
             }
         }
 
-    internal fun getComponentParameter(parameterOrReference: OpenAPIV30ParameterOrReference): OpenAPIV30Parameter? =
+    internal fun getComponentParameter(parameterOrReference: ParameterOrReference): Parameter? =
         when (parameterOrReference) {
-            is OpenAPIV30Reference -> {
-                val refName = getRefClassName(parameterOrReference)
-                val resolved = components?.parameters?.get(refName) ?: return null
+            is Reference -> {
+                val refName = parameterOrReference.refClassName
+                val resolved = model.componentParameters?.get(refName) ?: return null
                 resolveParameter(resolved)
             }
 
-            is OpenAPIV30Parameter -> {
+            is Parameter -> {
                 parameterOrReference
             }
         }
 
-    internal fun resolveSchema(schemaOrReference: OpenAPIV30SchemaOrReference?): OpenAPIV30Schema? =
+    internal fun resolveSchema(schemaOrReference: SchemaOrReference?): Schema? =
         when (schemaOrReference) {
-            is OpenAPIV30Schema -> {
+            is Schema -> {
                 schemaOrReference
             }
 
-            is OpenAPIV30Reference -> {
-                val refName = getRefClassName(schemaOrReference)
-                components?.schemas?.get(refName) as? OpenAPIV30Schema
+            is Reference -> {
+                val refName = schemaOrReference.refClassName
+                model.componentSchemas?.get(refName) as? Schema
             }
 
             null -> {
@@ -520,74 +443,74 @@ internal class ApiModel private constructor(
 
     private fun getClassName(
         name: String,
-        schemaOrReference: OpenAPIV30Schema,
-        type: OpenAPIV30Type?,
+        schema: Schema,
+        type: ApiSchemaType?,
     ): TypeName =
         when (type) {
-            OpenAPIV30Type.STRING -> {
-                if (schemaOrReference.enum?.isNotEmpty() == true) {
+            ApiSchemaType.STRING -> {
+                if (schema.enum?.isNotEmpty() == true) {
                     ClassName("", name.sanitizeToIdentifier().snakeToCamelCase().capitalize())
                 } else {
                     STRING
                 }
             }
 
-            OpenAPIV30Type.NUMBER -> {
-                when (schemaOrReference.format) {
+            ApiSchemaType.NUMBER -> {
+                when (schema.format) {
                     "float" -> FLOAT
                     else -> DOUBLE
                 }
             }
 
-            OpenAPIV30Type.INTEGER -> {
-                when (schemaOrReference.format) {
+            ApiSchemaType.INTEGER -> {
+                when (schema.format) {
                     "int32" -> INT
                     else -> LONG
                 }
             }
 
-            OpenAPIV30Type.BOOLEAN -> {
+            ApiSchemaType.BOOLEAN -> {
                 BOOLEAN
             }
 
-            OpenAPIV30Type.ARRAY -> {
-                (if (schemaOrReference.uniqueItems == true) SET else LIST)
+            ApiSchemaType.ARRAY -> {
+                (if (schema.uniqueItems == true) SET else LIST)
                     .parameterizedBy(
                         listOf(
                             getClassName(
                                 name,
-                                schemaOrReference.items ?: error("null items for $schemaOrReference"),
+                                schema.items ?: error("null items for $schema"),
                             ),
                         ),
                     )
             }
 
-            OpenAPIV30Type.OBJECT -> {
-                resolveObjectType(name, schemaOrReference)
+            ApiSchemaType.OBJECT -> {
+                resolveObjectType(name, schema)
             }
 
-            else -> {
-                resolveNullableOrUnionType(name, schemaOrReference)
+            ApiSchemaType.NULL, null -> {
+                resolveNullableOrUnionType(name, schema)
             }
         }
 
     private fun resolveObjectType(
         name: String,
-        schemaOrReference: OpenAPIV30Schema,
+        schema: Schema,
     ): TypeName =
-        schemaOrReference.additionalProperties?.let { additionalProp ->
+        schema.additionalProperties?.let { additionalProp ->
             when (additionalProp) {
-                is OpenAPIV30Boolean -> {
-                    error("boolean not allowed for $schemaOrReference")
+                is BooleanValue -> {
+                    error("boolean not allowed for $schema")
                 }
 
-                is OpenAPIV30Schema,
-                is OpenAPIV30Reference,
+                is Schema,
+                is Reference,
                 -> {
                     MAP.parameterizedBy(
                         listOf(
                             String::class.asClassName(),
-                            getClassName(name, additionalProp),
+                            getClassName(name, additionalProp as SchemaOrReference),
                         ),
                     )
                 }
@@ -596,21 +519,32 @@ internal class ApiModel private constructor(
 
     private fun resolveNullableOrUnionType(
         name: String,
-        schemaOrReference: OpenAPIV30Schema,
+        schema: Schema,
     ): TypeName {
-        val oneOf = schemaOrReference.oneOf
+        val oneOf = schema.oneOfSchemas
         if (oneOf.isNullOrEmpty()) return JsonElement::class.asClassName()
-        val refs = oneOf.filterIsInstance<OpenAPIV30Reference>()
+        val refs = oneOf.filterIsInstance<Reference>()
         val hasNullSchema = oneOf.any { it.isNullSchema() }
         return when {
-            refs.size == 1 && hasNullSchema -> getClassName(name, refs.first()).copy(nullable = true)
-            refs.size == 1 -> getClassName(name, refs.first())
-            else -> resolveMultiRefUnionType(refs)
+            refs.size == 1 && hasNullSchema -> {
+                getClassName(
+                    name,
+                    refs.first() as SchemaOrReference,
+                ).copy(nullable = true)
+            }
+
+            refs.size == 1 -> {
+                getClassName(name, refs.first() as SchemaOrReference)
+            }
+
+            else -> {
+                resolveMultiRefUnionType(refs)
+            }
         }
     }
 
-    private fun resolveMultiRefUnionType(refs: List<OpenAPIV30Reference>): TypeName {
-        val refNames = refs.map { getRefClassName(it) }
+    private fun resolveMultiRefUnionType(refs: List<Reference>): TypeName {
+        val refNames = refs.map { it.refClassName }
         val parentName =
             sealedParents.entries
                 .firstOrNull { it.value.toSet() == refNames.toSet() }
@@ -624,13 +558,13 @@ internal class ApiModel private constructor(
 
     fun getClassName(
         name: String,
-        schemaOrReference: OpenAPIV30SchemaOrReference,
+        schemaOrReference: SchemaOrReference,
     ): TypeName =
         when (schemaOrReference) {
-            is OpenAPIV30Reference -> {
+            is Reference -> {
                 ClassName(
                     configuration.resolvedModelPackage,
-                    getRefClassName(schemaOrReference).let {
+                    schemaOrReference.refClassName.let {
                         if (it == "Companion") {
                             "${configuration.resolvedModelPackage}.$it"
                         } else {
@@ -640,44 +574,30 @@ internal class ApiModel private constructor(
                 )
             }
 
-            is OpenAPIV30Schema -> {
-                when (val type = schemaOrReference.type) {
-                    is OpenAPIV30SingleType -> {
-                        getClassName(name, schemaOrReference, type.value)
-                    }
-
-                    is OpenAPIV30TypeArray -> {
-                        if (type.values.size > 1 && (type.values.size > 2 || !type.values.contains(OpenAPIV30Type.NULL))) {
-                            logger.warn { "For now only first type is handled for $schemaOrReference" }
-                        }
-                        getClassName(name, schemaOrReference, type.values.first { it != OpenAPIV30Type.NULL })
-                    }
-
-                    null -> {
-                        getClassName(name, schemaOrReference, null)
-                    }
+            is Schema -> {
+                val type = schemaOrReference.firstApiType
+                if (type != null && schemaOrReference.typeIncludesNull) {
+                    getClassName(name, schemaOrReference, type).copy(nullable = true)
+                } else {
+                    getClassName(name, schemaOrReference, type)
                 }
             }
         }
 
     fun getClassProperty(
         name: String,
-        schemaOrReference: OpenAPIV30SchemaOrReference,
-        parentSchema: OpenAPIV30Schema,
+        schemaOrReference: SchemaOrReference,
+        parentSchema: Schema,
     ): ApiClassProperty =
         ApiClassProperty(
             name,
             getClassName(name, schemaOrReference).let { c ->
-                if (parentSchema.required?.contains(name) == true) c else c.copy(nullable = true)
+                val inRequired = parentSchema.required?.contains(name) == true
+                val typeIsNullable = (schemaOrReference as? Schema)?.typeIncludesNull == true
+                if (!inRequired || typeIsNullable) c.copy(nullable = true) else c
             },
             schemaOrReference,
         )
 
-    private fun OpenAPIV30SchemaOrReference.isNullSchema(): Boolean =
-        this is OpenAPIV30Schema &&
-            when (val t = type) {
-                is OpenAPIV30SingleType -> t.value == OpenAPIV30Type.NULL
-                is OpenAPIV30TypeArray -> t.values.all { it == OpenAPIV30Type.NULL }
-                null -> false
-            }
+    private fun SchemaOrReference.isNullSchema(): Boolean = this is Schema && typeIncludesNull && firstApiType == ApiSchemaType.NULL
 }

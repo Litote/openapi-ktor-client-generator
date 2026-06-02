@@ -11,7 +11,7 @@
 [![Security Rating](https://sonarcloud.io/api/project_badges/measure?project=Litote_openapi-ktor-client-generator&metric=security_rating)](https://sonarcloud.io/summary/new_code?id=Litote_openapi-ktor-client-generator)
 [![Apache2 license](https://img.shields.io/badge/license-Apache%20License%202.0-blue.svg?style=flat)](https://www.apache.org/licenses/LICENSE-2.0)
 
-A Gradle plugin that transforms OpenAPI v3 specifications into production-ready Kotlin Ktor client code.
+A Gradle plugin that transforms OpenAPI v3.x specifications into production-ready Kotlin Ktor client code.
 
 The generated client code is **fully KMP-compatible**.
 
