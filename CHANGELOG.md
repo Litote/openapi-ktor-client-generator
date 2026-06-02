@@ -1,5 +1,12 @@
 # Changelog
 
+## [0.7.0](https://github.com/Litote/openapi-ktor-client-generator/compare/v0.6.1...v0.7.0) (2026-06-02)
+
+
+### Features
+
+* support OpenAPI 3.1 and 3.2 ([a1d5aa5](https://github.com/Litote/openapi-ktor-client-generator/commit/a1d5aa54ae90d52f07257db7d414a0d56865ad5e))
+
 ## [0.6.1](https://github.com/Litote/openapi-ktor-client-generator/compare/v0.6.0...v0.6.1) (2026-04-06)
 
 
