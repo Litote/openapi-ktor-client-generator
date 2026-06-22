@@ -7,13 +7,6 @@ on:
       - 'gradle/libs.versions.toml'
       - 'gradle/wrapper/gradle-wrapper.properties'
 
-# Serialize with the yarn-lock autofix: a Kotlin bump triggers both workflows on the
-# same PR and both commit back to the same branch. Sharing the group (with
-# cancel-in-progress: false) queues them so their commit-backs do not race on the ref.
-concurrency:
-  group: dependabot-autocommit-${{ github.head_ref }}
-  cancel-in-progress: false
-
 jobs:
   update-verification-metadata:
     name: Regenerate verification metadata

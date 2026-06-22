@@ -6,14 +6,6 @@ on:
     paths:
       - 'gradle/libs.versions.toml'
 
-# Serialize with the verification-metadata autofix: a Kotlin bump changes both the
-# verification metadata and the yarn locks, so both workflows run on the same PR and
-# commit back to the same branch. Sharing the group (with cancel-in-progress: false)
-# queues them so their commit-backs do not race on the branch ref.
-concurrency:
-  group: dependabot-autocommit-${{ github.head_ref }}
-  cancel-in-progress: false
-
 jobs:
   update-yarn-lock:
     name: Regenerate Kotlin yarn lock

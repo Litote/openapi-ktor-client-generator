@@ -9,5 +9,5 @@ rules:
   bot-conditions:
     ignore:
       # Restricting to dependabot[bot] is the intended guard here.
-      - dependabot-gradle-verification.yml:20
-      - dependabot-yarn-lock.yml:20
+      - dependabot-gradle-verification.yml:13
+      - dependabot-yarn-lock.yml:12
