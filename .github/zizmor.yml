@@ -1,11 +1,13 @@
 rules:
   dangerous-triggers:
     ignore:
-      # pull_request_target is intentional: the workflow checks out the base
-      # branch and only cherry-picks safe version files from the PR branch.
+      # pull_request_target is intentional: both workflows check out the base
+      # branch and only cherry-pick safe version files from the PR branch.
       - dependabot-gradle-verification.yml:3
+      - dependabot-yarn-lock.yml:3
 
   bot-conditions:
     ignore:
       # Restricting to dependabot[bot] is the intended guard here.
-      - dependabot-gradle-verification.yml:13
+      - dependabot-gradle-verification.yml:20
+      - dependabot-yarn-lock.yml:20
