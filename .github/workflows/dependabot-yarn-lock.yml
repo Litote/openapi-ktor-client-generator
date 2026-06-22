@@ -1,0 +1,131 @@
+name: Update Kotlin yarn lock
+
+on:
+  pull_request_target:
+    branches: [ main ]
+    paths:
+      - 'gradle/libs.versions.toml'
+
+# Serialize with the verification-metadata autofix: a Kotlin bump changes both the
+# verification metadata and the yarn locks, so both workflows run on the same PR and
+# commit back to the same branch. Sharing the group (with cancel-in-progress: false)
+# queues them so their commit-backs do not race on the branch ref.
+concurrency:
+  group: dependabot-autocommit-${{ github.head_ref }}
+  cancel-in-progress: false
+
+jobs:
+  update-yarn-lock:
+    name: Regenerate Kotlin yarn lock
+    if: github.actor == 'dependabot[bot]'
+    runs-on: ubuntu-latest
+    permissions:
+      contents: write
+
+    steps:
+      - uses: actions/create-github-app-token@bcd2ba49218906704ab6c1aa796996da409d3eb1 # v3.2.0
+        id: app-token
+        with:
+          app-id: ${{ secrets.RELEASE_PLEASE_APP_ID }}
+          private-key: ${{ secrets.RELEASE_PLEASE_APP_PRIVATE_KEY }}
+          repositories: ${{ github.event.repository.name }}
+          permission-contents: write
+
+      # Checkout the base branch (trusted code) to avoid executing untrusted build scripts.
+      # Only the version catalog is then fetched from the PR branch — it has safe,
+      # predictable content from dependabot. The Kotlin version it carries drives the
+      # regenerated yarn locks.
+      - uses: actions/checkout@df4cb1c069e1874edd31b4311f1884172cec0e10 # v6.0.3
+        with:
+          persist-credentials: false
+          ref: ${{ github.base_ref }}
+          token: ${{ steps.app-token.outputs.token }}
+
+      - name: Apply dependabot version changes
+        env:
+          HEAD_REF: ${{ github.head_ref }}
+        run: |
+          git fetch origin "$HEAD_REF"
+          git checkout FETCH_HEAD -- gradle/libs.versions.toml
+
+      - name: Set up JDK 25
+        uses: actions/setup-java@be666c2fcd27ec809703dec50e508c2fdc7f6654 # v5.2.0
+        with:
+          java-version: '25'
+          distribution: 'temurin'
+
+      - name: Set up Gradle
+        uses: gradle/actions/setup-gradle@5e2ebd065dc2488b7a6ad670704656cbbe1e8f60 # v6.1.1
+
+      # Publishing builds the plugin with the bumped Kotlin version (PluginVersion.kt is
+      # regenerated from libs.versions.toml), so the generated subproject and its yarn
+      # locks are produced for the new Kotlin version.
+      # Dependency verification is disabled: this job only pulls libs.versions.toml from
+      # the PR (not the regenerated verification-metadata.xml, which is owned by the
+      # gradle-verification workflow), so the bumped artifacts are not yet listed. The
+      # yarn lock content does not depend on artifact checksums, so skipping verification
+      # here is safe and decouples this job from the verification-metadata workflow.
+      - name: Publish plugin to Maven Local
+        run: ./gradlew publishToMavenLocal --dependency-verification off
+
+      - name: Generate split-by-client subproject
+        working-directory: e2e-split
+        run: >
+          ./gradlew initApiClientSubproject
+          -PopenApiFile=src/main/openapi/sample.json
+          -PsplitByClient=true
+          -PbasePackage=org.litote.sample
+          -PsplitGranularity=BY_TAG_AND_OPERATION
+          -PsharedModelGranularity=SHARED_PER_GROUP
+          -PsubprojectRootDirectory=client
+
+      - name: Regenerate Kotlin yarn lock
+        working-directory: e2e-split
+        run: ./gradlew kotlinUpgradeYarnLock
+
+      - name: Commit updated yarn lock
+        env:
+          GH_TOKEN: ${{ steps.app-token.outputs.token }}
+          OWNER: ${{ github.repository_owner }}
+          REPO: ${{ github.event.repository.name }}
+          BRANCH: ${{ github.head_ref }}
+        run: |
+          LOCK_FILES=(
+            "e2e-split/kotlin-js-store/yarn.lock"
+            "e2e-split/kotlin-js-store/wasm/yarn.lock"
+          )
+          if git diff --quiet -- "${LOCK_FILES[@]}"; then
+            echo "No changes to commit."
+            exit 0
+          fi
+          # Use the API to get the PR branch HEAD — git rev-parse HEAD would return
+          # the base branch SHA since we checked out github.base_ref, not the PR branch.
+          PARENT_SHA=$(gh api "repos/$OWNER/$REPO/git/refs/heads/$BRANCH" --jq '.object.sha')
+          CURRENT_TREE=$(gh api "repos/$OWNER/$REPO/git/commits/$PARENT_SHA" --jq '.tree.sha')
+
+          # Build one blob per lock file and assemble the tree entries.
+          TREE_ENTRIES=""
+          for f in "${LOCK_FILES[@]}"; do
+            base64 -w 0 "$f" > /tmp/content.b64
+            python3 -c "import json; c=open('/tmp/content.b64').read(); print(json.dumps({'content':c,'encoding':'base64'}))" > /tmp/blob-payload.json
+            BLOB_SHA=$(gh api "repos/$OWNER/$REPO/git/blobs" \
+              --input /tmp/blob-payload.json \
+              --jq '.sha')
+            ENTRY=$(jq -nc --arg path "$f" --arg sha "$BLOB_SHA" \
+              '{path: $path, mode: "100644", type: "blob", sha: $sha}')
+            TREE_ENTRIES="${TREE_ENTRIES}${TREE_ENTRIES:+,}${ENTRY}"
+          done
+
+          TREE_SHA=$(jq -nc --arg base "$CURRENT_TREE" --argjson tree "[$TREE_ENTRIES]" \
+            '{base_tree: $base, tree: $tree}' \
+            | gh api "repos/$OWNER/$REPO/git/trees" --input - --jq '.sha')
+
+          COMMIT_SHA=$(gh api "repos/$OWNER/$REPO/git/commits" \
+            --field message="chore: update Kotlin yarn lock" \
+            --field tree="$TREE_SHA" \
+            --field "parents[]=$PARENT_SHA" \
+            --jq '.sha')
+
+          gh api "repos/$OWNER/$REPO/git/refs/heads/$BRANCH" \
+            --method PATCH \
+            --field sha="$COMMIT_SHA"
