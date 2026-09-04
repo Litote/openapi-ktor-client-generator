@@ -1,5 +1,13 @@
 # Changelog
 
+## [0.7.1](https://github.com/Litote/openapi-ktor-client-generator/compare/v0.7.0...v0.7.1) (2026-09-04)
+
+
+### Bug Fixes
+
+* **ci:** add exact version for actions ([eda7f43](https://github.com/Litote/openapi-ktor-client-generator/commit/eda7f430db80e0d99697ffed551896923d1774a8))
+* **ci:** regenerate Kotlin Wasm yarn lock in dependabot automation ([#61](https://github.com/Litote/openapi-ktor-client-generator/issues/61)) ([405d930](https://github.com/Litote/openapi-ktor-client-generator/commit/405d9300f0d1e22b5917a0089097733945be8863))
+
 ## [0.7.0](https://github.com/Litote/openapi-ktor-client-generator/compare/v0.6.1...v0.7.0) (2026-06-02)
 
 
