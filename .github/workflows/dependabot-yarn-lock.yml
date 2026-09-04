@@ -73,7 +73,7 @@ jobs:
 
       - name: Regenerate Kotlin yarn lock
         working-directory: e2e-split
-        run: ./gradlew kotlinUpgradeYarnLock
+        run: ./gradlew kotlinUpgradeYarnLock kotlinWasmUpgradeYarnLock
 
       - name: Commit updated yarn lock
         env:
