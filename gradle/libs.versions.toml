@@ -11,7 +11,7 @@ logging = "8.0.4"
 maven-publish = "0.37.0"
 mockk = "1.14.11"
 openapi-bindings = "0.3.1"
-snakeyaml = "2.6"
+snakeyaml = "2.7"
 sonarqube = "7.3.1.8318"
 version-catalog-update = "1.1.0"
 
