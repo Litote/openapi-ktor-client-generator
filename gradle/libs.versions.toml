@@ -13,7 +13,7 @@ mockk = "1.14.11"
 openapi-bindings = "0.3.1"
 snakeyaml = "2.7"
 sonarqube = "7.4.0.8496"
-version-catalog-update = "1.1.0"
+version-catalog-update = "1.1.1"
 
 [plugins]
 gradle-publish = { id = "com.gradle.plugin-publish", version.ref = "gradle-publish" }
