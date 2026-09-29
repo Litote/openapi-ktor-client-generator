@@ -3,6 +3,7 @@ package org.example.client
 import io.ktor.client.call.body
 import io.ktor.client.request.`get`
 import kotlin.Int
+import kotlin.coroutines.cancellation.CancellationException
 import kotlinx.serialization.Serializable
 import org.example.client.ClientConfiguration.Companion.defaultClientConfiguration
 import org.example.model.TestStatusResponse
@@ -21,6 +22,9 @@ public class Client(
         200 -> GetTestStatusResponseSuccess(response.body<TestStatusResponse>())
         else -> GetTestStatusResponseUnknownFailure(response.status.value)
       }
+    }
+    catch(e: CancellationException) {
+      throw e
     }
     catch(e: Exception) {
       configuration.exceptionLogger(e)
