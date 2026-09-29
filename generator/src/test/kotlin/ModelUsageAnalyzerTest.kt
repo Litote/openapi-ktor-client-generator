@@ -261,4 +261,55 @@ class ModelUsageAnalyzerTest {
         assertEquals(setOf("Client1"), usage["MiddleModel"])
         assertEquals(setOf("Client1"), usage["LeafModel"])
     }
+
+    @Test
+    fun `GIVEN inline parameter model referencing a named model WHEN analyzeModelUsage THEN named model is used by the client`() {
+        val inlineFilter =
+            ModelSpec.DataClassSpec(
+                name = "Filter",
+                properties =
+                    listOf(
+                        ModelPropertySpec(
+                            originalName = "range",
+                            camelCaseName = "range",
+                            type = DomainTypeSpec.ModelReferenceSpec("Range"),
+                            needsSerialName = false,
+                        ),
+                    ),
+            )
+        val client =
+            ClientSpec(
+                name = "Client1",
+                operations =
+                    listOf(
+                        OperationSpec(
+                            name = "search",
+                            path = "/search",
+                            method = "GET",
+                            parameters =
+                                listOf(
+                                    OperationParameterSpec(
+                                        originalName = "filter",
+                                        camelCaseName = "filter",
+                                        type = DomainTypeSpec.InlineTypeSpec("Filter"),
+                                        location = ParameterLocationSpec.QUERY,
+                                        required = false,
+                                        additionalModel = inlineFilter,
+                                    ),
+                                ),
+                            responses = listOf(ResponseEntrySpec(statusCodes = listOf(200), bodyType = null, isSuccess = true)),
+                        ),
+                    ),
+            )
+        val spec =
+            GenerationSpec(
+                clientConfiguration = minimalConfig(),
+                clients = listOf(client),
+                models = listOf(ModelSpec.DataClassSpec(name = "Range", properties = emptyList())),
+            )
+
+        val usage = analyzeModelUsage(spec)
+
+        assertEquals(setOf("Client1"), usage["Range"])
+    }
 }

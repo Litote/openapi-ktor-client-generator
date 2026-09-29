@@ -26,6 +26,7 @@ import org.litote.openapi.ktor.client.generator.domain.OperationMetaSpec
 import org.litote.openapi.ktor.client.generator.domain.OperationParameterSpec
 import org.litote.openapi.ktor.client.generator.domain.OperationSpec
 import org.litote.openapi.ktor.client.generator.domain.ParameterLocationSpec
+import org.litote.openapi.ktor.client.generator.domain.ParameterStyleSpec
 import org.litote.openapi.ktor.client.generator.domain.RequestBodySpec
 import org.litote.openapi.ktor.client.generator.domain.ResponseEntrySpec
 import org.litote.openapi.ktor.client.generator.domain.ResponseHeaderSpec
@@ -341,26 +342,98 @@ public class OpenApiSpecificationParser(
             }
 
         val domainType =
-            if (additionalModel is ModelSpec.EnumSpec && additionalTypeName != null) {
+            if (additionalModel != null && additionalTypeName != null) {
                 adjustTypeForAdditionalModel(rawDomainType, additionalModel, additionalTypeName)
             } else {
                 rawDomainType
             }
         val domainTypeWithNullability = if (isOptional) domainType.asNullable() else domainType
         val defaultValue = defaultLiteral?.let { buildDefaultValueFromCodeBlock(it, parameterTypeName) }
+        val location = parameter.parameterLocation ?: ParameterLocationSpec.QUERY // extension on Parameter in SchemaAdapter
+        val resolvedSchema = apiModel.resolveSchema(parameter.schema)
+        val isObject = resolvedSchema?.isObjectSchema() == true
+        val isArray = resolvedSchema?.firstApiType == ApiSchemaType.ARRAY
+        val style = resolveParameterStyle(parameter, location, isObject || isArray)
+        val explode = resolveParameterExplode(parameter, location, style, isObject || isArray)
 
         return OperationParameterSpec(
             originalName = parameter.name,
             camelCaseName = paramName,
             type = domainTypeWithNullability,
-            location = parameter.parameterLocation ?: ParameterLocationSpec.QUERY, // extension on Parameter in SchemaAdapter
+            location = location,
             required = !isOptional,
             constName = constName,
             constDefaultName = constDefaultValue,
             defaultValue = defaultValue,
             additionalModel = additionalModel,
-            additionalModelBaseName = additionalTypeName,
+            additionalModelBaseName = additionalTypeName.takeIf { additionalModel != null },
+            style = style,
+            explode = explode,
+            isObject = isObject,
+            isEnumReference = isEnumReference(parameter.schema, apiModel),
         )
+    }
+
+    /** Whether [schema] (or its array items) is a `$ref` to a named enum schema. */
+    private fun isEnumReference(
+        schema: SchemaOrReference?,
+        apiModel: ApiModel,
+    ): Boolean {
+        val valueSchema = (schema as? Schema)?.takeIf { it.firstApiType == ApiSchemaType.ARRAY }?.items ?: schema
+        return valueSchema is Reference && !apiModel.resolveSchema(valueSchema)?.enum.isNullOrEmpty()
+    }
+
+    /** Free-form objects (no declared properties) are not flattened: their value may be any JSON element. */
+    private fun Schema.isObjectSchema(): Boolean =
+        enum.isNullOrEmpty() &&
+            !properties.isNullOrEmpty() &&
+            (firstApiType == ApiSchemaType.OBJECT || firstApiType == null)
+
+    /**
+     * Resolves the declared OpenAPI `style`, falling back to the default of [location]
+     * (with a warning) when the style is not supported for this location or value.
+     */
+    private fun resolveParameterStyle(
+        parameter: community.flock.kotlinx.openapi.bindings.Parameter,
+        location: ParameterLocationSpec,
+        isStructured: Boolean,
+    ): ParameterStyleSpec {
+        val default = ParameterStyleSpec.defaultFor(location)
+        val declared = parameter.parameterStyle ?: return default
+        val isQuery = location == ParameterLocationSpec.QUERY
+        val resolved =
+            when (declared) {
+                ApiParameterStyle.FORM -> ParameterStyleSpec.FORM.takeIf { isQuery || location == ParameterLocationSpec.COOKIE }
+                ApiParameterStyle.SIMPLE -> ParameterStyleSpec.SIMPLE.takeIf { !isQuery && location != ParameterLocationSpec.COOKIE }
+                ApiParameterStyle.SPACE_DELIMITED -> ParameterStyleSpec.SPACE_DELIMITED.takeIf { isQuery && isStructured }
+                ApiParameterStyle.PIPE_DELIMITED -> ParameterStyleSpec.PIPE_DELIMITED.takeIf { isQuery && isStructured }
+                ApiParameterStyle.DEEP_OBJECT -> ParameterStyleSpec.DEEP_OBJECT.takeIf { isQuery && isStructured }
+                ApiParameterStyle.MATRIX, ApiParameterStyle.LABEL -> null
+            }
+        if (resolved == null) {
+            logger.warn { "Unsupported style $declared for $location parameter '${parameter.name}' - using $default" }
+        }
+        return resolved ?: default
+    }
+
+    /**
+     * Resolves the declared OpenAPI `explode` flag (default: `true` for the form style only).
+     * Cookie arrays and objects are always rendered unexploded, as exploded cookies are undefined.
+     */
+    private fun resolveParameterExplode(
+        parameter: community.flock.kotlinx.openapi.bindings.Parameter,
+        location: ParameterLocationSpec,
+        style: ParameterStyleSpec,
+        isStructured: Boolean,
+    ): Boolean {
+        val declared = parameter.parameterExplode
+        if (location == ParameterLocationSpec.COOKIE && isStructured) {
+            if (declared == true) {
+                logger.warn { "Exploded cookie parameter '${parameter.name}' is not supported - using explode=false" }
+            }
+            return false
+        }
+        return declared ?: (style == ParameterStyleSpec.FORM)
     }
 
     private fun computeAdditionalTypeName(
@@ -384,10 +457,12 @@ public class OpenApiSpecificationParser(
         configuration: ApiGeneratorConfiguration,
     ): ModelSpec? {
         val schema = parameter.schema as? Schema ?: return null
-        val items = schema.items as? Schema
         val targetSchema =
-            if (schema.firstApiType == ApiSchemaType.ARRAY && items != null) items else schema
+            if (schema.firstApiType == ApiSchemaType.ARRAY) schema.items as? Schema ?: return null else schema
+        // Only enums and objects with properties need a class: primitives, references and free-form
+        // objects would otherwise produce an empty, unused `object`.
         return buildModelSpecFromSchema(typeName, targetSchema, apiModel, configuration)
+            ?.takeIf { it is ModelSpec.EnumSpec || it is ModelSpec.DataClassSpec }
     }
 
     private fun adjustTypeForAdditionalModel(
@@ -400,7 +475,7 @@ public class OpenApiSpecificationParser(
         return when (domainType) {
             is DomainTypeSpec.ListTypeSpec -> domainType.copy(element = inlineType)
             is DomainTypeSpec.SetTypeSpec -> domainType.copy(element = inlineType)
-            is DomainTypeSpec.InlineTypeSpec -> inlineType
+            is DomainTypeSpec.InlineTypeSpec, is DomainTypeSpec.JsonTypeSpec -> inlineType
             else -> domainType
         }
     }

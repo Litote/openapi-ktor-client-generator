@@ -21,6 +21,19 @@
             "schema": { "type": "string" }
           },
           {
+            "name": "session",
+            "in": "cookie",
+            "required": false,
+            "schema": { "type": "string" }
+          },
+          {
+            "name": "tags",
+            "in": "query",
+            "style": "pipeDelimited",
+            "explode": false,
+            "schema": { "type": "array", "items": { "type": "string" } }
+          },
+          {
             "name": "X-Api-Version",
             "in": "header",
             "required": false,

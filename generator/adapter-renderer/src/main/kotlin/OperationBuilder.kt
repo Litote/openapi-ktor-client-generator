@@ -17,6 +17,7 @@ import org.litote.openapi.ktor.client.generator.domain.DomainTypeSpec
 import org.litote.openapi.ktor.client.generator.domain.FormFieldSpec
 import org.litote.openapi.ktor.client.generator.domain.OperationParameterSpec
 import org.litote.openapi.ktor.client.generator.domain.OperationSpec
+import org.litote.openapi.ktor.client.generator.domain.ParameterStyleSpec
 import org.litote.openapi.ktor.client.generator.domain.RequestBodySpec
 import org.litote.openapi.ktor.client.generator.port.StringFormatType
 import org.litote.openapi.ktor.client.generator.shared.uncapitalize
@@ -37,6 +38,7 @@ internal class OperationBuilder(
         val pathParameters: List<OperationParameterSpec>,
         val queryParameters: List<OperationParameterSpec>,
         val headerParameters: List<OperationParameterSpec>,
+        val cookieParameters: List<OperationParameterSpec>,
         val trimmedPath: String,
     )
 
@@ -104,9 +106,11 @@ internal class OperationBuilder(
         val pathParameters = parameters.filter { it.isPath }
         val queryParameters = parameters.filter { it.isQuery }
         val headerParameters = parameters.filter { it.isHeader }
+        val cookieParameters = parameters.filter { it.isCookie }
 
         if (pathParameters.isNotEmpty()) context.hasPathComponents = true
         if (headerParameters.isNotEmpty()) context.hasHeaders = true
+        parameters.forEach { param -> param.serializationHelper()?.let { context.parameterHelpers.add(it) } }
 
         val trimmedPath = buildPathExpression(operationInfo.path, pathParameters)
         val operationParams =
@@ -114,6 +118,7 @@ internal class OperationBuilder(
                 pathParameters = pathParameters,
                 queryParameters = queryParameters,
                 headerParameters = headerParameters,
+                cookieParameters = cookieParameters,
                 trimmedPath = trimmedPath,
             )
 
@@ -158,6 +163,7 @@ internal class OperationBuilder(
         addParameters(funBuilder, pathParameters)
         addParameters(funBuilder, queryParameters)
         addParameters(funBuilder, headerParameters)
+        addParameters(funBuilder, cookieParameters)
 
         val requestContentTypes = requestBody?.contentTypes
         val hasJsonContentType =
@@ -304,19 +310,18 @@ internal class OperationBuilder(
         addParameters(funBuilder, params.pathParameters)
         addParameters(funBuilder, params.queryParameters)
         addParameters(funBuilder, params.headerParameters)
+        addParameters(funBuilder, params.cookieParameters)
         funBuilder.addParameter(ParameterSpec.builder("block", blockType).build())
 
-        funBuilder.addCode(buildSseFunctionBody(params.trimmedPath, params.headerParameters, params.queryParameters))
+        funBuilder.addCode(buildSseFunctionBody(params))
 
         clientBuilder.addFunction(funBuilder.build())
     }
 
-    private fun buildSseFunctionBody(
-        trimmedPath: String,
-        headerParameters: List<OperationParameterSpec>,
-        queryParameters: List<OperationParameterSpec>,
-    ): CodeBlock {
-        val hasRequestConfig = headerParameters.isNotEmpty() || queryParameters.isNotEmpty()
+    private fun buildSseFunctionBody(params: OperationParameters): CodeBlock {
+        val trimmedPath = params.trimmedPath
+        val hasRequestConfig =
+            params.headerParameters.isNotEmpty() || params.queryParameters.isNotEmpty() || params.cookieParameters.isNotEmpty()
         val builder = CodeBlock.builder()
         builder.beginControlFlow("try")
 
@@ -326,8 +331,9 @@ internal class OperationBuilder(
                 sseMember,
                 trimmedPath,
             )
-            addRegularHeaderParams(builder, headerParameters)
-            addQueryParams(builder, queryParameters)
+            addRegularHeaderParams(builder, params.headerParameters)
+            addCookieParams(builder, params.cookieParameters)
+            addQueryParams(builder, params.queryParameters)
             builder.endControlFlow()
             builder.beginControlFlow(")")
         } else {
@@ -365,25 +371,114 @@ internal class OperationBuilder(
         if (queryParameters.isEmpty()) return
         builder.beginControlFlow("url")
         queryParameters.forEach { param ->
-            val suffix = param.toStringSuffix(stringFormatTypes)
-            if (param.isOptional) {
-                builder.beginControlFlow(IF_NOT_NULL, param.camelCaseName)
-                builder.addStatement(
-                    "parameters.append(%S, %N$suffix)",
-                    param.originalName,
-                    param.camelCaseName,
-                )
-                builder.endControlFlow()
-            } else {
-                builder.addStatement(
-                    "parameters.append(%S, %N$suffix)",
-                    param.originalName,
-                    param.camelCaseName,
-                )
-            }
+            addIfNotNull(builder, param) { builder.add(queryStatement(param)) }
         }
         builder.endControlFlow()
     }
+
+    private fun queryStatement(param: OperationParameterSpec): CodeBlock {
+        val name = param.originalName
+        return when {
+            param.isObject -> {
+                when {
+                    param.style == ParameterStyleSpec.DEEP_OBJECT -> {
+                        CodeBlock.of("parameters.$APPEND_DEEP_OBJECT(%S, %L)\n", name, param.jsonElementCode())
+                    }
+
+                    param.style == ParameterStyleSpec.FORM && param.explode -> {
+                        CodeBlock.of("parameters.$APPEND_EXPLODED_OBJECT(%L)\n", param.jsonObjectCode())
+                    }
+
+                    else -> {
+                        CodeBlock.of("parameters.append(%S, %L)\n", name, param.delimitedObjectCode(param.style.delimiter()))
+                    }
+                }
+            }
+
+            param.isArray && param.style == ParameterStyleSpec.FORM && param.explode -> {
+                CodeBlock.of("parameters.appendAll(%S, %N%L)\n", name, param.camelCaseName, param.elementMapping())
+            }
+
+            param.isArray -> {
+                CodeBlock.of("parameters.append(%S, %L)\n", name, param.joinedArrayCode(param.style.delimiter()))
+            }
+
+            else -> {
+                CodeBlock.of("parameters.append(%S, %N${param.toStringSuffix(stringFormatTypes)})\n", name, param.camelCaseName)
+            }
+        }
+    }
+
+    private fun addCookieParams(
+        builder: CodeBlock.Builder,
+        cookieParameters: List<OperationParameterSpec>,
+    ) {
+        cookieParameters.forEach { param ->
+            val value =
+                when {
+                    param.isObject -> param.delimitedObjectCode(",")
+                    param.isArray -> param.joinedArrayCode(",")
+                    else -> CodeBlock.of("%N${param.toStringSuffix(stringFormatTypes)}", param.camelCaseName)
+                }
+            addIfNotNull(builder, param) {
+                builder.addStatement("%M(%L, %L)", cookieMember, parameterKey(param), value)
+            }
+        }
+    }
+
+    private fun addIfNotNull(
+        builder: CodeBlock.Builder,
+        param: OperationParameterSpec,
+        addCode: () -> Unit,
+    ) {
+        if (param.isOptional) {
+            builder.beginControlFlow(IF_NOT_NULL, param.camelCaseName)
+            addCode()
+            builder.endControlFlow()
+        } else {
+            addCode()
+        }
+    }
+
+    private fun parameterKey(param: OperationParameterSpec): CodeBlock =
+        if (param.constName != null) {
+            CodeBlock.of("%T.%L", clientConfigurationClass, param.constName)
+        } else {
+            CodeBlock.of("%S", param.originalName)
+        }
+
+    /** Mapping appended to an array parameter to get strings, e.g. `.map { it.serialName() }`. */
+    private fun OperationParameterSpec.elementMapping(): String {
+        val element =
+            when (val arrayType = type) {
+                is DomainTypeSpec.ListTypeSpec -> arrayType.element
+                is DomainTypeSpec.SetTypeSpec -> arrayType.element
+                else -> return ""
+            }
+        return when {
+            isEnumArray -> ".map { it.serialName() }"
+            element.isString && element.stringFormatType(stringFormatTypes) == null -> ""
+            else -> ".map { it.toString() }"
+        }
+    }
+
+    private fun OperationParameterSpec.joinedArrayCode(delimiter: String): CodeBlock =
+        CodeBlock.of("%N.joinToString(%S)${if (isEnumArray) " { it.serialName() }" else ""}", camelCaseName, delimiter)
+
+    private fun OperationParameterSpec.jsonElementCode(): CodeBlock =
+        CodeBlock.of("configuration.json.%M(%N)", encodeToJsonElementMember, camelCaseName)
+
+    private fun OperationParameterSpec.jsonObjectCode(): CodeBlock = CodeBlock.of("%L.%M", jsonElementCode(), jsonObjectMember)
+
+    private fun OperationParameterSpec.delimitedObjectCode(
+        separator: String,
+        keyValueSeparator: String = separator,
+    ): CodeBlock =
+        if (keyValueSeparator == separator) {
+            CodeBlock.of("%L.$TO_DELIMITED_STRING(%S)", jsonObjectCode(), separator)
+        } else {
+            CodeBlock.of("%L.$TO_DELIMITED_STRING(%S, %S)", jsonObjectCode(), separator, keyValueSeparator)
+        }
 
     private fun addParameters(
         funBuilder: FunSpec.Builder,
@@ -444,6 +539,7 @@ internal class OperationBuilder(
             builder.addStatement("%M(%T.parse(%S))", acceptMember, contentTypeClass, contentType)
         }
         addRegularHeaderParams(builder, operationParams.headerParameters)
+        addCookieParams(builder, operationParams.cookieParameters)
         addQueryParams(builder, operationParams.queryParameters)
         addRequestBodyCode(builder, requestBodyCtx)
         builder.endControlFlow()
@@ -464,40 +560,15 @@ internal class OperationBuilder(
         headerParameters: List<OperationParameterSpec>,
     ) {
         headerParameters.forEach { param ->
-            if (param.constName != null) {
-                if (param.isOptional) {
-                    builder.beginControlFlow(IF_NOT_NULL, param.camelCaseName)
-                    builder.addStatement(
-                        "$ALIAS_HEADER(%T.%L, %N)",
-                        clientConfigurationClass,
-                        param.constName,
-                        param.camelCaseName,
-                    )
-                    builder.endControlFlow()
-                } else {
-                    builder.addStatement(
-                        "$ALIAS_HEADER(%T.%L, %N)",
-                        clientConfigurationClass,
-                        param.constName,
-                        param.camelCaseName,
-                    )
+            val value =
+                when {
+                    param.isObject -> param.delimitedObjectCode(",", if (param.explode) "=" else ",")
+                    param.isArray -> param.joinedArrayCode(",")
+                    param.isEnum -> CodeBlock.of("%N.serialName()", param.camelCaseName)
+                    else -> CodeBlock.of("%N", param.camelCaseName)
                 }
-            } else {
-                if (param.isOptional) {
-                    builder.beginControlFlow(IF_NOT_NULL, param.camelCaseName)
-                    builder.addStatement(
-                        "$ALIAS_HEADER(%S, %N)",
-                        param.originalName,
-                        param.camelCaseName,
-                    )
-                    builder.endControlFlow()
-                } else {
-                    builder.addStatement(
-                        "$ALIAS_HEADER(%S, %N)",
-                        param.originalName,
-                        param.camelCaseName,
-                    )
-                }
+            addIfNotNull(builder, param) {
+                builder.addStatement("$ALIAS_HEADER(%L, %L)", parameterKey(param), value)
             }
         }
     }
@@ -631,6 +702,26 @@ internal class OperationBuilder(
         return builder.build()
     }
 }
+
+private val OperationParameterSpec.isArray: Boolean
+    get() = type is DomainTypeSpec.ListTypeSpec || type is DomainTypeSpec.SetTypeSpec
+
+/** Delimiter of unexploded query arrays and objects for this style. */
+private fun ParameterStyleSpec.delimiter(): String =
+    when (this) {
+        ParameterStyleSpec.SPACE_DELIMITED -> " "
+        ParameterStyleSpec.PIPE_DELIMITED -> "|"
+        else -> ","
+    }
+
+/** The runtime helper needed to serialize this object parameter, if any. */
+private fun OperationParameterSpec.serializationHelper(): ParameterSerializationHelper? =
+    when {
+        !isObject || isPath -> null
+        isQuery && style == ParameterStyleSpec.DEEP_OBJECT -> ParameterSerializationHelper.DEEP_OBJECT
+        isQuery && style == ParameterStyleSpec.FORM && explode -> ParameterSerializationHelper.EXPLODED_OBJECT
+        else -> ParameterSerializationHelper.DELIMITED_OBJECT
+    }
 
 private fun OperationParameterSpec.toStringSuffix(stringFormatTypes: Map<String, StringFormatType>): String =
     when {

@@ -111,13 +111,13 @@ See [CONTRIBUTING.md — Gradle Dependency Graph](CONTRIBUTING.md#gradle-depende
 
 | Sub-module | Root package | Key classes |
 |---|---|---|
-| `generator:domain` | `*.domain` | `GenerationSpec`, `ClientSpec`, `OperationSpec`, `ModelSpec` (sealed), `SubtypeHint`, `DomainTypeSpec` (sealed), `ModelPropertySpec`, `OperationParameterSpec`, `RequestBodySpec`, `ResponseEntrySpec`, `ResponseHeaderSpec`, `FormFieldSpec`, `ClientConfigurationSpec`, `SecuritySchemeSpec`, `ComponentParameterSpec`, `DefaultValueSpec`, `OperationMetaSpec`, `ParameterLocationSpec`, `ModelUsageAnalyzer` (top-level fns), `PartitionedGenerationSpec`, `PerClientGenerationSpec`, `SharedGroupSpec`, `GeneratedFileSpec` |
+| `generator:domain` | `*.domain` | `GenerationSpec`, `ClientSpec`, `OperationSpec`, `ModelSpec` (sealed), `SubtypeHint`, `DomainTypeSpec` (sealed), `ModelPropertySpec`, `OperationParameterSpec`, `RequestBodySpec`, `ResponseEntrySpec`, `ResponseHeaderSpec`, `FormFieldSpec`, `ClientConfigurationSpec`, `SecuritySchemeSpec`, `ComponentParameterSpec`, `DefaultValueSpec`, `OperationMetaSpec`, `ParameterLocationSpec` (HEADER, PATH, QUERY, COOKIE), `ParameterStyleSpec`, `ModelUsageAnalyzer` (top-level fns), `PartitionedGenerationSpec`, `PerClientGenerationSpec`, `SharedGroupSpec`, `GeneratedFileSpec` |
 | `generator:port` | `*.port` | `ApiSpecificationParser` (parse takes only `operationFilter`), `ApiTypeMappingConfig`, `StringFormatType`, `ApiConfigurationRenderer`, `ApiClientRenderer`, `ApiModelRenderer`, `ApiFileSystemWriter`, `ApiConfigurationGeneratorConfig`, `ApiClientGeneratorConfig`, `ApiModelGeneratorConfig` |
 | `generator:config` | `*.generator` | `ApiGeneratorConfiguration`, `ApiGeneratorModule`, `GenerationResult`, `SplitGranularity`, `SharedModelGranularity` |
 | `generator:application` | `*.application` | `GenerateCodeService`, `GenerationSpecPartitioner` |
 | `generator:adapter-writer` | `*.adapter.writer` | `KotlinPoetFileWriter` |
 | `generator:adapter-parser` | `*.adapter.parser` | `OpenApiSpecificationParser(configuration)`, `ApiModel`, `SchemaAdapter` (version-agnostic extensions), `TypeNameConverter`, `ParserNames`, `ParserTypes`, `ApiOperation`, `ApiClassProperty` |
-| `generator:adapter-renderer` | `*.adapter.renderer` | `ApiClientGenerator`, `ApiModelGenerator`, `ApiClientConfigurationGenerator`, `YamlContentConverterGenerator`, `OperationBuilder`, `ResponseBuilder`, `KotlinPoets`, `KtorPoets` |
+| `generator:adapter-renderer` | `*.adapter.renderer` | `ApiClientGenerator`, `ApiModelGenerator`, `ApiClientConfigurationGenerator`, `YamlContentConverterGenerator`, `OperationBuilder`, `ResponseBuilder`, `ParameterSerializationHelpers`, `KotlinPoets`, `KtorPoets` |
 | `generator` (root) | `*.generator` | `ApiGenerator.kt` — composition root, the ONLY file importing all layers |
 
 ### Architectural Invariants and Port Design
@@ -518,6 +518,30 @@ Bodies are read with `response.body<ByteArray>()` or `response.body<String>()`, 
 - `ResponseBuilder` renders each header as a nullable computed property (`headers["X"]?.toIntOrNull()`, …). A property name clashing with `body` / `headers` / `statusCode` gets a `Header` suffix.
 - Responses declared as `$ref: #/components/responses/...` are still skipped by `buildResponseEntries`.
 
+### Parameter serialization (`style` / `explode`)
+
+- `OperationParameterSpec` carries `location` (incl. `COOKIE`), `style: ParameterStyleSpec`, `explode` and `isObject`.
+  The parser always stores **resolved** values: OpenAPI defaults when undeclared (`FORM` + `explode=true` for query/cookie,
+  `SIMPLE` + `explode=false` for path/header). The domain constructor has the same defaults.
+- `OpenApiSpecificationParser.resolveParameterStyle` falls back to the location default with a `logger.warn` for
+  `matrix`/`label` (parsed as `ApiParameterStyle` in `SchemaAdapter.kt`), `deepObject`/`spaceDelimited`/`pipeDelimited`
+  outside query or on a scalar. Cookie arrays/objects are always `explode=false`.
+- `isObject` is true only for a resolved schema with declared `properties` (inline or `$ref`), never for free-form objects,
+  whose Kotlin type is `JsonElement` and whose value can be any JSON.
+- `OperationBuilder` renders query arrays with `parameters.appendAll` (exploded form) or `joinToString(",", " ", "|")`.
+  Objects are flattened **at runtime** from `configuration.json.encodeToJsonElement(value)` through private helpers
+  (`appendExplodedObject`, `appendDeepObject`, `toDelimitedString`, `toParameterValues`) generated as members of each client
+  class that needs them (`ClientGenerationContext.parameterHelpers` → `buildParameterSerializationHelpers`). Members, not
+  `ClientConfiguration` functions, so split-by-client subprojects need no shared helper.
+- Cookies use Ktor `cookie(name, value)`. Path parameters still use the `simple` style only.
+- Inline parameter models (`OperationParameterSpec.additionalModel`) are kept **only** when they are an `EnumSpec` or a
+  `DataClassSpec` (object with properties); the parameter is then typed with the nested `InlineTypeSpec` (e.g. `Filter`).
+  Primitive arrays, `$ref` items and free-form objects get no inline model (previously an empty `object`).
+- `isEnumReference` marks a `$ref` to a named enum (scalar or array items): `isEnum` / `isEnumArray` include it, so
+  the value is sent with `serialName()` like inline enums (every generated enum has `serialName()`).
+- `ApiModel.Operation.allReferences()` collects `$ref`s from parameter `schema`s, so models referenced only by a
+  parameter are generated.
+
 ---
 
 ## allOf with `$ref` — Interface Generation
@@ -533,6 +557,8 @@ See [CONTRIBUTING.md — allOf-only schemas → Kotlin interface](CONTRIBUTING.m
 > - `interfaceParentNames` — the interfaces this data class implements (via `allOf $ref`)
 > - property types (via `collectModelRefs(DomainTypeSpec)`)
 > - nested model types inside properties
+>
+> `collectDirectRefs(ClientSpec)` also collects the refs of inline parameter models (`OperationParameterSpec.additionalModel`).
 
 ---
 

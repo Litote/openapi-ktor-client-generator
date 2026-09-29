@@ -148,6 +148,34 @@ with `body`, `headers` or `statusCode` gets a `Header` suffix (e.g. `bodyHeader`
 When several status codes share one response class, the class exposes the union of their headers.
 `headers` is `@Transient`, so it is not part of the kotlinx.serialization form of the response classes.
 
+### Parameter serialization
+
+Query, header, path and cookie parameters follow the OpenAPI `style` and `explode` keywords. When they are not
+declared, the OpenAPI defaults apply: `form` + `explode: true` for query and cookie parameters, `simple` for path
+and header parameters.
+
+| Location | Style | Array `[a, b]` | Object `{x: 1, y: 2}` |
+|---|---|---|---|
+| query | `form`, `explode: true` (default) | `?id=a&id=b` | `?x=1&y=2` |
+| query | `form`, `explode: false` | `?id=a,b` | `?id=x,1,y,2` |
+| query | `spaceDelimited` / `pipeDelimited` | `?id=a%20b` / `?id=a\|b` | `?id=x%201%20y%202` / `?id=x\|1\|y\|2` |
+| query | `deepObject` | — | `?id[x]=1&id[y]=2` |
+| header | `simple` | `a,b` | `x,1,y,2` (`x=1,y=2` with `explode: true`) |
+| cookie | `form` | `id=a,b` | `id=x,1,y,2` |
+| path | `simple` | `a,b` | — |
+
+Enum values (inline or `$ref`) are sent with their OpenAPI value (`serialName()`), not the Kotlin constant name.
+An inline object parameter is typed with a nested class of the client (e.g. `filter: Filter?`).
+
+Objects are flattened at runtime from their JSON form (`ClientConfiguration.json`), so `@SerialName` and enum values
+are respected. `null` properties are skipped, and nested objects in `deepObject` become `id[x][z]=…`.
+Only objects with declared `properties` are flattened; a free-form object (`type: object` without properties) is
+sent with `toString()`.
+
+Unsupported combinations (`matrix` and `label` styles, `deepObject` on a scalar, a delimited style outside query, …)
+log a warning at generation time and fall back to the default style of the parameter location. Exploded cookie
+arrays and objects are sent unexploded.
+
 ## Gradle task configuration properties
 
 ### Root properties

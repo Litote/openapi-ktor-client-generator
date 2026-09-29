@@ -114,6 +114,7 @@ public class ApiClientGenerator public constructor(
         transformedSpec.operations.forEach { op ->
             operationBuilder.buildOperation(context, op, clientBuilder, clientName)
         }
+        buildParameterSerializationHelpers(context.parameterHelpers).forEach { clientBuilder.addFunction(it) }
 
         return ClientFileContext(context, clientBuilder.build())
     }

@@ -66,6 +66,58 @@
               "format": "date",
               "default": "2024-01-31"
             }
+          },
+          {
+            "name": "runIds",
+            "in": "query",
+            "schema": { "type": "array", "items": { "type": "string", "format": "uuid" } }
+          },
+          {
+            "name": "statuses",
+            "in": "query",
+            "style": "pipeDelimited",
+            "explode": false,
+            "schema": { "type": "array", "items": { "type": "string", "enum": ["PENDING", "RUNNING"] } }
+          },
+          {
+            "name": "filter",
+            "in": "query",
+            "style": "deepObject",
+            "explode": true,
+            "schema": {
+              "type": "object",
+              "properties": {
+                "name": { "type": "string" },
+                "minId": { "type": "integer" }
+              }
+            }
+          },
+          {
+            "name": "range",
+            "in": "query",
+            "schema": { "$ref": "#/components/schemas/TestRange" }
+          },
+          {
+            "name": "compactRange",
+            "in": "query",
+            "explode": false,
+            "schema": { "$ref": "#/components/schemas/TestRange" }
+          },
+          {
+            "name": "states",
+            "in": "query",
+            "schema": { "type": "array", "items": { "$ref": "#/components/schemas/TestStatusEnum" } }
+          },
+          {
+            "name": "X-Trace-Ids",
+            "in": "header",
+            "schema": { "type": "array", "items": { "type": "string" } }
+          },
+          {
+            "name": "session",
+            "in": "cookie",
+            "required": true,
+            "schema": { "type": "string" }
           }
         ]
       }
@@ -115,6 +167,13 @@
           }
         },
         "required": ["status"]
+      },
+      "TestRange": {
+        "type": "object",
+        "properties": {
+          "from": { "type": "integer" },
+          "to": { "type": "integer" }
+        }
       },
       "TestStatusEnum": {
         "type": "string",

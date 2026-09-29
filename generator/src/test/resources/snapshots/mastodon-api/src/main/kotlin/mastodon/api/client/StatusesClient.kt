@@ -44,7 +44,7 @@ public class StatusesClient(
       val response = configuration.client.`get`("api/v1/statuses") {
         url {
           if (id != null) {
-            parameters.append("id", id.joinToString(","))
+            parameters.appendAll("id", id)
           }
         }
       }
@@ -679,12 +679,6 @@ public class StatusesClient(
       return PostStatusUnreblogResponseUnknownFailure(500)
     }
   }
-
-  @Serializable
-  public object Id
-
-  @Serializable
-  public object IdempotencyKey
 
   @Serializable
   public sealed class GetStatusesResponse {

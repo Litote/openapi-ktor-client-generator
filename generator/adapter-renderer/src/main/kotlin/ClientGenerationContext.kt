@@ -12,6 +12,7 @@ internal data class ClientGenerationContext(
     var hasHeaders: Boolean = false,
     var hasPathComponents: Boolean = false,
     var hasSseOperations: Boolean = false,
+    val parameterHelpers: MutableSet<ParameterSerializationHelper> = mutableSetOf(),
 )
 
 /**

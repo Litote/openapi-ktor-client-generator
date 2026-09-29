@@ -48,7 +48,7 @@ public class NotificationsClient(
             parameters.append("account_id", accountId)
           }
           if (excludeTypes != null) {
-            parameters.append("exclude_types", excludeTypes.joinToString(","))
+            parameters.appendAll("exclude_types", excludeTypes.map { it.serialName() })
           }
           if (includeFiltered != null) {
             parameters.append("include_filtered", includeFiltered.toString())
@@ -66,7 +66,7 @@ public class NotificationsClient(
             parameters.append("since_id", sinceId)
           }
           if (types != null) {
-            parameters.append("types", types.joinToString(","))
+            parameters.appendAll("types", types.map { it.serialName() })
           }
         }
       }
@@ -351,9 +351,9 @@ public class NotificationsClient(
    */
   public suspend fun getNotificationsUnreadCount(
     accountId: String? = null,
-    excludeTypes: List<GetNotificationsUnreadCountExcludeTypes>? = null,
+    excludeTypes: List<String>? = null,
     limit: Long? = 100,
-    types: List<GetNotificationsUnreadCountTypes>? = null,
+    types: List<String>? = null,
   ): GetNotificationsUnreadCountResponse {
     try {
       val response = configuration.client.`get`("api/v1/notifications/unread_count") {
@@ -362,13 +362,13 @@ public class NotificationsClient(
             parameters.append("account_id", accountId)
           }
           if (excludeTypes != null) {
-            parameters.append("exclude_types", excludeTypes.joinToString(","))
+            parameters.appendAll("exclude_types", excludeTypes)
           }
           if (limit != null) {
             parameters.append("limit", limit.toString())
           }
           if (types != null) {
-            parameters.append("types", types.joinToString(","))
+            parameters.appendAll("types", types)
           }
         }
       }
@@ -411,13 +411,13 @@ public class NotificationsClient(
             parameters.append("account_id", accountId)
           }
           if (excludeTypes != null) {
-            parameters.append("exclude_types", excludeTypes.joinToString(","))
+            parameters.appendAll("exclude_types", excludeTypes.map { it.serialName() })
           }
           if (expandAccounts != null) {
             parameters.append("expand_accounts", expandAccounts)
           }
           if (groupedTypes != null) {
-            parameters.append("grouped_types", groupedTypes.joinToString(","))
+            parameters.appendAll("grouped_types", groupedTypes.map { it.serialName() })
           }
           if (includeFiltered != null) {
             parameters.append("include_filtered", includeFiltered.toString())
@@ -435,7 +435,7 @@ public class NotificationsClient(
             parameters.append("since_id", sinceId)
           }
           if (types != null) {
-            parameters.append("types", types.joinToString(","))
+            parameters.appendAll("types", types.map { it.serialName() })
           }
         }
       }
@@ -557,10 +557,10 @@ public class NotificationsClient(
    */
   public suspend fun getNotificationsUnreadCountV2(
     accountId: String? = null,
-    excludeTypes: List<GetNotificationsUnreadCountV2ExcludeTypes>? = null,
+    excludeTypes: List<String>? = null,
     groupedTypes: List<String>? = null,
     limit: Long? = 100,
-    types: List<GetNotificationsUnreadCountV2Types>? = null,
+    types: List<String>? = null,
   ): GetNotificationsUnreadCountV2Response {
     try {
       val response = configuration.client.`get`("api/v2/notifications/unread_count") {
@@ -569,16 +569,16 @@ public class NotificationsClient(
             parameters.append("account_id", accountId)
           }
           if (excludeTypes != null) {
-            parameters.append("exclude_types", excludeTypes.joinToString(","))
+            parameters.appendAll("exclude_types", excludeTypes)
           }
           if (groupedTypes != null) {
-            parameters.append("grouped_types", groupedTypes.joinToString(","))
+            parameters.appendAll("grouped_types", groupedTypes)
           }
           if (limit != null) {
             parameters.append("limit", limit.toString())
           }
           if (types != null) {
-            parameters.append("types", types.joinToString(","))
+            parameters.appendAll("types", types)
           }
         }
       }
@@ -598,21 +598,6 @@ public class NotificationsClient(
       return GetNotificationsUnreadCountV2ResponseUnknownFailure(500)
     }
   }
-
-  @Serializable
-  public object GetNotificationsUnreadCountExcludeTypes
-
-  @Serializable
-  public object GetNotificationsUnreadCountV2ExcludeTypes
-
-  @Serializable
-  public object GetNotificationsUnreadCountTypes
-
-  @Serializable
-  public object GetNotificationsUnreadCountV2Types
-
-  @Serializable
-  public object GroupedTypes
 
   @Serializable
   public sealed class GetNotificationsResponse {
