@@ -9,6 +9,7 @@ import kotlin.Int
 import kotlin.Long
 import kotlin.String
 import kotlin.collections.List
+import kotlin.coroutines.cancellation.CancellationException
 import kotlinx.serialization.Serializable
 import mastodon.api.client.ClientConfiguration.Companion.defaultClientConfiguration
 import mastodon.api.model.Account
@@ -75,6 +76,9 @@ public class NotificationsClient(
         else -> GetNotificationsResponseUnknownFailure(response.status.value)
       }
     }
+    catch(e: CancellationException) {
+      throw e
+    }
     catch(e: Exception) {
       configuration.exceptionLogger(e)
       return GetNotificationsResponseUnknownFailure(500)
@@ -95,6 +99,9 @@ public class NotificationsClient(
         422 -> GetNotificationResponseFailure(response.body<ValidationError>())
         else -> GetNotificationResponseUnknownFailure(response.status.value)
       }
+    }
+    catch(e: CancellationException) {
+      throw e
     }
     catch(e: Exception) {
       configuration.exceptionLogger(e)
@@ -117,6 +124,9 @@ public class NotificationsClient(
         else -> PostNotificationDismissResponseUnknownFailure(response.status.value)
       }
     }
+    catch(e: CancellationException) {
+      throw e
+    }
     catch(e: Exception) {
       configuration.exceptionLogger(e)
       return PostNotificationDismissResponseUnknownFailure(500)
@@ -137,6 +147,9 @@ public class NotificationsClient(
         422 -> CreateNotificationClearResponseFailure(response.body<ValidationError>())
         else -> CreateNotificationClearResponseUnknownFailure(response.status.value)
       }
+    }
+    catch(e: CancellationException) {
+      throw e
     }
     catch(e: Exception) {
       configuration.exceptionLogger(e)
@@ -178,6 +191,9 @@ public class NotificationsClient(
         else -> GetNotificationRequestsResponseUnknownFailure(response.status.value)
       }
     }
+    catch(e: CancellationException) {
+      throw e
+    }
     catch(e: Exception) {
       configuration.exceptionLogger(e)
       return GetNotificationRequestsResponseUnknownFailure(500)
@@ -198,6 +214,9 @@ public class NotificationsClient(
         422 -> GetNotificationsRequestsByIdResponseFailure(response.body<ValidationError>())
         else -> GetNotificationsRequestsByIdResponseUnknownFailure(response.status.value)
       }
+    }
+    catch(e: CancellationException) {
+      throw e
     }
     catch(e: Exception) {
       configuration.exceptionLogger(e)
@@ -220,6 +239,9 @@ public class NotificationsClient(
         else -> PostNotificationsRequestsByIdAcceptResponseUnknownFailure(response.status.value)
       }
     }
+    catch(e: CancellationException) {
+      throw e
+    }
     catch(e: Exception) {
       configuration.exceptionLogger(e)
       return PostNotificationsRequestsByIdAcceptResponseUnknownFailure(500)
@@ -240,6 +262,9 @@ public class NotificationsClient(
         422 -> PostNotificationsRequestsByIdDismissResponseFailure(response.body<ValidationError>())
         else -> PostNotificationsRequestsByIdDismissResponseUnknownFailure(response.status.value)
       }
+    }
+    catch(e: CancellationException) {
+      throw e
     }
     catch(e: Exception) {
       configuration.exceptionLogger(e)
@@ -262,6 +287,9 @@ public class NotificationsClient(
         else -> CreateNotificationsRequestsAcceptResponseUnknownFailure(response.status.value)
       }
     }
+    catch(e: CancellationException) {
+      throw e
+    }
     catch(e: Exception) {
       configuration.exceptionLogger(e)
       return CreateNotificationsRequestsAcceptResponseUnknownFailure(500)
@@ -283,6 +311,9 @@ public class NotificationsClient(
         else -> CreateNotificationsRequestsDismissResponseUnknownFailure(response.status.value)
       }
     }
+    catch(e: CancellationException) {
+      throw e
+    }
     catch(e: Exception) {
       configuration.exceptionLogger(e)
       return CreateNotificationsRequestsDismissResponseUnknownFailure(500)
@@ -303,6 +334,9 @@ public class NotificationsClient(
         422 -> GetNotificationsRequestsMergedResponseFailure(response.body<ValidationError>())
         else -> GetNotificationsRequestsMergedResponseUnknownFailure(response.status.value)
       }
+    }
+    catch(e: CancellationException) {
+      throw e
     }
     catch(e: Exception) {
       configuration.exceptionLogger(e)
@@ -343,6 +377,9 @@ public class NotificationsClient(
         422 -> GetNotificationsUnreadCountResponseFailure(response.body<ValidationError>())
         else -> GetNotificationsUnreadCountResponseUnknownFailure(response.status.value)
       }
+    }
+    catch(e: CancellationException) {
+      throw e
     }
     catch(e: Exception) {
       configuration.exceptionLogger(e)
@@ -408,6 +445,9 @@ public class NotificationsClient(
         else -> GetNotificationsV2ResponseUnknownFailure(response.status.value)
       }
     }
+    catch(e: CancellationException) {
+      throw e
+    }
     catch(e: Exception) {
       configuration.exceptionLogger(e)
       return GetNotificationsV2ResponseUnknownFailure(500)
@@ -428,6 +468,9 @@ public class NotificationsClient(
         422 -> GetNotificationsByGroupKeyV2ResponseFailure(response.body<ValidationError>())
         else -> GetNotificationsByGroupKeyV2ResponseUnknownFailure(response.status.value)
       }
+    }
+    catch(e: CancellationException) {
+      throw e
     }
     catch(e: Exception) {
       configuration.exceptionLogger(e)
@@ -450,6 +493,9 @@ public class NotificationsClient(
         else -> GetNotificationAccountsV2ResponseUnknownFailure(response.status.value)
       }
     }
+    catch(e: CancellationException) {
+      throw e
+    }
     catch(e: Exception) {
       configuration.exceptionLogger(e)
       return GetNotificationAccountsV2ResponseUnknownFailure(500)
@@ -471,6 +517,9 @@ public class NotificationsClient(
         else -> PostNotificationDismissV2ResponseUnknownFailure(response.status.value)
       }
     }
+    catch(e: CancellationException) {
+      throw e
+    }
     catch(e: Exception) {
       configuration.exceptionLogger(e)
       return PostNotificationDismissV2ResponseUnknownFailure(500)
@@ -491,6 +540,9 @@ public class NotificationsClient(
         422 -> GetNotificationPolicyV2ResponseFailure(response.body<ValidationError>())
         else -> GetNotificationPolicyV2ResponseUnknownFailure(response.status.value)
       }
+    }
+    catch(e: CancellationException) {
+      throw e
     }
     catch(e: Exception) {
       configuration.exceptionLogger(e)
@@ -535,6 +587,9 @@ public class NotificationsClient(
         422 -> GetNotificationsUnreadCountV2ResponseFailure(response.body<ValidationError>())
         else -> GetNotificationsUnreadCountV2ResponseUnknownFailure(response.status.value)
       }
+    }
+    catch(e: CancellationException) {
+      throw e
     }
     catch(e: Exception) {
       configuration.exceptionLogger(e)

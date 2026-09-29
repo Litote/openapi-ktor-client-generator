@@ -9,6 +9,7 @@ import kotlin.Int
 import kotlin.Long
 import kotlin.String
 import kotlin.collections.List
+import kotlin.coroutines.cancellation.CancellationException
 import kotlinx.serialization.Serializable
 import mastodon.api.client.ClientConfiguration.Companion.defaultClientConfiguration
 import mastodon.api.model.Conversation
@@ -52,6 +53,9 @@ public class ConversationsClient(
         else -> GetConversationsResponseUnknownFailure(response.status.value)
       }
     }
+    catch(e: CancellationException) {
+      throw e
+    }
     catch(e: Exception) {
       configuration.exceptionLogger(e)
       return GetConversationsResponseUnknownFailure(500)
@@ -73,6 +77,9 @@ public class ConversationsClient(
         else -> DeleteConversationResponseUnknownFailure(response.status.value)
       }
     }
+    catch(e: CancellationException) {
+      throw e
+    }
     catch(e: Exception) {
       configuration.exceptionLogger(e)
       return DeleteConversationResponseUnknownFailure(500)
@@ -93,6 +100,9 @@ public class ConversationsClient(
         422 -> PostConversationReadResponseFailure(response.body<ValidationError>())
         else -> PostConversationReadResponseUnknownFailure(response.status.value)
       }
+    }
+    catch(e: CancellationException) {
+      throw e
     }
     catch(e: Exception) {
       configuration.exceptionLogger(e)

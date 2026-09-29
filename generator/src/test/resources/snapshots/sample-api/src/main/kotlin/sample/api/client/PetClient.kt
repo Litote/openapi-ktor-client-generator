@@ -10,6 +10,7 @@ import kotlin.Int
 import kotlin.Long
 import kotlin.String
 import kotlin.collections.List
+import kotlin.coroutines.cancellation.CancellationException
 import kotlinx.serialization.SerialName
 import kotlinx.serialization.Serializable
 import kotlinx.serialization.builtins.serializer
@@ -45,6 +46,9 @@ public class PetClient(
         else -> GetPetFindByStatusMultipleExamplesResponseUnknownFailure(response.status.value)
       }
     }
+    catch(e: CancellationException) {
+      throw e
+    }
     catch(e: Exception) {
       configuration.exceptionLogger(e)
       return GetPetFindByStatusMultipleExamplesResponseUnknownFailure(500)
@@ -67,6 +71,9 @@ public class PetClient(
         else -> GetPetFindByStatusSingleExampleResponseUnknownFailure(response.status.value)
       }
     }
+    catch(e: CancellationException) {
+      throw e
+    }
     catch(e: Exception) {
       configuration.exceptionLogger(e)
       return GetPetFindByStatusSingleExampleResponseUnknownFailure(500)
@@ -86,6 +93,9 @@ public class PetClient(
         405 -> AddPetResponseFailure
         else -> AddPetResponseUnknownFailure(response.status.value)
       }
+    }
+    catch(e: CancellationException) {
+      throw e
     }
     catch(e: Exception) {
       configuration.exceptionLogger(e)

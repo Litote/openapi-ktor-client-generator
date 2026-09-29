@@ -8,6 +8,7 @@ import kotlin.Boolean
 import kotlin.Int
 import kotlin.String
 import kotlin.Unit
+import kotlin.coroutines.cancellation.CancellationException
 import kotlinx.serialization.Serializable
 import mastodon.api.client.ClientConfiguration.Companion.defaultClientConfiguration
 import mastodon.api.model.Error
@@ -24,6 +25,9 @@ public class StreamingClient(
       configuration.client.sse(urlString = "api/v1/streaming/direct") {
         block()
       }
+    }
+    catch(e: CancellationException) {
+      throw e
     }
     catch(e: Exception) {
       configuration.exceptionLogger(e)
@@ -44,6 +48,9 @@ public class StreamingClient(
         block()
       }
     }
+    catch(e: CancellationException) {
+      throw e
+    }
     catch(e: Exception) {
       configuration.exceptionLogger(e)
     }
@@ -62,6 +69,9 @@ public class StreamingClient(
       ) {
         block()
       }
+    }
+    catch(e: CancellationException) {
+      throw e
     }
     catch(e: Exception) {
       configuration.exceptionLogger(e)
@@ -83,6 +93,9 @@ public class StreamingClient(
         else -> GetStreamingHealthResponseUnknownFailure(response.status.value)
       }
     }
+    catch(e: CancellationException) {
+      throw e
+    }
     catch(e: Exception) {
       configuration.exceptionLogger(e)
       return GetStreamingHealthResponseUnknownFailure(500)
@@ -102,6 +115,9 @@ public class StreamingClient(
       ) {
         block()
       }
+    }
+    catch(e: CancellationException) {
+      throw e
     }
     catch(e: Exception) {
       configuration.exceptionLogger(e)
@@ -124,6 +140,9 @@ public class StreamingClient(
         block()
       }
     }
+    catch(e: CancellationException) {
+      throw e
+    }
     catch(e: Exception) {
       configuration.exceptionLogger(e)
     }
@@ -144,6 +163,9 @@ public class StreamingClient(
       ) {
         block()
       }
+    }
+    catch(e: CancellationException) {
+      throw e
     }
     catch(e: Exception) {
       configuration.exceptionLogger(e)
@@ -166,6 +188,9 @@ public class StreamingClient(
         block()
       }
     }
+    catch(e: CancellationException) {
+      throw e
+    }
     catch(e: Exception) {
       configuration.exceptionLogger(e)
     }
@@ -180,6 +205,9 @@ public class StreamingClient(
         block()
       }
     }
+    catch(e: CancellationException) {
+      throw e
+    }
     catch(e: Exception) {
       configuration.exceptionLogger(e)
     }
@@ -193,6 +221,9 @@ public class StreamingClient(
       configuration.client.sse(urlString = "api/v1/streaming/user/notification") {
         block()
       }
+    }
+    catch(e: CancellationException) {
+      throw e
     }
     catch(e: Exception) {
       configuration.exceptionLogger(e)

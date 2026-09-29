@@ -9,6 +9,7 @@ import io.ktor.http.contentType
 import kotlin.Boolean
 import kotlin.Int
 import kotlin.String
+import kotlin.coroutines.cancellation.CancellationException
 import kotlinx.serialization.SerialName
 import kotlinx.serialization.Serializable
 import mastodon.api.client.ClientConfiguration.Companion.defaultClientConfiguration
@@ -67,6 +68,9 @@ public class OauthClient(
         else -> GetOauthAuthorizeResponseUnknownFailure(response.status.value)
       }
     }
+    catch(e: CancellationException) {
+      throw e
+    }
     catch(e: Exception) {
       configuration.exceptionLogger(e)
       return GetOauthAuthorizeResponseUnknownFailure(500)
@@ -89,6 +93,9 @@ public class OauthClient(
         422 -> PostOauthRevokeResponseFailure(response.body<ValidationError>())
         else -> PostOauthRevokeResponseUnknownFailure(response.status.value)
       }
+    }
+    catch(e: CancellationException) {
+      throw e
     }
     catch(e: Exception) {
       configuration.exceptionLogger(e)
@@ -113,6 +120,9 @@ public class OauthClient(
         else -> PostOauthTokenResponseUnknownFailure(response.status.value)
       }
     }
+    catch(e: CancellationException) {
+      throw e
+    }
     catch(e: Exception) {
       configuration.exceptionLogger(e)
       return PostOauthTokenResponseUnknownFailure(500)
@@ -133,6 +143,9 @@ public class OauthClient(
         422 -> GetOauthUserinfoResponseFailure(response.body<ValidationError>())
         else -> GetOauthUserinfoResponseUnknownFailure(response.status.value)
       }
+    }
+    catch(e: CancellationException) {
+      throw e
     }
     catch(e: Exception) {
       configuration.exceptionLogger(e)

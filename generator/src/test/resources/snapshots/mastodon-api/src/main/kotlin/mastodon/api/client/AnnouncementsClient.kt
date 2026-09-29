@@ -9,6 +9,7 @@ import io.ktor.http.encodeURLPathPart
 import kotlin.Int
 import kotlin.String
 import kotlin.collections.List
+import kotlin.coroutines.cancellation.CancellationException
 import kotlinx.serialization.Serializable
 import mastodon.api.client.ClientConfiguration.Companion.defaultClientConfiguration
 import mastodon.api.model.Announcement
@@ -33,6 +34,9 @@ public class AnnouncementsClient(
         else -> GetAnnouncementsResponseUnknownFailure(response.status.value)
       }
     }
+    catch(e: CancellationException) {
+      throw e
+    }
     catch(e: Exception) {
       configuration.exceptionLogger(e)
       return GetAnnouncementsResponseUnknownFailure(500)
@@ -54,6 +58,9 @@ public class AnnouncementsClient(
         else -> PostAnnouncementDismissResponseUnknownFailure(response.status.value)
       }
     }
+    catch(e: CancellationException) {
+      throw e
+    }
     catch(e: Exception) {
       configuration.exceptionLogger(e)
       return PostAnnouncementDismissResponseUnknownFailure(500)
@@ -74,6 +81,9 @@ public class AnnouncementsClient(
         else -> UpdateAnnouncementReactionResponseUnknownFailure(response.status.value)
       }
     }
+    catch(e: CancellationException) {
+      throw e
+    }
     catch(e: Exception) {
       configuration.exceptionLogger(e)
       return UpdateAnnouncementReactionResponseUnknownFailure(500)
@@ -93,6 +103,9 @@ public class AnnouncementsClient(
         410 -> DeleteAnnouncementReactionResponseFailure
         else -> DeleteAnnouncementReactionResponseUnknownFailure(response.status.value)
       }
+    }
+    catch(e: CancellationException) {
+      throw e
     }
     catch(e: Exception) {
       configuration.exceptionLogger(e)

@@ -7,6 +7,7 @@ import io.ktor.http.ContentType
 import io.ktor.http.contentType
 import kotlin.Int
 import kotlin.String
+import kotlin.coroutines.cancellation.CancellationException
 import kotlinx.serialization.Serializable
 import mastodon.api.client.ClientConfiguration.Companion.defaultClientConfiguration
 import mastodon.api.model.Error
@@ -31,6 +32,9 @@ public class EmailsClient(
         422 -> CreateEmailConfirmationsResponseFailure(response.body<ValidationError>())
         else -> CreateEmailConfirmationsResponseUnknownFailure(response.status.value)
       }
+    }
+    catch(e: CancellationException) {
+      throw e
     }
     catch(e: Exception) {
       configuration.exceptionLogger(e)

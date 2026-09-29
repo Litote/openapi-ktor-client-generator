@@ -4,6 +4,7 @@ import io.ktor.client.call.body
 import io.ktor.client.request.`get`
 import kotlin.Int
 import kotlin.collections.List
+import kotlin.coroutines.cancellation.CancellationException
 import kotlinx.serialization.Serializable
 import mastodon.api.client.ClientConfiguration.Companion.defaultClientConfiguration
 import mastodon.api.model.CustomEmoji
@@ -27,6 +28,9 @@ public class CustomEmojisClient(
         422 -> GetCustomEmojisResponseFailure(response.body<ValidationError>())
         else -> GetCustomEmojisResponseUnknownFailure(response.status.value)
       }
+    }
+    catch(e: CancellationException) {
+      throw e
     }
     catch(e: Exception) {
       configuration.exceptionLogger(e)

@@ -66,6 +66,7 @@ internal class OperationBuilder(
         val httpHeadersClass = ClassName(KTOR_HTTP, "HttpHeaders")
         val sseMember = MemberName("io.ktor.client.plugins.sse", "sse")
         val clientSseSessionClass = ClassName("io.ktor.client.plugins.sse", "ClientSSESession")
+        val cancellationExceptionClass = ClassName("kotlin.coroutines.cancellation", "CancellationException")
         const val ALIAS_HEADER = "setHeader"
     }
 
@@ -330,10 +331,21 @@ internal class OperationBuilder(
         builder.addStatement("block()")
         builder.endControlFlow()
         builder.endControlFlow()
+        addCancellationRethrow(builder)
         builder.beginControlFlow("catch(e: Exception)")
         builder.addStatement("%L(%L)", "configuration.exceptionLogger", "e")
         builder.endControlFlow()
         return builder.build()
+    }
+
+    /**
+     * Rethrows [kotlin.coroutines.cancellation.CancellationException] so that coroutine cancellation
+     * is not swallowed by the generic exception handler.
+     */
+    private fun addCancellationRethrow(builder: CodeBlock.Builder) {
+        builder.beginControlFlow("catch(e: %T)", cancellationExceptionClass)
+        builder.addStatement("throw e")
+        builder.endControlFlow()
     }
 
     private fun addQueryParams(
@@ -425,6 +437,7 @@ internal class OperationBuilder(
         addResponseCases(builder, responseCtx, responseBaseName)
         builder.endControlFlow()
         builder.endControlFlow()
+        addCancellationRethrow(builder)
         builder.beginControlFlow("catch(e: Exception)")
         builder.addStatement("%L(%L)", "configuration.exceptionLogger", "e")
         builder.addStatement("return %L(%L)", "${responseBaseName}ResponseUnknownFailure", InternalServerError.value)

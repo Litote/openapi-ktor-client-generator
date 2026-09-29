@@ -11,6 +11,7 @@ import kotlin.Int
 import kotlin.Long
 import kotlin.String
 import kotlin.collections.List
+import kotlin.coroutines.cancellation.CancellationException
 import kotlinx.serialization.Serializable
 import mastodon.api.client.ClientConfiguration.Companion.defaultClientConfiguration
 import mastodon.api.model.Error
@@ -53,6 +54,9 @@ public class DomainBlocksClient(
         else -> GetDomainBlocksResponseUnknownFailure(response.status.value)
       }
     }
+    catch(e: CancellationException) {
+      throw e
+    }
     catch(e: Exception) {
       configuration.exceptionLogger(e)
       return GetDomainBlocksResponseUnknownFailure(500)
@@ -75,6 +79,9 @@ public class DomainBlocksClient(
         else -> CreateDomainBlockResponseUnknownFailure(response.status.value)
       }
     }
+    catch(e: CancellationException) {
+      throw e
+    }
     catch(e: Exception) {
       configuration.exceptionLogger(e)
       return CreateDomainBlockResponseUnknownFailure(500)
@@ -96,6 +103,9 @@ public class DomainBlocksClient(
         410 -> DeleteDomainBlocksResponseFailure
         else -> DeleteDomainBlocksResponseUnknownFailure(response.status.value)
       }
+    }
+    catch(e: CancellationException) {
+      throw e
     }
     catch(e: Exception) {
       configuration.exceptionLogger(e)

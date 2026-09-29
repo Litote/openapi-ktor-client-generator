@@ -8,6 +8,7 @@ import kotlin.Int
 import kotlin.Long
 import kotlin.String
 import kotlin.collections.List
+import kotlin.coroutines.cancellation.CancellationException
 import kotlinx.serialization.Serializable
 import mastodon.api.client.ClientConfiguration.Companion.defaultClientConfiguration
 import mastodon.api.model.Account
@@ -48,6 +49,9 @@ public class FollowRequestsClient(
         else -> GetFollowRequestsResponseUnknownFailure(response.status.value)
       }
     }
+    catch(e: CancellationException) {
+      throw e
+    }
     catch(e: Exception) {
       configuration.exceptionLogger(e)
       return GetFollowRequestsResponseUnknownFailure(500)
@@ -69,6 +73,9 @@ public class FollowRequestsClient(
         else -> PostFollowRequestAuthorizeResponseUnknownFailure(response.status.value)
       }
     }
+    catch(e: CancellationException) {
+      throw e
+    }
     catch(e: Exception) {
       configuration.exceptionLogger(e)
       return PostFollowRequestAuthorizeResponseUnknownFailure(500)
@@ -89,6 +96,9 @@ public class FollowRequestsClient(
         422 -> PostFollowRequestRejectResponseFailure(response.body<ValidationError>())
         else -> PostFollowRequestRejectResponseUnknownFailure(response.status.value)
       }
+    }
+    catch(e: CancellationException) {
+      throw e
     }
     catch(e: Exception) {
       configuration.exceptionLogger(e)

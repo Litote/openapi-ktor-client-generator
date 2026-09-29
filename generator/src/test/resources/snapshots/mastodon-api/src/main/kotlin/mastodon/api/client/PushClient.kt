@@ -11,6 +11,7 @@ import io.ktor.http.contentType
 import kotlin.Boolean
 import kotlin.Int
 import kotlin.String
+import kotlin.coroutines.cancellation.CancellationException
 import kotlinx.serialization.SerialName
 import kotlinx.serialization.Serializable
 import mastodon.api.client.ClientConfiguration.Companion.defaultClientConfiguration
@@ -36,6 +37,9 @@ public class PushClient(
         else -> GetPushSubscriptionResponseUnknownFailure(response.status.value)
       }
     }
+    catch(e: CancellationException) {
+      throw e
+    }
     catch(e: Exception) {
       configuration.exceptionLogger(e)
       return GetPushSubscriptionResponseUnknownFailure(500)
@@ -58,6 +62,9 @@ public class PushClient(
         422 -> PutPushSubscriptionResponseFailure(response.body<ValidationError>())
         else -> PutPushSubscriptionResponseUnknownFailure(response.status.value)
       }
+    }
+    catch(e: CancellationException) {
+      throw e
     }
     catch(e: Exception) {
       configuration.exceptionLogger(e)
@@ -82,6 +89,9 @@ public class PushClient(
         else -> CreatePushSubscriptionResponseUnknownFailure(response.status.value)
       }
     }
+    catch(e: CancellationException) {
+      throw e
+    }
     catch(e: Exception) {
       configuration.exceptionLogger(e)
       return CreatePushSubscriptionResponseUnknownFailure(500)
@@ -102,6 +112,9 @@ public class PushClient(
         422 -> DeletePushSubscriptionResponseFailure(response.body<ValidationError>())
         else -> DeletePushSubscriptionResponseUnknownFailure(response.status.value)
       }
+    }
+    catch(e: CancellationException) {
+      throw e
     }
     catch(e: Exception) {
       configuration.exceptionLogger(e)

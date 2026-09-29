@@ -12,6 +12,7 @@ import kotlin.Int
 import kotlin.Long
 import kotlin.String
 import kotlin.collections.List
+import kotlin.coroutines.cancellation.CancellationException
 import kotlinx.serialization.SerialName
 import kotlinx.serialization.Serializable
 import mastodon.api.client.ClientConfiguration.Companion.defaultClientConfiguration
@@ -56,6 +57,9 @@ public class ScheduledStatusesClient(
         else -> GetScheduledStatusesResponseUnknownFailure(response.status.value)
       }
     }
+    catch(e: CancellationException) {
+      throw e
+    }
     catch(e: Exception) {
       configuration.exceptionLogger(e)
       return GetScheduledStatusesResponseUnknownFailure(500)
@@ -76,6 +80,9 @@ public class ScheduledStatusesClient(
         422 -> GetScheduledStatusResponseFailure(response.body<ValidationError>())
         else -> GetScheduledStatusResponseUnknownFailure(response.status.value)
       }
+    }
+    catch(e: CancellationException) {
+      throw e
     }
     catch(e: Exception) {
       configuration.exceptionLogger(e)
@@ -99,6 +106,9 @@ public class ScheduledStatusesClient(
         else -> UpdateScheduledStatusResponseUnknownFailure(response.status.value)
       }
     }
+    catch(e: CancellationException) {
+      throw e
+    }
     catch(e: Exception) {
       configuration.exceptionLogger(e)
       return UpdateScheduledStatusResponseUnknownFailure(500)
@@ -119,6 +129,9 @@ public class ScheduledStatusesClient(
         422 -> DeleteScheduledStatusResponseFailure(response.body<ValidationError>())
         else -> DeleteScheduledStatusResponseUnknownFailure(response.status.value)
       }
+    }
+    catch(e: CancellationException) {
+      throw e
     }
     catch(e: Exception) {
       configuration.exceptionLogger(e)
