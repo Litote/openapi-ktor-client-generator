@@ -41,6 +41,47 @@ apiClientGenerator {
 | `LoggingSl4jModule` | Configures the `ClientConfiguration` exception logger to use SLF4J (`LoggerFactory.getLogger(…).error(…)`). **JVM-only** — do not use in KMP projects targeting non-JVM platforms |
 | `LoggingKotlinModule` | Configures the `ClientConfiguration` exception logger to use kotlin-logging / oshai (`KotlinLogging.logger(…).error(…)`) |
 | `BasicAuthModule` | Adds an `accessToken: String?` parameter to `ClientConfiguration` and configures `httpClientAuthorization` to inject an `Authorization: Bearer <token>` header on every request |
+| `KotlinTimeInstantModule` | Maps `type: string, format: date-time` to `kotlin.time.Instant` (stdlib, no extra dependency) |
+| `KotlinxDateTimeLocalDateModule` | Maps `type: string, format: date` to `kotlinx.datetime.LocalDate`. **Requires** `org.jetbrains.kotlinx:kotlinx-datetime` in the project compiling the generated code |
+| `KotlinUuidModule` | Maps `type: string, format: uuid` to `kotlin.uuid.Uuid` (stdlib, no extra dependency) |
+
+#### Rich types for string formats
+
+By default every `type: string` schema is generated as `String`, whatever its `format`. The three format modules above
+are opt-in and independent: enable only the ones you need.
+
+```kotlin
+apiClientGenerator {
+    generators {
+        create("openapi") {
+            openApiFile = file("src/main/openapi/openapi.json")
+            modulesIds.addAll("KotlinTimeInstantModule", "KotlinxDateTimeLocalDateModule", "KotlinUuidModule")
+        }
+    }
+}
+
+dependencies {
+    // only needed for KotlinxDateTimeLocalDateModule
+    implementation("org.jetbrains.kotlinx:kotlinx-datetime:<version>")
+}
+```
+
+The mapping applies everywhere the type is used: model properties, request/response bodies, path, query, header and
+form parameters (converted with `toString()`, which produces the ISO-8601 / canonical form), and default values
+(rendered as `Instant.parse("…")`, `LocalDate.parse("…")`, `Uuid.parse("…")`). Serialization relies on the serializers
+built into kotlinx-serialization (`Instant`, `Uuid`) and kotlinx-datetime (`LocalDate`). The generated code requires
+Kotlin 2.4+, where `kotlin.uuid.Uuid` is stable.
+
+With `initApiClientSubproject`, add the kotlinx-datetime dependency through
+`initSubproject { additionalDependencies.add("org.jetbrains.kotlinx:kotlinx-datetime:<version>") }`.
+
+To map other formats (e.g. `uri`), implement the `processTypeMapping` hook in a custom module:
+
+```kotlin
+override fun processTypeMapping(config: ApiTypeMappingConfig) {
+    config.stringFormatTypes["uri"] = StringFormatType("com.example.Uri", parseFunction = "parse")
+}
+```
 
 #### Custom module at runtime
 
@@ -92,7 +133,7 @@ apiClientGenerator {
 >   customModules.add(CopyrightModule())
 >   ```
 >
-> - **SPI via `modulesIds`** — package the module as a library with a `META-INF/services/org.litote.openapi.ktor.client.generator.ApiGeneratorModule` entry, add it to the buildscript classpath, and reference it by ID. The built-in modules (`UnknownEnumValueModule`, `LoggingSl4jModule`, `LoggingKotlinModule`) follow exactly this pattern and can serve as implementation examples.
+> - **SPI via `modulesIds`** — package the module as a library with a `META-INF/services/org.litote.openapi.ktor.client.generator.ApiGeneratorModule` entry, add it to the buildscript classpath, and reference it by ID. The built-in modules (`UnknownEnumValueModule`, `LoggingSl4jModule`, `LoggingKotlinModule`, ...) follow exactly this pattern and can serve as implementation examples.
 >
 > - **Disable the configuration cache** — if neither approach suits your project, set `org.gradle.configuration-cache=false` in `gradle.properties` (this is the default value).
 
@@ -105,6 +146,7 @@ A module can implement any combination of the following hooks — all are no-ops
 | `processConfiguration(ApiConfigurationGeneratorConfig)` | Before `ClientConfiguration` is rendered | Set custom Json properties (`coerceInputValues`, etc.), override the exception-logging lambda |
 | `processClient(ApiClientGeneratorConfig)` | Before any client class is rendered | Configure client-level rendering options (reserved for future use) |
 | `processModel(ApiModelGeneratorConfig)` | Before any model class is rendered | Set a fallback enum constant (`defaultEnumValue`) |
+| `processTypeMapping(ApiTypeMappingConfig)` | Once, before models, clients and `ClientConfiguration` are rendered | Map an OpenAPI `string` format to a Kotlin type (`stringFormatTypes["uuid"] = StringFormatType("kotlin.uuid.Uuid")`) |
 | `transformClientSpec(ClientSpec): ClientSpec` | For each client, before KotlinPoet rendering | Add, remove or rewrite operations; rename the client; change parameters or response types |
 | `transformModelSpec(ModelSpec): ModelSpec` | For each model, before KotlinPoet rendering | Add, remove or rewrite properties; change the model kind (data class, enum, sealed…) |
 | `transformFile(GeneratedFileSpec): GeneratedFileSpec` | After KotlinPoet rendering, before writing to disk | Add a file header, rewrite imports, inject code at the text level |

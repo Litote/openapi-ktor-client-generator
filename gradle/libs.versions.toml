@@ -3,6 +3,7 @@ coroutines = "1.11.0"
 gradle-publish = "2.2.1"
 kotlin = "2.4.20"
 kotlin-poet = "2.4.0"
+kotlinx-datetime = "0.8.0"
 kotlinx-serialization = "1.11.0"
 ktlint = "5.7.0"
 ktor = "3.5.2"
@@ -30,6 +31,7 @@ coroutines = { module = "org.jetbrains.kotlinx:kotlinx-coroutines-core", version
 kotlin-gradle-plugin = { module = "org.jetbrains.kotlin:kotlin-gradle-plugin", version.ref = "kotlin" }
 kotlin-poet = { module = "com.squareup:kotlinpoet-jvm", version.ref = "kotlin-poet" }
 kotlin-reflect = { module = "org.jetbrains.kotlin:kotlin-reflect", version.ref = "kotlin" }
+kotlinx-datetime = { module = "org.jetbrains.kotlinx:kotlinx-datetime", version.ref = "kotlinx-datetime" }
 ktor-cio = { module = "io.ktor:ktor-client-cio", version.ref = "ktor" }
 ktor-contentnegotiation = { module = "io.ktor:ktor-client-content-negotiation", version.ref = "ktor" }
 ktor-core = { module = "io.ktor:ktor-client-core", version.ref = "ktor" }

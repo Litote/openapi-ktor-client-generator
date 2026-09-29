@@ -14,7 +14,11 @@ openapi-ktor-client-generator/
 ├── module/
 │   ├── unknown-enum-value/       → Optional module: unknown enum value handling
 │   ├── logging-sl4j/             → Optional module: SLF4J logging
-│   └── logging-kotlin/           → Optional module: kotlin-logging (oshai) logging
+│   ├── logging-kotlin/           → Optional module: kotlin-logging (oshai) logging
+│   ├── basic-auth/               → Optional module: Bearer token authorization
+│   ├── kotlin-time-instant/      → Optional module: date-time → kotlin.time.Instant
+│   ├── kotlinx-datetime-local-date/ → Optional module: date → kotlinx.datetime.LocalDate
+│   └── kotlin-uuid/              → Optional module: uuid → kotlin.uuid.Uuid
 ├── convention/                   → Build convention plugins
 ├── e2e/                          → End-to-end test project (single-module, inline generation)
 ├── e2e-split/                    → E2E test for initApiClientSubproject (split-by-client mode)
@@ -108,7 +112,7 @@ See [CONTRIBUTING.md — Gradle Dependency Graph](CONTRIBUTING.md#gradle-depende
 | Sub-module | Root package | Key classes |
 |---|---|---|
 | `generator:domain` | `*.domain` | `GenerationSpec`, `ClientSpec`, `OperationSpec`, `ModelSpec` (sealed), `SubtypeHint`, `DomainTypeSpec` (sealed), `ModelPropertySpec`, `OperationParameterSpec`, `RequestBodySpec`, `ResponseEntrySpec`, `FormFieldSpec`, `ClientConfigurationSpec`, `SecuritySchemeSpec`, `ComponentParameterSpec`, `DefaultValueSpec`, `OperationMetaSpec`, `ParameterLocationSpec`, `ModelUsageAnalyzer` (top-level fns), `PartitionedGenerationSpec`, `PerClientGenerationSpec`, `SharedGroupSpec`, `GeneratedFileSpec` |
-| `generator:port` | `*.port` | `ApiSpecificationParser` (parse takes only `operationFilter`), `ApiConfigurationRenderer`, `ApiClientRenderer`, `ApiModelRenderer`, `ApiFileSystemWriter`, `ApiConfigurationGeneratorConfig`, `ApiClientGeneratorConfig`, `ApiModelGeneratorConfig` |
+| `generator:port` | `*.port` | `ApiSpecificationParser` (parse takes only `operationFilter`), `ApiTypeMappingConfig`, `StringFormatType`, `ApiConfigurationRenderer`, `ApiClientRenderer`, `ApiModelRenderer`, `ApiFileSystemWriter`, `ApiConfigurationGeneratorConfig`, `ApiClientGeneratorConfig`, `ApiModelGeneratorConfig` |
 | `generator:config` | `*.generator` | `ApiGeneratorConfiguration`, `ApiGeneratorModule`, `GenerationResult`, `SplitGranularity`, `SharedModelGranularity` |
 | `generator:application` | `*.application` | `GenerateCodeService`, `GenerationSpecPartitioner` |
 | `generator:adapter-writer` | `*.adapter.writer` | `KotlinPoetFileWriter` |
@@ -350,10 +354,10 @@ Used by both `generator/` and `gradle-plugin/`.
 
 See [ADVANCED_USAGE.md — Modules](ADVANCED_USAGE.md#modules) for the full module documentation and hook reference.
 
-Built-in module IDs: `"UnknownEnumValueModule"`, `"LoggingSl4jModule"`, `"LoggingKotlinModule"`, `"BasicAuthModule"`.
+Built-in module IDs: `"UnknownEnumValueModule"`, `"LoggingSl4jModule"`, `"LoggingKotlinModule"`, `"BasicAuthModule"`, `"KotlinTimeInstantModule"`, `"KotlinxDateTimeLocalDateModule"`, `"KotlinUuidModule"`.
 Hooks are declared on `ApiConfigurationGeneratorConfig`, `ApiClientGeneratorConfig`, `ApiModelGeneratorConfig`.
 
-> ⚠️ **Every new module must be added as an `implementation` dependency in `gradle-plugin/build.gradle.kts`** — otherwise the SPI `ServiceLoader` cannot find it at runtime when the plugin is applied. Currently declared: `module:unknown-enum-value`, `module:logging-kotlin`, `module:logging-sl4j`, `module:basic-auth`.
+> ⚠️ **Every new module must be added as an `implementation` dependency in `gradle-plugin/build.gradle.kts`** — otherwise the SPI `ServiceLoader` cannot find it at runtime when the plugin is applied. Currently declared: `module:unknown-enum-value`, `module:logging-kotlin`, `module:logging-sl4j`, `module:basic-auth`, `module:kotlin-time-instant`, `module:kotlinx-datetime-local-date`, `module:kotlin-uuid`.
 
 `ApiConfigurationGeneratorConfig` exposes:
 - `jsonDefaultValueProperties: MutableMap<String, String>` — add/modify Json builder properties
@@ -361,6 +365,20 @@ Hooks are declared on `ApiConfigurationGeneratorConfig`, `ApiClientGeneratorConf
 - `httpClientAuthorizationDefaultValue: String` — lambda body for the `httpClientAuthorization` constructor parameter (default `"{}"`)
 - `additionalStringParameters: MutableList<String>` — param names (type `String?`, default `null`) injected before `httpClientAuthorization` in the constructor; referenced by name inside `httpClientAuthorizationDefaultValue` lambdas
 - `logLevelDefaultValue: String` — default value for the `logLevel: LogLevel` constructor parameter (default `"LogLevel.HEADERS"`, matching Ktor's own default)
+
+### String format → rich type mapping
+
+- The parser always keeps the OpenAPI `format` of `string` schemas in `DomainTypeSpec.PrimitiveSpec.format`
+  (`binary` excepted). Inside the parser it travels on the KotlinPoet `STRING` TypeName as a `StringFormatTag`
+  (`TypeNameConverter.kt`, `stringTypeName()`); tags do not affect `TypeName` equality, so `== STRING` checks still hold.
+- `ApiGeneratorModule.processTypeMapping(ApiTypeMappingConfig)` (port) fills `stringFormatTypes: format → StringFormatType(qualifiedName, parseFunction)`.
+  `List<ApiGeneratorModule>.stringFormatTypes()` (config) resolves the map; each renderer (`ApiModelGenerator`,
+  `ApiClientGenerator` → `OperationBuilder`/`ResponseBuilder`, `ApiClientConfigurationGenerator`) computes it from its modules.
+- **Every `DomainTypeSpec.toTypeName(...)` call must pass `stringFormatTypes`**, otherwise the type silently falls back to `String`.
+- Mapped types: path/query params use `.toString()`, string defaults render `Type.parse("…")`, and component-parameter
+  defaults become a non-`const` `val` in `ClientConfiguration.Companion`.
+- Modules: `KotlinTimeInstantModule` (`date-time` → `kotlin.time.Instant`), `KotlinxDateTimeLocalDateModule`
+  (`date` → `kotlinx.datetime.LocalDate`, needs kotlinx-datetime), `KotlinUuidModule` (`uuid` → `kotlin.uuid.Uuid`).
 
 `BasicAuthModule` adds `accessToken: String?` and sets `httpClientAuthorization` to `{ accessToken?.let { token -> defaultRequest { header("Authorization", "Bearer " + token) } } }`.
 

@@ -6,6 +6,8 @@ import org.litote.openapi.ktor.client.generator.domain.ModelSpec
 import org.litote.openapi.ktor.client.generator.port.ApiClientGeneratorConfig
 import org.litote.openapi.ktor.client.generator.port.ApiConfigurationGeneratorConfig
 import org.litote.openapi.ktor.client.generator.port.ApiModelGeneratorConfig
+import org.litote.openapi.ktor.client.generator.port.ApiTypeMappingConfig
+import org.litote.openapi.ktor.client.generator.port.StringFormatType
 import java.util.ServiceLoader
 
 public interface ApiGeneratorModule {
@@ -20,6 +22,10 @@ public interface ApiGeneratorModule {
     }
 
     public fun processModel(generator: ApiModelGeneratorConfig) {
+        // Module hook — no-op by default.
+    }
+
+    public fun processTypeMapping(config: ApiTypeMappingConfig) {
         // Module hook — no-op by default.
     }
 
@@ -38,4 +44,14 @@ public interface ApiGeneratorModule {
 
         public fun getModule(id: String): ApiGeneratorModule? = modules[id]
     }
+}
+
+/** Applies every module's [ApiGeneratorModule.processTypeMapping] hook and returns the resulting string format mapping. */
+public fun List<ApiGeneratorModule>.stringFormatTypes(): Map<String, StringFormatType> {
+    val config =
+        object : ApiTypeMappingConfig {
+            override val stringFormatTypes: MutableMap<String, StringFormatType> = mutableMapOf()
+        }
+    forEach { it.processTypeMapping(config) }
+    return config.stringFormatTypes.toMap()
 }

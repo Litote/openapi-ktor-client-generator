@@ -4,6 +4,8 @@ import io.ktor.client.call.body
 import io.ktor.client.request.`get`
 import kotlin.Int
 import kotlin.coroutines.cancellation.CancellationException
+import kotlin.uuid.Uuid
+import kotlinx.datetime.LocalDate
 import kotlinx.serialization.Serializable
 import org.example.client.ClientConfiguration.Companion.defaultClientConfiguration
 import org.example.model.TestStatusResponse
@@ -14,9 +16,17 @@ public class Client(
   /**
    * Get test status
    */
-  public suspend fun getTestStatus(): GetTestStatusResponse {
+  public suspend fun getTestStatus(runId: Uuid? = null, day: LocalDate? = LocalDate.parse("2024-01-31")): GetTestStatusResponse {
     try {
       val response = configuration.client.`get`("test-status") {
+        url {
+          if (runId != null) {
+            parameters.append("runId", runId.toString())
+          }
+          if (day != null) {
+            parameters.append("day", day.toString())
+          }
+        }
       }
       return when (response.status.value) {
         200 -> GetTestStatusResponseSuccess(response.body<TestStatusResponse>())

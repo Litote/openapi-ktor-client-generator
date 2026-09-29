@@ -9,12 +9,15 @@ import com.squareup.kotlinpoet.PropertySpec
 import com.squareup.kotlinpoet.TypeName
 import com.squareup.kotlinpoet.TypeSpec
 import kotlinx.serialization.Serializable
+import org.litote.openapi.ktor.client.generator.port.StringFormatType
 import org.litote.openapi.ktor.client.generator.domain.ResponseEntrySpec as DomainResponseEntry
 
 /**
  * Builds response types for API operations.
  */
-internal class ResponseBuilder {
+internal class ResponseBuilder(
+    private val stringFormatTypes: Map<String, StringFormatType> = emptyMap(),
+) {
     private companion object {
         val serializableAnnotation: AnnotationSpec = AnnotationSpec.builder(Serializable::class).build()
     }
@@ -53,7 +56,7 @@ internal class ResponseBuilder {
     ): List<RenderedResponseEntry> {
         val grouped: List<Triple<TypeName?, Boolean, List<Int>>> =
             responses.map { entry ->
-                val typeName = entry.bodyType?.toTypeName(modelPackage, modelPackageOverrides)
+                val typeName = entry.bodyType?.toTypeName(modelPackage, modelPackageOverrides, stringFormatTypes)
                 Triple(typeName, entry.isSuccess, entry.statusCodes)
             }
 

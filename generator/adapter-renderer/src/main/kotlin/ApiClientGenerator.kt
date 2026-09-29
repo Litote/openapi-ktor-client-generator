@@ -13,6 +13,8 @@ import org.litote.openapi.ktor.client.generator.adapter.writer.KotlinPoetFileWri
 import org.litote.openapi.ktor.client.generator.domain.ClientSpec
 import org.litote.openapi.ktor.client.generator.port.ApiClientGeneratorConfig
 import org.litote.openapi.ktor.client.generator.port.ApiFileSystemWriter
+import org.litote.openapi.ktor.client.generator.port.StringFormatType
+import org.litote.openapi.ktor.client.generator.stringFormatTypes
 
 /**
  * Generates Ktor HTTP client classes from OpenAPI operations.
@@ -24,6 +26,8 @@ public class ApiClientGenerator public constructor(
     public val configuration: ApiGeneratorConfiguration,
     private val fileSystemWriter: ApiFileSystemWriter = KotlinPoetFileWriter(),
 ) : ApiClientGeneratorConfig {
+    private val stringFormatTypes: Map<String, StringFormatType> = configuration.modules.stringFormatTypes()
+
     public val clientConfigurationClass: ClassName =
         ClassName(configuration.configPackage, "ClientConfiguration")
 
@@ -77,11 +81,12 @@ public class ApiClientGenerator public constructor(
         val operationBuilder =
             OperationBuilder(
                 modelGenerator = modelGenerator,
-                responseBuilder = ResponseBuilder(),
+                responseBuilder = ResponseBuilder(stringFormatTypes),
                 clientConfigurationClass = clientConfigurationClass,
                 modelPackage = configuration.resolvedModelPackage,
                 clientPackage = configuration.clientPackage,
                 modelPackageOverrides = configuration.modelPackageOverrides,
+                stringFormatTypes = stringFormatTypes,
             )
 
         // Add all additional inline models first (across all operations), then build operations.

@@ -19,6 +19,7 @@ import kotlinx.serialization.json.JsonElement
 import org.litote.openapi.ktor.client.generator.domain.DefaultValueSpec
 import org.litote.openapi.ktor.client.generator.domain.DomainTypeSpec
 import org.litote.openapi.ktor.client.generator.domain.GeneratedFileSpec
+import org.litote.openapi.ktor.client.generator.port.StringFormatType
 
 /** Converts a KotlinPoet [FileSpec] to a domain [GeneratedFileSpec] by rendering its content to a string. */
 internal fun FileSpec.toGeneratedFile(): GeneratedFileSpec = GeneratedFileSpec(packageName, name, toString())
@@ -52,9 +53,24 @@ internal fun TypeName.isFloat(): Boolean = if (isNullable) this == NULLABLE_FLOA
 
 internal fun TypeName.isInt(): Boolean = if (isNullable) this == NULLABLE_INT else this == INT
 
-internal fun DefaultValueSpec.toCodeBlock(): CodeBlock =
+/** Returns the [StringFormatType] mapped for this type's `string` format, or `null` when it is rendered as [STRING]. */
+internal fun DomainTypeSpec.stringFormatType(stringFormatTypes: Map<String, StringFormatType>): StringFormatType? =
+    (this as? DomainTypeSpec.PrimitiveSpec)?.format?.let { stringFormatTypes[it] }
+
+/** Renders a string literal, or `Type.parse("…")` when [formatType] maps it to a richer type. */
+internal fun stringLiteralCodeBlock(
+    value: String,
+    formatType: StringFormatType?,
+): CodeBlock =
+    if (formatType == null) {
+        CodeBlock.of("%S", value)
+    } else {
+        CodeBlock.of("%T.%N(%S)", ClassName.bestGuess(formatType.qualifiedName), formatType.parseFunction, value)
+    }
+
+internal fun DefaultValueSpec.toCodeBlock(formatType: StringFormatType? = null): CodeBlock =
     when (this) {
-        is DefaultValueSpec.StringDefaultSpec -> CodeBlock.of("%S", value)
+        is DefaultValueSpec.StringDefaultSpec -> stringLiteralCodeBlock(value, formatType)
         is DefaultValueSpec.BooleanDefaultSpec -> CodeBlock.of("%L", value)
         is DefaultValueSpec.IntDefaultSpec -> CodeBlock.of("%L", value)
         is DefaultValueSpec.LongDefaultSpec -> CodeBlock.of("%L", value)
@@ -66,30 +82,48 @@ internal fun DefaultValueSpec.toCodeBlock(): CodeBlock =
 internal fun DomainTypeSpec.toTypeName(
     modelPackage: String,
     modelPackageOverrides: Map<String, String> = emptyMap(),
+    stringFormatTypes: Map<String, StringFormatType> = emptyMap(),
 ): TypeName {
     val base: TypeName =
         when (this) {
             is DomainTypeSpec.PrimitiveSpec -> {
                 when (kind) {
-                    DomainTypeSpec.PrimitiveSpec.KindSpec.STRING -> STRING
-                    DomainTypeSpec.PrimitiveSpec.KindSpec.INT -> INT
-                    DomainTypeSpec.PrimitiveSpec.KindSpec.LONG -> LONG
-                    DomainTypeSpec.PrimitiveSpec.KindSpec.DOUBLE -> DOUBLE
-                    DomainTypeSpec.PrimitiveSpec.KindSpec.FLOAT -> FLOAT
-                    DomainTypeSpec.PrimitiveSpec.KindSpec.BOOLEAN -> BOOLEAN
+                    DomainTypeSpec.PrimitiveSpec.KindSpec.STRING -> {
+                        stringFormatType(stringFormatTypes)?.let { ClassName.bestGuess(it.qualifiedName) } ?: STRING
+                    }
+
+                    DomainTypeSpec.PrimitiveSpec.KindSpec.INT -> {
+                        INT
+                    }
+
+                    DomainTypeSpec.PrimitiveSpec.KindSpec.LONG -> {
+                        LONG
+                    }
+
+                    DomainTypeSpec.PrimitiveSpec.KindSpec.DOUBLE -> {
+                        DOUBLE
+                    }
+
+                    DomainTypeSpec.PrimitiveSpec.KindSpec.FLOAT -> {
+                        FLOAT
+                    }
+
+                    DomainTypeSpec.PrimitiveSpec.KindSpec.BOOLEAN -> {
+                        BOOLEAN
+                    }
                 }
             }
 
             is DomainTypeSpec.ListTypeSpec -> {
-                LIST.parameterizedBy(element.toTypeName(modelPackage, modelPackageOverrides))
+                LIST.parameterizedBy(element.toTypeName(modelPackage, modelPackageOverrides, stringFormatTypes))
             }
 
             is DomainTypeSpec.SetTypeSpec -> {
-                SET.parameterizedBy(element.toTypeName(modelPackage, modelPackageOverrides))
+                SET.parameterizedBy(element.toTypeName(modelPackage, modelPackageOverrides, stringFormatTypes))
             }
 
             is DomainTypeSpec.MapTypeSpec -> {
-                MAP.parameterizedBy(STRING, value.toTypeName(modelPackage, modelPackageOverrides))
+                MAP.parameterizedBy(STRING, value.toTypeName(modelPackage, modelPackageOverrides, stringFormatTypes))
             }
 
             is DomainTypeSpec.ModelReferenceSpec -> {

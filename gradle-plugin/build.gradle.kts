@@ -52,6 +52,9 @@ dependencies {
     implementation(project(":module:logging-kotlin"))
     implementation(project(":module:logging-sl4j"))
     implementation(project(":module:basic-auth"))
+    implementation(project(":module:kotlin-time-instant"))
+    implementation(project(":module:kotlinx-datetime-local-date"))
+    implementation(project(":module:kotlin-uuid"))
 }
 
 val pluginDescription = "Gradle plugin to generate OpenApi client with ktor/kotlinx.serialization"

@@ -18,6 +18,7 @@ import org.litote.openapi.ktor.client.generator.domain.FormFieldSpec
 import org.litote.openapi.ktor.client.generator.domain.OperationParameterSpec
 import org.litote.openapi.ktor.client.generator.domain.OperationSpec
 import org.litote.openapi.ktor.client.generator.domain.RequestBodySpec
+import org.litote.openapi.ktor.client.generator.port.StringFormatType
 import org.litote.openapi.ktor.client.generator.shared.uncapitalize
 
 /**
@@ -30,6 +31,7 @@ internal class OperationBuilder(
     private val modelPackage: String,
     private val clientPackage: String,
     private val modelPackageOverrides: Map<String, String> = emptyMap(),
+    private val stringFormatTypes: Map<String, StringFormatType> = emptyMap(),
 ) {
     private data class OperationParameters(
         val pathParameters: List<OperationParameterSpec>,
@@ -147,7 +149,7 @@ internal class OperationBuilder(
         operationInfo.summary?.let { funBuilder.addKdoc("%L\n", it) }
 
         requestBody?.let {
-            val requestTypeName = it.type.toTypeName(modelPackage, modelPackageOverrides)
+            val requestTypeName = it.type.toTypeName(modelPackage, modelPackageOverrides, stringFormatTypes)
             funBuilder.addParameter(it.parameterName, requestTypeName)
         }
         addParameters(funBuilder, pathParameters)
@@ -208,7 +210,7 @@ internal class OperationBuilder(
                         .constructorBuilder()
                         .apply {
                             fields.forEach { field ->
-                                val fieldTypeName = field.type.toTypeName(modelPackage, modelPackageOverrides)
+                                val fieldTypeName = field.type.toTypeName(modelPackage, modelPackageOverrides, stringFormatTypes)
                                 addParameter(
                                     ParameterSpec
                                         .builder(field.parameterName, fieldTypeName)
@@ -220,7 +222,7 @@ internal class OperationBuilder(
                         }.build(),
                 ).apply {
                     fields.forEach { field ->
-                        val fieldTypeName = field.type.toTypeName(modelPackage, modelPackageOverrides)
+                        val fieldTypeName = field.type.toTypeName(modelPackage, modelPackageOverrides, stringFormatTypes)
                         addProperty(
                             PropertySpec
                                 .builder(field.parameterName, fieldTypeName)
@@ -288,7 +290,7 @@ internal class OperationBuilder(
         operationInfo.summary?.let { funBuilder.addKdoc("%L\n", it) }
 
         requestBody?.let {
-            val requestTypeName = it.type.toTypeName(modelPackage, modelPackageOverrides)
+            val requestTypeName = it.type.toTypeName(modelPackage, modelPackageOverrides, stringFormatTypes)
             funBuilder.addParameter(it.parameterName, requestTypeName)
         }
         addParameters(funBuilder, params.pathParameters)
@@ -355,7 +357,7 @@ internal class OperationBuilder(
         if (queryParameters.isEmpty()) return
         builder.beginControlFlow("url")
         queryParameters.forEach { param ->
-            val suffix = param.toStringSuffix()
+            val suffix = param.toStringSuffix(stringFormatTypes)
             if (param.isOptional) {
                 builder.beginControlFlow(IF_NOT_NULL, param.camelCaseName)
                 builder.addStatement(
@@ -380,7 +382,7 @@ internal class OperationBuilder(
         parameters: List<OperationParameterSpec>,
     ) {
         parameters.forEach { param ->
-            val paramTypeName = param.type.toTypeName(modelPackage, modelPackageOverrides)
+            val paramTypeName = param.type.toTypeName(modelPackage, modelPackageOverrides, stringFormatTypes)
             val builder = ParameterSpec.builder(param.camelCaseName, paramTypeName)
             when {
                 param.constDefaultName != null -> {
@@ -392,7 +394,7 @@ internal class OperationBuilder(
                 }
 
                 param.defaultValue != null -> {
-                    param.defaultValue?.let { builder.defaultValue(it.toCodeBlock()) }
+                    param.defaultValue?.let { builder.defaultValue(it.toCodeBlock(param.type.stringFormatType(stringFormatTypes))) }
                 }
 
                 param.isOptional -> {
@@ -409,11 +411,12 @@ internal class OperationBuilder(
     ): String {
         var result = "\"${path.trimStart('/')}\""
         pathParameters.forEach { param ->
+            val suffix = param.toStringSuffix(stringFormatTypes)
             result +=
                 if (param.isOptional) {
-                    ".replace(\"/{${param.originalName}}\", if(${param.camelCaseName} == null) \"\" else \"/\${${param.camelCaseName}${param.toStringSuffix()}.encodeURLPathPart()}\")"
+                    ".replace(\"/{${param.originalName}}\", if(${param.camelCaseName} == null) \"\" else \"/\${${param.camelCaseName}$suffix.encodeURLPathPart()}\")"
                 } else {
-                    ".replace(\"/{${param.originalName}}\", \"/\${${param.camelCaseName}${param.toStringSuffix()}.encodeURLPathPart()}\")"
+                    ".replace(\"/{${param.originalName}}\", \"/\${${param.camelCaseName}$suffix.encodeURLPathPart()}\")"
                 }
         }
         return result
@@ -593,7 +596,7 @@ internal class OperationBuilder(
                 ).unindent()
                 .add("})\n")
         } else {
-            val typeName = field.type.toTypeName(modelPackage, modelPackageOverrides)
+            val typeName = field.type.toTypeName(modelPackage, modelPackageOverrides, stringFormatTypes)
             if (typeName.isString()) {
                 builder.addStatement("append(%S, %L)", field.originalName, valueReference)
             } else {
@@ -618,13 +621,13 @@ internal class OperationBuilder(
     }
 }
 
-private fun OperationParameterSpec.toStringSuffix(): String =
+private fun OperationParameterSpec.toStringSuffix(stringFormatTypes: Map<String, StringFormatType>): String =
     when {
         isEnum -> {
             ".serialName()"
         }
 
-        type.isString -> {
+        type.isString && type.stringFormatType(stringFormatTypes) == null -> {
             ""
         }
 
