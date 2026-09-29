@@ -12,6 +12,7 @@ kotlin {
         commonMain.dependencies {
             implementation(e2e.serialization)
             implementation(e2e.coroutines)
+            implementation(e2e.kotlinx.datetime)
             implementation(e2e.bundles.ktor)
         }
     }
@@ -25,7 +26,14 @@ apiClientGenerator {
         create("openapi") {
             outputDirectory = file("build/generated")
             allowedPaths = setOf("/test-status")
-            modulesIds = setOf("UnknownEnumValueModule", "BasicAuthModule")
+            modulesIds =
+                setOf(
+                    "UnknownEnumValueModule",
+                    "BasicAuthModule",
+                    "KotlinTimeInstantModule",
+                    "KotlinxDateTimeLocalDateModule",
+                    "KotlinUuidModule",
+                )
         }
     }
 }

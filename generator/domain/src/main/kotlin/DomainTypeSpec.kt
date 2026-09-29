@@ -6,10 +6,16 @@ package org.litote.openapi.ktor.client.generator.domain
 public sealed class DomainTypeSpec {
     public abstract val nullable: Boolean
 
-    /** Kotlin primitive / standard types. */
+    /**
+     * Kotlin primitive / standard types.
+     *
+     * [format] is the OpenAPI `format` of a `string` schema (e.g. `date-time`, `uuid`), kept so that
+     * modules can map it to a richer Kotlin type at render time. `null` when absent.
+     */
     public data class PrimitiveSpec(
         val kind: KindSpec,
         override val nullable: Boolean = false,
+        val format: String? = null,
     ) : DomainTypeSpec() {
         public enum class KindSpec { STRING, INT, LONG, DOUBLE, FLOAT, BOOLEAN }
     }

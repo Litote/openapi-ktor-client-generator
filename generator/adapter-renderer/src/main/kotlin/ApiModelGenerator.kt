@@ -25,6 +25,8 @@ import org.litote.openapi.ktor.client.generator.domain.SubtypeHint
 import org.litote.openapi.ktor.client.generator.domain.enumFieldName
 import org.litote.openapi.ktor.client.generator.port.ApiFileSystemWriter
 import org.litote.openapi.ktor.client.generator.port.ApiModelGeneratorConfig
+import org.litote.openapi.ktor.client.generator.port.StringFormatType
+import org.litote.openapi.ktor.client.generator.stringFormatTypes
 
 public class ApiModelGenerator public constructor(
     private val modelPackage: String,
@@ -40,6 +42,8 @@ public class ApiModelGenerator public constructor(
     private val fallbackModelPackage: String = modelPackage,
     private val modules: List<ApiGeneratorModule> = emptyList(),
 ) : ApiModelGeneratorConfig {
+    private val stringFormatTypes: Map<String, StringFormatType> = modules.stringFormatTypes()
+
     private companion object {
         private const val KSJ_PACKAGE = "kotlinx.serialization.json"
 
@@ -125,7 +129,7 @@ public class ApiModelGenerator public constructor(
             .interfaceBuilder(spec.name)
             .apply {
                 spec.properties.forEach { property ->
-                    val typeName = property.type.toTypeName(fallbackModelPackage, modelPackageOverrides)
+                    val typeName = property.type.toTypeName(fallbackModelPackage, modelPackageOverrides, stringFormatTypes)
                     addProperty(PropertySpec.builder(property.camelCaseName, typeName).build())
                 }
             }.build()
@@ -246,12 +250,23 @@ public class ApiModelGenerator public constructor(
             }.build()
 
     private fun buildPropertyParameter(property: ModelPropertySpec): ParameterSpec {
-        val typeName = property.type.toTypeName(fallbackModelPackage, modelPackageOverrides)
+        val typeName = property.type.toTypeName(fallbackModelPackage, modelPackageOverrides, stringFormatTypes)
         val builder = ParameterSpec.builder(property.camelCaseName, typeName)
         val defaultValueString = computePropertyDefaultValue(property)
-        if (defaultValueString != null) {
-            val format = computeDefaultValueFormat(property, defaultValueString)
-            builder.defaultValue(format, defaultValueString)
+        val formatType = property.type.stringFormatType(stringFormatTypes)
+        when {
+            defaultValueString == null -> {
+                Unit
+            }
+
+            formatType != null && defaultValueString != "null" -> {
+                builder.defaultValue(stringLiteralCodeBlock(defaultValueString, formatType))
+            }
+
+            else -> {
+                val format = computeDefaultValueFormat(property, defaultValueString)
+                builder.defaultValue(format, defaultValueString)
+            }
         }
         return builder.build()
     }
@@ -263,7 +278,7 @@ public class ApiModelGenerator public constructor(
                 if (raw == "null" || !property.isEnum) {
                     raw
                 } else {
-                    val typeName = property.type.toTypeName(fallbackModelPackage, modelPackageOverrides)
+                    val typeName = property.type.toTypeName(fallbackModelPackage, modelPackageOverrides, stringFormatTypes)
                     val simpleName =
                         (typeName as? ClassName)?.simpleName
                             ?: (typeName.copy(nullable = false) as? ClassName)?.simpleName
@@ -276,7 +291,7 @@ public class ApiModelGenerator public constructor(
             }
 
             property.isEnum && defaultEnumValue != null -> {
-                val typeName = property.type.toTypeName(fallbackModelPackage, modelPackageOverrides)
+                val typeName = property.type.toTypeName(fallbackModelPackage, modelPackageOverrides, stringFormatTypes)
                 val simpleName = (typeName as? ClassName)?.simpleName
                 simpleName?.let { "$it.$defaultEnumValue" }
             }
@@ -298,7 +313,7 @@ public class ApiModelGenerator public constructor(
         }
 
     private fun buildPropertySpec(property: ModelPropertySpec): PropertySpec {
-        val typeName = property.type.toTypeName(fallbackModelPackage, modelPackageOverrides)
+        val typeName = property.type.toTypeName(fallbackModelPackage, modelPackageOverrides, stringFormatTypes)
         return PropertySpec
             .builder(property.camelCaseName, typeName)
             .initializer(property.camelCaseName)

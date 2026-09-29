@@ -451,7 +451,7 @@ internal class ApiModel private constructor(
                 if (schema.enum?.isNotEmpty() == true) {
                     ClassName("", name.sanitizeToIdentifier().snakeToCamelCase().capitalize())
                 } else {
-                    STRING
+                    stringTypeName(schema.format)
                 }
             }
 

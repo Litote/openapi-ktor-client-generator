@@ -13,15 +13,35 @@ import com.squareup.kotlinpoet.SET
 import com.squareup.kotlinpoet.STRING
 import com.squareup.kotlinpoet.TypeName
 import com.squareup.kotlinpoet.asClassName
+import com.squareup.kotlinpoet.tag
 import kotlinx.serialization.json.JsonElement
 import org.litote.openapi.ktor.client.generator.domain.DomainTypeSpec
+
+/** KotlinPoet tag carrying the OpenAPI `format` of a `string` schema until it reaches the domain. */
+internal data class StringFormatTag(
+    val format: String,
+)
+
+/**
+ * Returns [STRING] tagged with [format] when present. Tags do not affect [TypeName] equality,
+ * so every `== STRING` check keeps working. `binary` is left untagged: it has dedicated multipart handling.
+ */
+internal fun stringTypeName(format: String?): TypeName =
+    if (format.isNullOrBlank() || format == "binary") {
+        STRING
+    } else {
+        STRING.copy(tags = mapOf(StringFormatTag::class to StringFormatTag(format)))
+    }
 
 internal fun TypeName.toDomainType(modelPackage: String): DomainTypeSpec {
     val nonNullable = if (isNullable) copy(nullable = false) else this
     val base: DomainTypeSpec =
         when {
             nonNullable == STRING -> {
-                DomainTypeSpec.PrimitiveSpec(DomainTypeSpec.PrimitiveSpec.KindSpec.STRING)
+                DomainTypeSpec.PrimitiveSpec(
+                    DomainTypeSpec.PrimitiveSpec.KindSpec.STRING,
+                    format = nonNullable.tag<StringFormatTag>()?.format,
+                )
             }
 
             nonNullable == INT -> {

@@ -29,5 +29,8 @@ include(
     "module:unknown-enum-value",
     "module:logging-sl4j",
     "module:logging-kotlin",
-    "module:basic-auth"
+    "module:basic-auth",
+    "module:kotlin-time-instant",
+    "module:kotlinx-datetime-local-date",
+    "module:kotlin-uuid"
 )

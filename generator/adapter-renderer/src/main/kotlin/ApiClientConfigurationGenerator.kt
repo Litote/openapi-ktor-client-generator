@@ -26,6 +26,8 @@ import org.litote.openapi.ktor.client.generator.domain.SecuritySchemeLocationSpe
 import org.litote.openapi.ktor.client.generator.port.ApiConfigurationGeneratorConfig
 import org.litote.openapi.ktor.client.generator.port.ApiConfigurationRenderer
 import org.litote.openapi.ktor.client.generator.port.ApiFileSystemWriter
+import org.litote.openapi.ktor.client.generator.port.StringFormatType
+import org.litote.openapi.ktor.client.generator.stringFormatTypes
 
 public class ApiClientConfigurationGenerator public constructor(
     private val clientConfiguration: ClientConfigurationSpec,
@@ -33,6 +35,8 @@ public class ApiClientConfigurationGenerator public constructor(
     private val fileSystemWriter: ApiFileSystemWriter = KotlinPoetFileWriter(),
 ) : ApiConfigurationRenderer,
     ApiConfigurationGeneratorConfig {
+    private val stringFormatTypes: Map<String, StringFormatType> = configuration.modules.stringFormatTypes()
+
     private companion object {
         val engineFactoryType: ParameterizedTypeName =
             HttpClientEngineFactory::class.asTypeName().parameterizedBy(STAR)
@@ -284,14 +288,16 @@ public class ApiClientConfigurationGenerator public constructor(
         clientConfiguration.componentParameters.forEach { spec ->
             val specDefaultValue = spec.defaultValue
             if (specDefaultValue != null) {
-                val typeName = spec.type.toTypeName(configuration.resolvedModelPackage, configuration.modelPackageOverrides)
-                // Only add const if the type supports it (primitives)
-                if (isConstSupported(typeName)) {
+                val typeName =
+                    spec.type.toTypeName(configuration.resolvedModelPackage, configuration.modelPackageOverrides, stringFormatTypes)
+                val formatType = spec.type.stringFormatType(stringFormatTypes)
+                // Only add const if the type supports it (primitives); mapped string formats get a parsed val
+                if (isConstSupported(typeName) || formatType != null) {
                     companionBuilder.addProperty(
                         PropertySpec
                             .builder("${spec.constName}_DEFAULT_VALUE", typeName)
-                            .addModifiers(KModifier.CONST)
-                            .initializer(specDefaultValue.toCodeBlock())
+                            .apply { if (formatType == null) addModifiers(KModifier.CONST) }
+                            .initializer(specDefaultValue.toCodeBlock(formatType))
                             .build(),
                     )
                 }

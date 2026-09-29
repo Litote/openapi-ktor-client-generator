@@ -111,6 +111,22 @@ val users = client.getUsers() // returns a sealed class to manage errors
 | `splitByClient`    | Enable split-by-client mode — see [PROJECT_GENERATION.md](PROJECT_GENERATION.md)     | `false`                                 | Boolean                                                                 |
 | `targetClientName` | In split mode: name of the client to generate (`null` = shared subproject) — see [PROJECT_GENERATION.md](PROJECT_GENERATION.md) | `null`                                  | Any tag-derived client name from the spec                               |
 
+### Rich types for date, date-time and uuid
+
+By default, `string` schemas are generated as `String` whatever their `format`. Enable the opt-in modules to get rich types:
+
+| Module ID | OpenAPI format | Kotlin type | Extra dependency |
+|---|---|---|---|
+| `KotlinTimeInstantModule` | `date-time` | `kotlin.time.Instant` | none |
+| `KotlinxDateTimeLocalDateModule` | `date` | `kotlinx.datetime.LocalDate` | `org.jetbrains.kotlinx:kotlinx-datetime` |
+| `KotlinUuidModule` | `uuid` | `kotlin.uuid.Uuid` | none |
+
+```kotlin
+modulesIds.addAll("KotlinTimeInstantModule", "KotlinxDateTimeLocalDateModule", "KotlinUuidModule")
+```
+
+See [ADVANCED_USAGE.md](ADVANCED_USAGE.md#rich-types-for-string-formats) for details.
+
 ## Advanced usage and troubleshooting
 
 See [ADVANCED_USAGE.md](CONTRIBUTING.md)
