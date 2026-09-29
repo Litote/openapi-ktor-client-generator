@@ -29,9 +29,7 @@ import org.example.model.TestStatusEnum
 import org.example.model.TestStatusResponse
 import io.ktor.client.request.`header` as setHeader
 
-public class Client(
-  private val configuration: ClientConfiguration = defaultClientConfiguration,
-) {
+public interface Client {
   /**
    * Get test status
    */
@@ -46,74 +44,7 @@ public class Client(
     states: List<TestStatusEnum>? = null,
     xTraceIds: List<String>? = null,
     session: String,
-  ): GetTestStatusResponse {
-    try {
-      val response = configuration.client.`get`("test-status") {
-        if (xTraceIds != null) {
-          setHeader("X-Trace-Ids", xTraceIds.joinToString(","))
-        }
-        cookie("session", session)
-        url {
-          if (runId != null) {
-            parameters.append("runId", runId.toString())
-          }
-          if (day != null) {
-            parameters.append("day", day.toString())
-          }
-          if (runIds != null) {
-            parameters.appendAll("runIds", runIds.map { it.toString() })
-          }
-          if (statuses != null) {
-            parameters.append("statuses", statuses.joinToString("|") { it.serialName() })
-          }
-          if (filter != null) {
-            parameters.appendDeepObject("filter", configuration.json.encodeToJsonElement(filter))
-          }
-          if (range != null) {
-            parameters.appendExplodedObject(configuration.json.encodeToJsonElement(range).jsonObject)
-          }
-          if (compactRange != null) {
-            parameters.append("compactRange", configuration.json.encodeToJsonElement(compactRange).jsonObject.toDelimitedString(","))
-          }
-          if (states != null) {
-            parameters.appendAll("states", states.map { it.serialName() })
-          }
-        }
-      }
-      return when (response.status.value) {
-        200 -> GetTestStatusResponseSuccess(response.body<TestStatusResponse>(), response.headers)
-        else -> GetTestStatusResponseUnknownFailure(response.status.value, response.headers)
-      }
-    }
-    catch(e: CancellationException) {
-      throw e
-    }
-    catch(e: Exception) {
-      configuration.exceptionLogger(e)
-      return GetTestStatusResponseUnknownFailure(500)
-    }
-  }
-
-  private fun ParametersBuilder.appendExplodedObject(`value`: JsonObject) {
-    value.forEach { (key, element) -> appendAll(key, element.toParameterValues()) }
-  }
-
-  private fun ParametersBuilder.appendDeepObject(name: String, `value`: JsonElement) {
-    when (value) {
-      is JsonObject -> value.forEach { (key, element) -> appendDeepObject("$name[$key]", element) }
-      is JsonArray -> value.forEach { appendDeepObject(name, it) }
-      else -> value.toParameterValues().forEach { append(name, it) }
-    }
-  }
-
-  private fun JsonObject.toDelimitedString(separator: String, keyValueSeparator: String = separator): String = entries.filter { it.value !is JsonNull }.joinToString(separator) { (key, element) -> key + keyValueSeparator + element.toParameterValues().joinToString(",") }
-
-  private fun JsonElement.toParameterValues(): List<String> = when (this) {
-    is JsonNull -> emptyList()
-    is JsonPrimitive -> listOf(content)
-    is JsonArray -> flatMap { it.toParameterValues() }
-    is JsonObject -> listOf(toString())
-  }
+  ): GetTestStatusResponse
 
   @Serializable
   public enum class Statuses {
@@ -150,4 +81,90 @@ public class Client(
     @Transient
     override val headers: Headers = Headers.Empty,
   ) : GetTestStatusResponse()
+}
+
+public fun Client(configuration: ClientConfiguration = defaultClientConfiguration): Client = DefaultClient(configuration)
+
+public class DefaultClient(
+  private val configuration: ClientConfiguration = defaultClientConfiguration,
+) : Client {
+  override suspend fun getTestStatus(
+    runId: Uuid?,
+    day: LocalDate?,
+    runIds: List<Uuid>?,
+    statuses: List<Client.Statuses>?,
+    filter: Client.Filter?,
+    range: TestRange?,
+    compactRange: TestRange?,
+    states: List<TestStatusEnum>?,
+    xTraceIds: List<String>?,
+    session: String,
+  ): Client.GetTestStatusResponse {
+    try {
+      val response = configuration.client.`get`("test-status") {
+        if (xTraceIds != null) {
+          setHeader("X-Trace-Ids", xTraceIds.joinToString(","))
+        }
+        cookie("session", session)
+        url {
+          if (runId != null) {
+            parameters.append("runId", runId.toString())
+          }
+          if (day != null) {
+            parameters.append("day", day.toString())
+          }
+          if (runIds != null) {
+            parameters.appendAll("runIds", runIds.map { it.toString() })
+          }
+          if (statuses != null) {
+            parameters.append("statuses", statuses.joinToString("|") { it.serialName() })
+          }
+          if (filter != null) {
+            parameters.appendDeepObject("filter", configuration.json.encodeToJsonElement(filter))
+          }
+          if (range != null) {
+            parameters.appendExplodedObject(configuration.json.encodeToJsonElement(range).jsonObject)
+          }
+          if (compactRange != null) {
+            parameters.append("compactRange", configuration.json.encodeToJsonElement(compactRange).jsonObject.toDelimitedString(","))
+          }
+          if (states != null) {
+            parameters.appendAll("states", states.map { it.serialName() })
+          }
+        }
+      }
+      return when (response.status.value) {
+        200 -> Client.GetTestStatusResponseSuccess(response.body<TestStatusResponse>(), response.headers)
+        else -> Client.GetTestStatusResponseUnknownFailure(response.status.value, response.headers)
+      }
+    }
+    catch(e: CancellationException) {
+      throw e
+    }
+    catch(e: Exception) {
+      configuration.exceptionLogger(e)
+      return Client.GetTestStatusResponseUnknownFailure(500)
+    }
+  }
+
+  private fun ParametersBuilder.appendExplodedObject(`value`: JsonObject) {
+    value.forEach { (key, element) -> appendAll(key, element.toParameterValues()) }
+  }
+
+  private fun ParametersBuilder.appendDeepObject(name: String, `value`: JsonElement) {
+    when (value) {
+      is JsonObject -> value.forEach { (key, element) -> appendDeepObject("$name[$key]", element) }
+      is JsonArray -> value.forEach { appendDeepObject(name, it) }
+      else -> value.toParameterValues().forEach { append(name, it) }
+    }
+  }
+
+  private fun JsonObject.toDelimitedString(separator: String, keyValueSeparator: String = separator): String = entries.filter { it.value !is JsonNull }.joinToString(separator) { (key, element) -> key + keyValueSeparator + element.toParameterValues().joinToString(",") }
+
+  private fun JsonElement.toParameterValues(): List<String> = when (this) {
+    is JsonNull -> emptyList()
+    is JsonPrimitive -> listOf(content)
+    is JsonArray -> flatMap { it.toParameterValues() }
+    is JsonObject -> listOf(toString())
+  }
 }

@@ -15,9 +15,7 @@ import mastodon.api.model.Error
 import mastodon.api.model.Status
 import mastodon.api.model.ValidationError
 
-public class BookmarksClient(
-  private val configuration: ClientConfiguration = defaultClientConfiguration,
-) {
+public interface BookmarksClient {
   /**
    * View bookmarked statuses
    */
@@ -26,40 +24,7 @@ public class BookmarksClient(
     maxId: String? = null,
     minId: String? = null,
     sinceId: String? = null,
-  ): GetBookmarksResponse {
-    try {
-      val response = configuration.client.`get`("api/v1/bookmarks") {
-        url {
-          if (limit != null) {
-            parameters.append("limit", limit.toString())
-          }
-          if (maxId != null) {
-            parameters.append("max_id", maxId)
-          }
-          if (minId != null) {
-            parameters.append("min_id", minId)
-          }
-          if (sinceId != null) {
-            parameters.append("since_id", sinceId)
-          }
-        }
-      }
-      return when (response.status.value) {
-        200 -> GetBookmarksResponseSuccess(response.body<List<Status>>(), response.headers)
-        401, 404, 429, 503 -> GetBookmarksResponseFailure401(response.body<Error>(), response.headers)
-        410 -> GetBookmarksResponseFailure410(response.headers)
-        422 -> GetBookmarksResponseFailure(response.body<ValidationError>(), response.headers)
-        else -> GetBookmarksResponseUnknownFailure(response.status.value, response.headers)
-      }
-    }
-    catch(e: CancellationException) {
-      throw e
-    }
-    catch(e: Exception) {
-      configuration.exceptionLogger(e)
-      return GetBookmarksResponseUnknownFailure(500)
-    }
-  }
+  ): GetBookmarksResponse
 
   @Serializable
   public sealed class GetBookmarksResponse {
@@ -123,4 +88,50 @@ public class BookmarksClient(
     @Transient
     override val headers: Headers = Headers.Empty,
   ) : GetBookmarksResponse()
+}
+
+public fun BookmarksClient(configuration: ClientConfiguration = defaultClientConfiguration): BookmarksClient = DefaultBookmarksClient(configuration)
+
+public class DefaultBookmarksClient(
+  private val configuration: ClientConfiguration = defaultClientConfiguration,
+) : BookmarksClient {
+  override suspend fun getBookmarks(
+    limit: Long?,
+    maxId: String?,
+    minId: String?,
+    sinceId: String?,
+  ): BookmarksClient.GetBookmarksResponse {
+    try {
+      val response = configuration.client.`get`("api/v1/bookmarks") {
+        url {
+          if (limit != null) {
+            parameters.append("limit", limit.toString())
+          }
+          if (maxId != null) {
+            parameters.append("max_id", maxId)
+          }
+          if (minId != null) {
+            parameters.append("min_id", minId)
+          }
+          if (sinceId != null) {
+            parameters.append("since_id", sinceId)
+          }
+        }
+      }
+      return when (response.status.value) {
+        200 -> BookmarksClient.GetBookmarksResponseSuccess(response.body<List<Status>>(), response.headers)
+        401, 404, 429, 503 -> BookmarksClient.GetBookmarksResponseFailure401(response.body<Error>(), response.headers)
+        410 -> BookmarksClient.GetBookmarksResponseFailure410(response.headers)
+        422 -> BookmarksClient.GetBookmarksResponseFailure(response.body<ValidationError>(), response.headers)
+        else -> BookmarksClient.GetBookmarksResponseUnknownFailure(response.status.value, response.headers)
+      }
+    }
+    catch(e: CancellationException) {
+      throw e
+    }
+    catch(e: Exception) {
+      configuration.exceptionLogger(e)
+      return BookmarksClient.GetBookmarksResponseUnknownFailure(500)
+    }
+  }
 }

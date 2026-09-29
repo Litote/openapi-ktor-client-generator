@@ -29,473 +29,101 @@ import mastodon.api.model.FilterStatus
 import mastodon.api.model.V1Filter
 import mastodon.api.model.ValidationError
 
-public class FiltersClient(
-  private val configuration: ClientConfiguration = defaultClientConfiguration,
-) {
+public interface FiltersClient {
   /**
    * View your filters
    */
-  public suspend fun getFilters(): GetFiltersResponse {
-    try {
-      val response = configuration.client.`get`("api/v1/filters") {
-      }
-      return when (response.status.value) {
-        200 -> GetFiltersResponseSuccess(response.body<V1Filter>(), response.headers)
-        401, 404, 429, 503 -> GetFiltersResponseFailure401(response.body<Error>(), response.headers)
-        410 -> GetFiltersResponseFailure410(response.headers)
-        422 -> GetFiltersResponseFailure(response.body<ValidationError>(), response.headers)
-        else -> GetFiltersResponseUnknownFailure(response.status.value, response.headers)
-      }
-    }
-    catch(e: CancellationException) {
-      throw e
-    }
-    catch(e: Exception) {
-      configuration.exceptionLogger(e)
-      return GetFiltersResponseUnknownFailure(500)
-    }
-  }
+  public suspend fun getFilters(): GetFiltersResponse
 
   /**
    * Create a filter
    */
-  public suspend fun createFilter(request: CreateFilterRequest): CreateFilterResponse {
-    try {
-      val response = configuration.client.post("api/v1/filters") {
-        setBody(request)
-        contentType(ContentType.Application.Json)
-      }
-      return when (response.status.value) {
-        200 -> CreateFilterResponseSuccess(response.body<V1Filter>(), response.headers)
-        401, 404, 422, 429, 503 -> CreateFilterResponseFailure401(response.body<Error>(), response.headers)
-        410 -> CreateFilterResponseFailure(response.headers)
-        else -> CreateFilterResponseUnknownFailure(response.status.value, response.headers)
-      }
-    }
-    catch(e: CancellationException) {
-      throw e
-    }
-    catch(e: Exception) {
-      configuration.exceptionLogger(e)
-      return CreateFilterResponseUnknownFailure(500)
-    }
-  }
+  public suspend fun createFilter(request: CreateFilterRequest): CreateFilterResponse
 
   /**
    * View a single filter
    */
-  public suspend fun getFilter(id: String): GetFilterResponse {
-    try {
-      val response = configuration.client.`get`("api/v1/filters/{id}".replace("/{id}", "/${id.encodeURLPathPart()}")) {
-      }
-      return when (response.status.value) {
-        200 -> GetFilterResponseSuccess(response.body<V1Filter>(), response.headers)
-        401, 404, 429, 503 -> GetFilterResponseFailure401(response.body<Error>(), response.headers)
-        410 -> GetFilterResponseFailure410(response.headers)
-        422 -> GetFilterResponseFailure(response.body<ValidationError>(), response.headers)
-        else -> GetFilterResponseUnknownFailure(response.status.value, response.headers)
-      }
-    }
-    catch(e: CancellationException) {
-      throw e
-    }
-    catch(e: Exception) {
-      configuration.exceptionLogger(e)
-      return GetFilterResponseUnknownFailure(500)
-    }
-  }
+  public suspend fun getFilter(id: String): GetFilterResponse
 
   /**
    * Update a filter
    */
-  public suspend fun updateFilter(request: UpdateFilterRequest, id: String): UpdateFilterResponse {
-    try {
-      val response = configuration.client.put("api/v1/filters/{id}".replace("/{id}", "/${id.encodeURLPathPart()}")) {
-        setBody(request)
-        contentType(ContentType.Application.Json)
-      }
-      return when (response.status.value) {
-        200 -> UpdateFilterResponseSuccess(response.body<V1Filter>(), response.headers)
-        401, 404, 422, 429, 503 -> UpdateFilterResponseFailure401(response.body<Error>(), response.headers)
-        410 -> UpdateFilterResponseFailure(response.headers)
-        else -> UpdateFilterResponseUnknownFailure(response.status.value, response.headers)
-      }
-    }
-    catch(e: CancellationException) {
-      throw e
-    }
-    catch(e: Exception) {
-      configuration.exceptionLogger(e)
-      return UpdateFilterResponseUnknownFailure(500)
-    }
-  }
+  public suspend fun updateFilter(request: UpdateFilterRequest, id: String): UpdateFilterResponse
 
   /**
    * Remove a filter
    */
-  public suspend fun deleteFilter(id: String): DeleteFilterResponse {
-    try {
-      val response = configuration.client.delete("api/v1/filters/{id}".replace("/{id}", "/${id.encodeURLPathPart()}")) {
-      }
-      return when (response.status.value) {
-        200 -> DeleteFilterResponseSuccess(response.headers)
-        401, 404, 429, 503 -> DeleteFilterResponseFailure401(response.body<Error>(), response.headers)
-        410 -> DeleteFilterResponseFailure410(response.headers)
-        422 -> DeleteFilterResponseFailure(response.body<ValidationError>(), response.headers)
-        else -> DeleteFilterResponseUnknownFailure(response.status.value, response.headers)
-      }
-    }
-    catch(e: CancellationException) {
-      throw e
-    }
-    catch(e: Exception) {
-      configuration.exceptionLogger(e)
-      return DeleteFilterResponseUnknownFailure(500)
-    }
-  }
+  public suspend fun deleteFilter(id: String): DeleteFilterResponse
 
   /**
    * View all filters
    */
-  public suspend fun getFiltersV2(): GetFiltersV2Response {
-    try {
-      val response = configuration.client.`get`("api/v2/filters") {
-      }
-      return when (response.status.value) {
-        200 -> GetFiltersV2ResponseSuccess(response.body<List<Filter>>(), response.headers)
-        401, 404, 429, 503 -> GetFiltersV2ResponseFailure401(response.body<Error>(), response.headers)
-        410 -> GetFiltersV2ResponseFailure410(response.headers)
-        422 -> GetFiltersV2ResponseFailure(response.body<ValidationError>(), response.headers)
-        else -> GetFiltersV2ResponseUnknownFailure(response.status.value, response.headers)
-      }
-    }
-    catch(e: CancellationException) {
-      throw e
-    }
-    catch(e: Exception) {
-      configuration.exceptionLogger(e)
-      return GetFiltersV2ResponseUnknownFailure(500)
-    }
-  }
+  public suspend fun getFiltersV2(): GetFiltersV2Response
 
   /**
    * Create a filter
    */
-  public suspend fun createFilterV2(request: CreateFilterV2Request): CreateFilterV2Response {
-    try {
-      val response = configuration.client.post("api/v2/filters") {
-        setBody(request)
-        contentType(ContentType.Application.Json)
-      }
-      return when (response.status.value) {
-        200 -> CreateFilterV2ResponseSuccess(response.body<Filter>(), response.headers)
-        401, 404, 422, 429, 503 -> CreateFilterV2ResponseFailure401(response.body<Error>(), response.headers)
-        410 -> CreateFilterV2ResponseFailure(response.headers)
-        else -> CreateFilterV2ResponseUnknownFailure(response.status.value, response.headers)
-      }
-    }
-    catch(e: CancellationException) {
-      throw e
-    }
-    catch(e: Exception) {
-      configuration.exceptionLogger(e)
-      return CreateFilterV2ResponseUnknownFailure(500)
-    }
-  }
+  public suspend fun createFilterV2(request: CreateFilterV2Request): CreateFilterV2Response
 
   /**
    * View keywords added to a filter
    */
-  public suspend fun getFilterKeywordsV2(filterId: String): GetFilterKeywordsV2Response {
-    try {
-      val response = configuration.client.`get`("api/v2/filters/{filter_id}/keywords".replace("/{filter_id}", "/${filterId.encodeURLPathPart()}")) {
-      }
-      return when (response.status.value) {
-        200 -> GetFilterKeywordsV2ResponseSuccess(response.body<List<FilterKeyword>>(), response.headers)
-        401, 404, 429, 503 -> GetFilterKeywordsV2ResponseFailure401(response.body<Error>(), response.headers)
-        410 -> GetFilterKeywordsV2ResponseFailure410(response.headers)
-        422 -> GetFilterKeywordsV2ResponseFailure(response.body<ValidationError>(), response.headers)
-        else -> GetFilterKeywordsV2ResponseUnknownFailure(response.status.value, response.headers)
-      }
-    }
-    catch(e: CancellationException) {
-      throw e
-    }
-    catch(e: Exception) {
-      configuration.exceptionLogger(e)
-      return GetFilterKeywordsV2ResponseUnknownFailure(500)
-    }
-  }
+  public suspend fun getFilterKeywordsV2(filterId: String): GetFilterKeywordsV2Response
 
   /**
    * Add a keyword to a filter
    */
-  public suspend fun postFilterKeywordsV2(request: PostFilterKeywordsV2Request, filterId: String): PostFilterKeywordsV2Response {
-    try {
-      val response = configuration.client.post("api/v2/filters/{filter_id}/keywords".replace("/{filter_id}", "/${filterId.encodeURLPathPart()}")) {
-        setBody(request)
-        contentType(ContentType.Application.Json)
-      }
-      return when (response.status.value) {
-        200 -> PostFilterKeywordsV2ResponseSuccess(response.body<FilterKeyword>(), response.headers)
-        401, 404, 422, 429, 503 -> PostFilterKeywordsV2ResponseFailure401(response.body<Error>(), response.headers)
-        410 -> PostFilterKeywordsV2ResponseFailure(response.headers)
-        else -> PostFilterKeywordsV2ResponseUnknownFailure(response.status.value, response.headers)
-      }
-    }
-    catch(e: CancellationException) {
-      throw e
-    }
-    catch(e: Exception) {
-      configuration.exceptionLogger(e)
-      return PostFilterKeywordsV2ResponseUnknownFailure(500)
-    }
-  }
+  public suspend fun postFilterKeywordsV2(request: PostFilterKeywordsV2Request, filterId: String): PostFilterKeywordsV2Response
 
   /**
    * View all status filters
    */
-  public suspend fun getFilterStatusesV2(filterId: String): GetFilterStatusesV2Response {
-    try {
-      val response = configuration.client.`get`("api/v2/filters/{filter_id}/statuses".replace("/{filter_id}", "/${filterId.encodeURLPathPart()}")) {
-      }
-      return when (response.status.value) {
-        200 -> GetFilterStatusesV2ResponseSuccess(response.body<List<FilterStatus>>(), response.headers)
-        401, 404, 429, 503 -> GetFilterStatusesV2ResponseFailure401(response.body<Error>(), response.headers)
-        410 -> GetFilterStatusesV2ResponseFailure410(response.headers)
-        422 -> GetFilterStatusesV2ResponseFailure(response.body<ValidationError>(), response.headers)
-        else -> GetFilterStatusesV2ResponseUnknownFailure(response.status.value, response.headers)
-      }
-    }
-    catch(e: CancellationException) {
-      throw e
-    }
-    catch(e: Exception) {
-      configuration.exceptionLogger(e)
-      return GetFilterStatusesV2ResponseUnknownFailure(500)
-    }
-  }
+  public suspend fun getFilterStatusesV2(filterId: String): GetFilterStatusesV2Response
 
   /**
    * Add a status to a filter group
    */
-  public suspend fun postFilterStatusesV2(request: PostFilterStatusesV2Request, filterId: String): PostFilterStatusesV2Response {
-    try {
-      val response = configuration.client.post("api/v2/filters/{filter_id}/statuses".replace("/{filter_id}", "/${filterId.encodeURLPathPart()}")) {
-        setBody(request)
-        contentType(ContentType.Application.Json)
-      }
-      return when (response.status.value) {
-        200 -> PostFilterStatusesV2ResponseSuccess(response.body<FilterStatus>(), response.headers)
-        401, 404, 429, 503 -> PostFilterStatusesV2ResponseFailure401(response.body<Error>(), response.headers)
-        410 -> PostFilterStatusesV2ResponseFailure410(response.headers)
-        422 -> PostFilterStatusesV2ResponseFailure(response.body<ValidationError>(), response.headers)
-        else -> PostFilterStatusesV2ResponseUnknownFailure(response.status.value, response.headers)
-      }
-    }
-    catch(e: CancellationException) {
-      throw e
-    }
-    catch(e: Exception) {
-      configuration.exceptionLogger(e)
-      return PostFilterStatusesV2ResponseUnknownFailure(500)
-    }
-  }
+  public suspend fun postFilterStatusesV2(request: PostFilterStatusesV2Request, filterId: String): PostFilterStatusesV2Response
 
   /**
    * View a specific filter
    */
-  public suspend fun getFilterV2(id: String): GetFilterV2Response {
-    try {
-      val response = configuration.client.`get`("api/v2/filters/{id}".replace("/{id}", "/${id.encodeURLPathPart()}")) {
-      }
-      return when (response.status.value) {
-        200 -> GetFilterV2ResponseSuccess(response.body<Filter>(), response.headers)
-        401, 404, 429, 503 -> GetFilterV2ResponseFailure401(response.body<Error>(), response.headers)
-        410 -> GetFilterV2ResponseFailure410(response.headers)
-        422 -> GetFilterV2ResponseFailure(response.body<ValidationError>(), response.headers)
-        else -> GetFilterV2ResponseUnknownFailure(response.status.value, response.headers)
-      }
-    }
-    catch(e: CancellationException) {
-      throw e
-    }
-    catch(e: Exception) {
-      configuration.exceptionLogger(e)
-      return GetFilterV2ResponseUnknownFailure(500)
-    }
-  }
+  public suspend fun getFilterV2(id: String): GetFilterV2Response
 
   /**
    * Update a filter
    */
-  public suspend fun updateFilterV2(request: UpdateFilterV2Request, id: String): UpdateFilterV2Response {
-    try {
-      val response = configuration.client.put("api/v2/filters/{id}".replace("/{id}", "/${id.encodeURLPathPart()}")) {
-        setBody(request)
-        contentType(ContentType.Application.Json)
-      }
-      return when (response.status.value) {
-        200 -> UpdateFilterV2ResponseSuccess(response.body<Filter>(), response.headers)
-        401, 404, 429, 503 -> UpdateFilterV2ResponseFailure401(response.body<Error>(), response.headers)
-        410 -> UpdateFilterV2ResponseFailure410(response.headers)
-        422 -> UpdateFilterV2ResponseFailure(response.body<ValidationError>(), response.headers)
-        else -> UpdateFilterV2ResponseUnknownFailure(response.status.value, response.headers)
-      }
-    }
-    catch(e: CancellationException) {
-      throw e
-    }
-    catch(e: Exception) {
-      configuration.exceptionLogger(e)
-      return UpdateFilterV2ResponseUnknownFailure(500)
-    }
-  }
+  public suspend fun updateFilterV2(request: UpdateFilterV2Request, id: String): UpdateFilterV2Response
 
   /**
    * Delete a filter
    */
-  public suspend fun deleteFilterV2(id: String): DeleteFilterV2Response {
-    try {
-      val response = configuration.client.delete("api/v2/filters/{id}".replace("/{id}", "/${id.encodeURLPathPart()}")) {
-      }
-      return when (response.status.value) {
-        200 -> DeleteFilterV2ResponseSuccess(response.headers)
-        401, 404, 429, 503 -> DeleteFilterV2ResponseFailure401(response.body<Error>(), response.headers)
-        410 -> DeleteFilterV2ResponseFailure410(response.headers)
-        422 -> DeleteFilterV2ResponseFailure(response.body<ValidationError>(), response.headers)
-        else -> DeleteFilterV2ResponseUnknownFailure(response.status.value, response.headers)
-      }
-    }
-    catch(e: CancellationException) {
-      throw e
-    }
-    catch(e: Exception) {
-      configuration.exceptionLogger(e)
-      return DeleteFilterV2ResponseUnknownFailure(500)
-    }
-  }
+  public suspend fun deleteFilterV2(id: String): DeleteFilterV2Response
 
   /**
    * View a single keyword
    */
-  public suspend fun getFiltersKeywordsByIdV2(id: String): GetFiltersKeywordsByIdV2Response {
-    try {
-      val response = configuration.client.`get`("api/v2/filters/keywords/{id}".replace("/{id}", "/${id.encodeURLPathPart()}")) {
-      }
-      return when (response.status.value) {
-        200 -> GetFiltersKeywordsByIdV2ResponseSuccess(response.body<FilterKeyword>(), response.headers)
-        401, 404, 429, 503 -> GetFiltersKeywordsByIdV2ResponseFailure401(response.body<Error>(), response.headers)
-        410 -> GetFiltersKeywordsByIdV2ResponseFailure410(response.headers)
-        422 -> GetFiltersKeywordsByIdV2ResponseFailure(response.body<ValidationError>(), response.headers)
-        else -> GetFiltersKeywordsByIdV2ResponseUnknownFailure(response.status.value, response.headers)
-      }
-    }
-    catch(e: CancellationException) {
-      throw e
-    }
-    catch(e: Exception) {
-      configuration.exceptionLogger(e)
-      return GetFiltersKeywordsByIdV2ResponseUnknownFailure(500)
-    }
-  }
+  public suspend fun getFiltersKeywordsByIdV2(id: String): GetFiltersKeywordsByIdV2Response
 
   /**
    * Edit a keyword within a filter
    */
-  public suspend fun updateFiltersKeywordsByIdV2(request: UpdateFiltersKeywordsByIdV2Request, id: String): UpdateFiltersKeywordsByIdV2Response {
-    try {
-      val response = configuration.client.put("api/v2/filters/keywords/{id}".replace("/{id}", "/${id.encodeURLPathPart()}")) {
-        setBody(request)
-        contentType(ContentType.Application.Json)
-      }
-      return when (response.status.value) {
-        200 -> UpdateFiltersKeywordsByIdV2ResponseSuccess(response.body<FilterKeyword>(), response.headers)
-        401, 404, 422, 429, 503 -> UpdateFiltersKeywordsByIdV2ResponseFailure401(response.body<Error>(), response.headers)
-        410 -> UpdateFiltersKeywordsByIdV2ResponseFailure(response.headers)
-        else -> UpdateFiltersKeywordsByIdV2ResponseUnknownFailure(response.status.value, response.headers)
-      }
-    }
-    catch(e: CancellationException) {
-      throw e
-    }
-    catch(e: Exception) {
-      configuration.exceptionLogger(e)
-      return UpdateFiltersKeywordsByIdV2ResponseUnknownFailure(500)
-    }
-  }
+  public suspend fun updateFiltersKeywordsByIdV2(request: UpdateFiltersKeywordsByIdV2Request, id: String): UpdateFiltersKeywordsByIdV2Response
 
   /**
    * Remove keywords from a filter
    */
-  public suspend fun deleteFiltersKeywordsByIdV2(id: String): DeleteFiltersKeywordsByIdV2Response {
-    try {
-      val response = configuration.client.delete("api/v2/filters/keywords/{id}".replace("/{id}", "/${id.encodeURLPathPart()}")) {
-      }
-      return when (response.status.value) {
-        200 -> DeleteFiltersKeywordsByIdV2ResponseSuccess(response.headers)
-        401, 404, 429, 503 -> DeleteFiltersKeywordsByIdV2ResponseFailure401(response.body<Error>(), response.headers)
-        410 -> DeleteFiltersKeywordsByIdV2ResponseFailure410(response.headers)
-        422 -> DeleteFiltersKeywordsByIdV2ResponseFailure(response.body<ValidationError>(), response.headers)
-        else -> DeleteFiltersKeywordsByIdV2ResponseUnknownFailure(response.status.value, response.headers)
-      }
-    }
-    catch(e: CancellationException) {
-      throw e
-    }
-    catch(e: Exception) {
-      configuration.exceptionLogger(e)
-      return DeleteFiltersKeywordsByIdV2ResponseUnknownFailure(500)
-    }
-  }
+  public suspend fun deleteFiltersKeywordsByIdV2(id: String): DeleteFiltersKeywordsByIdV2Response
 
   /**
    * View a single status filter
    */
-  public suspend fun getFiltersStatusesByIdV2(id: String): GetFiltersStatusesByIdV2Response {
-    try {
-      val response = configuration.client.`get`("api/v2/filters/statuses/{id}".replace("/{id}", "/${id.encodeURLPathPart()}")) {
-      }
-      return when (response.status.value) {
-        200 -> GetFiltersStatusesByIdV2ResponseSuccess(response.body<FilterStatus>(), response.headers)
-        401, 404, 429, 503 -> GetFiltersStatusesByIdV2ResponseFailure401(response.body<Error>(), response.headers)
-        410 -> GetFiltersStatusesByIdV2ResponseFailure410(response.headers)
-        422 -> GetFiltersStatusesByIdV2ResponseFailure(response.body<ValidationError>(), response.headers)
-        else -> GetFiltersStatusesByIdV2ResponseUnknownFailure(response.status.value, response.headers)
-      }
-    }
-    catch(e: CancellationException) {
-      throw e
-    }
-    catch(e: Exception) {
-      configuration.exceptionLogger(e)
-      return GetFiltersStatusesByIdV2ResponseUnknownFailure(500)
-    }
-  }
+  public suspend fun getFiltersStatusesByIdV2(id: String): GetFiltersStatusesByIdV2Response
 
   /**
    * Remove a status from a filter group
    */
-  public suspend fun deleteFiltersStatusesByIdV2(id: String): DeleteFiltersStatusesByIdV2Response {
-    try {
-      val response = configuration.client.delete("api/v2/filters/statuses/{id}".replace("/{id}", "/${id.encodeURLPathPart()}")) {
-      }
-      return when (response.status.value) {
-        200 -> DeleteFiltersStatusesByIdV2ResponseSuccess(response.body<FilterStatus>(), response.headers)
-        401, 404, 429, 503 -> DeleteFiltersStatusesByIdV2ResponseFailure401(response.body<Error>(), response.headers)
-        410 -> DeleteFiltersStatusesByIdV2ResponseFailure410(response.headers)
-        422 -> DeleteFiltersStatusesByIdV2ResponseFailure(response.body<ValidationError>(), response.headers)
-        else -> DeleteFiltersStatusesByIdV2ResponseUnknownFailure(response.status.value, response.headers)
-      }
-    }
-    catch(e: CancellationException) {
-      throw e
-    }
-    catch(e: Exception) {
-      configuration.exceptionLogger(e)
-      return DeleteFiltersStatusesByIdV2ResponseUnknownFailure(500)
-    }
-  }
+  public suspend fun deleteFiltersStatusesByIdV2(id: String): DeleteFiltersStatusesByIdV2Response
 
   @Serializable
   public sealed class GetFiltersResponse {
@@ -1607,4 +1235,418 @@ public class FiltersClient(
     @Transient
     override val headers: Headers = Headers.Empty,
   ) : DeleteFiltersStatusesByIdV2Response()
+}
+
+public fun FiltersClient(configuration: ClientConfiguration = defaultClientConfiguration): FiltersClient = DefaultFiltersClient(configuration)
+
+public class DefaultFiltersClient(
+  private val configuration: ClientConfiguration = defaultClientConfiguration,
+) : FiltersClient {
+  override suspend fun getFilters(): FiltersClient.GetFiltersResponse {
+    try {
+      val response = configuration.client.`get`("api/v1/filters") {
+      }
+      return when (response.status.value) {
+        200 -> FiltersClient.GetFiltersResponseSuccess(response.body<V1Filter>(), response.headers)
+        401, 404, 429, 503 -> FiltersClient.GetFiltersResponseFailure401(response.body<Error>(), response.headers)
+        410 -> FiltersClient.GetFiltersResponseFailure410(response.headers)
+        422 -> FiltersClient.GetFiltersResponseFailure(response.body<ValidationError>(), response.headers)
+        else -> FiltersClient.GetFiltersResponseUnknownFailure(response.status.value, response.headers)
+      }
+    }
+    catch(e: CancellationException) {
+      throw e
+    }
+    catch(e: Exception) {
+      configuration.exceptionLogger(e)
+      return FiltersClient.GetFiltersResponseUnknownFailure(500)
+    }
+  }
+
+  override suspend fun createFilter(request: FiltersClient.CreateFilterRequest): FiltersClient.CreateFilterResponse {
+    try {
+      val response = configuration.client.post("api/v1/filters") {
+        setBody(request)
+        contentType(ContentType.Application.Json)
+      }
+      return when (response.status.value) {
+        200 -> FiltersClient.CreateFilterResponseSuccess(response.body<V1Filter>(), response.headers)
+        401, 404, 422, 429, 503 -> FiltersClient.CreateFilterResponseFailure401(response.body<Error>(), response.headers)
+        410 -> FiltersClient.CreateFilterResponseFailure(response.headers)
+        else -> FiltersClient.CreateFilterResponseUnknownFailure(response.status.value, response.headers)
+      }
+    }
+    catch(e: CancellationException) {
+      throw e
+    }
+    catch(e: Exception) {
+      configuration.exceptionLogger(e)
+      return FiltersClient.CreateFilterResponseUnknownFailure(500)
+    }
+  }
+
+  override suspend fun getFilter(id: String): FiltersClient.GetFilterResponse {
+    try {
+      val response = configuration.client.`get`("api/v1/filters/{id}".replace("/{id}", "/${id.encodeURLPathPart()}")) {
+      }
+      return when (response.status.value) {
+        200 -> FiltersClient.GetFilterResponseSuccess(response.body<V1Filter>(), response.headers)
+        401, 404, 429, 503 -> FiltersClient.GetFilterResponseFailure401(response.body<Error>(), response.headers)
+        410 -> FiltersClient.GetFilterResponseFailure410(response.headers)
+        422 -> FiltersClient.GetFilterResponseFailure(response.body<ValidationError>(), response.headers)
+        else -> FiltersClient.GetFilterResponseUnknownFailure(response.status.value, response.headers)
+      }
+    }
+    catch(e: CancellationException) {
+      throw e
+    }
+    catch(e: Exception) {
+      configuration.exceptionLogger(e)
+      return FiltersClient.GetFilterResponseUnknownFailure(500)
+    }
+  }
+
+  override suspend fun updateFilter(request: FiltersClient.UpdateFilterRequest, id: String): FiltersClient.UpdateFilterResponse {
+    try {
+      val response = configuration.client.put("api/v1/filters/{id}".replace("/{id}", "/${id.encodeURLPathPart()}")) {
+        setBody(request)
+        contentType(ContentType.Application.Json)
+      }
+      return when (response.status.value) {
+        200 -> FiltersClient.UpdateFilterResponseSuccess(response.body<V1Filter>(), response.headers)
+        401, 404, 422, 429, 503 -> FiltersClient.UpdateFilterResponseFailure401(response.body<Error>(), response.headers)
+        410 -> FiltersClient.UpdateFilterResponseFailure(response.headers)
+        else -> FiltersClient.UpdateFilterResponseUnknownFailure(response.status.value, response.headers)
+      }
+    }
+    catch(e: CancellationException) {
+      throw e
+    }
+    catch(e: Exception) {
+      configuration.exceptionLogger(e)
+      return FiltersClient.UpdateFilterResponseUnknownFailure(500)
+    }
+  }
+
+  override suspend fun deleteFilter(id: String): FiltersClient.DeleteFilterResponse {
+    try {
+      val response = configuration.client.delete("api/v1/filters/{id}".replace("/{id}", "/${id.encodeURLPathPart()}")) {
+      }
+      return when (response.status.value) {
+        200 -> FiltersClient.DeleteFilterResponseSuccess(response.headers)
+        401, 404, 429, 503 -> FiltersClient.DeleteFilterResponseFailure401(response.body<Error>(), response.headers)
+        410 -> FiltersClient.DeleteFilterResponseFailure410(response.headers)
+        422 -> FiltersClient.DeleteFilterResponseFailure(response.body<ValidationError>(), response.headers)
+        else -> FiltersClient.DeleteFilterResponseUnknownFailure(response.status.value, response.headers)
+      }
+    }
+    catch(e: CancellationException) {
+      throw e
+    }
+    catch(e: Exception) {
+      configuration.exceptionLogger(e)
+      return FiltersClient.DeleteFilterResponseUnknownFailure(500)
+    }
+  }
+
+  override suspend fun getFiltersV2(): FiltersClient.GetFiltersV2Response {
+    try {
+      val response = configuration.client.`get`("api/v2/filters") {
+      }
+      return when (response.status.value) {
+        200 -> FiltersClient.GetFiltersV2ResponseSuccess(response.body<List<Filter>>(), response.headers)
+        401, 404, 429, 503 -> FiltersClient.GetFiltersV2ResponseFailure401(response.body<Error>(), response.headers)
+        410 -> FiltersClient.GetFiltersV2ResponseFailure410(response.headers)
+        422 -> FiltersClient.GetFiltersV2ResponseFailure(response.body<ValidationError>(), response.headers)
+        else -> FiltersClient.GetFiltersV2ResponseUnknownFailure(response.status.value, response.headers)
+      }
+    }
+    catch(e: CancellationException) {
+      throw e
+    }
+    catch(e: Exception) {
+      configuration.exceptionLogger(e)
+      return FiltersClient.GetFiltersV2ResponseUnknownFailure(500)
+    }
+  }
+
+  override suspend fun createFilterV2(request: FiltersClient.CreateFilterV2Request): FiltersClient.CreateFilterV2Response {
+    try {
+      val response = configuration.client.post("api/v2/filters") {
+        setBody(request)
+        contentType(ContentType.Application.Json)
+      }
+      return when (response.status.value) {
+        200 -> FiltersClient.CreateFilterV2ResponseSuccess(response.body<Filter>(), response.headers)
+        401, 404, 422, 429, 503 -> FiltersClient.CreateFilterV2ResponseFailure401(response.body<Error>(), response.headers)
+        410 -> FiltersClient.CreateFilterV2ResponseFailure(response.headers)
+        else -> FiltersClient.CreateFilterV2ResponseUnknownFailure(response.status.value, response.headers)
+      }
+    }
+    catch(e: CancellationException) {
+      throw e
+    }
+    catch(e: Exception) {
+      configuration.exceptionLogger(e)
+      return FiltersClient.CreateFilterV2ResponseUnknownFailure(500)
+    }
+  }
+
+  override suspend fun getFilterKeywordsV2(filterId: String): FiltersClient.GetFilterKeywordsV2Response {
+    try {
+      val response = configuration.client.`get`("api/v2/filters/{filter_id}/keywords".replace("/{filter_id}", "/${filterId.encodeURLPathPart()}")) {
+      }
+      return when (response.status.value) {
+        200 -> FiltersClient.GetFilterKeywordsV2ResponseSuccess(response.body<List<FilterKeyword>>(), response.headers)
+        401, 404, 429, 503 -> FiltersClient.GetFilterKeywordsV2ResponseFailure401(response.body<Error>(), response.headers)
+        410 -> FiltersClient.GetFilterKeywordsV2ResponseFailure410(response.headers)
+        422 -> FiltersClient.GetFilterKeywordsV2ResponseFailure(response.body<ValidationError>(), response.headers)
+        else -> FiltersClient.GetFilterKeywordsV2ResponseUnknownFailure(response.status.value, response.headers)
+      }
+    }
+    catch(e: CancellationException) {
+      throw e
+    }
+    catch(e: Exception) {
+      configuration.exceptionLogger(e)
+      return FiltersClient.GetFilterKeywordsV2ResponseUnknownFailure(500)
+    }
+  }
+
+  override suspend fun postFilterKeywordsV2(request: FiltersClient.PostFilterKeywordsV2Request, filterId: String): FiltersClient.PostFilterKeywordsV2Response {
+    try {
+      val response = configuration.client.post("api/v2/filters/{filter_id}/keywords".replace("/{filter_id}", "/${filterId.encodeURLPathPart()}")) {
+        setBody(request)
+        contentType(ContentType.Application.Json)
+      }
+      return when (response.status.value) {
+        200 -> FiltersClient.PostFilterKeywordsV2ResponseSuccess(response.body<FilterKeyword>(), response.headers)
+        401, 404, 422, 429, 503 -> FiltersClient.PostFilterKeywordsV2ResponseFailure401(response.body<Error>(), response.headers)
+        410 -> FiltersClient.PostFilterKeywordsV2ResponseFailure(response.headers)
+        else -> FiltersClient.PostFilterKeywordsV2ResponseUnknownFailure(response.status.value, response.headers)
+      }
+    }
+    catch(e: CancellationException) {
+      throw e
+    }
+    catch(e: Exception) {
+      configuration.exceptionLogger(e)
+      return FiltersClient.PostFilterKeywordsV2ResponseUnknownFailure(500)
+    }
+  }
+
+  override suspend fun getFilterStatusesV2(filterId: String): FiltersClient.GetFilterStatusesV2Response {
+    try {
+      val response = configuration.client.`get`("api/v2/filters/{filter_id}/statuses".replace("/{filter_id}", "/${filterId.encodeURLPathPart()}")) {
+      }
+      return when (response.status.value) {
+        200 -> FiltersClient.GetFilterStatusesV2ResponseSuccess(response.body<List<FilterStatus>>(), response.headers)
+        401, 404, 429, 503 -> FiltersClient.GetFilterStatusesV2ResponseFailure401(response.body<Error>(), response.headers)
+        410 -> FiltersClient.GetFilterStatusesV2ResponseFailure410(response.headers)
+        422 -> FiltersClient.GetFilterStatusesV2ResponseFailure(response.body<ValidationError>(), response.headers)
+        else -> FiltersClient.GetFilterStatusesV2ResponseUnknownFailure(response.status.value, response.headers)
+      }
+    }
+    catch(e: CancellationException) {
+      throw e
+    }
+    catch(e: Exception) {
+      configuration.exceptionLogger(e)
+      return FiltersClient.GetFilterStatusesV2ResponseUnknownFailure(500)
+    }
+  }
+
+  override suspend fun postFilterStatusesV2(request: FiltersClient.PostFilterStatusesV2Request, filterId: String): FiltersClient.PostFilterStatusesV2Response {
+    try {
+      val response = configuration.client.post("api/v2/filters/{filter_id}/statuses".replace("/{filter_id}", "/${filterId.encodeURLPathPart()}")) {
+        setBody(request)
+        contentType(ContentType.Application.Json)
+      }
+      return when (response.status.value) {
+        200 -> FiltersClient.PostFilterStatusesV2ResponseSuccess(response.body<FilterStatus>(), response.headers)
+        401, 404, 429, 503 -> FiltersClient.PostFilterStatusesV2ResponseFailure401(response.body<Error>(), response.headers)
+        410 -> FiltersClient.PostFilterStatusesV2ResponseFailure410(response.headers)
+        422 -> FiltersClient.PostFilterStatusesV2ResponseFailure(response.body<ValidationError>(), response.headers)
+        else -> FiltersClient.PostFilterStatusesV2ResponseUnknownFailure(response.status.value, response.headers)
+      }
+    }
+    catch(e: CancellationException) {
+      throw e
+    }
+    catch(e: Exception) {
+      configuration.exceptionLogger(e)
+      return FiltersClient.PostFilterStatusesV2ResponseUnknownFailure(500)
+    }
+  }
+
+  override suspend fun getFilterV2(id: String): FiltersClient.GetFilterV2Response {
+    try {
+      val response = configuration.client.`get`("api/v2/filters/{id}".replace("/{id}", "/${id.encodeURLPathPart()}")) {
+      }
+      return when (response.status.value) {
+        200 -> FiltersClient.GetFilterV2ResponseSuccess(response.body<Filter>(), response.headers)
+        401, 404, 429, 503 -> FiltersClient.GetFilterV2ResponseFailure401(response.body<Error>(), response.headers)
+        410 -> FiltersClient.GetFilterV2ResponseFailure410(response.headers)
+        422 -> FiltersClient.GetFilterV2ResponseFailure(response.body<ValidationError>(), response.headers)
+        else -> FiltersClient.GetFilterV2ResponseUnknownFailure(response.status.value, response.headers)
+      }
+    }
+    catch(e: CancellationException) {
+      throw e
+    }
+    catch(e: Exception) {
+      configuration.exceptionLogger(e)
+      return FiltersClient.GetFilterV2ResponseUnknownFailure(500)
+    }
+  }
+
+  override suspend fun updateFilterV2(request: FiltersClient.UpdateFilterV2Request, id: String): FiltersClient.UpdateFilterV2Response {
+    try {
+      val response = configuration.client.put("api/v2/filters/{id}".replace("/{id}", "/${id.encodeURLPathPart()}")) {
+        setBody(request)
+        contentType(ContentType.Application.Json)
+      }
+      return when (response.status.value) {
+        200 -> FiltersClient.UpdateFilterV2ResponseSuccess(response.body<Filter>(), response.headers)
+        401, 404, 429, 503 -> FiltersClient.UpdateFilterV2ResponseFailure401(response.body<Error>(), response.headers)
+        410 -> FiltersClient.UpdateFilterV2ResponseFailure410(response.headers)
+        422 -> FiltersClient.UpdateFilterV2ResponseFailure(response.body<ValidationError>(), response.headers)
+        else -> FiltersClient.UpdateFilterV2ResponseUnknownFailure(response.status.value, response.headers)
+      }
+    }
+    catch(e: CancellationException) {
+      throw e
+    }
+    catch(e: Exception) {
+      configuration.exceptionLogger(e)
+      return FiltersClient.UpdateFilterV2ResponseUnknownFailure(500)
+    }
+  }
+
+  override suspend fun deleteFilterV2(id: String): FiltersClient.DeleteFilterV2Response {
+    try {
+      val response = configuration.client.delete("api/v2/filters/{id}".replace("/{id}", "/${id.encodeURLPathPart()}")) {
+      }
+      return when (response.status.value) {
+        200 -> FiltersClient.DeleteFilterV2ResponseSuccess(response.headers)
+        401, 404, 429, 503 -> FiltersClient.DeleteFilterV2ResponseFailure401(response.body<Error>(), response.headers)
+        410 -> FiltersClient.DeleteFilterV2ResponseFailure410(response.headers)
+        422 -> FiltersClient.DeleteFilterV2ResponseFailure(response.body<ValidationError>(), response.headers)
+        else -> FiltersClient.DeleteFilterV2ResponseUnknownFailure(response.status.value, response.headers)
+      }
+    }
+    catch(e: CancellationException) {
+      throw e
+    }
+    catch(e: Exception) {
+      configuration.exceptionLogger(e)
+      return FiltersClient.DeleteFilterV2ResponseUnknownFailure(500)
+    }
+  }
+
+  override suspend fun getFiltersKeywordsByIdV2(id: String): FiltersClient.GetFiltersKeywordsByIdV2Response {
+    try {
+      val response = configuration.client.`get`("api/v2/filters/keywords/{id}".replace("/{id}", "/${id.encodeURLPathPart()}")) {
+      }
+      return when (response.status.value) {
+        200 -> FiltersClient.GetFiltersKeywordsByIdV2ResponseSuccess(response.body<FilterKeyword>(), response.headers)
+        401, 404, 429, 503 -> FiltersClient.GetFiltersKeywordsByIdV2ResponseFailure401(response.body<Error>(), response.headers)
+        410 -> FiltersClient.GetFiltersKeywordsByIdV2ResponseFailure410(response.headers)
+        422 -> FiltersClient.GetFiltersKeywordsByIdV2ResponseFailure(response.body<ValidationError>(), response.headers)
+        else -> FiltersClient.GetFiltersKeywordsByIdV2ResponseUnknownFailure(response.status.value, response.headers)
+      }
+    }
+    catch(e: CancellationException) {
+      throw e
+    }
+    catch(e: Exception) {
+      configuration.exceptionLogger(e)
+      return FiltersClient.GetFiltersKeywordsByIdV2ResponseUnknownFailure(500)
+    }
+  }
+
+  override suspend fun updateFiltersKeywordsByIdV2(request: FiltersClient.UpdateFiltersKeywordsByIdV2Request, id: String): FiltersClient.UpdateFiltersKeywordsByIdV2Response {
+    try {
+      val response = configuration.client.put("api/v2/filters/keywords/{id}".replace("/{id}", "/${id.encodeURLPathPart()}")) {
+        setBody(request)
+        contentType(ContentType.Application.Json)
+      }
+      return when (response.status.value) {
+        200 -> FiltersClient.UpdateFiltersKeywordsByIdV2ResponseSuccess(response.body<FilterKeyword>(), response.headers)
+        401, 404, 422, 429, 503 -> FiltersClient.UpdateFiltersKeywordsByIdV2ResponseFailure401(response.body<Error>(), response.headers)
+        410 -> FiltersClient.UpdateFiltersKeywordsByIdV2ResponseFailure(response.headers)
+        else -> FiltersClient.UpdateFiltersKeywordsByIdV2ResponseUnknownFailure(response.status.value, response.headers)
+      }
+    }
+    catch(e: CancellationException) {
+      throw e
+    }
+    catch(e: Exception) {
+      configuration.exceptionLogger(e)
+      return FiltersClient.UpdateFiltersKeywordsByIdV2ResponseUnknownFailure(500)
+    }
+  }
+
+  override suspend fun deleteFiltersKeywordsByIdV2(id: String): FiltersClient.DeleteFiltersKeywordsByIdV2Response {
+    try {
+      val response = configuration.client.delete("api/v2/filters/keywords/{id}".replace("/{id}", "/${id.encodeURLPathPart()}")) {
+      }
+      return when (response.status.value) {
+        200 -> FiltersClient.DeleteFiltersKeywordsByIdV2ResponseSuccess(response.headers)
+        401, 404, 429, 503 -> FiltersClient.DeleteFiltersKeywordsByIdV2ResponseFailure401(response.body<Error>(), response.headers)
+        410 -> FiltersClient.DeleteFiltersKeywordsByIdV2ResponseFailure410(response.headers)
+        422 -> FiltersClient.DeleteFiltersKeywordsByIdV2ResponseFailure(response.body<ValidationError>(), response.headers)
+        else -> FiltersClient.DeleteFiltersKeywordsByIdV2ResponseUnknownFailure(response.status.value, response.headers)
+      }
+    }
+    catch(e: CancellationException) {
+      throw e
+    }
+    catch(e: Exception) {
+      configuration.exceptionLogger(e)
+      return FiltersClient.DeleteFiltersKeywordsByIdV2ResponseUnknownFailure(500)
+    }
+  }
+
+  override suspend fun getFiltersStatusesByIdV2(id: String): FiltersClient.GetFiltersStatusesByIdV2Response {
+    try {
+      val response = configuration.client.`get`("api/v2/filters/statuses/{id}".replace("/{id}", "/${id.encodeURLPathPart()}")) {
+      }
+      return when (response.status.value) {
+        200 -> FiltersClient.GetFiltersStatusesByIdV2ResponseSuccess(response.body<FilterStatus>(), response.headers)
+        401, 404, 429, 503 -> FiltersClient.GetFiltersStatusesByIdV2ResponseFailure401(response.body<Error>(), response.headers)
+        410 -> FiltersClient.GetFiltersStatusesByIdV2ResponseFailure410(response.headers)
+        422 -> FiltersClient.GetFiltersStatusesByIdV2ResponseFailure(response.body<ValidationError>(), response.headers)
+        else -> FiltersClient.GetFiltersStatusesByIdV2ResponseUnknownFailure(response.status.value, response.headers)
+      }
+    }
+    catch(e: CancellationException) {
+      throw e
+    }
+    catch(e: Exception) {
+      configuration.exceptionLogger(e)
+      return FiltersClient.GetFiltersStatusesByIdV2ResponseUnknownFailure(500)
+    }
+  }
+
+  override suspend fun deleteFiltersStatusesByIdV2(id: String): FiltersClient.DeleteFiltersStatusesByIdV2Response {
+    try {
+      val response = configuration.client.delete("api/v2/filters/statuses/{id}".replace("/{id}", "/${id.encodeURLPathPart()}")) {
+      }
+      return when (response.status.value) {
+        200 -> FiltersClient.DeleteFiltersStatusesByIdV2ResponseSuccess(response.body<FilterStatus>(), response.headers)
+        401, 404, 429, 503 -> FiltersClient.DeleteFiltersStatusesByIdV2ResponseFailure401(response.body<Error>(), response.headers)
+        410 -> FiltersClient.DeleteFiltersStatusesByIdV2ResponseFailure410(response.headers)
+        422 -> FiltersClient.DeleteFiltersStatusesByIdV2ResponseFailure(response.body<ValidationError>(), response.headers)
+        else -> FiltersClient.DeleteFiltersStatusesByIdV2ResponseUnknownFailure(response.status.value, response.headers)
+      }
+    }
+    catch(e: CancellationException) {
+      throw e
+    }
+    catch(e: Exception) {
+      configuration.exceptionLogger(e)
+      return FiltersClient.DeleteFiltersStatusesByIdV2ResponseUnknownFailure(500)
+    }
+  }
 }

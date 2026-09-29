@@ -14,32 +14,11 @@ import mastodon.api.model.AsyncRefreshResponse
 import mastodon.api.model.Error
 import mastodon.api.model.ValidationError
 
-public class AsyncRefreshesClient(
-  private val configuration: ClientConfiguration = defaultClientConfiguration,
-) {
+public interface AsyncRefreshesClient {
   /**
    * Get Status of Async Refresh
    */
-  public suspend fun getAsyncRefreshV1Alpha(id: String): GetAsyncRefreshV1AlphaResponse {
-    try {
-      val response = configuration.client.`get`("api/v1_alpha/async_refreshes/{id}".replace("/{id}", "/${id.encodeURLPathPart()}")) {
-      }
-      return when (response.status.value) {
-        200 -> GetAsyncRefreshV1AlphaResponseSuccess(response.body<AsyncRefreshResponse>(), response.headers)
-        401, 404, 429, 503 -> GetAsyncRefreshV1AlphaResponseFailure401(response.body<Error>(), response.headers)
-        410 -> GetAsyncRefreshV1AlphaResponseFailure410(response.headers)
-        422 -> GetAsyncRefreshV1AlphaResponseFailure(response.body<ValidationError>(), response.headers)
-        else -> GetAsyncRefreshV1AlphaResponseUnknownFailure(response.status.value, response.headers)
-      }
-    }
-    catch(e: CancellationException) {
-      throw e
-    }
-    catch(e: Exception) {
-      configuration.exceptionLogger(e)
-      return GetAsyncRefreshV1AlphaResponseUnknownFailure(500)
-    }
-  }
+  public suspend fun getAsyncRefreshV1Alpha(id: String): GetAsyncRefreshV1AlphaResponse
 
   @Serializable
   public sealed class GetAsyncRefreshV1AlphaResponse {
@@ -97,4 +76,31 @@ public class AsyncRefreshesClient(
     @Transient
     override val headers: Headers = Headers.Empty,
   ) : GetAsyncRefreshV1AlphaResponse()
+}
+
+public fun AsyncRefreshesClient(configuration: ClientConfiguration = defaultClientConfiguration): AsyncRefreshesClient = DefaultAsyncRefreshesClient(configuration)
+
+public class DefaultAsyncRefreshesClient(
+  private val configuration: ClientConfiguration = defaultClientConfiguration,
+) : AsyncRefreshesClient {
+  override suspend fun getAsyncRefreshV1Alpha(id: String): AsyncRefreshesClient.GetAsyncRefreshV1AlphaResponse {
+    try {
+      val response = configuration.client.`get`("api/v1_alpha/async_refreshes/{id}".replace("/{id}", "/${id.encodeURLPathPart()}")) {
+      }
+      return when (response.status.value) {
+        200 -> AsyncRefreshesClient.GetAsyncRefreshV1AlphaResponseSuccess(response.body<AsyncRefreshResponse>(), response.headers)
+        401, 404, 429, 503 -> AsyncRefreshesClient.GetAsyncRefreshV1AlphaResponseFailure401(response.body<Error>(), response.headers)
+        410 -> AsyncRefreshesClient.GetAsyncRefreshV1AlphaResponseFailure410(response.headers)
+        422 -> AsyncRefreshesClient.GetAsyncRefreshV1AlphaResponseFailure(response.body<ValidationError>(), response.headers)
+        else -> AsyncRefreshesClient.GetAsyncRefreshV1AlphaResponseUnknownFailure(response.status.value, response.headers)
+      }
+    }
+    catch(e: CancellationException) {
+      throw e
+    }
+    catch(e: Exception) {
+      configuration.exceptionLogger(e)
+      return AsyncRefreshesClient.GetAsyncRefreshV1AlphaResponseUnknownFailure(500)
+    }
+  }
 }

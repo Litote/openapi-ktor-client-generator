@@ -72,7 +72,13 @@ internal class ResponseBuilder(
         val grouped: List<ResponseGroup> =
             responses.map { entry ->
                 ResponseGroup(
-                    typeName = entry.bodyType?.toTypeName(modelPackage, modelPackageOverrides, stringFormatTypes),
+                    typeName =
+                        entry.bodyType?.toTypeName(
+                            modelPackage,
+                            modelPackageOverrides,
+                            stringFormatTypes,
+                            responseSealedClass.enclosingClassName(),
+                        ),
                     isSuccess = entry.isSuccess,
                     statusCodes = entry.statusCodes,
                     headers = entry.headers,
@@ -85,9 +91,9 @@ internal class ResponseBuilder(
 
         return grouped.mapIndexed { index, group ->
             val suffix = determineClassNameSuffix(index, group.isSuccess, group.statusCodes, grouped)
-            val responseType = createResponseType("${responseBaseName}Response$suffix", group, responseSealedClass)
-            clientBuilder.addType(responseType)
-            RenderedResponseEntry(group.statusCodes, group.typeName, responseType)
+            val responseTypeName = "${responseBaseName}Response$suffix"
+            clientBuilder.addType(createResponseType(responseTypeName, group, responseSealedClass))
+            RenderedResponseEntry(group.statusCodes, group.typeName, responseSealedClass.peerClass(responseTypeName))
         }
     }
 
@@ -190,7 +196,7 @@ internal class ResponseBuilder(
 internal data class RenderedResponseEntry(
     val statusCodes: List<Int>,
     val bodyTypeName: TypeName?,
-    val type: TypeSpec,
+    val className: ClassName,
 ) {
     val isSuccess: Boolean get() = statusCodes.any { it in 200 until 300 }
 }

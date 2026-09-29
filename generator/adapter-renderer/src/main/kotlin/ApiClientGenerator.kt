@@ -19,8 +19,8 @@ import org.litote.openapi.ktor.client.generator.stringFormatTypes
 /**
  * Generates Ktor HTTP client classes from OpenAPI operations.
  *
- * This class is responsible for generating client classes that group operations by tag.
- * Each client class contains methods for each API operation.
+ * For each client (operations grouped by tag), it generates an interface declaring the operations and
+ * the response types, a `Default*` implementation calling Ktor, and a factory function named like the interface.
  */
 public class ApiClientGenerator public constructor(
     public val configuration: ApiGeneratorConfiguration,
@@ -34,27 +34,37 @@ public class ApiClientGenerator public constructor(
     public val clientConfigurationCompanionClass: ClassName =
         ClassName(configuration.configPackage, "ClientConfiguration", "Companion")
 
+    private companion object {
+        const val DEFAULT_IMPLEMENTATION_PREFIX = "Default"
+    }
+
     /**
-     * Builds a client class for the given spec (name and operations).
+     * Builds a client interface, its default implementation and its factory function for the given spec (name and operations).
      */
     public fun buildClient(spec: ClientSpec): ClientFileContext {
         val transformedSpec = configuration.modules.fold(spec) { acc, m -> m.transformClientSpec(acc) }
         val clientName = transformedSpec.name
 
+        val interfaceClassName = ClassName(configuration.clientPackage, clientName)
+        val configurationParameter =
+            ParameterSpec
+                .builder("configuration", clientConfigurationClass)
+                .defaultValue(
+                    "%M",
+                    MemberName(clientConfigurationCompanionClass, "defaultClientConfiguration"),
+                ).build()
+
+        val interfaceBuilder = TypeSpec.interfaceBuilder(clientName)
+        val implementationClassName = ClassName(configuration.clientPackage, "$DEFAULT_IMPLEMENTATION_PREFIX$clientName")
         val clientBuilder =
             TypeSpec
-                .classBuilder(clientName)
+                .classBuilder(implementationClassName)
+                .addSuperinterface(interfaceClassName)
                 .primaryConstructor(
                     FunSpec
                         .constructorBuilder()
-                        .addParameter(
-                            ParameterSpec
-                                .builder("configuration", clientConfigurationClass)
-                                .defaultValue(
-                                    "%M",
-                                    MemberName(clientConfigurationCompanionClass, "defaultClientConfiguration"),
-                                ).build(),
-                        ).build(),
+                        .addParameter(configurationParameter)
+                        .build(),
                 ).addProperty(
                     PropertySpec
                         .builder("configuration", clientConfigurationClass)
@@ -62,6 +72,13 @@ public class ApiClientGenerator public constructor(
                         .initializer("configuration")
                         .build(),
                 )
+        val factory =
+            FunSpec
+                .builder(clientName)
+                .addParameter(configurationParameter)
+                .returns(interfaceClassName)
+                .addStatement("return %T(configuration)", implementationClassName)
+                .build()
 
         val context =
             ClientGenerationContext(
@@ -108,15 +125,15 @@ public class ApiClientGenerator public constructor(
         seenBaseNames.values
             .flatten()
             .mapNotNull { (_, model) -> modelGenerator.buildModel(model) }
-            .forEach { clientBuilder.addType(it) }
+            .forEach { interfaceBuilder.addType(it) }
 
         // Then build all operations
         transformedSpec.operations.forEach { op ->
-            operationBuilder.buildOperation(context, op, clientBuilder, clientName)
+            operationBuilder.buildOperation(context, op, interfaceBuilder, clientBuilder, clientName)
         }
         buildParameterSerializationHelpers(context.parameterHelpers).forEach { clientBuilder.addFunction(it) }
 
-        return ClientFileContext(context, clientBuilder.build())
+        return ClientFileContext(context, interfaceBuilder.build(), factory, clientBuilder.build())
     }
 
     /**
@@ -138,7 +155,9 @@ public class ApiClientGenerator public constructor(
                         addImport("io.ktor.client.plugins.sse", "sse")
                         addImport("io.ktor.client.plugins.sse", "ClientSSESession")
                     }
-                }.addType(context.clientClass)
+                }.addType(context.clientInterface)
+                .addFunction(context.clientFactory)
+                .addType(context.clientClass)
                 .build()
 
         fileSystemWriter.write(fileSpec.toGeneratedFile(), configuration.outputDirectory)

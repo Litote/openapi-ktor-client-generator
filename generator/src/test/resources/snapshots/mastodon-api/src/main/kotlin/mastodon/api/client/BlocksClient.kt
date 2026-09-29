@@ -15,9 +15,7 @@ import mastodon.api.model.Account
 import mastodon.api.model.Error
 import mastodon.api.model.ValidationError
 
-public class BlocksClient(
-  private val configuration: ClientConfiguration = defaultClientConfiguration,
-) {
+public interface BlocksClient {
   /**
    * View blocked users
    */
@@ -26,40 +24,7 @@ public class BlocksClient(
     maxId: String? = null,
     minId: String? = null,
     sinceId: String? = null,
-  ): GetBlocksResponse {
-    try {
-      val response = configuration.client.`get`("api/v1/blocks") {
-        url {
-          if (limit != null) {
-            parameters.append("limit", limit.toString())
-          }
-          if (maxId != null) {
-            parameters.append("max_id", maxId)
-          }
-          if (minId != null) {
-            parameters.append("min_id", minId)
-          }
-          if (sinceId != null) {
-            parameters.append("since_id", sinceId)
-          }
-        }
-      }
-      return when (response.status.value) {
-        200 -> GetBlocksResponseSuccess(response.body<List<Account>>(), response.headers)
-        401, 404, 429, 503 -> GetBlocksResponseFailure401(response.body<Error>(), response.headers)
-        410 -> GetBlocksResponseFailure410(response.headers)
-        422 -> GetBlocksResponseFailure(response.body<ValidationError>(), response.headers)
-        else -> GetBlocksResponseUnknownFailure(response.status.value, response.headers)
-      }
-    }
-    catch(e: CancellationException) {
-      throw e
-    }
-    catch(e: Exception) {
-      configuration.exceptionLogger(e)
-      return GetBlocksResponseUnknownFailure(500)
-    }
-  }
+  ): GetBlocksResponse
 
   @Serializable
   public sealed class GetBlocksResponse {
@@ -123,4 +88,50 @@ public class BlocksClient(
     @Transient
     override val headers: Headers = Headers.Empty,
   ) : GetBlocksResponse()
+}
+
+public fun BlocksClient(configuration: ClientConfiguration = defaultClientConfiguration): BlocksClient = DefaultBlocksClient(configuration)
+
+public class DefaultBlocksClient(
+  private val configuration: ClientConfiguration = defaultClientConfiguration,
+) : BlocksClient {
+  override suspend fun getBlocks(
+    limit: Long?,
+    maxId: String?,
+    minId: String?,
+    sinceId: String?,
+  ): BlocksClient.GetBlocksResponse {
+    try {
+      val response = configuration.client.`get`("api/v1/blocks") {
+        url {
+          if (limit != null) {
+            parameters.append("limit", limit.toString())
+          }
+          if (maxId != null) {
+            parameters.append("max_id", maxId)
+          }
+          if (minId != null) {
+            parameters.append("min_id", minId)
+          }
+          if (sinceId != null) {
+            parameters.append("since_id", sinceId)
+          }
+        }
+      }
+      return when (response.status.value) {
+        200 -> BlocksClient.GetBlocksResponseSuccess(response.body<List<Account>>(), response.headers)
+        401, 404, 429, 503 -> BlocksClient.GetBlocksResponseFailure401(response.body<Error>(), response.headers)
+        410 -> BlocksClient.GetBlocksResponseFailure410(response.headers)
+        422 -> BlocksClient.GetBlocksResponseFailure(response.body<ValidationError>(), response.headers)
+        else -> BlocksClient.GetBlocksResponseUnknownFailure(response.status.value, response.headers)
+      }
+    }
+    catch(e: CancellationException) {
+      throw e
+    }
+    catch(e: Exception) {
+      configuration.exceptionLogger(e)
+      return BlocksClient.GetBlocksResponseUnknownFailure(500)
+    }
+  }
 }

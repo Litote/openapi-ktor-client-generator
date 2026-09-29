@@ -12,32 +12,11 @@ import mastodon.api.client.ClientConfiguration.Companion.defaultClientConfigurat
 import mastodon.api.model.Error
 import mastodon.api.model.ValidationError
 
-public class HealthClient(
-  private val configuration: ClientConfiguration = defaultClientConfiguration,
-) {
+public interface HealthClient {
   /**
    * Get basic health status as JSON
    */
-  public suspend fun getHealth(): GetHealthResponse {
-    try {
-      val response = configuration.client.`get`("health") {
-      }
-      return when (response.status.value) {
-        200 -> GetHealthResponseSuccess(response.headers)
-        401, 404, 429, 503 -> GetHealthResponseFailure401(response.body<Error>(), response.headers)
-        410 -> GetHealthResponseFailure410(response.headers)
-        422 -> GetHealthResponseFailure(response.body<ValidationError>(), response.headers)
-        else -> GetHealthResponseUnknownFailure(response.status.value, response.headers)
-      }
-    }
-    catch(e: CancellationException) {
-      throw e
-    }
-    catch(e: Exception) {
-      configuration.exceptionLogger(e)
-      return GetHealthResponseUnknownFailure(500)
-    }
-  }
+  public suspend fun getHealth(): GetHealthResponse
 
   @Serializable
   public sealed class GetHealthResponse {
@@ -94,4 +73,31 @@ public class HealthClient(
     @Transient
     override val headers: Headers = Headers.Empty,
   ) : GetHealthResponse()
+}
+
+public fun HealthClient(configuration: ClientConfiguration = defaultClientConfiguration): HealthClient = DefaultHealthClient(configuration)
+
+public class DefaultHealthClient(
+  private val configuration: ClientConfiguration = defaultClientConfiguration,
+) : HealthClient {
+  override suspend fun getHealth(): HealthClient.GetHealthResponse {
+    try {
+      val response = configuration.client.`get`("health") {
+      }
+      return when (response.status.value) {
+        200 -> HealthClient.GetHealthResponseSuccess(response.headers)
+        401, 404, 429, 503 -> HealthClient.GetHealthResponseFailure401(response.body<Error>(), response.headers)
+        410 -> HealthClient.GetHealthResponseFailure410(response.headers)
+        422 -> HealthClient.GetHealthResponseFailure(response.body<ValidationError>(), response.headers)
+        else -> HealthClient.GetHealthResponseUnknownFailure(response.status.value, response.headers)
+      }
+    }
+    catch(e: CancellationException) {
+      throw e
+    }
+    catch(e: Exception) {
+      configuration.exceptionLogger(e)
+      return HealthClient.GetHealthResponseUnknownFailure(500)
+    }
+  }
 }

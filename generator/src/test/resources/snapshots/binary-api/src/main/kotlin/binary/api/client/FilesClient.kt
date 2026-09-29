@@ -16,121 +16,18 @@ import kotlin.coroutines.cancellation.CancellationException
 import kotlinx.serialization.Serializable
 import kotlinx.serialization.Transient
 
-public class FilesClient(
-  private val configuration: ClientConfiguration = defaultClientConfiguration,
-) {
-  public suspend fun downloadFile(id: String): DownloadFileResponse {
-    try {
-      val response = configuration.client.`get`("files/{id}".replace("/{id}", "/${id.encodeURLPathPart()}")) {
-        accept(ContentType.parse("application/octet-stream"))
-      }
-      return when (response.status.value) {
-        200 -> DownloadFileResponseSuccess(response.body<ByteArray>(), response.headers)
-        404 -> DownloadFileResponseFailure(response.body<Error>(), response.headers)
-        else -> DownloadFileResponseUnknownFailure(response.status.value, response.headers)
-      }
-    }
-    catch(e: CancellationException) {
-      throw e
-    }
-    catch(e: Exception) {
-      configuration.exceptionLogger(e)
-      return DownloadFileResponseUnknownFailure(500)
-    }
-  }
+public interface FilesClient {
+  public suspend fun downloadFile(id: String): DownloadFileResponse
 
-  public suspend fun getImage(id: String): GetImageResponse {
-    try {
-      val response = configuration.client.`get`("images/{id}".replace("/{id}", "/${id.encodeURLPathPart()}")) {
-        accept(ContentType.parse("image/png"))
-      }
-      return when (response.status.value) {
-        200 -> GetImageResponseSuccess(response.body<ByteArray>(), response.headers)
-        else -> GetImageResponseUnknownFailure(response.status.value, response.headers)
-      }
-    }
-    catch(e: CancellationException) {
-      throw e
-    }
-    catch(e: Exception) {
-      configuration.exceptionLogger(e)
-      return GetImageResponseUnknownFailure(500)
-    }
-  }
+  public suspend fun getImage(id: String): GetImageResponse
 
-  public suspend fun getReport(): GetReportResponse {
-    try {
-      val response = configuration.client.`get`("report") {
-        accept(ContentType.parse("text/plain"))
-      }
-      return when (response.status.value) {
-        200 -> GetReportResponseSuccess(response.body<String>(), response.headers)
-        else -> GetReportResponseUnknownFailure(response.status.value, response.headers)
-      }
-    }
-    catch(e: CancellationException) {
-      throw e
-    }
-    catch(e: Exception) {
-      configuration.exceptionLogger(e)
-      return GetReportResponseUnknownFailure(500)
-    }
-  }
+  public suspend fun getReport(): GetReportResponse
 
-  public suspend fun exportCsv(): ExportCsvResponse {
-    try {
-      val response = configuration.client.`get`("export") {
-        accept(ContentType.parse("text/csv"))
-      }
-      return when (response.status.value) {
-        200 -> ExportCsvResponseSuccess(response.body<String>(), response.headers)
-        else -> ExportCsvResponseUnknownFailure(response.status.value, response.headers)
-      }
-    }
-    catch(e: CancellationException) {
-      throw e
-    }
-    catch(e: Exception) {
-      configuration.exceptionLogger(e)
-      return ExportCsvResponseUnknownFailure(500)
-    }
-  }
+  public suspend fun exportCsv(): ExportCsvResponse
 
-  public suspend fun download(): DownloadResponse {
-    try {
-      val response = configuration.client.`get`("download") {
-      }
-      return when (response.status.value) {
-        200 -> DownloadResponseSuccess(response.body<ByteArray>(), response.headers)
-        else -> DownloadResponseUnknownFailure(response.status.value, response.headers)
-      }
-    }
-    catch(e: CancellationException) {
-      throw e
-    }
-    catch(e: Exception) {
-      configuration.exceptionLogger(e)
-      return DownloadResponseUnknownFailure(500)
-    }
-  }
+  public suspend fun download(): DownloadResponse
 
-  public suspend fun getDocument(id: String): GetDocumentResponse {
-    try {
-      val response = configuration.client.`get`("documents/{id}".replace("/{id}", "/${id.encodeURLPathPart()}")) {
-      }
-      return when (response.status.value) {
-        200 -> GetDocumentResponseSuccess(response.body<Document>(), response.headers)
-        else -> GetDocumentResponseUnknownFailure(response.status.value, response.headers)
-      }
-    }
-    catch(e: CancellationException) {
-      throw e
-    }
-    catch(e: Exception) {
-      configuration.exceptionLogger(e)
-      return GetDocumentResponseUnknownFailure(500)
-    }
-  }
+  public suspend fun getDocument(id: String): GetDocumentResponse
 
   @Serializable
   public sealed class DownloadFileResponse {
@@ -252,4 +149,123 @@ public class FilesClient(
     @Transient
     override val headers: Headers = Headers.Empty,
   ) : GetDocumentResponse()
+}
+
+public fun FilesClient(configuration: ClientConfiguration = defaultClientConfiguration): FilesClient = DefaultFilesClient(configuration)
+
+public class DefaultFilesClient(
+  private val configuration: ClientConfiguration = defaultClientConfiguration,
+) : FilesClient {
+  override suspend fun downloadFile(id: String): FilesClient.DownloadFileResponse {
+    try {
+      val response = configuration.client.`get`("files/{id}".replace("/{id}", "/${id.encodeURLPathPart()}")) {
+        accept(ContentType.parse("application/octet-stream"))
+      }
+      return when (response.status.value) {
+        200 -> FilesClient.DownloadFileResponseSuccess(response.body<ByteArray>(), response.headers)
+        404 -> FilesClient.DownloadFileResponseFailure(response.body<Error>(), response.headers)
+        else -> FilesClient.DownloadFileResponseUnknownFailure(response.status.value, response.headers)
+      }
+    }
+    catch(e: CancellationException) {
+      throw e
+    }
+    catch(e: Exception) {
+      configuration.exceptionLogger(e)
+      return FilesClient.DownloadFileResponseUnknownFailure(500)
+    }
+  }
+
+  override suspend fun getImage(id: String): FilesClient.GetImageResponse {
+    try {
+      val response = configuration.client.`get`("images/{id}".replace("/{id}", "/${id.encodeURLPathPart()}")) {
+        accept(ContentType.parse("image/png"))
+      }
+      return when (response.status.value) {
+        200 -> FilesClient.GetImageResponseSuccess(response.body<ByteArray>(), response.headers)
+        else -> FilesClient.GetImageResponseUnknownFailure(response.status.value, response.headers)
+      }
+    }
+    catch(e: CancellationException) {
+      throw e
+    }
+    catch(e: Exception) {
+      configuration.exceptionLogger(e)
+      return FilesClient.GetImageResponseUnknownFailure(500)
+    }
+  }
+
+  override suspend fun getReport(): FilesClient.GetReportResponse {
+    try {
+      val response = configuration.client.`get`("report") {
+        accept(ContentType.parse("text/plain"))
+      }
+      return when (response.status.value) {
+        200 -> FilesClient.GetReportResponseSuccess(response.body<String>(), response.headers)
+        else -> FilesClient.GetReportResponseUnknownFailure(response.status.value, response.headers)
+      }
+    }
+    catch(e: CancellationException) {
+      throw e
+    }
+    catch(e: Exception) {
+      configuration.exceptionLogger(e)
+      return FilesClient.GetReportResponseUnknownFailure(500)
+    }
+  }
+
+  override suspend fun exportCsv(): FilesClient.ExportCsvResponse {
+    try {
+      val response = configuration.client.`get`("export") {
+        accept(ContentType.parse("text/csv"))
+      }
+      return when (response.status.value) {
+        200 -> FilesClient.ExportCsvResponseSuccess(response.body<String>(), response.headers)
+        else -> FilesClient.ExportCsvResponseUnknownFailure(response.status.value, response.headers)
+      }
+    }
+    catch(e: CancellationException) {
+      throw e
+    }
+    catch(e: Exception) {
+      configuration.exceptionLogger(e)
+      return FilesClient.ExportCsvResponseUnknownFailure(500)
+    }
+  }
+
+  override suspend fun download(): FilesClient.DownloadResponse {
+    try {
+      val response = configuration.client.`get`("download") {
+      }
+      return when (response.status.value) {
+        200 -> FilesClient.DownloadResponseSuccess(response.body<ByteArray>(), response.headers)
+        else -> FilesClient.DownloadResponseUnknownFailure(response.status.value, response.headers)
+      }
+    }
+    catch(e: CancellationException) {
+      throw e
+    }
+    catch(e: Exception) {
+      configuration.exceptionLogger(e)
+      return FilesClient.DownloadResponseUnknownFailure(500)
+    }
+  }
+
+  override suspend fun getDocument(id: String): FilesClient.GetDocumentResponse {
+    try {
+      val response = configuration.client.`get`("documents/{id}".replace("/{id}", "/${id.encodeURLPathPart()}")) {
+      }
+      return when (response.status.value) {
+        200 -> FilesClient.GetDocumentResponseSuccess(response.body<Document>(), response.headers)
+        else -> FilesClient.GetDocumentResponseUnknownFailure(response.status.value, response.headers)
+      }
+    }
+    catch(e: CancellationException) {
+      throw e
+    }
+    catch(e: Exception) {
+      configuration.exceptionLogger(e)
+      return FilesClient.GetDocumentResponseUnknownFailure(500)
+    }
+  }
 }

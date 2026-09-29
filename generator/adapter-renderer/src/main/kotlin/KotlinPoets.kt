@@ -80,10 +80,15 @@ internal fun DefaultValueSpec.toCodeBlock(formatType: StringFormatType? = null):
         is DefaultValueSpec.EnumDefaultSpec -> CodeBlock.of("%L.%L", typeName, enumValue)
     }
 
+/**
+ * @param inlineTypeOwner class declaring the [DomainTypeSpec.InlineTypeSpec] types, for references from outside of it
+ * (e.g. the client interface, referenced from its implementation). When null, inline types are referenced by simple name.
+ */
 internal fun DomainTypeSpec.toTypeName(
     modelPackage: String,
     modelPackageOverrides: Map<String, String> = emptyMap(),
     stringFormatTypes: Map<String, StringFormatType> = emptyMap(),
+    inlineTypeOwner: ClassName? = null,
 ): TypeName {
     val base: TypeName =
         when (this) {
@@ -116,15 +121,15 @@ internal fun DomainTypeSpec.toTypeName(
             }
 
             is DomainTypeSpec.ListTypeSpec -> {
-                LIST.parameterizedBy(element.toTypeName(modelPackage, modelPackageOverrides, stringFormatTypes))
+                LIST.parameterizedBy(element.toTypeName(modelPackage, modelPackageOverrides, stringFormatTypes, inlineTypeOwner))
             }
 
             is DomainTypeSpec.SetTypeSpec -> {
-                SET.parameterizedBy(element.toTypeName(modelPackage, modelPackageOverrides, stringFormatTypes))
+                SET.parameterizedBy(element.toTypeName(modelPackage, modelPackageOverrides, stringFormatTypes, inlineTypeOwner))
             }
 
             is DomainTypeSpec.MapTypeSpec -> {
-                MAP.parameterizedBy(STRING, value.toTypeName(modelPackage, modelPackageOverrides, stringFormatTypes))
+                MAP.parameterizedBy(STRING, value.toTypeName(modelPackage, modelPackageOverrides, stringFormatTypes, inlineTypeOwner))
             }
 
             is DomainTypeSpec.ModelReferenceSpec -> {
@@ -132,7 +137,7 @@ internal fun DomainTypeSpec.toTypeName(
             }
 
             is DomainTypeSpec.InlineTypeSpec -> {
-                ClassName("", name)
+                inlineTypeOwner?.nestedClass(name) ?: ClassName("", name)
             }
 
             is DomainTypeSpec.JsonTypeSpec -> {

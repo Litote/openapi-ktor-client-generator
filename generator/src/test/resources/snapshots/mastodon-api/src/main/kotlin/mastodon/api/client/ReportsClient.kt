@@ -19,33 +19,11 @@ import mastodon.api.model.Error
 import mastodon.api.model.Report
 import mastodon.api.model.ReportCategoryEnum
 
-public class ReportsClient(
-  private val configuration: ClientConfiguration = defaultClientConfiguration,
-) {
+public interface ReportsClient {
   /**
    * File a report
    */
-  public suspend fun createReport(request: CreateReportRequest): CreateReportResponse {
-    try {
-      val response = configuration.client.post("api/v1/reports") {
-        setBody(request)
-        contentType(ContentType.Application.Json)
-      }
-      return when (response.status.value) {
-        200 -> CreateReportResponseSuccess(response.body<Report>(), response.headers)
-        401, 404, 422, 429, 503 -> CreateReportResponseFailure401(response.body<Error>(), response.headers)
-        410 -> CreateReportResponseFailure(response.headers)
-        else -> CreateReportResponseUnknownFailure(response.status.value, response.headers)
-      }
-    }
-    catch(e: CancellationException) {
-      throw e
-    }
-    catch(e: Exception) {
-      configuration.exceptionLogger(e)
-      return CreateReportResponseUnknownFailure(500)
-    }
-  }
+  public suspend fun createReport(request: CreateReportRequest): CreateReportResponse
 
   @Serializable
   public data class CreateReportRequest(
@@ -109,4 +87,32 @@ public class ReportsClient(
     @Transient
     override val headers: Headers = Headers.Empty,
   ) : CreateReportResponse()
+}
+
+public fun ReportsClient(configuration: ClientConfiguration = defaultClientConfiguration): ReportsClient = DefaultReportsClient(configuration)
+
+public class DefaultReportsClient(
+  private val configuration: ClientConfiguration = defaultClientConfiguration,
+) : ReportsClient {
+  override suspend fun createReport(request: ReportsClient.CreateReportRequest): ReportsClient.CreateReportResponse {
+    try {
+      val response = configuration.client.post("api/v1/reports") {
+        setBody(request)
+        contentType(ContentType.Application.Json)
+      }
+      return when (response.status.value) {
+        200 -> ReportsClient.CreateReportResponseSuccess(response.body<Report>(), response.headers)
+        401, 404, 422, 429, 503 -> ReportsClient.CreateReportResponseFailure401(response.body<Error>(), response.headers)
+        410 -> ReportsClient.CreateReportResponseFailure(response.headers)
+        else -> ReportsClient.CreateReportResponseUnknownFailure(response.status.value, response.headers)
+      }
+    }
+    catch(e: CancellationException) {
+      throw e
+    }
+    catch(e: Exception) {
+      configuration.exceptionLogger(e)
+      return ReportsClient.CreateReportResponseUnknownFailure(500)
+    }
+  }
 }

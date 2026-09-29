@@ -15,34 +15,11 @@ import mastodon.api.client.ClientConfiguration.Companion.defaultClientConfigurat
 import mastodon.api.model.Error
 import mastodon.api.model.ValidationError
 
-public class EmailsClient(
-  private val configuration: ClientConfiguration = defaultClientConfiguration,
-) {
+public interface EmailsClient {
   /**
    * Resend confirmation email
    */
-  public suspend fun createEmailConfirmations(request: CreateEmailConfirmationsRequest): CreateEmailConfirmationsResponse {
-    try {
-      val response = configuration.client.post("api/v1/emails/confirmations") {
-        setBody(request)
-        contentType(ContentType.Application.Json)
-      }
-      return when (response.status.value) {
-        200 -> CreateEmailConfirmationsResponseSuccess(response.headers)
-        401, 403, 404, 429, 503 -> CreateEmailConfirmationsResponseFailure401(response.body<Error>(), response.headers)
-        410 -> CreateEmailConfirmationsResponseFailure410(response.headers)
-        422 -> CreateEmailConfirmationsResponseFailure(response.body<ValidationError>(), response.headers)
-        else -> CreateEmailConfirmationsResponseUnknownFailure(response.status.value, response.headers)
-      }
-    }
-    catch(e: CancellationException) {
-      throw e
-    }
-    catch(e: Exception) {
-      configuration.exceptionLogger(e)
-      return CreateEmailConfirmationsResponseUnknownFailure(500)
-    }
-  }
+  public suspend fun createEmailConfirmations(request: CreateEmailConfirmationsRequest): CreateEmailConfirmationsResponse
 
   @Serializable
   public data class CreateEmailConfirmationsRequest(
@@ -104,4 +81,33 @@ public class EmailsClient(
     @Transient
     override val headers: Headers = Headers.Empty,
   ) : CreateEmailConfirmationsResponse()
+}
+
+public fun EmailsClient(configuration: ClientConfiguration = defaultClientConfiguration): EmailsClient = DefaultEmailsClient(configuration)
+
+public class DefaultEmailsClient(
+  private val configuration: ClientConfiguration = defaultClientConfiguration,
+) : EmailsClient {
+  override suspend fun createEmailConfirmations(request: EmailsClient.CreateEmailConfirmationsRequest): EmailsClient.CreateEmailConfirmationsResponse {
+    try {
+      val response = configuration.client.post("api/v1/emails/confirmations") {
+        setBody(request)
+        contentType(ContentType.Application.Json)
+      }
+      return when (response.status.value) {
+        200 -> EmailsClient.CreateEmailConfirmationsResponseSuccess(response.headers)
+        401, 403, 404, 429, 503 -> EmailsClient.CreateEmailConfirmationsResponseFailure401(response.body<Error>(), response.headers)
+        410 -> EmailsClient.CreateEmailConfirmationsResponseFailure410(response.headers)
+        422 -> EmailsClient.CreateEmailConfirmationsResponseFailure(response.body<ValidationError>(), response.headers)
+        else -> EmailsClient.CreateEmailConfirmationsResponseUnknownFailure(response.status.value, response.headers)
+      }
+    }
+    catch(e: CancellationException) {
+      throw e
+    }
+    catch(e: Exception) {
+      configuration.exceptionLogger(e)
+      return EmailsClient.CreateEmailConfirmationsResponseUnknownFailure(500)
+    }
+  }
 }

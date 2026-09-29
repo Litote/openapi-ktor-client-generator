@@ -75,17 +75,38 @@ The generator accepts OpenAPI V3 specification files in both **JSON** and **YAML
 
 ## Using the generated client
 
-After generation, each API tag produces a client class (e.g. `UserClient`, `PetClient`).
+After generation, each API tag produces a client (e.g. `UserClient`, `PetClient`) made of:
+
+- an interface `UserClient` declaring the operations (with their default parameter values) and the nested response types (`UserClient.GetUsersResponse`, …);
+- a factory function `UserClient(configuration)` returning the default implementation;
+- the Ktor implementation `DefaultUserClient(configuration) : UserClient`.
+
 All clients share by default a single `ClientConfiguration` instance.
 
 ### Minimal example
 
 ```kotlin
 val config = ClientConfiguration() // default generated configuration class
-val client = UserClient(config) // UserClient is the generated client
+val client: UserClient = UserClient(config) // factory function returning a DefaultUserClient
 
 val users = client.getUsers() // returns a sealed class to manage errors
 ```
+
+### Testing code that uses a client
+
+Since each client is an interface, it can be replaced by a fake in tests, without any mocking library.
+This also works in Kotlin Multiplatform `commonTest`:
+
+```kotlin
+val fakeClient =
+    object : UserClient {
+        override suspend fun getUsers(): UserClient.GetUsersResponse =
+            UserClient.GetUsersResponseSuccess(listOf(User(id = "1", name = "Alice")))
+        // other operations...
+    }
+```
+
+Mocking libraries can work too.
 
 ### Response body types
 

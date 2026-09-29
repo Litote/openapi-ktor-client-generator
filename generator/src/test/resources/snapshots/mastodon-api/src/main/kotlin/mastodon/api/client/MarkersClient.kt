@@ -21,63 +21,16 @@ import mastodon.api.model.FilterContextEnum
 import mastodon.api.model.Marker
 import mastodon.api.model.ValidationError
 
-public class MarkersClient(
-  private val configuration: ClientConfiguration = defaultClientConfiguration,
-) {
+public interface MarkersClient {
   /**
    * Get saved timeline positions
    */
-  public suspend fun getMarkers(timeline: List<FilterContextEnum>? = null): GetMarkersResponse {
-    try {
-      val response = configuration.client.`get`("api/v1/markers") {
-        url {
-          if (timeline != null) {
-            parameters.appendAll("timeline", timeline.map { it.serialName() })
-          }
-        }
-      }
-      return when (response.status.value) {
-        200 -> GetMarkersResponseSuccess(response.body<Map<String, Marker>>(), response.headers)
-        401, 404, 429, 503 -> GetMarkersResponseFailure401(response.body<Error>(), response.headers)
-        410 -> GetMarkersResponseFailure410(response.headers)
-        422 -> GetMarkersResponseFailure(response.body<ValidationError>(), response.headers)
-        else -> GetMarkersResponseUnknownFailure(response.status.value, response.headers)
-      }
-    }
-    catch(e: CancellationException) {
-      throw e
-    }
-    catch(e: Exception) {
-      configuration.exceptionLogger(e)
-      return GetMarkersResponseUnknownFailure(500)
-    }
-  }
+  public suspend fun getMarkers(timeline: List<FilterContextEnum>? = null): GetMarkersResponse
 
   /**
    * Save your position in a timeline
    */
-  public suspend fun createMarker(request: CreateMarkerRequest): CreateMarkerResponse {
-    try {
-      val response = configuration.client.post("api/v1/markers") {
-        setBody(request)
-        contentType(ContentType.Application.Json)
-      }
-      return when (response.status.value) {
-        200 -> CreateMarkerResponseSuccess(response.body<Map<String, Marker>>(), response.headers)
-        401, 404, 429, 503 -> CreateMarkerResponseFailure401(response.body<Error>(), response.headers)
-        410 -> CreateMarkerResponseFailure410(response.headers)
-        422 -> CreateMarkerResponseFailure(response.body<ValidationError>(), response.headers)
-        else -> CreateMarkerResponseUnknownFailure(response.status.value, response.headers)
-      }
-    }
-    catch(e: CancellationException) {
-      throw e
-    }
-    catch(e: Exception) {
-      configuration.exceptionLogger(e)
-      return CreateMarkerResponseUnknownFailure(500)
-    }
-  }
+  public suspend fun createMarker(request: CreateMarkerRequest): CreateMarkerResponse
 
   @Serializable
   public sealed class GetMarkersResponse {
@@ -210,4 +163,59 @@ public class MarkersClient(
     @Transient
     override val headers: Headers = Headers.Empty,
   ) : CreateMarkerResponse()
+}
+
+public fun MarkersClient(configuration: ClientConfiguration = defaultClientConfiguration): MarkersClient = DefaultMarkersClient(configuration)
+
+public class DefaultMarkersClient(
+  private val configuration: ClientConfiguration = defaultClientConfiguration,
+) : MarkersClient {
+  override suspend fun getMarkers(timeline: List<FilterContextEnum>?): MarkersClient.GetMarkersResponse {
+    try {
+      val response = configuration.client.`get`("api/v1/markers") {
+        url {
+          if (timeline != null) {
+            parameters.appendAll("timeline", timeline.map { it.serialName() })
+          }
+        }
+      }
+      return when (response.status.value) {
+        200 -> MarkersClient.GetMarkersResponseSuccess(response.body<Map<String, Marker>>(), response.headers)
+        401, 404, 429, 503 -> MarkersClient.GetMarkersResponseFailure401(response.body<Error>(), response.headers)
+        410 -> MarkersClient.GetMarkersResponseFailure410(response.headers)
+        422 -> MarkersClient.GetMarkersResponseFailure(response.body<ValidationError>(), response.headers)
+        else -> MarkersClient.GetMarkersResponseUnknownFailure(response.status.value, response.headers)
+      }
+    }
+    catch(e: CancellationException) {
+      throw e
+    }
+    catch(e: Exception) {
+      configuration.exceptionLogger(e)
+      return MarkersClient.GetMarkersResponseUnknownFailure(500)
+    }
+  }
+
+  override suspend fun createMarker(request: MarkersClient.CreateMarkerRequest): MarkersClient.CreateMarkerResponse {
+    try {
+      val response = configuration.client.post("api/v1/markers") {
+        setBody(request)
+        contentType(ContentType.Application.Json)
+      }
+      return when (response.status.value) {
+        200 -> MarkersClient.CreateMarkerResponseSuccess(response.body<Map<String, Marker>>(), response.headers)
+        401, 404, 429, 503 -> MarkersClient.CreateMarkerResponseFailure401(response.body<Error>(), response.headers)
+        410 -> MarkersClient.CreateMarkerResponseFailure410(response.headers)
+        422 -> MarkersClient.CreateMarkerResponseFailure(response.body<ValidationError>(), response.headers)
+        else -> MarkersClient.CreateMarkerResponseUnknownFailure(response.status.value, response.headers)
+      }
+    }
+    catch(e: CancellationException) {
+      throw e
+    }
+    catch(e: Exception) {
+      configuration.exceptionLogger(e)
+      return MarkersClient.CreateMarkerResponseUnknownFailure(500)
+    }
+  }
 }

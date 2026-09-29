@@ -23,175 +23,31 @@ import mastodon.api.model.Error
 import mastodon.api.model.MediaAttachment
 import mastodon.api.model.ValidationError
 
-public class MediaClient(
-  private val configuration: ClientConfiguration = defaultClientConfiguration,
-) {
+public interface MediaClient {
   /**
    * Upload media as an attachment (v1)
    */
-  public suspend fun createMedia(form: CreateMediaForm): CreateMediaResponse {
-    try {
-      val response = configuration.client.post("api/v1/media") {
-        setBody(MultiPartFormDataContent(formData {
-        append("file", form.file.bytes, Headers.build {
-          append(HttpHeaders.ContentType, form.file.contentType.toString())
-          append(HttpHeaders.ContentDisposition, "form-data; name=\"file\"; filename=\"" + form.file.filename + "\"")
-        })
-        form.description?.let { value ->
-          append("description", value)
-        }
-        form.focus?.let { value ->
-          append("focus", value)
-        }
-        form.thumbnail?.let { value ->
-          append("thumbnail", value.bytes, Headers.build {
-            append(HttpHeaders.ContentType, value.contentType.toString())
-            append(HttpHeaders.ContentDisposition, "form-data; name=\"thumbnail\"; filename=\"" + value.filename + "\"")
-          })
-        }
-        }))
-      }
-      return when (response.status.value) {
-        200 -> CreateMediaResponseSuccess(response.body<MediaAttachment>(), response.headers)
-        401, 404, 422, 429, 503 -> CreateMediaResponseFailure401(response.body<Error>(), response.headers)
-        410 -> CreateMediaResponseFailure(response.headers)
-        else -> CreateMediaResponseUnknownFailure(response.status.value, response.headers)
-      }
-    }
-    catch(e: CancellationException) {
-      throw e
-    }
-    catch(e: Exception) {
-      configuration.exceptionLogger(e)
-      return CreateMediaResponseUnknownFailure(500)
-    }
-  }
+  public suspend fun createMedia(form: CreateMediaForm): CreateMediaResponse
 
   /**
    * Get media attachment
    */
-  public suspend fun getMedia(id: String): GetMediaResponse {
-    try {
-      val response = configuration.client.`get`("api/v1/media/{id}".replace("/{id}", "/${id.encodeURLPathPart()}")) {
-      }
-      return when (response.status.value) {
-        200 -> GetMediaResponseSuccess200(response.body<MediaAttachment>(), response.headers)
-        206 -> GetMediaResponseSuccess(response.headers)
-        401, 404, 422, 429, 503 -> GetMediaResponseFailure401(response.body<Error>(), response.headers)
-        410 -> GetMediaResponseFailure(response.headers)
-        else -> GetMediaResponseUnknownFailure(response.status.value, response.headers)
-      }
-    }
-    catch(e: CancellationException) {
-      throw e
-    }
-    catch(e: Exception) {
-      configuration.exceptionLogger(e)
-      return GetMediaResponseUnknownFailure(500)
-    }
-  }
+  public suspend fun getMedia(id: String): GetMediaResponse
 
   /**
    * Update media attachment
    */
-  public suspend fun updateMedia(form: UpdateMediaForm, id: String): UpdateMediaResponse {
-    try {
-      val response = configuration.client.put("api/v1/media/{id}".replace("/{id}", "/${id.encodeURLPathPart()}")) {
-        setBody(MultiPartFormDataContent(formData {
-        form.description?.let { value ->
-          append("description", value)
-        }
-        form.focus?.let { value ->
-          append("focus", value)
-        }
-        form.thumbnail?.let { value ->
-          append("thumbnail", value.bytes, Headers.build {
-            append(HttpHeaders.ContentType, value.contentType.toString())
-            append(HttpHeaders.ContentDisposition, "form-data; name=\"thumbnail\"; filename=\"" + value.filename + "\"")
-          })
-        }
-        }))
-      }
-      return when (response.status.value) {
-        200 -> UpdateMediaResponseSuccess(response.body<MediaAttachment>(), response.headers)
-        401, 404, 422, 429, 503 -> UpdateMediaResponseFailure401(response.body<Error>(), response.headers)
-        410 -> UpdateMediaResponseFailure(response.headers)
-        else -> UpdateMediaResponseUnknownFailure(response.status.value, response.headers)
-      }
-    }
-    catch(e: CancellationException) {
-      throw e
-    }
-    catch(e: Exception) {
-      configuration.exceptionLogger(e)
-      return UpdateMediaResponseUnknownFailure(500)
-    }
-  }
+  public suspend fun updateMedia(form: UpdateMediaForm, id: String): UpdateMediaResponse
 
   /**
    * Delete media attachment
    */
-  public suspend fun deleteMedia(id: String): DeleteMediaResponse {
-    try {
-      val response = configuration.client.delete("api/v1/media/{id}".replace("/{id}", "/${id.encodeURLPathPart()}")) {
-      }
-      return when (response.status.value) {
-        200 -> DeleteMediaResponseSuccess(response.headers)
-        401, 404, 429, 503 -> DeleteMediaResponseFailure401(response.body<Error>(), response.headers)
-        410 -> DeleteMediaResponseFailure410(response.headers)
-        422 -> DeleteMediaResponseFailure(response.body<ValidationError>(), response.headers)
-        else -> DeleteMediaResponseUnknownFailure(response.status.value, response.headers)
-      }
-    }
-    catch(e: CancellationException) {
-      throw e
-    }
-    catch(e: Exception) {
-      configuration.exceptionLogger(e)
-      return DeleteMediaResponseUnknownFailure(500)
-    }
-  }
+  public suspend fun deleteMedia(id: String): DeleteMediaResponse
 
   /**
    * Upload media as an attachment (async)
    */
-  public suspend fun createMediaV2(form: CreateMediaV2Form): CreateMediaV2Response {
-    try {
-      val response = configuration.client.post("api/v2/media") {
-        setBody(MultiPartFormDataContent(formData {
-        append("file", form.file.bytes, Headers.build {
-          append(HttpHeaders.ContentType, form.file.contentType.toString())
-          append(HttpHeaders.ContentDisposition, "form-data; name=\"file\"; filename=\"" + form.file.filename + "\"")
-        })
-        form.description?.let { value ->
-          append("description", value)
-        }
-        form.focus?.let { value ->
-          append("focus", value)
-        }
-        form.thumbnail?.let { value ->
-          append("thumbnail", value.bytes, Headers.build {
-            append(HttpHeaders.ContentType, value.contentType.toString())
-            append(HttpHeaders.ContentDisposition, "form-data; name=\"thumbnail\"; filename=\"" + value.filename + "\"")
-          })
-        }
-        }))
-      }
-      return when (response.status.value) {
-        200, 202 -> CreateMediaV2ResponseSuccess(response.body<MediaAttachment>(), response.headers)
-        401, 404, 422, 429, 500, 503 -> CreateMediaV2ResponseFailure401(response.body<Error>(), response.headers)
-        410 -> CreateMediaV2ResponseFailure(response.headers)
-        else -> CreateMediaV2ResponseUnknownFailure(response.status.value, response.headers)
-      }
-    }
-    catch(e: CancellationException) {
-      throw e
-    }
-    catch(e: Exception) {
-      configuration.exceptionLogger(e)
-      return CreateMediaV2ResponseUnknownFailure(500)
-    }
-  }
+  public suspend fun createMediaV2(form: CreateMediaV2Form): CreateMediaV2Response
 
   public data class CreateMediaForm(
     public val `file`: CreateMediaFormFile,
@@ -510,4 +366,162 @@ public class MediaClient(
     @Transient
     override val headers: Headers = Headers.Empty,
   ) : CreateMediaV2Response()
+}
+
+public fun MediaClient(configuration: ClientConfiguration = defaultClientConfiguration): MediaClient = DefaultMediaClient(configuration)
+
+public class DefaultMediaClient(
+  private val configuration: ClientConfiguration = defaultClientConfiguration,
+) : MediaClient {
+  override suspend fun createMedia(form: MediaClient.CreateMediaForm): MediaClient.CreateMediaResponse {
+    try {
+      val response = configuration.client.post("api/v1/media") {
+        setBody(MultiPartFormDataContent(formData {
+        append("file", form.file.bytes, Headers.build {
+          append(HttpHeaders.ContentType, form.file.contentType.toString())
+          append(HttpHeaders.ContentDisposition, "form-data; name=\"file\"; filename=\"" + form.file.filename + "\"")
+        })
+        form.description?.let { value ->
+          append("description", value)
+        }
+        form.focus?.let { value ->
+          append("focus", value)
+        }
+        form.thumbnail?.let { value ->
+          append("thumbnail", value.bytes, Headers.build {
+            append(HttpHeaders.ContentType, value.contentType.toString())
+            append(HttpHeaders.ContentDisposition, "form-data; name=\"thumbnail\"; filename=\"" + value.filename + "\"")
+          })
+        }
+        }))
+      }
+      return when (response.status.value) {
+        200 -> MediaClient.CreateMediaResponseSuccess(response.body<MediaAttachment>(), response.headers)
+        401, 404, 422, 429, 503 -> MediaClient.CreateMediaResponseFailure401(response.body<Error>(), response.headers)
+        410 -> MediaClient.CreateMediaResponseFailure(response.headers)
+        else -> MediaClient.CreateMediaResponseUnknownFailure(response.status.value, response.headers)
+      }
+    }
+    catch(e: CancellationException) {
+      throw e
+    }
+    catch(e: Exception) {
+      configuration.exceptionLogger(e)
+      return MediaClient.CreateMediaResponseUnknownFailure(500)
+    }
+  }
+
+  override suspend fun getMedia(id: String): MediaClient.GetMediaResponse {
+    try {
+      val response = configuration.client.`get`("api/v1/media/{id}".replace("/{id}", "/${id.encodeURLPathPart()}")) {
+      }
+      return when (response.status.value) {
+        200 -> MediaClient.GetMediaResponseSuccess200(response.body<MediaAttachment>(), response.headers)
+        206 -> MediaClient.GetMediaResponseSuccess(response.headers)
+        401, 404, 422, 429, 503 -> MediaClient.GetMediaResponseFailure401(response.body<Error>(), response.headers)
+        410 -> MediaClient.GetMediaResponseFailure(response.headers)
+        else -> MediaClient.GetMediaResponseUnknownFailure(response.status.value, response.headers)
+      }
+    }
+    catch(e: CancellationException) {
+      throw e
+    }
+    catch(e: Exception) {
+      configuration.exceptionLogger(e)
+      return MediaClient.GetMediaResponseUnknownFailure(500)
+    }
+  }
+
+  override suspend fun updateMedia(form: MediaClient.UpdateMediaForm, id: String): MediaClient.UpdateMediaResponse {
+    try {
+      val response = configuration.client.put("api/v1/media/{id}".replace("/{id}", "/${id.encodeURLPathPart()}")) {
+        setBody(MultiPartFormDataContent(formData {
+        form.description?.let { value ->
+          append("description", value)
+        }
+        form.focus?.let { value ->
+          append("focus", value)
+        }
+        form.thumbnail?.let { value ->
+          append("thumbnail", value.bytes, Headers.build {
+            append(HttpHeaders.ContentType, value.contentType.toString())
+            append(HttpHeaders.ContentDisposition, "form-data; name=\"thumbnail\"; filename=\"" + value.filename + "\"")
+          })
+        }
+        }))
+      }
+      return when (response.status.value) {
+        200 -> MediaClient.UpdateMediaResponseSuccess(response.body<MediaAttachment>(), response.headers)
+        401, 404, 422, 429, 503 -> MediaClient.UpdateMediaResponseFailure401(response.body<Error>(), response.headers)
+        410 -> MediaClient.UpdateMediaResponseFailure(response.headers)
+        else -> MediaClient.UpdateMediaResponseUnknownFailure(response.status.value, response.headers)
+      }
+    }
+    catch(e: CancellationException) {
+      throw e
+    }
+    catch(e: Exception) {
+      configuration.exceptionLogger(e)
+      return MediaClient.UpdateMediaResponseUnknownFailure(500)
+    }
+  }
+
+  override suspend fun deleteMedia(id: String): MediaClient.DeleteMediaResponse {
+    try {
+      val response = configuration.client.delete("api/v1/media/{id}".replace("/{id}", "/${id.encodeURLPathPart()}")) {
+      }
+      return when (response.status.value) {
+        200 -> MediaClient.DeleteMediaResponseSuccess(response.headers)
+        401, 404, 429, 503 -> MediaClient.DeleteMediaResponseFailure401(response.body<Error>(), response.headers)
+        410 -> MediaClient.DeleteMediaResponseFailure410(response.headers)
+        422 -> MediaClient.DeleteMediaResponseFailure(response.body<ValidationError>(), response.headers)
+        else -> MediaClient.DeleteMediaResponseUnknownFailure(response.status.value, response.headers)
+      }
+    }
+    catch(e: CancellationException) {
+      throw e
+    }
+    catch(e: Exception) {
+      configuration.exceptionLogger(e)
+      return MediaClient.DeleteMediaResponseUnknownFailure(500)
+    }
+  }
+
+  override suspend fun createMediaV2(form: MediaClient.CreateMediaV2Form): MediaClient.CreateMediaV2Response {
+    try {
+      val response = configuration.client.post("api/v2/media") {
+        setBody(MultiPartFormDataContent(formData {
+        append("file", form.file.bytes, Headers.build {
+          append(HttpHeaders.ContentType, form.file.contentType.toString())
+          append(HttpHeaders.ContentDisposition, "form-data; name=\"file\"; filename=\"" + form.file.filename + "\"")
+        })
+        form.description?.let { value ->
+          append("description", value)
+        }
+        form.focus?.let { value ->
+          append("focus", value)
+        }
+        form.thumbnail?.let { value ->
+          append("thumbnail", value.bytes, Headers.build {
+            append(HttpHeaders.ContentType, value.contentType.toString())
+            append(HttpHeaders.ContentDisposition, "form-data; name=\"thumbnail\"; filename=\"" + value.filename + "\"")
+          })
+        }
+        }))
+      }
+      return when (response.status.value) {
+        200, 202 -> MediaClient.CreateMediaV2ResponseSuccess(response.body<MediaAttachment>(), response.headers)
+        401, 404, 422, 429, 500, 503 -> MediaClient.CreateMediaV2ResponseFailure401(response.body<Error>(), response.headers)
+        410 -> MediaClient.CreateMediaV2ResponseFailure(response.headers)
+        else -> MediaClient.CreateMediaV2ResponseUnknownFailure(response.status.value, response.headers)
+      }
+    }
+    catch(e: CancellationException) {
+      throw e
+    }
+    catch(e: Exception) {
+      configuration.exceptionLogger(e)
+      return MediaClient.CreateMediaV2ResponseUnknownFailure(500)
+    }
+  }
 }

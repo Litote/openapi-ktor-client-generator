@@ -15,9 +15,7 @@ import mastodon.api.model.Error
 import mastodon.api.model.Search
 import mastodon.api.model.ValidationError
 
-public class SearchClient(
-  private val configuration: ClientConfiguration = defaultClientConfiguration,
-) {
+public interface SearchClient {
   /**
    * Perform a search
    */
@@ -32,56 +30,7 @@ public class SearchClient(
     offset: Long? = null,
     resolve: Boolean? = null,
     type: String? = null,
-  ): GetSearchV2Response {
-    try {
-      val response = configuration.client.`get`("api/v2/search") {
-        url {
-          parameters.append("q", q)
-          if (accountId != null) {
-            parameters.append("account_id", accountId)
-          }
-          if (excludeUnreviewed != null) {
-            parameters.append("exclude_unreviewed", excludeUnreviewed.toString())
-          }
-          if (following != null) {
-            parameters.append("following", following.toString())
-          }
-          if (limit != null) {
-            parameters.append("limit", limit.toString())
-          }
-          if (maxId != null) {
-            parameters.append("max_id", maxId)
-          }
-          if (minId != null) {
-            parameters.append("min_id", minId)
-          }
-          if (offset != null) {
-            parameters.append("offset", offset.toString())
-          }
-          if (resolve != null) {
-            parameters.append("resolve", resolve.toString())
-          }
-          if (type != null) {
-            parameters.append("type", type)
-          }
-        }
-      }
-      return when (response.status.value) {
-        200 -> GetSearchV2ResponseSuccess(response.body<Search>(), response.headers)
-        401, 404, 429, 503 -> GetSearchV2ResponseFailure401(response.body<Error>(), response.headers)
-        410 -> GetSearchV2ResponseFailure410(response.headers)
-        422 -> GetSearchV2ResponseFailure(response.body<ValidationError>(), response.headers)
-        else -> GetSearchV2ResponseUnknownFailure(response.status.value, response.headers)
-      }
-    }
-    catch(e: CancellationException) {
-      throw e
-    }
-    catch(e: Exception) {
-      configuration.exceptionLogger(e)
-      return GetSearchV2ResponseUnknownFailure(500)
-    }
-  }
+  ): GetSearchV2Response
 
   @Serializable
   public sealed class GetSearchV2Response {
@@ -145,4 +94,72 @@ public class SearchClient(
     @Transient
     override val headers: Headers = Headers.Empty,
   ) : GetSearchV2Response()
+}
+
+public fun SearchClient(configuration: ClientConfiguration = defaultClientConfiguration): SearchClient = DefaultSearchClient(configuration)
+
+public class DefaultSearchClient(
+  private val configuration: ClientConfiguration = defaultClientConfiguration,
+) : SearchClient {
+  override suspend fun getSearchV2(
+    q: String,
+    accountId: String?,
+    excludeUnreviewed: Boolean?,
+    following: Boolean?,
+    limit: Long?,
+    maxId: String?,
+    minId: String?,
+    offset: Long?,
+    resolve: Boolean?,
+    type: String?,
+  ): SearchClient.GetSearchV2Response {
+    try {
+      val response = configuration.client.`get`("api/v2/search") {
+        url {
+          parameters.append("q", q)
+          if (accountId != null) {
+            parameters.append("account_id", accountId)
+          }
+          if (excludeUnreviewed != null) {
+            parameters.append("exclude_unreviewed", excludeUnreviewed.toString())
+          }
+          if (following != null) {
+            parameters.append("following", following.toString())
+          }
+          if (limit != null) {
+            parameters.append("limit", limit.toString())
+          }
+          if (maxId != null) {
+            parameters.append("max_id", maxId)
+          }
+          if (minId != null) {
+            parameters.append("min_id", minId)
+          }
+          if (offset != null) {
+            parameters.append("offset", offset.toString())
+          }
+          if (resolve != null) {
+            parameters.append("resolve", resolve.toString())
+          }
+          if (type != null) {
+            parameters.append("type", type)
+          }
+        }
+      }
+      return when (response.status.value) {
+        200 -> SearchClient.GetSearchV2ResponseSuccess(response.body<Search>(), response.headers)
+        401, 404, 429, 503 -> SearchClient.GetSearchV2ResponseFailure401(response.body<Error>(), response.headers)
+        410 -> SearchClient.GetSearchV2ResponseFailure410(response.headers)
+        422 -> SearchClient.GetSearchV2ResponseFailure(response.body<ValidationError>(), response.headers)
+        else -> SearchClient.GetSearchV2ResponseUnknownFailure(response.status.value, response.headers)
+      }
+    }
+    catch(e: CancellationException) {
+      throw e
+    }
+    catch(e: Exception) {
+      configuration.exceptionLogger(e)
+      return SearchClient.GetSearchV2ResponseUnknownFailure(500)
+    }
+  }
 }

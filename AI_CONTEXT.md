@@ -263,7 +263,7 @@ outputDirectory/
 └── src/main/kotlin/
     ├── {basePackage}/client/
     │   ├── ClientConfiguration.kt
-    │   ├── UserClient.kt
+    │   ├── UserClient.kt      ← interface UserClient + fun UserClient(...) + class DefaultUserClient
     │   └── ProductClient.kt
     └── {basePackage}/model/
         ├── User.kt
@@ -435,6 +435,26 @@ systemProp.sonar.token=<your-token>
 - Files at the root of `src/main/kotlin/` (e.g. `ApiGenerator.kt`) produce "File not found in project sources" warnings — this is a known Sonar/JaCoCo limitation with the Kotlin "common root omitted" convention; the code analysis is not affected
 
 ---
+
+## Client Files — Interface, Factory Function and `Default*` Implementation
+
+Each `XClient.kt` contains, in this order (`ApiClientGenerator.buildClient` / `writeFile`):
+
+1. `public interface XClient` — abstract `suspend` operations **with** KDoc and default parameter values, and all
+   nested types (response sealed classes and subclasses, `*Form`, `*FormFile`, inline models of parameters and bodies).
+2. `public fun XClient(configuration: ClientConfiguration = defaultClientConfiguration): XClient = DefaultXClient(configuration)`.
+3. `public class DefaultXClient(private val configuration: ClientConfiguration = …) : XClient` — `override` operations
+   **without** default values (Kotlin forbids redeclaring them), Ktor calls and private parameter serialization helpers.
+
+Rules (`OperationBuilder`):
+- `declareOperation` adds the abstract declaration to the interface and returns the builder of the override.
+- Nested types are **not** resolvable by simple name from `DefaultXClient` (and KotlinPoet would import a
+  `ClassName("", …)` as a default-package class). References from the implementation must be qualified:
+  `toTypeName(..., inlineTypeOwner = interfaceClass)` for inline types, `RenderedResponseEntry.className` /
+  `ResponseBuildContext.unknownFailureClass` for response classes.
+- `ClientFileContext` exposes `clientInterface`, `clientFactory` and `clientClass` (the implementation).
+- The snapshot sources (`generator/src/test/resources/snapshots/**`) are compiled with the generator tests, so an
+  unresolved reference in generated code fails `compileTestKotlin`.
 
 ## Multipart Binary Fields — `Content-Disposition` with `filename`
 

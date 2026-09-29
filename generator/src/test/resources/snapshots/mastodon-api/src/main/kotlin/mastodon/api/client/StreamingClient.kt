@@ -16,221 +16,56 @@ import mastodon.api.client.ClientConfiguration.Companion.defaultClientConfigurat
 import mastodon.api.model.Error
 import mastodon.api.model.ValidationError
 
-public class StreamingClient(
-  private val configuration: ClientConfiguration = defaultClientConfiguration,
-) {
+public interface StreamingClient {
   /**
    * Watch for direct messages
    */
-  public suspend fun getStreamingDirect(block: suspend ClientSSESession.() -> Unit) {
-    try {
-      configuration.client.sse(urlString = "api/v1/streaming/direct") {
-        block()
-      }
-    }
-    catch(e: CancellationException) {
-      throw e
-    }
-    catch(e: Exception) {
-      configuration.exceptionLogger(e)
-    }
-  }
+  public suspend fun getStreamingDirect(block: suspend ClientSSESession.() -> Unit)
 
   /**
    * Watch the public timeline for a hashtag
    */
-  public suspend fun getStreamingHashtag(tag: String, block: suspend ClientSSESession.() -> Unit) {
-    try {
-      configuration.client.sse(urlString = "api/v1/streaming/hashtag", request = {
-        url {
-          parameters.append("tag", tag)
-        }
-      }
-      ) {
-        block()
-      }
-    }
-    catch(e: CancellationException) {
-      throw e
-    }
-    catch(e: Exception) {
-      configuration.exceptionLogger(e)
-    }
-  }
+  public suspend fun getStreamingHashtag(tag: String, block: suspend ClientSSESession.() -> Unit)
 
   /**
    * Watch the local timeline for a hashtag
    */
-  public suspend fun getStreamingHashtagLocal(tag: String, block: suspend ClientSSESession.() -> Unit) {
-    try {
-      configuration.client.sse(urlString = "api/v1/streaming/hashtag/local", request = {
-        url {
-          parameters.append("tag", tag)
-        }
-      }
-      ) {
-        block()
-      }
-    }
-    catch(e: CancellationException) {
-      throw e
-    }
-    catch(e: Exception) {
-      configuration.exceptionLogger(e)
-    }
-  }
+  public suspend fun getStreamingHashtagLocal(tag: String, block: suspend ClientSSESession.() -> Unit)
 
   /**
    * Check if the server is alive
    */
-  public suspend fun getStreamingHealth(): GetStreamingHealthResponse {
-    try {
-      val response = configuration.client.`get`("api/v1/streaming/health") {
-      }
-      return when (response.status.value) {
-        200 -> GetStreamingHealthResponseSuccess(response.headers)
-        401, 404, 429, 503 -> GetStreamingHealthResponseFailure401(response.body<Error>(), response.headers)
-        410 -> GetStreamingHealthResponseFailure410(response.headers)
-        422 -> GetStreamingHealthResponseFailure(response.body<ValidationError>(), response.headers)
-        else -> GetStreamingHealthResponseUnknownFailure(response.status.value, response.headers)
-      }
-    }
-    catch(e: CancellationException) {
-      throw e
-    }
-    catch(e: Exception) {
-      configuration.exceptionLogger(e)
-      return GetStreamingHealthResponseUnknownFailure(500)
-    }
-  }
+  public suspend fun getStreamingHealth(): GetStreamingHealthResponse
 
   /**
    * Watch for list updates
    */
-  public suspend fun getStreamingList(list: String, block: suspend ClientSSESession.() -> Unit) {
-    try {
-      configuration.client.sse(urlString = "api/v1/streaming/list", request = {
-        url {
-          parameters.append("list", list)
-        }
-      }
-      ) {
-        block()
-      }
-    }
-    catch(e: CancellationException) {
-      throw e
-    }
-    catch(e: Exception) {
-      configuration.exceptionLogger(e)
-    }
-  }
+  public suspend fun getStreamingList(list: String, block: suspend ClientSSESession.() -> Unit)
 
   /**
    * Watch the federated timeline
    */
-  public suspend fun getStreamingPublic(onlyMedia: Boolean? = null, block: suspend ClientSSESession.() -> Unit) {
-    try {
-      configuration.client.sse(urlString = "api/v1/streaming/public", request = {
-        url {
-          if (onlyMedia != null) {
-            parameters.append("only_media", onlyMedia.toString())
-          }
-        }
-      }
-      ) {
-        block()
-      }
-    }
-    catch(e: CancellationException) {
-      throw e
-    }
-    catch(e: Exception) {
-      configuration.exceptionLogger(e)
-    }
-  }
+  public suspend fun getStreamingPublic(onlyMedia: Boolean? = null, block: suspend ClientSSESession.() -> Unit)
 
   /**
    * Watch the local timeline
    */
-  public suspend fun getStreamingPublicLocal(onlyMedia: Boolean? = null, block: suspend ClientSSESession.() -> Unit) {
-    try {
-      configuration.client.sse(urlString = "api/v1/streaming/public/local", request = {
-        url {
-          if (onlyMedia != null) {
-            parameters.append("only_media", onlyMedia.toString())
-          }
-        }
-      }
-      ) {
-        block()
-      }
-    }
-    catch(e: CancellationException) {
-      throw e
-    }
-    catch(e: Exception) {
-      configuration.exceptionLogger(e)
-    }
-  }
+  public suspend fun getStreamingPublicLocal(onlyMedia: Boolean? = null, block: suspend ClientSSESession.() -> Unit)
 
   /**
    * Watch for remote statuses
    */
-  public suspend fun getStreamingPublicRemote(onlyMedia: Boolean? = null, block: suspend ClientSSESession.() -> Unit) {
-    try {
-      configuration.client.sse(urlString = "api/v1/streaming/public/remote", request = {
-        url {
-          if (onlyMedia != null) {
-            parameters.append("only_media", onlyMedia.toString())
-          }
-        }
-      }
-      ) {
-        block()
-      }
-    }
-    catch(e: CancellationException) {
-      throw e
-    }
-    catch(e: Exception) {
-      configuration.exceptionLogger(e)
-    }
-  }
+  public suspend fun getStreamingPublicRemote(onlyMedia: Boolean? = null, block: suspend ClientSSESession.() -> Unit)
 
   /**
    * Watch your home timeline and notifications
    */
-  public suspend fun getStreamingUser(block: suspend ClientSSESession.() -> Unit) {
-    try {
-      configuration.client.sse(urlString = "api/v1/streaming/user") {
-        block()
-      }
-    }
-    catch(e: CancellationException) {
-      throw e
-    }
-    catch(e: Exception) {
-      configuration.exceptionLogger(e)
-    }
-  }
+  public suspend fun getStreamingUser(block: suspend ClientSSESession.() -> Unit)
 
   /**
    * Watch your notifications
    */
-  public suspend fun getStreamingUserNotification(block: suspend ClientSSESession.() -> Unit) {
-    try {
-      configuration.client.sse(urlString = "api/v1/streaming/user/notification") {
-        block()
-      }
-    }
-    catch(e: CancellationException) {
-      throw e
-    }
-    catch(e: Exception) {
-      configuration.exceptionLogger(e)
-    }
-  }
+  public suspend fun getStreamingUserNotification(block: suspend ClientSSESession.() -> Unit)
 
   @Serializable
   public sealed class GetStreamingHealthResponse {
@@ -287,4 +122,193 @@ public class StreamingClient(
     @Transient
     override val headers: Headers = Headers.Empty,
   ) : GetStreamingHealthResponse()
+}
+
+public fun StreamingClient(configuration: ClientConfiguration = defaultClientConfiguration): StreamingClient = DefaultStreamingClient(configuration)
+
+public class DefaultStreamingClient(
+  private val configuration: ClientConfiguration = defaultClientConfiguration,
+) : StreamingClient {
+  override suspend fun getStreamingDirect(block: suspend ClientSSESession.() -> Unit) {
+    try {
+      configuration.client.sse(urlString = "api/v1/streaming/direct") {
+        block()
+      }
+    }
+    catch(e: CancellationException) {
+      throw e
+    }
+    catch(e: Exception) {
+      configuration.exceptionLogger(e)
+    }
+  }
+
+  override suspend fun getStreamingHashtag(tag: String, block: suspend ClientSSESession.() -> Unit) {
+    try {
+      configuration.client.sse(urlString = "api/v1/streaming/hashtag", request = {
+        url {
+          parameters.append("tag", tag)
+        }
+      }
+      ) {
+        block()
+      }
+    }
+    catch(e: CancellationException) {
+      throw e
+    }
+    catch(e: Exception) {
+      configuration.exceptionLogger(e)
+    }
+  }
+
+  override suspend fun getStreamingHashtagLocal(tag: String, block: suspend ClientSSESession.() -> Unit) {
+    try {
+      configuration.client.sse(urlString = "api/v1/streaming/hashtag/local", request = {
+        url {
+          parameters.append("tag", tag)
+        }
+      }
+      ) {
+        block()
+      }
+    }
+    catch(e: CancellationException) {
+      throw e
+    }
+    catch(e: Exception) {
+      configuration.exceptionLogger(e)
+    }
+  }
+
+  override suspend fun getStreamingHealth(): StreamingClient.GetStreamingHealthResponse {
+    try {
+      val response = configuration.client.`get`("api/v1/streaming/health") {
+      }
+      return when (response.status.value) {
+        200 -> StreamingClient.GetStreamingHealthResponseSuccess(response.headers)
+        401, 404, 429, 503 -> StreamingClient.GetStreamingHealthResponseFailure401(response.body<Error>(), response.headers)
+        410 -> StreamingClient.GetStreamingHealthResponseFailure410(response.headers)
+        422 -> StreamingClient.GetStreamingHealthResponseFailure(response.body<ValidationError>(), response.headers)
+        else -> StreamingClient.GetStreamingHealthResponseUnknownFailure(response.status.value, response.headers)
+      }
+    }
+    catch(e: CancellationException) {
+      throw e
+    }
+    catch(e: Exception) {
+      configuration.exceptionLogger(e)
+      return StreamingClient.GetStreamingHealthResponseUnknownFailure(500)
+    }
+  }
+
+  override suspend fun getStreamingList(list: String, block: suspend ClientSSESession.() -> Unit) {
+    try {
+      configuration.client.sse(urlString = "api/v1/streaming/list", request = {
+        url {
+          parameters.append("list", list)
+        }
+      }
+      ) {
+        block()
+      }
+    }
+    catch(e: CancellationException) {
+      throw e
+    }
+    catch(e: Exception) {
+      configuration.exceptionLogger(e)
+    }
+  }
+
+  override suspend fun getStreamingPublic(onlyMedia: Boolean?, block: suspend ClientSSESession.() -> Unit) {
+    try {
+      configuration.client.sse(urlString = "api/v1/streaming/public", request = {
+        url {
+          if (onlyMedia != null) {
+            parameters.append("only_media", onlyMedia.toString())
+          }
+        }
+      }
+      ) {
+        block()
+      }
+    }
+    catch(e: CancellationException) {
+      throw e
+    }
+    catch(e: Exception) {
+      configuration.exceptionLogger(e)
+    }
+  }
+
+  override suspend fun getStreamingPublicLocal(onlyMedia: Boolean?, block: suspend ClientSSESession.() -> Unit) {
+    try {
+      configuration.client.sse(urlString = "api/v1/streaming/public/local", request = {
+        url {
+          if (onlyMedia != null) {
+            parameters.append("only_media", onlyMedia.toString())
+          }
+        }
+      }
+      ) {
+        block()
+      }
+    }
+    catch(e: CancellationException) {
+      throw e
+    }
+    catch(e: Exception) {
+      configuration.exceptionLogger(e)
+    }
+  }
+
+  override suspend fun getStreamingPublicRemote(onlyMedia: Boolean?, block: suspend ClientSSESession.() -> Unit) {
+    try {
+      configuration.client.sse(urlString = "api/v1/streaming/public/remote", request = {
+        url {
+          if (onlyMedia != null) {
+            parameters.append("only_media", onlyMedia.toString())
+          }
+        }
+      }
+      ) {
+        block()
+      }
+    }
+    catch(e: CancellationException) {
+      throw e
+    }
+    catch(e: Exception) {
+      configuration.exceptionLogger(e)
+    }
+  }
+
+  override suspend fun getStreamingUser(block: suspend ClientSSESession.() -> Unit) {
+    try {
+      configuration.client.sse(urlString = "api/v1/streaming/user") {
+        block()
+      }
+    }
+    catch(e: CancellationException) {
+      throw e
+    }
+    catch(e: Exception) {
+      configuration.exceptionLogger(e)
+    }
+  }
+
+  override suspend fun getStreamingUserNotification(block: suspend ClientSSESession.() -> Unit) {
+    try {
+      configuration.client.sse(urlString = "api/v1/streaming/user/notification") {
+        block()
+      }
+    }
+    catch(e: CancellationException) {
+      throw e
+    }
+    catch(e: Exception) {
+      configuration.exceptionLogger(e)
+    }
+  }
 }

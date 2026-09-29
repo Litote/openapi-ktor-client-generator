@@ -19,9 +19,7 @@ import kotlinx.serialization.builtins.serializer
 import sample.api.client.ClientConfiguration.Companion.defaultClientConfiguration
 import sample.api.model.Pet
 
-public class PetClient(
-  private val configuration: ClientConfiguration = defaultClientConfiguration,
-) {
+public interface PetClient {
   /**
    * Finds Pets by status
    */
@@ -29,81 +27,17 @@ public class PetClient(
     status: List<GetPetFindByStatusMultipleExamplesStatus>,
     test: String? = null,
     testInt: Long? = null,
-  ): GetPetFindByStatusMultipleExamplesResponse {
-    try {
-      val response = configuration.client.`get`("pet/findByStatus/MultipleExamples") {
-        url {
-          parameters.appendAll("status", status.map { it.serialName() })
-          if (test != null) {
-            parameters.append("test", test)
-          }
-          if (testInt != null) {
-            parameters.append("testInt", testInt.toString())
-          }
-        }
-      }
-      return when (response.status.value) {
-        200 -> GetPetFindByStatusMultipleExamplesResponseSuccess(response.body<List<Pet>>(), response.headers)
-        400 -> GetPetFindByStatusMultipleExamplesResponseFailure(response.headers)
-        else -> GetPetFindByStatusMultipleExamplesResponseUnknownFailure(response.status.value, response.headers)
-      }
-    }
-    catch(e: CancellationException) {
-      throw e
-    }
-    catch(e: Exception) {
-      configuration.exceptionLogger(e)
-      return GetPetFindByStatusMultipleExamplesResponseUnknownFailure(500)
-    }
-  }
+  ): GetPetFindByStatusMultipleExamplesResponse
 
   /**
    * Finds Pets by status
    */
-  public suspend fun getPetFindByStatusSingleExample(status: List<GetPetFindByStatusSingleExampleStatus>): GetPetFindByStatusSingleExampleResponse {
-    try {
-      val response = configuration.client.`get`("pet/findByStatus/singleExample") {
-        url {
-          parameters.appendAll("status", status.map { it.serialName() })
-        }
-      }
-      return when (response.status.value) {
-        200 -> GetPetFindByStatusSingleExampleResponseSuccess(response.body<List<Pet>>(), response.headers)
-        400 -> GetPetFindByStatusSingleExampleResponseFailure(response.headers)
-        else -> GetPetFindByStatusSingleExampleResponseUnknownFailure(response.status.value, response.headers)
-      }
-    }
-    catch(e: CancellationException) {
-      throw e
-    }
-    catch(e: Exception) {
-      configuration.exceptionLogger(e)
-      return GetPetFindByStatusSingleExampleResponseUnknownFailure(500)
-    }
-  }
+  public suspend fun getPetFindByStatusSingleExample(status: List<GetPetFindByStatusSingleExampleStatus>): GetPetFindByStatusSingleExampleResponse
 
   /**
    * Add a new pet to the store
    */
-  public suspend fun addPet(request: Pet): AddPetResponse {
-    try {
-      val response = configuration.client.post("pet") {
-        setBody(request)
-        contentType(ContentType.Application.Json)
-      }
-      return when (response.status.value) {
-        405 -> AddPetResponseFailure(response.headers)
-        else -> AddPetResponseUnknownFailure(response.status.value, response.headers)
-      }
-    }
-    catch(e: CancellationException) {
-      throw e
-    }
-    catch(e: Exception) {
-      configuration.exceptionLogger(e)
-      return AddPetResponseUnknownFailure(500)
-    }
-  }
+  public suspend fun addPet(request: Pet): AddPetResponse
 
   @Serializable
   public enum class GetPetFindByStatusMultipleExamplesStatus {
@@ -198,4 +132,84 @@ public class PetClient(
     @Transient
     override val headers: Headers = Headers.Empty,
   ) : AddPetResponse()
+}
+
+public fun PetClient(configuration: ClientConfiguration = defaultClientConfiguration): PetClient = DefaultPetClient(configuration)
+
+public class DefaultPetClient(
+  private val configuration: ClientConfiguration = defaultClientConfiguration,
+) : PetClient {
+  override suspend fun getPetFindByStatusMultipleExamples(
+    status: List<PetClient.GetPetFindByStatusMultipleExamplesStatus>,
+    test: String?,
+    testInt: Long?,
+  ): PetClient.GetPetFindByStatusMultipleExamplesResponse {
+    try {
+      val response = configuration.client.`get`("pet/findByStatus/MultipleExamples") {
+        url {
+          parameters.appendAll("status", status.map { it.serialName() })
+          if (test != null) {
+            parameters.append("test", test)
+          }
+          if (testInt != null) {
+            parameters.append("testInt", testInt.toString())
+          }
+        }
+      }
+      return when (response.status.value) {
+        200 -> PetClient.GetPetFindByStatusMultipleExamplesResponseSuccess(response.body<List<Pet>>(), response.headers)
+        400 -> PetClient.GetPetFindByStatusMultipleExamplesResponseFailure(response.headers)
+        else -> PetClient.GetPetFindByStatusMultipleExamplesResponseUnknownFailure(response.status.value, response.headers)
+      }
+    }
+    catch(e: CancellationException) {
+      throw e
+    }
+    catch(e: Exception) {
+      configuration.exceptionLogger(e)
+      return PetClient.GetPetFindByStatusMultipleExamplesResponseUnknownFailure(500)
+    }
+  }
+
+  override suspend fun getPetFindByStatusSingleExample(status: List<PetClient.GetPetFindByStatusSingleExampleStatus>): PetClient.GetPetFindByStatusSingleExampleResponse {
+    try {
+      val response = configuration.client.`get`("pet/findByStatus/singleExample") {
+        url {
+          parameters.appendAll("status", status.map { it.serialName() })
+        }
+      }
+      return when (response.status.value) {
+        200 -> PetClient.GetPetFindByStatusSingleExampleResponseSuccess(response.body<List<Pet>>(), response.headers)
+        400 -> PetClient.GetPetFindByStatusSingleExampleResponseFailure(response.headers)
+        else -> PetClient.GetPetFindByStatusSingleExampleResponseUnknownFailure(response.status.value, response.headers)
+      }
+    }
+    catch(e: CancellationException) {
+      throw e
+    }
+    catch(e: Exception) {
+      configuration.exceptionLogger(e)
+      return PetClient.GetPetFindByStatusSingleExampleResponseUnknownFailure(500)
+    }
+  }
+
+  override suspend fun addPet(request: Pet): PetClient.AddPetResponse {
+    try {
+      val response = configuration.client.post("pet") {
+        setBody(request)
+        contentType(ContentType.Application.Json)
+      }
+      return when (response.status.value) {
+        405 -> PetClient.AddPetResponseFailure(response.headers)
+        else -> PetClient.AddPetResponseUnknownFailure(response.status.value, response.headers)
+      }
+    }
+    catch(e: CancellationException) {
+      throw e
+    }
+    catch(e: Exception) {
+      configuration.exceptionLogger(e)
+      return PetClient.AddPetResponseUnknownFailure(500)
+    }
+  }
 }

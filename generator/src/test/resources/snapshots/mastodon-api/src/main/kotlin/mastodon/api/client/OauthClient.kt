@@ -19,9 +19,7 @@ import mastodon.api.model.Error
 import mastodon.api.model.Token
 import mastodon.api.model.ValidationError
 
-public class OauthClient(
-  private val configuration: ClientConfiguration = defaultClientConfiguration,
-) {
+public interface OauthClient {
   /**
    * Authorize a user
    */
@@ -35,125 +33,22 @@ public class OauthClient(
     lang: String? = null,
     scope: String? = "read",
     state: String? = null,
-  ): GetOauthAuthorizeResponse {
-    try {
-      val response = configuration.client.`get`("oauth/authorize") {
-        url {
-          parameters.append("client_id", clientId)
-          parameters.append("redirect_uri", redirectUri)
-          parameters.append("response_type", responseType)
-          if (codeChallenge != null) {
-            parameters.append("code_challenge", codeChallenge)
-          }
-          if (codeChallengeMethod != null) {
-            parameters.append("code_challenge_method", codeChallengeMethod)
-          }
-          if (forceLogin != null) {
-            parameters.append("force_login", forceLogin.toString())
-          }
-          if (lang != null) {
-            parameters.append("lang", lang)
-          }
-          if (scope != null) {
-            parameters.append("scope", scope)
-          }
-          if (state != null) {
-            parameters.append("state", state)
-          }
-        }
-      }
-      return when (response.status.value) {
-        200 -> GetOauthAuthorizeResponseSuccess(response.headers)
-        400, 401, 404, 429, 503 -> GetOauthAuthorizeResponseFailure400(response.body<Error>(), response.headers)
-        410 -> GetOauthAuthorizeResponseFailure410(response.headers)
-        422 -> GetOauthAuthorizeResponseFailure(response.body<ValidationError>(), response.headers)
-        else -> GetOauthAuthorizeResponseUnknownFailure(response.status.value, response.headers)
-      }
-    }
-    catch(e: CancellationException) {
-      throw e
-    }
-    catch(e: Exception) {
-      configuration.exceptionLogger(e)
-      return GetOauthAuthorizeResponseUnknownFailure(500)
-    }
-  }
+  ): GetOauthAuthorizeResponse
 
   /**
    * Revoke a token
    */
-  public suspend fun postOauthRevoke(request: PostOauthRevokeRequest): PostOauthRevokeResponse {
-    try {
-      val response = configuration.client.post("oauth/revoke") {
-        setBody(request)
-        contentType(ContentType.Application.Json)
-      }
-      return when (response.status.value) {
-        200 -> PostOauthRevokeResponseSuccess(response.headers)
-        401, 403, 404, 429, 503 -> PostOauthRevokeResponseFailure401(response.body<Error>(), response.headers)
-        410 -> PostOauthRevokeResponseFailure410(response.headers)
-        422 -> PostOauthRevokeResponseFailure(response.body<ValidationError>(), response.headers)
-        else -> PostOauthRevokeResponseUnknownFailure(response.status.value, response.headers)
-      }
-    }
-    catch(e: CancellationException) {
-      throw e
-    }
-    catch(e: Exception) {
-      configuration.exceptionLogger(e)
-      return PostOauthRevokeResponseUnknownFailure(500)
-    }
-  }
+  public suspend fun postOauthRevoke(request: PostOauthRevokeRequest): PostOauthRevokeResponse
 
   /**
    * Obtain a token
    */
-  public suspend fun postOauthToken(request: PostOauthTokenRequest): PostOauthTokenResponse {
-    try {
-      val response = configuration.client.post("oauth/token") {
-        setBody(request)
-        contentType(ContentType.Application.Json)
-      }
-      return when (response.status.value) {
-        200 -> PostOauthTokenResponseSuccess(response.body<Token>(), response.headers)
-        400, 401, 404, 429, 503 -> PostOauthTokenResponseFailure400(response.body<Error>(), response.headers)
-        410 -> PostOauthTokenResponseFailure410(response.headers)
-        422 -> PostOauthTokenResponseFailure(response.body<ValidationError>(), response.headers)
-        else -> PostOauthTokenResponseUnknownFailure(response.status.value, response.headers)
-      }
-    }
-    catch(e: CancellationException) {
-      throw e
-    }
-    catch(e: Exception) {
-      configuration.exceptionLogger(e)
-      return PostOauthTokenResponseUnknownFailure(500)
-    }
-  }
+  public suspend fun postOauthToken(request: PostOauthTokenRequest): PostOauthTokenResponse
 
   /**
    * Retrieve user information
    */
-  public suspend fun getOauthUserinfo(): GetOauthUserinfoResponse {
-    try {
-      val response = configuration.client.`get`("oauth/userinfo") {
-      }
-      return when (response.status.value) {
-        200 -> GetOauthUserinfoResponseSuccess(response.headers)
-        401, 403, 404, 429, 503 -> GetOauthUserinfoResponseFailure401(response.body<Error>(), response.headers)
-        410 -> GetOauthUserinfoResponseFailure410(response.headers)
-        422 -> GetOauthUserinfoResponseFailure(response.body<ValidationError>(), response.headers)
-        else -> GetOauthUserinfoResponseUnknownFailure(response.status.value, response.headers)
-      }
-    }
-    catch(e: CancellationException) {
-      throw e
-    }
-    catch(e: Exception) {
-      configuration.exceptionLogger(e)
-      return GetOauthUserinfoResponseUnknownFailure(500)
-    }
-  }
+  public suspend fun getOauthUserinfo(): GetOauthUserinfoResponse
 
   @Serializable
   public sealed class GetOauthAuthorizeResponse {
@@ -404,4 +299,131 @@ public class OauthClient(
     @Transient
     override val headers: Headers = Headers.Empty,
   ) : GetOauthUserinfoResponse()
+}
+
+public fun OauthClient(configuration: ClientConfiguration = defaultClientConfiguration): OauthClient = DefaultOauthClient(configuration)
+
+public class DefaultOauthClient(
+  private val configuration: ClientConfiguration = defaultClientConfiguration,
+) : OauthClient {
+  override suspend fun getOauthAuthorize(
+    clientId: String,
+    redirectUri: String,
+    responseType: String,
+    codeChallenge: String?,
+    codeChallengeMethod: String?,
+    forceLogin: Boolean?,
+    lang: String?,
+    scope: String?,
+    state: String?,
+  ): OauthClient.GetOauthAuthorizeResponse {
+    try {
+      val response = configuration.client.`get`("oauth/authorize") {
+        url {
+          parameters.append("client_id", clientId)
+          parameters.append("redirect_uri", redirectUri)
+          parameters.append("response_type", responseType)
+          if (codeChallenge != null) {
+            parameters.append("code_challenge", codeChallenge)
+          }
+          if (codeChallengeMethod != null) {
+            parameters.append("code_challenge_method", codeChallengeMethod)
+          }
+          if (forceLogin != null) {
+            parameters.append("force_login", forceLogin.toString())
+          }
+          if (lang != null) {
+            parameters.append("lang", lang)
+          }
+          if (scope != null) {
+            parameters.append("scope", scope)
+          }
+          if (state != null) {
+            parameters.append("state", state)
+          }
+        }
+      }
+      return when (response.status.value) {
+        200 -> OauthClient.GetOauthAuthorizeResponseSuccess(response.headers)
+        400, 401, 404, 429, 503 -> OauthClient.GetOauthAuthorizeResponseFailure400(response.body<Error>(), response.headers)
+        410 -> OauthClient.GetOauthAuthorizeResponseFailure410(response.headers)
+        422 -> OauthClient.GetOauthAuthorizeResponseFailure(response.body<ValidationError>(), response.headers)
+        else -> OauthClient.GetOauthAuthorizeResponseUnknownFailure(response.status.value, response.headers)
+      }
+    }
+    catch(e: CancellationException) {
+      throw e
+    }
+    catch(e: Exception) {
+      configuration.exceptionLogger(e)
+      return OauthClient.GetOauthAuthorizeResponseUnknownFailure(500)
+    }
+  }
+
+  override suspend fun postOauthRevoke(request: OauthClient.PostOauthRevokeRequest): OauthClient.PostOauthRevokeResponse {
+    try {
+      val response = configuration.client.post("oauth/revoke") {
+        setBody(request)
+        contentType(ContentType.Application.Json)
+      }
+      return when (response.status.value) {
+        200 -> OauthClient.PostOauthRevokeResponseSuccess(response.headers)
+        401, 403, 404, 429, 503 -> OauthClient.PostOauthRevokeResponseFailure401(response.body<Error>(), response.headers)
+        410 -> OauthClient.PostOauthRevokeResponseFailure410(response.headers)
+        422 -> OauthClient.PostOauthRevokeResponseFailure(response.body<ValidationError>(), response.headers)
+        else -> OauthClient.PostOauthRevokeResponseUnknownFailure(response.status.value, response.headers)
+      }
+    }
+    catch(e: CancellationException) {
+      throw e
+    }
+    catch(e: Exception) {
+      configuration.exceptionLogger(e)
+      return OauthClient.PostOauthRevokeResponseUnknownFailure(500)
+    }
+  }
+
+  override suspend fun postOauthToken(request: OauthClient.PostOauthTokenRequest): OauthClient.PostOauthTokenResponse {
+    try {
+      val response = configuration.client.post("oauth/token") {
+        setBody(request)
+        contentType(ContentType.Application.Json)
+      }
+      return when (response.status.value) {
+        200 -> OauthClient.PostOauthTokenResponseSuccess(response.body<Token>(), response.headers)
+        400, 401, 404, 429, 503 -> OauthClient.PostOauthTokenResponseFailure400(response.body<Error>(), response.headers)
+        410 -> OauthClient.PostOauthTokenResponseFailure410(response.headers)
+        422 -> OauthClient.PostOauthTokenResponseFailure(response.body<ValidationError>(), response.headers)
+        else -> OauthClient.PostOauthTokenResponseUnknownFailure(response.status.value, response.headers)
+      }
+    }
+    catch(e: CancellationException) {
+      throw e
+    }
+    catch(e: Exception) {
+      configuration.exceptionLogger(e)
+      return OauthClient.PostOauthTokenResponseUnknownFailure(500)
+    }
+  }
+
+  override suspend fun getOauthUserinfo(): OauthClient.GetOauthUserinfoResponse {
+    try {
+      val response = configuration.client.`get`("oauth/userinfo") {
+      }
+      return when (response.status.value) {
+        200 -> OauthClient.GetOauthUserinfoResponseSuccess(response.headers)
+        401, 403, 404, 429, 503 -> OauthClient.GetOauthUserinfoResponseFailure401(response.body<Error>(), response.headers)
+        410 -> OauthClient.GetOauthUserinfoResponseFailure410(response.headers)
+        422 -> OauthClient.GetOauthUserinfoResponseFailure(response.body<ValidationError>(), response.headers)
+        else -> OauthClient.GetOauthUserinfoResponseUnknownFailure(response.status.value, response.headers)
+      }
+    }
+    catch(e: CancellationException) {
+      throw e
+    }
+    catch(e: Exception) {
+      configuration.exceptionLogger(e)
+      return OauthClient.GetOauthUserinfoResponseUnknownFailure(500)
+    }
+  }
 }

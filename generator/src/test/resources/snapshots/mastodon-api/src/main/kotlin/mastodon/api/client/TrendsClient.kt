@@ -17,104 +17,21 @@ import mastodon.api.model.Tag
 import mastodon.api.model.TrendsLink
 import mastodon.api.model.ValidationError
 
-public class TrendsClient(
-  private val configuration: ClientConfiguration = defaultClientConfiguration,
-) {
+public interface TrendsClient {
   /**
    * View trending links
    */
-  public suspend fun getTrendLinks(limit: Long? = 10, offset: Long? = null): GetTrendLinksResponse {
-    try {
-      val response = configuration.client.`get`("api/v1/trends/links") {
-        url {
-          if (limit != null) {
-            parameters.append("limit", limit.toString())
-          }
-          if (offset != null) {
-            parameters.append("offset", offset.toString())
-          }
-        }
-      }
-      return when (response.status.value) {
-        200 -> GetTrendLinksResponseSuccess(response.body<List<TrendsLink>>(), response.headers)
-        401, 404, 429, 503 -> GetTrendLinksResponseFailure401(response.body<Error>(), response.headers)
-        410 -> GetTrendLinksResponseFailure410(response.headers)
-        422 -> GetTrendLinksResponseFailure(response.body<ValidationError>(), response.headers)
-        else -> GetTrendLinksResponseUnknownFailure(response.status.value, response.headers)
-      }
-    }
-    catch(e: CancellationException) {
-      throw e
-    }
-    catch(e: Exception) {
-      configuration.exceptionLogger(e)
-      return GetTrendLinksResponseUnknownFailure(500)
-    }
-  }
+  public suspend fun getTrendLinks(limit: Long? = 10, offset: Long? = null): GetTrendLinksResponse
 
   /**
    * View trending statuses
    */
-  public suspend fun getTrendStatuses(limit: Long? = 20, offset: Long? = null): GetTrendStatusesResponse {
-    try {
-      val response = configuration.client.`get`("api/v1/trends/statuses") {
-        url {
-          if (limit != null) {
-            parameters.append("limit", limit.toString())
-          }
-          if (offset != null) {
-            parameters.append("offset", offset.toString())
-          }
-        }
-      }
-      return when (response.status.value) {
-        200 -> GetTrendStatusesResponseSuccess(response.body<List<Status>>(), response.headers)
-        401, 404, 429, 503 -> GetTrendStatusesResponseFailure401(response.body<Error>(), response.headers)
-        410 -> GetTrendStatusesResponseFailure410(response.headers)
-        422 -> GetTrendStatusesResponseFailure(response.body<ValidationError>(), response.headers)
-        else -> GetTrendStatusesResponseUnknownFailure(response.status.value, response.headers)
-      }
-    }
-    catch(e: CancellationException) {
-      throw e
-    }
-    catch(e: Exception) {
-      configuration.exceptionLogger(e)
-      return GetTrendStatusesResponseUnknownFailure(500)
-    }
-  }
+  public suspend fun getTrendStatuses(limit: Long? = 20, offset: Long? = null): GetTrendStatusesResponse
 
   /**
    * View trending tags
    */
-  public suspend fun getTrendTags(limit: Long? = 10, offset: Long? = null): GetTrendTagsResponse {
-    try {
-      val response = configuration.client.`get`("api/v1/trends/tags") {
-        url {
-          if (limit != null) {
-            parameters.append("limit", limit.toString())
-          }
-          if (offset != null) {
-            parameters.append("offset", offset.toString())
-          }
-        }
-      }
-      return when (response.status.value) {
-        200 -> GetTrendTagsResponseSuccess(response.body<List<Tag>>(), response.headers)
-        401, 404, 429, 503 -> GetTrendTagsResponseFailure401(response.body<Error>(), response.headers)
-        410 -> GetTrendTagsResponseFailure410(response.headers)
-        422 -> GetTrendTagsResponseFailure(response.body<ValidationError>(), response.headers)
-        else -> GetTrendTagsResponseUnknownFailure(response.status.value, response.headers)
-      }
-    }
-    catch(e: CancellationException) {
-      throw e
-    }
-    catch(e: Exception) {
-      configuration.exceptionLogger(e)
-      return GetTrendTagsResponseUnknownFailure(500)
-    }
-  }
+  public suspend fun getTrendTags(limit: Long? = 10, offset: Long? = null): GetTrendTagsResponse
 
   @Serializable
   public sealed class GetTrendLinksResponse {
@@ -286,4 +203,97 @@ public class TrendsClient(
     @Transient
     override val headers: Headers = Headers.Empty,
   ) : GetTrendTagsResponse()
+}
+
+public fun TrendsClient(configuration: ClientConfiguration = defaultClientConfiguration): TrendsClient = DefaultTrendsClient(configuration)
+
+public class DefaultTrendsClient(
+  private val configuration: ClientConfiguration = defaultClientConfiguration,
+) : TrendsClient {
+  override suspend fun getTrendLinks(limit: Long?, offset: Long?): TrendsClient.GetTrendLinksResponse {
+    try {
+      val response = configuration.client.`get`("api/v1/trends/links") {
+        url {
+          if (limit != null) {
+            parameters.append("limit", limit.toString())
+          }
+          if (offset != null) {
+            parameters.append("offset", offset.toString())
+          }
+        }
+      }
+      return when (response.status.value) {
+        200 -> TrendsClient.GetTrendLinksResponseSuccess(response.body<List<TrendsLink>>(), response.headers)
+        401, 404, 429, 503 -> TrendsClient.GetTrendLinksResponseFailure401(response.body<Error>(), response.headers)
+        410 -> TrendsClient.GetTrendLinksResponseFailure410(response.headers)
+        422 -> TrendsClient.GetTrendLinksResponseFailure(response.body<ValidationError>(), response.headers)
+        else -> TrendsClient.GetTrendLinksResponseUnknownFailure(response.status.value, response.headers)
+      }
+    }
+    catch(e: CancellationException) {
+      throw e
+    }
+    catch(e: Exception) {
+      configuration.exceptionLogger(e)
+      return TrendsClient.GetTrendLinksResponseUnknownFailure(500)
+    }
+  }
+
+  override suspend fun getTrendStatuses(limit: Long?, offset: Long?): TrendsClient.GetTrendStatusesResponse {
+    try {
+      val response = configuration.client.`get`("api/v1/trends/statuses") {
+        url {
+          if (limit != null) {
+            parameters.append("limit", limit.toString())
+          }
+          if (offset != null) {
+            parameters.append("offset", offset.toString())
+          }
+        }
+      }
+      return when (response.status.value) {
+        200 -> TrendsClient.GetTrendStatusesResponseSuccess(response.body<List<Status>>(), response.headers)
+        401, 404, 429, 503 -> TrendsClient.GetTrendStatusesResponseFailure401(response.body<Error>(), response.headers)
+        410 -> TrendsClient.GetTrendStatusesResponseFailure410(response.headers)
+        422 -> TrendsClient.GetTrendStatusesResponseFailure(response.body<ValidationError>(), response.headers)
+        else -> TrendsClient.GetTrendStatusesResponseUnknownFailure(response.status.value, response.headers)
+      }
+    }
+    catch(e: CancellationException) {
+      throw e
+    }
+    catch(e: Exception) {
+      configuration.exceptionLogger(e)
+      return TrendsClient.GetTrendStatusesResponseUnknownFailure(500)
+    }
+  }
+
+  override suspend fun getTrendTags(limit: Long?, offset: Long?): TrendsClient.GetTrendTagsResponse {
+    try {
+      val response = configuration.client.`get`("api/v1/trends/tags") {
+        url {
+          if (limit != null) {
+            parameters.append("limit", limit.toString())
+          }
+          if (offset != null) {
+            parameters.append("offset", offset.toString())
+          }
+        }
+      }
+      return when (response.status.value) {
+        200 -> TrendsClient.GetTrendTagsResponseSuccess(response.body<List<Tag>>(), response.headers)
+        401, 404, 429, 503 -> TrendsClient.GetTrendTagsResponseFailure401(response.body<Error>(), response.headers)
+        410 -> TrendsClient.GetTrendTagsResponseFailure410(response.headers)
+        422 -> TrendsClient.GetTrendTagsResponseFailure(response.body<ValidationError>(), response.headers)
+        else -> TrendsClient.GetTrendTagsResponseUnknownFailure(response.status.value, response.headers)
+      }
+    }
+    catch(e: CancellationException) {
+      throw e
+    }
+    catch(e: Exception) {
+      configuration.exceptionLogger(e)
+      return TrendsClient.GetTrendTagsResponseUnknownFailure(500)
+    }
+  }
 }

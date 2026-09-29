@@ -18,9 +18,7 @@ import mastodon.api.model.Conversation
 import mastodon.api.model.Error
 import mastodon.api.model.ValidationError
 
-public class ConversationsClient(
-  private val configuration: ClientConfiguration = defaultClientConfiguration,
-) {
+public interface ConversationsClient {
   /**
    * View all conversations
    */
@@ -29,88 +27,17 @@ public class ConversationsClient(
     maxId: String? = null,
     minId: String? = null,
     sinceId: String? = null,
-  ): GetConversationsResponse {
-    try {
-      val response = configuration.client.`get`("api/v1/conversations") {
-        url {
-          if (limit != null) {
-            parameters.append("limit", limit.toString())
-          }
-          if (maxId != null) {
-            parameters.append("max_id", maxId)
-          }
-          if (minId != null) {
-            parameters.append("min_id", minId)
-          }
-          if (sinceId != null) {
-            parameters.append("since_id", sinceId)
-          }
-        }
-      }
-      return when (response.status.value) {
-        200 -> GetConversationsResponseSuccess(response.body<List<Conversation>>(), response.headers)
-        401, 404, 429, 503 -> GetConversationsResponseFailure401(response.body<Error>(), response.headers)
-        410 -> GetConversationsResponseFailure410(response.headers)
-        422 -> GetConversationsResponseFailure(response.body<ValidationError>(), response.headers)
-        else -> GetConversationsResponseUnknownFailure(response.status.value, response.headers)
-      }
-    }
-    catch(e: CancellationException) {
-      throw e
-    }
-    catch(e: Exception) {
-      configuration.exceptionLogger(e)
-      return GetConversationsResponseUnknownFailure(500)
-    }
-  }
+  ): GetConversationsResponse
 
   /**
    * Remove a conversation
    */
-  public suspend fun deleteConversation(id: String): DeleteConversationResponse {
-    try {
-      val response = configuration.client.delete("api/v1/conversations/{id}".replace("/{id}", "/${id.encodeURLPathPart()}")) {
-      }
-      return when (response.status.value) {
-        200 -> DeleteConversationResponseSuccess(response.headers)
-        401, 404, 429, 503 -> DeleteConversationResponseFailure401(response.body<Error>(), response.headers)
-        410 -> DeleteConversationResponseFailure410(response.headers)
-        422 -> DeleteConversationResponseFailure(response.body<ValidationError>(), response.headers)
-        else -> DeleteConversationResponseUnknownFailure(response.status.value, response.headers)
-      }
-    }
-    catch(e: CancellationException) {
-      throw e
-    }
-    catch(e: Exception) {
-      configuration.exceptionLogger(e)
-      return DeleteConversationResponseUnknownFailure(500)
-    }
-  }
+  public suspend fun deleteConversation(id: String): DeleteConversationResponse
 
   /**
    * Mark a conversation as read
    */
-  public suspend fun postConversationRead(id: String): PostConversationReadResponse {
-    try {
-      val response = configuration.client.post("api/v1/conversations/{id}/read".replace("/{id}", "/${id.encodeURLPathPart()}")) {
-      }
-      return when (response.status.value) {
-        200 -> PostConversationReadResponseSuccess(response.body<Conversation>(), response.headers)
-        401, 404, 429, 503 -> PostConversationReadResponseFailure401(response.body<Error>(), response.headers)
-        410 -> PostConversationReadResponseFailure410(response.headers)
-        422 -> PostConversationReadResponseFailure(response.body<ValidationError>(), response.headers)
-        else -> PostConversationReadResponseUnknownFailure(response.status.value, response.headers)
-      }
-    }
-    catch(e: CancellationException) {
-      throw e
-    }
-    catch(e: Exception) {
-      configuration.exceptionLogger(e)
-      return PostConversationReadResponseUnknownFailure(500)
-    }
-  }
+  public suspend fun postConversationRead(id: String): PostConversationReadResponse
 
   @Serializable
   public sealed class GetConversationsResponse {
@@ -287,4 +214,92 @@ public class ConversationsClient(
     @Transient
     override val headers: Headers = Headers.Empty,
   ) : PostConversationReadResponse()
+}
+
+public fun ConversationsClient(configuration: ClientConfiguration = defaultClientConfiguration): ConversationsClient = DefaultConversationsClient(configuration)
+
+public class DefaultConversationsClient(
+  private val configuration: ClientConfiguration = defaultClientConfiguration,
+) : ConversationsClient {
+  override suspend fun getConversations(
+    limit: Long?,
+    maxId: String?,
+    minId: String?,
+    sinceId: String?,
+  ): ConversationsClient.GetConversationsResponse {
+    try {
+      val response = configuration.client.`get`("api/v1/conversations") {
+        url {
+          if (limit != null) {
+            parameters.append("limit", limit.toString())
+          }
+          if (maxId != null) {
+            parameters.append("max_id", maxId)
+          }
+          if (minId != null) {
+            parameters.append("min_id", minId)
+          }
+          if (sinceId != null) {
+            parameters.append("since_id", sinceId)
+          }
+        }
+      }
+      return when (response.status.value) {
+        200 -> ConversationsClient.GetConversationsResponseSuccess(response.body<List<Conversation>>(), response.headers)
+        401, 404, 429, 503 -> ConversationsClient.GetConversationsResponseFailure401(response.body<Error>(), response.headers)
+        410 -> ConversationsClient.GetConversationsResponseFailure410(response.headers)
+        422 -> ConversationsClient.GetConversationsResponseFailure(response.body<ValidationError>(), response.headers)
+        else -> ConversationsClient.GetConversationsResponseUnknownFailure(response.status.value, response.headers)
+      }
+    }
+    catch(e: CancellationException) {
+      throw e
+    }
+    catch(e: Exception) {
+      configuration.exceptionLogger(e)
+      return ConversationsClient.GetConversationsResponseUnknownFailure(500)
+    }
+  }
+
+  override suspend fun deleteConversation(id: String): ConversationsClient.DeleteConversationResponse {
+    try {
+      val response = configuration.client.delete("api/v1/conversations/{id}".replace("/{id}", "/${id.encodeURLPathPart()}")) {
+      }
+      return when (response.status.value) {
+        200 -> ConversationsClient.DeleteConversationResponseSuccess(response.headers)
+        401, 404, 429, 503 -> ConversationsClient.DeleteConversationResponseFailure401(response.body<Error>(), response.headers)
+        410 -> ConversationsClient.DeleteConversationResponseFailure410(response.headers)
+        422 -> ConversationsClient.DeleteConversationResponseFailure(response.body<ValidationError>(), response.headers)
+        else -> ConversationsClient.DeleteConversationResponseUnknownFailure(response.status.value, response.headers)
+      }
+    }
+    catch(e: CancellationException) {
+      throw e
+    }
+    catch(e: Exception) {
+      configuration.exceptionLogger(e)
+      return ConversationsClient.DeleteConversationResponseUnknownFailure(500)
+    }
+  }
+
+  override suspend fun postConversationRead(id: String): ConversationsClient.PostConversationReadResponse {
+    try {
+      val response = configuration.client.post("api/v1/conversations/{id}/read".replace("/{id}", "/${id.encodeURLPathPart()}")) {
+      }
+      return when (response.status.value) {
+        200 -> ConversationsClient.PostConversationReadResponseSuccess(response.body<Conversation>(), response.headers)
+        401, 404, 429, 503 -> ConversationsClient.PostConversationReadResponseFailure401(response.body<Error>(), response.headers)
+        410 -> ConversationsClient.PostConversationReadResponseFailure410(response.headers)
+        422 -> ConversationsClient.PostConversationReadResponseFailure(response.body<ValidationError>(), response.headers)
+        else -> ConversationsClient.PostConversationReadResponseUnknownFailure(response.status.value, response.headers)
+      }
+    }
+    catch(e: CancellationException) {
+      throw e
+    }
+    catch(e: Exception) {
+      configuration.exceptionLogger(e)
+      return ConversationsClient.PostConversationReadResponseUnknownFailure(500)
+    }
+  }
 }

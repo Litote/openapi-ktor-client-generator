@@ -16,9 +16,7 @@ import mastodon.api.model.Account
 import mastodon.api.model.Error
 import mastodon.api.model.ValidationError
 
-public class DirectoryClient(
-  private val configuration: ClientConfiguration = defaultClientConfiguration,
-) {
+public interface DirectoryClient {
   /**
    * View profile directory
    */
@@ -27,40 +25,7 @@ public class DirectoryClient(
     local: Boolean? = null,
     offset: Long? = null,
     order: String? = null,
-  ): GetDirectoryResponse {
-    try {
-      val response = configuration.client.`get`("api/v1/directory") {
-        url {
-          if (limit != null) {
-            parameters.append("limit", limit.toString())
-          }
-          if (local != null) {
-            parameters.append("local", local.toString())
-          }
-          if (offset != null) {
-            parameters.append("offset", offset.toString())
-          }
-          if (order != null) {
-            parameters.append("order", order)
-          }
-        }
-      }
-      return when (response.status.value) {
-        200 -> GetDirectoryResponseSuccess(response.body<List<Account>>(), response.headers)
-        401, 404, 429, 503 -> GetDirectoryResponseFailure401(response.body<Error>(), response.headers)
-        410 -> GetDirectoryResponseFailure410(response.headers)
-        422 -> GetDirectoryResponseFailure(response.body<ValidationError>(), response.headers)
-        else -> GetDirectoryResponseUnknownFailure(response.status.value, response.headers)
-      }
-    }
-    catch(e: CancellationException) {
-      throw e
-    }
-    catch(e: Exception) {
-      configuration.exceptionLogger(e)
-      return GetDirectoryResponseUnknownFailure(500)
-    }
-  }
+  ): GetDirectoryResponse
 
   @Serializable
   public sealed class GetDirectoryResponse {
@@ -118,4 +83,50 @@ public class DirectoryClient(
     @Transient
     override val headers: Headers = Headers.Empty,
   ) : GetDirectoryResponse()
+}
+
+public fun DirectoryClient(configuration: ClientConfiguration = defaultClientConfiguration): DirectoryClient = DefaultDirectoryClient(configuration)
+
+public class DefaultDirectoryClient(
+  private val configuration: ClientConfiguration = defaultClientConfiguration,
+) : DirectoryClient {
+  override suspend fun getDirectory(
+    limit: Long?,
+    local: Boolean?,
+    offset: Long?,
+    order: String?,
+  ): DirectoryClient.GetDirectoryResponse {
+    try {
+      val response = configuration.client.`get`("api/v1/directory") {
+        url {
+          if (limit != null) {
+            parameters.append("limit", limit.toString())
+          }
+          if (local != null) {
+            parameters.append("local", local.toString())
+          }
+          if (offset != null) {
+            parameters.append("offset", offset.toString())
+          }
+          if (order != null) {
+            parameters.append("order", order)
+          }
+        }
+      }
+      return when (response.status.value) {
+        200 -> DirectoryClient.GetDirectoryResponseSuccess(response.body<List<Account>>(), response.headers)
+        401, 404, 429, 503 -> DirectoryClient.GetDirectoryResponseFailure401(response.body<Error>(), response.headers)
+        410 -> DirectoryClient.GetDirectoryResponseFailure410(response.headers)
+        422 -> DirectoryClient.GetDirectoryResponseFailure(response.body<ValidationError>(), response.headers)
+        else -> DirectoryClient.GetDirectoryResponseUnknownFailure(response.status.value, response.headers)
+      }
+    }
+    catch(e: CancellationException) {
+      throw e
+    }
+    catch(e: Exception) {
+      configuration.exceptionLogger(e)
+      return DirectoryClient.GetDirectoryResponseUnknownFailure(500)
+    }
+  }
 }

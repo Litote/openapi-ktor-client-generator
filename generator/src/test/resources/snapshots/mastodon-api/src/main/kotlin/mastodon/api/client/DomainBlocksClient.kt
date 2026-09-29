@@ -19,9 +19,7 @@ import mastodon.api.client.ClientConfiguration.Companion.defaultClientConfigurat
 import mastodon.api.model.Error
 import mastodon.api.model.ValidationError
 
-public class DomainBlocksClient(
-  private val configuration: ClientConfiguration = defaultClientConfiguration,
-) {
+public interface DomainBlocksClient {
   /**
    * Get domain blocks
    */
@@ -30,90 +28,17 @@ public class DomainBlocksClient(
     maxId: String? = null,
     minId: String? = null,
     sinceId: String? = null,
-  ): GetDomainBlocksResponse {
-    try {
-      val response = configuration.client.`get`("api/v1/domain_blocks") {
-        url {
-          if (limit != null) {
-            parameters.append("limit", limit.toString())
-          }
-          if (maxId != null) {
-            parameters.append("max_id", maxId)
-          }
-          if (minId != null) {
-            parameters.append("min_id", minId)
-          }
-          if (sinceId != null) {
-            parameters.append("since_id", sinceId)
-          }
-        }
-      }
-      return when (response.status.value) {
-        200 -> GetDomainBlocksResponseSuccess(response.body<List<String>>(), response.headers)
-        401, 404, 429, 503 -> GetDomainBlocksResponseFailure401(response.body<Error>(), response.headers)
-        410 -> GetDomainBlocksResponseFailure410(response.headers)
-        422 -> GetDomainBlocksResponseFailure(response.body<ValidationError>(), response.headers)
-        else -> GetDomainBlocksResponseUnknownFailure(response.status.value, response.headers)
-      }
-    }
-    catch(e: CancellationException) {
-      throw e
-    }
-    catch(e: Exception) {
-      configuration.exceptionLogger(e)
-      return GetDomainBlocksResponseUnknownFailure(500)
-    }
-  }
+  ): GetDomainBlocksResponse
 
   /**
    * Block a domain
    */
-  public suspend fun createDomainBlock(request: CreateDomainBlockRequest): CreateDomainBlockResponse {
-    try {
-      val response = configuration.client.post("api/v1/domain_blocks") {
-        setBody(request)
-        contentType(ContentType.Application.Json)
-      }
-      return when (response.status.value) {
-        200 -> CreateDomainBlockResponseSuccess(response.headers)
-        401, 404, 422, 429, 503 -> CreateDomainBlockResponseFailure401(response.body<Error>(), response.headers)
-        410 -> CreateDomainBlockResponseFailure(response.headers)
-        else -> CreateDomainBlockResponseUnknownFailure(response.status.value, response.headers)
-      }
-    }
-    catch(e: CancellationException) {
-      throw e
-    }
-    catch(e: Exception) {
-      configuration.exceptionLogger(e)
-      return CreateDomainBlockResponseUnknownFailure(500)
-    }
-  }
+  public suspend fun createDomainBlock(request: CreateDomainBlockRequest): CreateDomainBlockResponse
 
   /**
    * Unblock a domain
    */
-  public suspend fun deleteDomainBlocks(request: DeleteDomainBlocksRequest): DeleteDomainBlocksResponse {
-    try {
-      val response = configuration.client.delete("api/v1/domain_blocks") {
-        setBody(request)
-        contentType(ContentType.Application.Json)
-      }
-      return when (response.status.value) {
-        200 -> DeleteDomainBlocksResponseSuccess(response.headers)
-        401, 404, 422, 429, 503 -> DeleteDomainBlocksResponseFailure401(response.body<Error>(), response.headers)
-        410 -> DeleteDomainBlocksResponseFailure(response.headers)
-        else -> DeleteDomainBlocksResponseUnknownFailure(response.status.value, response.headers)
-      }
-    }
-    catch(e: CancellationException) {
-      throw e
-    }
-    catch(e: Exception) {
-      configuration.exceptionLogger(e)
-      return DeleteDomainBlocksResponseUnknownFailure(500)
-    }
-  }
+  public suspend fun deleteDomainBlocks(request: DeleteDomainBlocksRequest): DeleteDomainBlocksResponse
 
   @Serializable
   public sealed class GetDomainBlocksResponse {
@@ -285,4 +210,94 @@ public class DomainBlocksClient(
     @Transient
     override val headers: Headers = Headers.Empty,
   ) : DeleteDomainBlocksResponse()
+}
+
+public fun DomainBlocksClient(configuration: ClientConfiguration = defaultClientConfiguration): DomainBlocksClient = DefaultDomainBlocksClient(configuration)
+
+public class DefaultDomainBlocksClient(
+  private val configuration: ClientConfiguration = defaultClientConfiguration,
+) : DomainBlocksClient {
+  override suspend fun getDomainBlocks(
+    limit: Long?,
+    maxId: String?,
+    minId: String?,
+    sinceId: String?,
+  ): DomainBlocksClient.GetDomainBlocksResponse {
+    try {
+      val response = configuration.client.`get`("api/v1/domain_blocks") {
+        url {
+          if (limit != null) {
+            parameters.append("limit", limit.toString())
+          }
+          if (maxId != null) {
+            parameters.append("max_id", maxId)
+          }
+          if (minId != null) {
+            parameters.append("min_id", minId)
+          }
+          if (sinceId != null) {
+            parameters.append("since_id", sinceId)
+          }
+        }
+      }
+      return when (response.status.value) {
+        200 -> DomainBlocksClient.GetDomainBlocksResponseSuccess(response.body<List<String>>(), response.headers)
+        401, 404, 429, 503 -> DomainBlocksClient.GetDomainBlocksResponseFailure401(response.body<Error>(), response.headers)
+        410 -> DomainBlocksClient.GetDomainBlocksResponseFailure410(response.headers)
+        422 -> DomainBlocksClient.GetDomainBlocksResponseFailure(response.body<ValidationError>(), response.headers)
+        else -> DomainBlocksClient.GetDomainBlocksResponseUnknownFailure(response.status.value, response.headers)
+      }
+    }
+    catch(e: CancellationException) {
+      throw e
+    }
+    catch(e: Exception) {
+      configuration.exceptionLogger(e)
+      return DomainBlocksClient.GetDomainBlocksResponseUnknownFailure(500)
+    }
+  }
+
+  override suspend fun createDomainBlock(request: DomainBlocksClient.CreateDomainBlockRequest): DomainBlocksClient.CreateDomainBlockResponse {
+    try {
+      val response = configuration.client.post("api/v1/domain_blocks") {
+        setBody(request)
+        contentType(ContentType.Application.Json)
+      }
+      return when (response.status.value) {
+        200 -> DomainBlocksClient.CreateDomainBlockResponseSuccess(response.headers)
+        401, 404, 422, 429, 503 -> DomainBlocksClient.CreateDomainBlockResponseFailure401(response.body<Error>(), response.headers)
+        410 -> DomainBlocksClient.CreateDomainBlockResponseFailure(response.headers)
+        else -> DomainBlocksClient.CreateDomainBlockResponseUnknownFailure(response.status.value, response.headers)
+      }
+    }
+    catch(e: CancellationException) {
+      throw e
+    }
+    catch(e: Exception) {
+      configuration.exceptionLogger(e)
+      return DomainBlocksClient.CreateDomainBlockResponseUnknownFailure(500)
+    }
+  }
+
+  override suspend fun deleteDomainBlocks(request: DomainBlocksClient.DeleteDomainBlocksRequest): DomainBlocksClient.DeleteDomainBlocksResponse {
+    try {
+      val response = configuration.client.delete("api/v1/domain_blocks") {
+        setBody(request)
+        contentType(ContentType.Application.Json)
+      }
+      return when (response.status.value) {
+        200 -> DomainBlocksClient.DeleteDomainBlocksResponseSuccess(response.headers)
+        401, 404, 422, 429, 503 -> DomainBlocksClient.DeleteDomainBlocksResponseFailure401(response.body<Error>(), response.headers)
+        410 -> DomainBlocksClient.DeleteDomainBlocksResponseFailure(response.headers)
+        else -> DomainBlocksClient.DeleteDomainBlocksResponseUnknownFailure(response.status.value, response.headers)
+      }
+    }
+    catch(e: CancellationException) {
+      throw e
+    }
+    catch(e: Exception) {
+      configuration.exceptionLogger(e)
+      return DomainBlocksClient.DeleteDomainBlocksResponseUnknownFailure(500)
+    }
+  }
 }
