@@ -5,6 +5,7 @@ import community.flock.kotlinx.openapi.bindings.MediaType
 import community.flock.kotlinx.openapi.bindings.Reference
 import community.flock.kotlinx.openapi.bindings.RequestBody
 import community.flock.kotlinx.openapi.bindings.Response
+import community.flock.kotlinx.openapi.bindings.ResponseOrReference
 import community.flock.kotlinx.openapi.bindings.Schema
 import community.flock.kotlinx.openapi.bindings.SchemaOrReference
 import io.github.oshai.kotlinlogging.KotlinLogging
@@ -39,6 +40,9 @@ public class OpenApiSpecificationParser(
 ) : ApiSpecificationParser {
     private companion object {
         private val logger = KotlinLogging.logger {}
+        private const val SSE_MEDIA_TYPE = "text/event-stream"
+        private val STRUCTURED_RESPONSE_MEDIA_TYPES =
+            listOf("application/json", "application/yaml", "application/x-yaml", "*/*")
     }
 
     override fun parse(operationFilter: (OperationMetaSpec) -> Boolean): GenerationSpec {
@@ -507,36 +511,87 @@ public class OpenApiSpecificationParser(
                 .mapNotNull { (key, responseOrRef) ->
                     val code = key.value.toIntOrNull() ?: return@mapNotNull null
                     if (responseOrRef !is Response) return@mapNotNull null
-                    val schema =
-                        responseOrRef.responseContent?.get(MediaType("application/json"))?.schema
-                            ?: responseOrRef.responseContent?.get(MediaType("application/yaml"))?.schema
-                            ?: responseOrRef.responseContent?.get(MediaType("application/x-yaml"))?.schema
-                            ?: responseOrRef.responseContent?.get(MediaType("*/*"))?.schema
-                    if (responseOrRef.responseContent != null && schema == null) {
-                        val isSseContent =
-                            responseOrRef.responseContent?.containsKey(MediaType("text/event-stream")) == true
-                        if (!isSseContent) {
-                            logger.warn { "Unknown media type for: $responseOrRef - do not parse response" }
-                        }
-                    }
-                    val bodyTypeName = schema?.let { apiModel.getClassName("${operationName}ResponseBody", it) }
-                    val bodyType = bodyTypeName?.toDomainType(modelPackage)
-                    code to bodyType
+                    code to resolveResponseBody(responseOrRef, operationName, apiModel, modelPackage)
                 }.sortedBy { it.first }
 
-        val grouped =
-            parsedResponses
-                .groupBy { (code, bodyType) -> bodyType to (code in 200 until 300) }
-                .map { (key, values) -> Triple(key.first, key.second, values.map { it.first }) }
+        return parsedResponses
+            .groupBy { (code, body) -> body.type to (code in 200 until 300) }
+            .map { (key, values) ->
+                ResponseEntrySpec(
+                    statusCodes = values.map { it.first },
+                    bodyType = key.first,
+                    isSuccess = key.second,
+                    contentTypes = values.flatMap { it.second.contentTypes }.distinct(),
+                )
+            }
+    }
 
-        return grouped.map { (bodyType, isSuccess, statusCodes) ->
-            ResponseEntrySpec(
-                statusCodes = statusCodes,
-                bodyType = bodyType,
-                isSuccess = isSuccess,
-            )
+    private data class ResponseBody(
+        val type: DomainTypeSpec?,
+        val contentTypes: List<String> = emptyList(),
+    )
+
+    // Resolves the body type of a response from its declared media types:
+    // - JSON / YAML / wildcard with a schema -> the schema type (ByteArray for a string/binary schema)
+    // - text media types (text/plain, text/csv, ...) -> String
+    // - any other non-JSON media type (application/octet-stream, images, application/pdf, ...) -> ByteArray
+    private fun resolveResponseBody(
+        response: ResponseOrReference,
+        operationName: String,
+        apiModel: ApiModel,
+        modelPackage: String,
+    ): ResponseBody {
+        val content = response.responseContent ?: return ResponseBody(null)
+        val schema = STRUCTURED_RESPONSE_MEDIA_TYPES.firstNotNullOfOrNull { content[MediaType(it)]?.schema }
+        if (schema != null) {
+            val type =
+                if (apiModel.isBinarySchema(schema)) {
+                    DomainTypeSpec.BinaryTypeSpec()
+                } else {
+                    apiModel.getClassName("${operationName}ResponseBody", schema).toDomainType(modelPackage)
+                }
+            return ResponseBody(type)
+        }
+        val mediaTypes =
+            content.keys.map {
+                it.value
+                    .substringBefore(';')
+                    .trim()
+                    .lowercase()
+            }
+        val rawMediaTypes = mediaTypes.filter { it.isRawResponseMediaType() }.distinct()
+        return when {
+            rawMediaTypes.isNotEmpty() && rawMediaTypes.all { it.startsWith("text/") } -> {
+                ResponseBody(DomainTypeSpec.PrimitiveSpec(DomainTypeSpec.PrimitiveSpec.KindSpec.STRING), rawMediaTypes)
+            }
+
+            rawMediaTypes.isNotEmpty() -> {
+                ResponseBody(DomainTypeSpec.BinaryTypeSpec(), rawMediaTypes)
+            }
+
+            else -> {
+                if (mediaTypes.any { it != SSE_MEDIA_TYPE }) {
+                    logger.warn { "Unknown media type for: $response - do not parse response" }
+                }
+                ResponseBody(null)
+            }
         }
     }
+
+    private fun ApiModel.isBinarySchema(schemaOrReference: SchemaOrReference): Boolean {
+        val resolved = resolveSchema(schemaOrReference) ?: schemaOrReference as? Schema
+        return resolved?.firstApiType == ApiSchemaType.STRING && resolved.format == "binary"
+    }
+
+    /**
+     * A media type read as raw text or bytes: not structured (JSON/YAML), not a wildcard and not SSE.
+     */
+    private fun String.isRawResponseMediaType(): Boolean =
+        isNotEmpty() &&
+            this !in STRUCTURED_RESPONSE_MEDIA_TYPES &&
+            this != SSE_MEDIA_TYPE &&
+            !endsWith("+json") &&
+            !endsWith("+yaml")
 
     private fun buildModelSpecs(
         apiModel: ApiModel,
@@ -783,7 +838,7 @@ public class OpenApiSpecificationParser(
         return responses.entries.any { (key, value) ->
             val code = key.value.toIntOrNull() ?: return@any false
             if (code !in 200..299) return@any false
-            value.responseContent?.containsKey(MediaType("text/event-stream")) == true
+            value.responseContent?.containsKey(MediaType(SSE_MEDIA_TYPE)) == true
         }
     }
 

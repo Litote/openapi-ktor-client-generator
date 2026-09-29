@@ -1,6 +1,7 @@
 package org.litote.openapi.ktor.client.generator.adapter.renderer
 
 import com.squareup.kotlinpoet.BOOLEAN
+import com.squareup.kotlinpoet.BYTE_ARRAY
 import com.squareup.kotlinpoet.ClassName
 import com.squareup.kotlinpoet.CodeBlock
 import com.squareup.kotlinpoet.DOUBLE
@@ -102,6 +103,10 @@ internal fun DomainTypeSpec.toTypeName(
 
             is DomainTypeSpec.JsonTypeSpec -> {
                 JsonElement::class.asClassName()
+            }
+
+            is DomainTypeSpec.BinaryTypeSpec -> {
+                BYTE_ARRAY
             }
         }
     return if (nullable) base.copy(nullable = true) else base

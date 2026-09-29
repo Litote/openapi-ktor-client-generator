@@ -38,6 +38,7 @@ private fun collectModelRefs(type: DomainTypeSpec): Set<String> =
         is DomainTypeSpec.PrimitiveSpec,
         is DomainTypeSpec.InlineTypeSpec,
         is DomainTypeSpec.JsonTypeSpec,
+        is DomainTypeSpec.BinaryTypeSpec,
         -> emptySet()
     }
 
