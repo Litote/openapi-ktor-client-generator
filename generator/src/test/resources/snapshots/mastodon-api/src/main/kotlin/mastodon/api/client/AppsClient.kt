@@ -20,57 +20,16 @@ import mastodon.api.model.CredentialApplication
 import mastodon.api.model.Error
 import mastodon.api.model.ValidationError
 
-public class AppsClient(
-  private val configuration: ClientConfiguration = defaultClientConfiguration,
-) {
+public interface AppsClient {
   /**
    * Create an application
    */
-  public suspend fun createApp(request: CreateAppRequest): CreateAppResponse {
-    try {
-      val response = configuration.client.post("api/v1/apps") {
-        setBody(request)
-        contentType(ContentType.Application.Json)
-      }
-      return when (response.status.value) {
-        200 -> CreateAppResponseSuccess(response.body<CredentialApplication>(), response.headers)
-        401, 404, 422, 429, 503 -> CreateAppResponseFailure401(response.body<Error>(), response.headers)
-        410 -> CreateAppResponseFailure(response.headers)
-        else -> CreateAppResponseUnknownFailure(response.status.value, response.headers)
-      }
-    }
-    catch(e: CancellationException) {
-      throw e
-    }
-    catch(e: Exception) {
-      configuration.exceptionLogger(e)
-      return CreateAppResponseUnknownFailure(500)
-    }
-  }
+  public suspend fun createApp(request: CreateAppRequest): CreateAppResponse
 
   /**
    * Verify your app works
    */
-  public suspend fun getAppsVerifyCredentials(): GetAppsVerifyCredentialsResponse {
-    try {
-      val response = configuration.client.`get`("api/v1/apps/verify_credentials") {
-      }
-      return when (response.status.value) {
-        200 -> GetAppsVerifyCredentialsResponseSuccess(response.body<Application>(), response.headers)
-        401, 404, 429, 503 -> GetAppsVerifyCredentialsResponseFailure401(response.body<Error>(), response.headers)
-        410 -> GetAppsVerifyCredentialsResponseFailure410(response.headers)
-        422 -> GetAppsVerifyCredentialsResponseFailure(response.body<ValidationError>(), response.headers)
-        else -> GetAppsVerifyCredentialsResponseUnknownFailure(response.status.value, response.headers)
-      }
-    }
-    catch(e: CancellationException) {
-      throw e
-    }
-    catch(e: Exception) {
-      configuration.exceptionLogger(e)
-      return GetAppsVerifyCredentialsResponseUnknownFailure(500)
-    }
-  }
+  public suspend fun getAppsVerifyCredentials(): GetAppsVerifyCredentialsResponse
 
   @Serializable
   public data class CreateAppRequest(
@@ -188,4 +147,53 @@ public class AppsClient(
     @Transient
     override val headers: Headers = Headers.Empty,
   ) : GetAppsVerifyCredentialsResponse()
+}
+
+public fun AppsClient(configuration: ClientConfiguration = defaultClientConfiguration): AppsClient = DefaultAppsClient(configuration)
+
+public class DefaultAppsClient(
+  private val configuration: ClientConfiguration = defaultClientConfiguration,
+) : AppsClient {
+  override suspend fun createApp(request: AppsClient.CreateAppRequest): AppsClient.CreateAppResponse {
+    try {
+      val response = configuration.client.post("api/v1/apps") {
+        setBody(request)
+        contentType(ContentType.Application.Json)
+      }
+      return when (response.status.value) {
+        200 -> AppsClient.CreateAppResponseSuccess(response.body<CredentialApplication>(), response.headers)
+        401, 404, 422, 429, 503 -> AppsClient.CreateAppResponseFailure401(response.body<Error>(), response.headers)
+        410 -> AppsClient.CreateAppResponseFailure(response.headers)
+        else -> AppsClient.CreateAppResponseUnknownFailure(response.status.value, response.headers)
+      }
+    }
+    catch(e: CancellationException) {
+      throw e
+    }
+    catch(e: Exception) {
+      configuration.exceptionLogger(e)
+      return AppsClient.CreateAppResponseUnknownFailure(500)
+    }
+  }
+
+  override suspend fun getAppsVerifyCredentials(): AppsClient.GetAppsVerifyCredentialsResponse {
+    try {
+      val response = configuration.client.`get`("api/v1/apps/verify_credentials") {
+      }
+      return when (response.status.value) {
+        200 -> AppsClient.GetAppsVerifyCredentialsResponseSuccess(response.body<Application>(), response.headers)
+        401, 404, 429, 503 -> AppsClient.GetAppsVerifyCredentialsResponseFailure401(response.body<Error>(), response.headers)
+        410 -> AppsClient.GetAppsVerifyCredentialsResponseFailure410(response.headers)
+        422 -> AppsClient.GetAppsVerifyCredentialsResponseFailure(response.body<ValidationError>(), response.headers)
+        else -> AppsClient.GetAppsVerifyCredentialsResponseUnknownFailure(response.status.value, response.headers)
+      }
+    }
+    catch(e: CancellationException) {
+      throw e
+    }
+    catch(e: Exception) {
+      configuration.exceptionLogger(e)
+      return AppsClient.GetAppsVerifyCredentialsResponseUnknownFailure(500)
+    }
+  }
 }

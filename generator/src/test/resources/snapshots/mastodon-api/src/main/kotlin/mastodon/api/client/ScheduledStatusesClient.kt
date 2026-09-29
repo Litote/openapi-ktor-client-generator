@@ -22,9 +22,7 @@ import mastodon.api.model.Error
 import mastodon.api.model.ScheduledStatus
 import mastodon.api.model.ValidationError
 
-public class ScheduledStatusesClient(
-  private val configuration: ClientConfiguration = defaultClientConfiguration,
-) {
+public interface ScheduledStatusesClient {
   /**
    * View scheduled statuses
    */
@@ -33,113 +31,22 @@ public class ScheduledStatusesClient(
     maxId: String? = null,
     minId: String? = null,
     sinceId: String? = null,
-  ): GetScheduledStatusesResponse {
-    try {
-      val response = configuration.client.`get`("api/v1/scheduled_statuses") {
-        url {
-          if (limit != null) {
-            parameters.append("limit", limit.toString())
-          }
-          if (maxId != null) {
-            parameters.append("max_id", maxId)
-          }
-          if (minId != null) {
-            parameters.append("min_id", minId)
-          }
-          if (sinceId != null) {
-            parameters.append("since_id", sinceId)
-          }
-        }
-      }
-      return when (response.status.value) {
-        200 -> GetScheduledStatusesResponseSuccess(response.body<List<ScheduledStatus>>(), response.headers)
-        401, 404, 429, 503 -> GetScheduledStatusesResponseFailure401(response.body<Error>(), response.headers)
-        410 -> GetScheduledStatusesResponseFailure410(response.headers)
-        422 -> GetScheduledStatusesResponseFailure(response.body<ValidationError>(), response.headers)
-        else -> GetScheduledStatusesResponseUnknownFailure(response.status.value, response.headers)
-      }
-    }
-    catch(e: CancellationException) {
-      throw e
-    }
-    catch(e: Exception) {
-      configuration.exceptionLogger(e)
-      return GetScheduledStatusesResponseUnknownFailure(500)
-    }
-  }
+  ): GetScheduledStatusesResponse
 
   /**
    * View a single scheduled status
    */
-  public suspend fun getScheduledStatus(id: String): GetScheduledStatusResponse {
-    try {
-      val response = configuration.client.`get`("api/v1/scheduled_statuses/{id}".replace("/{id}", "/${id.encodeURLPathPart()}")) {
-      }
-      return when (response.status.value) {
-        200 -> GetScheduledStatusResponseSuccess(response.body<ScheduledStatus>(), response.headers)
-        401, 404, 429, 503 -> GetScheduledStatusResponseFailure401(response.body<Error>(), response.headers)
-        410 -> GetScheduledStatusResponseFailure410(response.headers)
-        422 -> GetScheduledStatusResponseFailure(response.body<ValidationError>(), response.headers)
-        else -> GetScheduledStatusResponseUnknownFailure(response.status.value, response.headers)
-      }
-    }
-    catch(e: CancellationException) {
-      throw e
-    }
-    catch(e: Exception) {
-      configuration.exceptionLogger(e)
-      return GetScheduledStatusResponseUnknownFailure(500)
-    }
-  }
+  public suspend fun getScheduledStatus(id: String): GetScheduledStatusResponse
 
   /**
    * Update a scheduled status's publishing date
    */
-  public suspend fun updateScheduledStatus(request: UpdateScheduledStatusRequest, id: String): UpdateScheduledStatusResponse {
-    try {
-      val response = configuration.client.put("api/v1/scheduled_statuses/{id}".replace("/{id}", "/${id.encodeURLPathPart()}")) {
-        setBody(request)
-        contentType(ContentType.Application.Json)
-      }
-      return when (response.status.value) {
-        200 -> UpdateScheduledStatusResponseSuccess(response.body<ScheduledStatus>(), response.headers)
-        401, 404, 422, 429, 503 -> UpdateScheduledStatusResponseFailure401(response.body<Error>(), response.headers)
-        410 -> UpdateScheduledStatusResponseFailure(response.headers)
-        else -> UpdateScheduledStatusResponseUnknownFailure(response.status.value, response.headers)
-      }
-    }
-    catch(e: CancellationException) {
-      throw e
-    }
-    catch(e: Exception) {
-      configuration.exceptionLogger(e)
-      return UpdateScheduledStatusResponseUnknownFailure(500)
-    }
-  }
+  public suspend fun updateScheduledStatus(request: UpdateScheduledStatusRequest, id: String): UpdateScheduledStatusResponse
 
   /**
    * Cancel a scheduled status
    */
-  public suspend fun deleteScheduledStatus(id: String): DeleteScheduledStatusResponse {
-    try {
-      val response = configuration.client.delete("api/v1/scheduled_statuses/{id}".replace("/{id}", "/${id.encodeURLPathPart()}")) {
-      }
-      return when (response.status.value) {
-        200 -> DeleteScheduledStatusResponseSuccess(response.headers)
-        401, 404, 429, 503 -> DeleteScheduledStatusResponseFailure401(response.body<Error>(), response.headers)
-        410 -> DeleteScheduledStatusResponseFailure410(response.headers)
-        422 -> DeleteScheduledStatusResponseFailure(response.body<ValidationError>(), response.headers)
-        else -> DeleteScheduledStatusResponseUnknownFailure(response.status.value, response.headers)
-      }
-    }
-    catch(e: CancellationException) {
-      throw e
-    }
-    catch(e: Exception) {
-      configuration.exceptionLogger(e)
-      return DeleteScheduledStatusResponseUnknownFailure(500)
-    }
-  }
+  public suspend fun deleteScheduledStatus(id: String): DeleteScheduledStatusResponse
 
   @Serializable
   public sealed class GetScheduledStatusesResponse {
@@ -372,4 +279,114 @@ public class ScheduledStatusesClient(
     @Transient
     override val headers: Headers = Headers.Empty,
   ) : DeleteScheduledStatusResponse()
+}
+
+public fun ScheduledStatusesClient(configuration: ClientConfiguration = defaultClientConfiguration): ScheduledStatusesClient = DefaultScheduledStatusesClient(configuration)
+
+public class DefaultScheduledStatusesClient(
+  private val configuration: ClientConfiguration = defaultClientConfiguration,
+) : ScheduledStatusesClient {
+  override suspend fun getScheduledStatuses(
+    limit: Long?,
+    maxId: String?,
+    minId: String?,
+    sinceId: String?,
+  ): ScheduledStatusesClient.GetScheduledStatusesResponse {
+    try {
+      val response = configuration.client.`get`("api/v1/scheduled_statuses") {
+        url {
+          if (limit != null) {
+            parameters.append("limit", limit.toString())
+          }
+          if (maxId != null) {
+            parameters.append("max_id", maxId)
+          }
+          if (minId != null) {
+            parameters.append("min_id", minId)
+          }
+          if (sinceId != null) {
+            parameters.append("since_id", sinceId)
+          }
+        }
+      }
+      return when (response.status.value) {
+        200 -> ScheduledStatusesClient.GetScheduledStatusesResponseSuccess(response.body<List<ScheduledStatus>>(), response.headers)
+        401, 404, 429, 503 -> ScheduledStatusesClient.GetScheduledStatusesResponseFailure401(response.body<Error>(), response.headers)
+        410 -> ScheduledStatusesClient.GetScheduledStatusesResponseFailure410(response.headers)
+        422 -> ScheduledStatusesClient.GetScheduledStatusesResponseFailure(response.body<ValidationError>(), response.headers)
+        else -> ScheduledStatusesClient.GetScheduledStatusesResponseUnknownFailure(response.status.value, response.headers)
+      }
+    }
+    catch(e: CancellationException) {
+      throw e
+    }
+    catch(e: Exception) {
+      configuration.exceptionLogger(e)
+      return ScheduledStatusesClient.GetScheduledStatusesResponseUnknownFailure(500)
+    }
+  }
+
+  override suspend fun getScheduledStatus(id: String): ScheduledStatusesClient.GetScheduledStatusResponse {
+    try {
+      val response = configuration.client.`get`("api/v1/scheduled_statuses/{id}".replace("/{id}", "/${id.encodeURLPathPart()}")) {
+      }
+      return when (response.status.value) {
+        200 -> ScheduledStatusesClient.GetScheduledStatusResponseSuccess(response.body<ScheduledStatus>(), response.headers)
+        401, 404, 429, 503 -> ScheduledStatusesClient.GetScheduledStatusResponseFailure401(response.body<Error>(), response.headers)
+        410 -> ScheduledStatusesClient.GetScheduledStatusResponseFailure410(response.headers)
+        422 -> ScheduledStatusesClient.GetScheduledStatusResponseFailure(response.body<ValidationError>(), response.headers)
+        else -> ScheduledStatusesClient.GetScheduledStatusResponseUnknownFailure(response.status.value, response.headers)
+      }
+    }
+    catch(e: CancellationException) {
+      throw e
+    }
+    catch(e: Exception) {
+      configuration.exceptionLogger(e)
+      return ScheduledStatusesClient.GetScheduledStatusResponseUnknownFailure(500)
+    }
+  }
+
+  override suspend fun updateScheduledStatus(request: ScheduledStatusesClient.UpdateScheduledStatusRequest, id: String): ScheduledStatusesClient.UpdateScheduledStatusResponse {
+    try {
+      val response = configuration.client.put("api/v1/scheduled_statuses/{id}".replace("/{id}", "/${id.encodeURLPathPart()}")) {
+        setBody(request)
+        contentType(ContentType.Application.Json)
+      }
+      return when (response.status.value) {
+        200 -> ScheduledStatusesClient.UpdateScheduledStatusResponseSuccess(response.body<ScheduledStatus>(), response.headers)
+        401, 404, 422, 429, 503 -> ScheduledStatusesClient.UpdateScheduledStatusResponseFailure401(response.body<Error>(), response.headers)
+        410 -> ScheduledStatusesClient.UpdateScheduledStatusResponseFailure(response.headers)
+        else -> ScheduledStatusesClient.UpdateScheduledStatusResponseUnknownFailure(response.status.value, response.headers)
+      }
+    }
+    catch(e: CancellationException) {
+      throw e
+    }
+    catch(e: Exception) {
+      configuration.exceptionLogger(e)
+      return ScheduledStatusesClient.UpdateScheduledStatusResponseUnknownFailure(500)
+    }
+  }
+
+  override suspend fun deleteScheduledStatus(id: String): ScheduledStatusesClient.DeleteScheduledStatusResponse {
+    try {
+      val response = configuration.client.delete("api/v1/scheduled_statuses/{id}".replace("/{id}", "/${id.encodeURLPathPart()}")) {
+      }
+      return when (response.status.value) {
+        200 -> ScheduledStatusesClient.DeleteScheduledStatusResponseSuccess(response.headers)
+        401, 404, 429, 503 -> ScheduledStatusesClient.DeleteScheduledStatusResponseFailure401(response.body<Error>(), response.headers)
+        410 -> ScheduledStatusesClient.DeleteScheduledStatusResponseFailure410(response.headers)
+        422 -> ScheduledStatusesClient.DeleteScheduledStatusResponseFailure(response.body<ValidationError>(), response.headers)
+        else -> ScheduledStatusesClient.DeleteScheduledStatusResponseUnknownFailure(response.status.value, response.headers)
+      }
+    }
+    catch(e: CancellationException) {
+      throw e
+    }
+    catch(e: Exception) {
+      configuration.exceptionLogger(e)
+      return ScheduledStatusesClient.DeleteScheduledStatusResponseUnknownFailure(500)
+    }
+  }
 }

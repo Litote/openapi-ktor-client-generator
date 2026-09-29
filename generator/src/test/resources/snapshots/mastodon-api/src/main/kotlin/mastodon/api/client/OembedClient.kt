@@ -14,9 +14,7 @@ import mastodon.api.model.Error
 import mastodon.api.model.OEmbedResponse
 import mastodon.api.model.ValidationError
 
-public class OembedClient(
-  private val configuration: ClientConfiguration = defaultClientConfiguration,
-) {
+public interface OembedClient {
   /**
    * Get OEmbed info as JSON
    */
@@ -24,35 +22,7 @@ public class OembedClient(
     url: String,
     maxheight: Long? = null,
     maxwidth: Long? = 400,
-  ): GetOembedResponse {
-    try {
-      val response = configuration.client.`get`("api/oembed") {
-        url {
-          parameters.append("url", url)
-          if (maxheight != null) {
-            parameters.append("maxheight", maxheight.toString())
-          }
-          if (maxwidth != null) {
-            parameters.append("maxwidth", maxwidth.toString())
-          }
-        }
-      }
-      return when (response.status.value) {
-        200 -> GetOembedResponseSuccess(response.body<OEmbedResponse>(), response.headers)
-        401, 404, 429, 503 -> GetOembedResponseFailure401(response.body<Error>(), response.headers)
-        410 -> GetOembedResponseFailure410(response.headers)
-        422 -> GetOembedResponseFailure(response.body<ValidationError>(), response.headers)
-        else -> GetOembedResponseUnknownFailure(response.status.value, response.headers)
-      }
-    }
-    catch(e: CancellationException) {
-      throw e
-    }
-    catch(e: Exception) {
-      configuration.exceptionLogger(e)
-      return GetOembedResponseUnknownFailure(500)
-    }
-  }
+  ): GetOembedResponse
 
   @Serializable
   public sealed class GetOembedResponse {
@@ -110,4 +80,44 @@ public class OembedClient(
     @Transient
     override val headers: Headers = Headers.Empty,
   ) : GetOembedResponse()
+}
+
+public fun OembedClient(configuration: ClientConfiguration = defaultClientConfiguration): OembedClient = DefaultOembedClient(configuration)
+
+public class DefaultOembedClient(
+  private val configuration: ClientConfiguration = defaultClientConfiguration,
+) : OembedClient {
+  override suspend fun getOembed(
+    url: String,
+    maxheight: Long?,
+    maxwidth: Long?,
+  ): OembedClient.GetOembedResponse {
+    try {
+      val response = configuration.client.`get`("api/oembed") {
+        url {
+          parameters.append("url", url)
+          if (maxheight != null) {
+            parameters.append("maxheight", maxheight.toString())
+          }
+          if (maxwidth != null) {
+            parameters.append("maxwidth", maxwidth.toString())
+          }
+        }
+      }
+      return when (response.status.value) {
+        200 -> OembedClient.GetOembedResponseSuccess(response.body<OEmbedResponse>(), response.headers)
+        401, 404, 429, 503 -> OembedClient.GetOembedResponseFailure401(response.body<Error>(), response.headers)
+        410 -> OembedClient.GetOembedResponseFailure410(response.headers)
+        422 -> OembedClient.GetOembedResponseFailure(response.body<ValidationError>(), response.headers)
+        else -> OembedClient.GetOembedResponseUnknownFailure(response.status.value, response.headers)
+      }
+    }
+    catch(e: CancellationException) {
+      throw e
+    }
+    catch(e: Exception) {
+      configuration.exceptionLogger(e)
+      return OembedClient.GetOembedResponseUnknownFailure(500)
+    }
+  }
 }

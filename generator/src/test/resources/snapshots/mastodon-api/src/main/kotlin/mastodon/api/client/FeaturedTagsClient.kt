@@ -21,105 +21,26 @@ import mastodon.api.model.FeaturedTag
 import mastodon.api.model.Tag
 import mastodon.api.model.ValidationError
 
-public class FeaturedTagsClient(
-  private val configuration: ClientConfiguration = defaultClientConfiguration,
-) {
+public interface FeaturedTagsClient {
   /**
    * View your featured tags
    */
-  public suspend fun getFeaturedTags(): GetFeaturedTagsResponse {
-    try {
-      val response = configuration.client.`get`("api/v1/featured_tags") {
-      }
-      return when (response.status.value) {
-        200 -> GetFeaturedTagsResponseSuccess(response.body<List<FeaturedTag>>(), response.headers)
-        401, 404, 429, 503 -> GetFeaturedTagsResponseFailure401(response.body<Error>(), response.headers)
-        410 -> GetFeaturedTagsResponseFailure410(response.headers)
-        422 -> GetFeaturedTagsResponseFailure(response.body<ValidationError>(), response.headers)
-        else -> GetFeaturedTagsResponseUnknownFailure(response.status.value, response.headers)
-      }
-    }
-    catch(e: CancellationException) {
-      throw e
-    }
-    catch(e: Exception) {
-      configuration.exceptionLogger(e)
-      return GetFeaturedTagsResponseUnknownFailure(500)
-    }
-  }
+  public suspend fun getFeaturedTags(): GetFeaturedTagsResponse
 
   /**
    * Feature a tag
    */
-  public suspend fun createFeaturedTag(request: CreateFeaturedTagRequest): CreateFeaturedTagResponse {
-    try {
-      val response = configuration.client.post("api/v1/featured_tags") {
-        setBody(request)
-        contentType(ContentType.Application.Json)
-      }
-      return when (response.status.value) {
-        200 -> CreateFeaturedTagResponseSuccess(response.body<FeaturedTag>(), response.headers)
-        401, 404, 422, 429, 503 -> CreateFeaturedTagResponseFailure401(response.body<Error>(), response.headers)
-        410 -> CreateFeaturedTagResponseFailure(response.headers)
-        else -> CreateFeaturedTagResponseUnknownFailure(response.status.value, response.headers)
-      }
-    }
-    catch(e: CancellationException) {
-      throw e
-    }
-    catch(e: Exception) {
-      configuration.exceptionLogger(e)
-      return CreateFeaturedTagResponseUnknownFailure(500)
-    }
-  }
+  public suspend fun createFeaturedTag(request: CreateFeaturedTagRequest): CreateFeaturedTagResponse
 
   /**
    * Unfeature a tag
    */
-  public suspend fun deleteFeaturedTag(id: String): DeleteFeaturedTagResponse {
-    try {
-      val response = configuration.client.delete("api/v1/featured_tags/{id}".replace("/{id}", "/${id.encodeURLPathPart()}")) {
-      }
-      return when (response.status.value) {
-        200 -> DeleteFeaturedTagResponseSuccess(response.headers)
-        401, 404, 429, 503 -> DeleteFeaturedTagResponseFailure401(response.body<Error>(), response.headers)
-        410 -> DeleteFeaturedTagResponseFailure410(response.headers)
-        422 -> DeleteFeaturedTagResponseFailure(response.body<ValidationError>(), response.headers)
-        else -> DeleteFeaturedTagResponseUnknownFailure(response.status.value, response.headers)
-      }
-    }
-    catch(e: CancellationException) {
-      throw e
-    }
-    catch(e: Exception) {
-      configuration.exceptionLogger(e)
-      return DeleteFeaturedTagResponseUnknownFailure(500)
-    }
-  }
+  public suspend fun deleteFeaturedTag(id: String): DeleteFeaturedTagResponse
 
   /**
    * View suggested tags to feature
    */
-  public suspend fun getFeaturedTagSuggestions(): GetFeaturedTagSuggestionsResponse {
-    try {
-      val response = configuration.client.`get`("api/v1/featured_tags/suggestions") {
-      }
-      return when (response.status.value) {
-        200 -> GetFeaturedTagSuggestionsResponseSuccess(response.body<List<Tag>>(), response.headers)
-        401, 404, 429, 503 -> GetFeaturedTagSuggestionsResponseFailure401(response.body<Error>(), response.headers)
-        410 -> GetFeaturedTagSuggestionsResponseFailure410(response.headers)
-        422 -> GetFeaturedTagSuggestionsResponseFailure(response.body<ValidationError>(), response.headers)
-        else -> GetFeaturedTagSuggestionsResponseUnknownFailure(response.status.value, response.headers)
-      }
-    }
-    catch(e: CancellationException) {
-      throw e
-    }
-    catch(e: Exception) {
-      configuration.exceptionLogger(e)
-      return GetFeaturedTagSuggestionsResponseUnknownFailure(500)
-    }
-  }
+  public suspend fun getFeaturedTagSuggestions(): GetFeaturedTagSuggestionsResponse
 
   @Serializable
   public sealed class GetFeaturedTagsResponse {
@@ -345,4 +266,95 @@ public class FeaturedTagsClient(
     @Transient
     override val headers: Headers = Headers.Empty,
   ) : GetFeaturedTagSuggestionsResponse()
+}
+
+public fun FeaturedTagsClient(configuration: ClientConfiguration = defaultClientConfiguration): FeaturedTagsClient = DefaultFeaturedTagsClient(configuration)
+
+public class DefaultFeaturedTagsClient(
+  private val configuration: ClientConfiguration = defaultClientConfiguration,
+) : FeaturedTagsClient {
+  override suspend fun getFeaturedTags(): FeaturedTagsClient.GetFeaturedTagsResponse {
+    try {
+      val response = configuration.client.`get`("api/v1/featured_tags") {
+      }
+      return when (response.status.value) {
+        200 -> FeaturedTagsClient.GetFeaturedTagsResponseSuccess(response.body<List<FeaturedTag>>(), response.headers)
+        401, 404, 429, 503 -> FeaturedTagsClient.GetFeaturedTagsResponseFailure401(response.body<Error>(), response.headers)
+        410 -> FeaturedTagsClient.GetFeaturedTagsResponseFailure410(response.headers)
+        422 -> FeaturedTagsClient.GetFeaturedTagsResponseFailure(response.body<ValidationError>(), response.headers)
+        else -> FeaturedTagsClient.GetFeaturedTagsResponseUnknownFailure(response.status.value, response.headers)
+      }
+    }
+    catch(e: CancellationException) {
+      throw e
+    }
+    catch(e: Exception) {
+      configuration.exceptionLogger(e)
+      return FeaturedTagsClient.GetFeaturedTagsResponseUnknownFailure(500)
+    }
+  }
+
+  override suspend fun createFeaturedTag(request: FeaturedTagsClient.CreateFeaturedTagRequest): FeaturedTagsClient.CreateFeaturedTagResponse {
+    try {
+      val response = configuration.client.post("api/v1/featured_tags") {
+        setBody(request)
+        contentType(ContentType.Application.Json)
+      }
+      return when (response.status.value) {
+        200 -> FeaturedTagsClient.CreateFeaturedTagResponseSuccess(response.body<FeaturedTag>(), response.headers)
+        401, 404, 422, 429, 503 -> FeaturedTagsClient.CreateFeaturedTagResponseFailure401(response.body<Error>(), response.headers)
+        410 -> FeaturedTagsClient.CreateFeaturedTagResponseFailure(response.headers)
+        else -> FeaturedTagsClient.CreateFeaturedTagResponseUnknownFailure(response.status.value, response.headers)
+      }
+    }
+    catch(e: CancellationException) {
+      throw e
+    }
+    catch(e: Exception) {
+      configuration.exceptionLogger(e)
+      return FeaturedTagsClient.CreateFeaturedTagResponseUnknownFailure(500)
+    }
+  }
+
+  override suspend fun deleteFeaturedTag(id: String): FeaturedTagsClient.DeleteFeaturedTagResponse {
+    try {
+      val response = configuration.client.delete("api/v1/featured_tags/{id}".replace("/{id}", "/${id.encodeURLPathPart()}")) {
+      }
+      return when (response.status.value) {
+        200 -> FeaturedTagsClient.DeleteFeaturedTagResponseSuccess(response.headers)
+        401, 404, 429, 503 -> FeaturedTagsClient.DeleteFeaturedTagResponseFailure401(response.body<Error>(), response.headers)
+        410 -> FeaturedTagsClient.DeleteFeaturedTagResponseFailure410(response.headers)
+        422 -> FeaturedTagsClient.DeleteFeaturedTagResponseFailure(response.body<ValidationError>(), response.headers)
+        else -> FeaturedTagsClient.DeleteFeaturedTagResponseUnknownFailure(response.status.value, response.headers)
+      }
+    }
+    catch(e: CancellationException) {
+      throw e
+    }
+    catch(e: Exception) {
+      configuration.exceptionLogger(e)
+      return FeaturedTagsClient.DeleteFeaturedTagResponseUnknownFailure(500)
+    }
+  }
+
+  override suspend fun getFeaturedTagSuggestions(): FeaturedTagsClient.GetFeaturedTagSuggestionsResponse {
+    try {
+      val response = configuration.client.`get`("api/v1/featured_tags/suggestions") {
+      }
+      return when (response.status.value) {
+        200 -> FeaturedTagsClient.GetFeaturedTagSuggestionsResponseSuccess(response.body<List<Tag>>(), response.headers)
+        401, 404, 429, 503 -> FeaturedTagsClient.GetFeaturedTagSuggestionsResponseFailure401(response.body<Error>(), response.headers)
+        410 -> FeaturedTagsClient.GetFeaturedTagSuggestionsResponseFailure410(response.headers)
+        422 -> FeaturedTagsClient.GetFeaturedTagSuggestionsResponseFailure(response.body<ValidationError>(), response.headers)
+        else -> FeaturedTagsClient.GetFeaturedTagSuggestionsResponseUnknownFailure(response.status.value, response.headers)
+      }
+    }
+    catch(e: CancellationException) {
+      throw e
+    }
+    catch(e: Exception) {
+      configuration.exceptionLogger(e)
+      return FeaturedTagsClient.GetFeaturedTagSuggestionsResponseUnknownFailure(500)
+    }
+  }
 }

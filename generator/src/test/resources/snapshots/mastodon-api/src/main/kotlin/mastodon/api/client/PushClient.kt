@@ -21,108 +21,26 @@ import mastodon.api.model.Error
 import mastodon.api.model.ValidationError
 import mastodon.api.model.WebPushSubscription
 
-public class PushClient(
-  private val configuration: ClientConfiguration = defaultClientConfiguration,
-) {
+public interface PushClient {
   /**
    * Get current subscription
    */
-  public suspend fun getPushSubscription(): GetPushSubscriptionResponse {
-    try {
-      val response = configuration.client.`get`("api/v1/push/subscription") {
-      }
-      return when (response.status.value) {
-        200 -> GetPushSubscriptionResponseSuccess(response.body<WebPushSubscription>(), response.headers)
-        401, 404, 429, 503 -> GetPushSubscriptionResponseFailure401(response.body<Error>(), response.headers)
-        410 -> GetPushSubscriptionResponseFailure410(response.headers)
-        422 -> GetPushSubscriptionResponseFailure(response.body<ValidationError>(), response.headers)
-        else -> GetPushSubscriptionResponseUnknownFailure(response.status.value, response.headers)
-      }
-    }
-    catch(e: CancellationException) {
-      throw e
-    }
-    catch(e: Exception) {
-      configuration.exceptionLogger(e)
-      return GetPushSubscriptionResponseUnknownFailure(500)
-    }
-  }
+  public suspend fun getPushSubscription(): GetPushSubscriptionResponse
 
   /**
    * Change types of notifications
    */
-  public suspend fun putPushSubscription(request: PutPushSubscriptionRequest): PutPushSubscriptionResponse {
-    try {
-      val response = configuration.client.put("api/v1/push/subscription") {
-        setBody(request)
-        contentType(ContentType.Application.Json)
-      }
-      return when (response.status.value) {
-        200 -> PutPushSubscriptionResponseSuccess(response.body<WebPushSubscription>(), response.headers)
-        401, 404, 429, 503 -> PutPushSubscriptionResponseFailure401(response.body<Error>(), response.headers)
-        410 -> PutPushSubscriptionResponseFailure410(response.headers)
-        422 -> PutPushSubscriptionResponseFailure(response.body<ValidationError>(), response.headers)
-        else -> PutPushSubscriptionResponseUnknownFailure(response.status.value, response.headers)
-      }
-    }
-    catch(e: CancellationException) {
-      throw e
-    }
-    catch(e: Exception) {
-      configuration.exceptionLogger(e)
-      return PutPushSubscriptionResponseUnknownFailure(500)
-    }
-  }
+  public suspend fun putPushSubscription(request: PutPushSubscriptionRequest): PutPushSubscriptionResponse
 
   /**
    * Subscribe to push notifications
    */
-  public suspend fun createPushSubscription(request: CreatePushSubscriptionRequest): CreatePushSubscriptionResponse {
-    try {
-      val response = configuration.client.post("api/v1/push/subscription") {
-        setBody(request)
-        contentType(ContentType.Application.Json)
-      }
-      return when (response.status.value) {
-        200 -> CreatePushSubscriptionResponseSuccess(response.body<WebPushSubscription>(), response.headers)
-        401, 404, 429, 503 -> CreatePushSubscriptionResponseFailure401(response.body<Error>(), response.headers)
-        410 -> CreatePushSubscriptionResponseFailure410(response.headers)
-        422 -> CreatePushSubscriptionResponseFailure(response.body<ValidationError>(), response.headers)
-        else -> CreatePushSubscriptionResponseUnknownFailure(response.status.value, response.headers)
-      }
-    }
-    catch(e: CancellationException) {
-      throw e
-    }
-    catch(e: Exception) {
-      configuration.exceptionLogger(e)
-      return CreatePushSubscriptionResponseUnknownFailure(500)
-    }
-  }
+  public suspend fun createPushSubscription(request: CreatePushSubscriptionRequest): CreatePushSubscriptionResponse
 
   /**
    * Remove current subscription
    */
-  public suspend fun deletePushSubscription(): DeletePushSubscriptionResponse {
-    try {
-      val response = configuration.client.delete("api/v1/push/subscription") {
-      }
-      return when (response.status.value) {
-        200 -> DeletePushSubscriptionResponseSuccess(response.headers)
-        401, 404, 429, 503 -> DeletePushSubscriptionResponseFailure401(response.body<Error>(), response.headers)
-        410 -> DeletePushSubscriptionResponseFailure410(response.headers)
-        422 -> DeletePushSubscriptionResponseFailure(response.body<ValidationError>(), response.headers)
-        else -> DeletePushSubscriptionResponseUnknownFailure(response.status.value, response.headers)
-      }
-    }
-    catch(e: CancellationException) {
-      throw e
-    }
-    catch(e: Exception) {
-      configuration.exceptionLogger(e)
-      return DeletePushSubscriptionResponseUnknownFailure(500)
-    }
-  }
+  public suspend fun deletePushSubscription(): DeletePushSubscriptionResponse
 
   @Serializable
   public sealed class GetPushSubscriptionResponse {
@@ -423,4 +341,98 @@ public class PushClient(
     @Transient
     override val headers: Headers = Headers.Empty,
   ) : DeletePushSubscriptionResponse()
+}
+
+public fun PushClient(configuration: ClientConfiguration = defaultClientConfiguration): PushClient = DefaultPushClient(configuration)
+
+public class DefaultPushClient(
+  private val configuration: ClientConfiguration = defaultClientConfiguration,
+) : PushClient {
+  override suspend fun getPushSubscription(): PushClient.GetPushSubscriptionResponse {
+    try {
+      val response = configuration.client.`get`("api/v1/push/subscription") {
+      }
+      return when (response.status.value) {
+        200 -> PushClient.GetPushSubscriptionResponseSuccess(response.body<WebPushSubscription>(), response.headers)
+        401, 404, 429, 503 -> PushClient.GetPushSubscriptionResponseFailure401(response.body<Error>(), response.headers)
+        410 -> PushClient.GetPushSubscriptionResponseFailure410(response.headers)
+        422 -> PushClient.GetPushSubscriptionResponseFailure(response.body<ValidationError>(), response.headers)
+        else -> PushClient.GetPushSubscriptionResponseUnknownFailure(response.status.value, response.headers)
+      }
+    }
+    catch(e: CancellationException) {
+      throw e
+    }
+    catch(e: Exception) {
+      configuration.exceptionLogger(e)
+      return PushClient.GetPushSubscriptionResponseUnknownFailure(500)
+    }
+  }
+
+  override suspend fun putPushSubscription(request: PushClient.PutPushSubscriptionRequest): PushClient.PutPushSubscriptionResponse {
+    try {
+      val response = configuration.client.put("api/v1/push/subscription") {
+        setBody(request)
+        contentType(ContentType.Application.Json)
+      }
+      return when (response.status.value) {
+        200 -> PushClient.PutPushSubscriptionResponseSuccess(response.body<WebPushSubscription>(), response.headers)
+        401, 404, 429, 503 -> PushClient.PutPushSubscriptionResponseFailure401(response.body<Error>(), response.headers)
+        410 -> PushClient.PutPushSubscriptionResponseFailure410(response.headers)
+        422 -> PushClient.PutPushSubscriptionResponseFailure(response.body<ValidationError>(), response.headers)
+        else -> PushClient.PutPushSubscriptionResponseUnknownFailure(response.status.value, response.headers)
+      }
+    }
+    catch(e: CancellationException) {
+      throw e
+    }
+    catch(e: Exception) {
+      configuration.exceptionLogger(e)
+      return PushClient.PutPushSubscriptionResponseUnknownFailure(500)
+    }
+  }
+
+  override suspend fun createPushSubscription(request: PushClient.CreatePushSubscriptionRequest): PushClient.CreatePushSubscriptionResponse {
+    try {
+      val response = configuration.client.post("api/v1/push/subscription") {
+        setBody(request)
+        contentType(ContentType.Application.Json)
+      }
+      return when (response.status.value) {
+        200 -> PushClient.CreatePushSubscriptionResponseSuccess(response.body<WebPushSubscription>(), response.headers)
+        401, 404, 429, 503 -> PushClient.CreatePushSubscriptionResponseFailure401(response.body<Error>(), response.headers)
+        410 -> PushClient.CreatePushSubscriptionResponseFailure410(response.headers)
+        422 -> PushClient.CreatePushSubscriptionResponseFailure(response.body<ValidationError>(), response.headers)
+        else -> PushClient.CreatePushSubscriptionResponseUnknownFailure(response.status.value, response.headers)
+      }
+    }
+    catch(e: CancellationException) {
+      throw e
+    }
+    catch(e: Exception) {
+      configuration.exceptionLogger(e)
+      return PushClient.CreatePushSubscriptionResponseUnknownFailure(500)
+    }
+  }
+
+  override suspend fun deletePushSubscription(): PushClient.DeletePushSubscriptionResponse {
+    try {
+      val response = configuration.client.delete("api/v1/push/subscription") {
+      }
+      return when (response.status.value) {
+        200 -> PushClient.DeletePushSubscriptionResponseSuccess(response.headers)
+        401, 404, 429, 503 -> PushClient.DeletePushSubscriptionResponseFailure401(response.body<Error>(), response.headers)
+        410 -> PushClient.DeletePushSubscriptionResponseFailure410(response.headers)
+        422 -> PushClient.DeletePushSubscriptionResponseFailure(response.body<ValidationError>(), response.headers)
+        else -> PushClient.DeletePushSubscriptionResponseUnknownFailure(response.status.value, response.headers)
+      }
+    }
+    catch(e: CancellationException) {
+      throw e
+    }
+    catch(e: Exception) {
+      configuration.exceptionLogger(e)
+      return PushClient.DeletePushSubscriptionResponseUnknownFailure(500)
+    }
+  }
 }

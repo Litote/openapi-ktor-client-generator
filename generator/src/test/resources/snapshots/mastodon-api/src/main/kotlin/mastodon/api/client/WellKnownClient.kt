@@ -13,32 +13,11 @@ import mastodon.api.model.DiscoverOauthServerConfigurationResponse
 import mastodon.api.model.Error
 import mastodon.api.model.ValidationError
 
-public class WellKnownClient(
-  private val configuration: ClientConfiguration = defaultClientConfiguration,
-) {
+public interface WellKnownClient {
   /**
    * Discover OAuth Server Configuration
    */
-  public suspend fun getWellKnownOauthAuthorizationServer(): GetWellKnownOauthAuthorizationServerResponse {
-    try {
-      val response = configuration.client.`get`(".well-known/oauth-authorization-server") {
-      }
-      return when (response.status.value) {
-        200 -> GetWellKnownOauthAuthorizationServerResponseSuccess(response.body<DiscoverOauthServerConfigurationResponse>(), response.headers)
-        401, 404, 429, 503 -> GetWellKnownOauthAuthorizationServerResponseFailure401(response.body<Error>(), response.headers)
-        410 -> GetWellKnownOauthAuthorizationServerResponseFailure410(response.headers)
-        422 -> GetWellKnownOauthAuthorizationServerResponseFailure(response.body<ValidationError>(), response.headers)
-        else -> GetWellKnownOauthAuthorizationServerResponseUnknownFailure(response.status.value, response.headers)
-      }
-    }
-    catch(e: CancellationException) {
-      throw e
-    }
-    catch(e: Exception) {
-      configuration.exceptionLogger(e)
-      return GetWellKnownOauthAuthorizationServerResponseUnknownFailure(500)
-    }
-  }
+  public suspend fun getWellKnownOauthAuthorizationServer(): GetWellKnownOauthAuthorizationServerResponse
 
   @Serializable
   public sealed class GetWellKnownOauthAuthorizationServerResponse {
@@ -96,4 +75,31 @@ public class WellKnownClient(
     @Transient
     override val headers: Headers = Headers.Empty,
   ) : GetWellKnownOauthAuthorizationServerResponse()
+}
+
+public fun WellKnownClient(configuration: ClientConfiguration = defaultClientConfiguration): WellKnownClient = DefaultWellKnownClient(configuration)
+
+public class DefaultWellKnownClient(
+  private val configuration: ClientConfiguration = defaultClientConfiguration,
+) : WellKnownClient {
+  override suspend fun getWellKnownOauthAuthorizationServer(): WellKnownClient.GetWellKnownOauthAuthorizationServerResponse {
+    try {
+      val response = configuration.client.`get`(".well-known/oauth-authorization-server") {
+      }
+      return when (response.status.value) {
+        200 -> WellKnownClient.GetWellKnownOauthAuthorizationServerResponseSuccess(response.body<DiscoverOauthServerConfigurationResponse>(), response.headers)
+        401, 404, 429, 503 -> WellKnownClient.GetWellKnownOauthAuthorizationServerResponseFailure401(response.body<Error>(), response.headers)
+        410 -> WellKnownClient.GetWellKnownOauthAuthorizationServerResponseFailure410(response.headers)
+        422 -> WellKnownClient.GetWellKnownOauthAuthorizationServerResponseFailure(response.body<ValidationError>(), response.headers)
+        else -> WellKnownClient.GetWellKnownOauthAuthorizationServerResponseUnknownFailure(response.status.value, response.headers)
+      }
+    }
+    catch(e: CancellationException) {
+      throw e
+    }
+    catch(e: Exception) {
+      configuration.exceptionLogger(e)
+      return WellKnownClient.GetWellKnownOauthAuthorizationServerResponseUnknownFailure(500)
+    }
+  }
 }

@@ -26,130 +26,31 @@ import mastodon.api.model.ValidationError
 import kotlin.collections.List as CollectionsList
 import mastodon.api.model.List as ModelList
 
-public class ListsClient(
-  private val configuration: ClientConfiguration = defaultClientConfiguration,
-) {
+public interface ListsClient {
   /**
    * View your lists
    */
-  public suspend fun getLists(): GetListsResponse {
-    try {
-      val response = configuration.client.`get`("api/v1/lists") {
-      }
-      return when (response.status.value) {
-        200 -> GetListsResponseSuccess(response.body<CollectionsList<ModelList>>(), response.headers)
-        401, 404, 429, 503 -> GetListsResponseFailure401(response.body<Error>(), response.headers)
-        410 -> GetListsResponseFailure410(response.headers)
-        422 -> GetListsResponseFailure(response.body<ValidationError>(), response.headers)
-        else -> GetListsResponseUnknownFailure(response.status.value, response.headers)
-      }
-    }
-    catch(e: CancellationException) {
-      throw e
-    }
-    catch(e: Exception) {
-      configuration.exceptionLogger(e)
-      return GetListsResponseUnknownFailure(500)
-    }
-  }
+  public suspend fun getLists(): GetListsResponse
 
   /**
    * Create a list
    */
-  public suspend fun createList(request: CreateListRequest): CreateListResponse {
-    try {
-      val response = configuration.client.post("api/v1/lists") {
-        setBody(request)
-        contentType(ContentType.Application.Json)
-      }
-      return when (response.status.value) {
-        200 -> CreateListResponseSuccess(response.body<ModelList>(), response.headers)
-        401, 404, 422, 429, 503 -> CreateListResponseFailure401(response.body<Error>(), response.headers)
-        410 -> CreateListResponseFailure(response.headers)
-        else -> CreateListResponseUnknownFailure(response.status.value, response.headers)
-      }
-    }
-    catch(e: CancellationException) {
-      throw e
-    }
-    catch(e: Exception) {
-      configuration.exceptionLogger(e)
-      return CreateListResponseUnknownFailure(500)
-    }
-  }
+  public suspend fun createList(request: CreateListRequest): CreateListResponse
 
   /**
    * Show a single list
    */
-  public suspend fun getList(id: String): GetListResponse {
-    try {
-      val response = configuration.client.`get`("api/v1/lists/{id}".replace("/{id}", "/${id.encodeURLPathPart()}")) {
-      }
-      return when (response.status.value) {
-        200 -> GetListResponseSuccess(response.body<ModelList>(), response.headers)
-        401, 404, 429, 503 -> GetListResponseFailure401(response.body<Error>(), response.headers)
-        410 -> GetListResponseFailure410(response.headers)
-        422 -> GetListResponseFailure(response.body<ValidationError>(), response.headers)
-        else -> GetListResponseUnknownFailure(response.status.value, response.headers)
-      }
-    }
-    catch(e: CancellationException) {
-      throw e
-    }
-    catch(e: Exception) {
-      configuration.exceptionLogger(e)
-      return GetListResponseUnknownFailure(500)
-    }
-  }
+  public suspend fun getList(id: String): GetListResponse
 
   /**
    * Update a list
    */
-  public suspend fun updateList(request: UpdateListRequest, id: String): UpdateListResponse {
-    try {
-      val response = configuration.client.put("api/v1/lists/{id}".replace("/{id}", "/${id.encodeURLPathPart()}")) {
-        setBody(request)
-        contentType(ContentType.Application.Json)
-      }
-      return when (response.status.value) {
-        200 -> UpdateListResponseSuccess(response.body<ModelList>(), response.headers)
-        401, 404, 422, 429, 503 -> UpdateListResponseFailure401(response.body<Error>(), response.headers)
-        410 -> UpdateListResponseFailure(response.headers)
-        else -> UpdateListResponseUnknownFailure(response.status.value, response.headers)
-      }
-    }
-    catch(e: CancellationException) {
-      throw e
-    }
-    catch(e: Exception) {
-      configuration.exceptionLogger(e)
-      return UpdateListResponseUnknownFailure(500)
-    }
-  }
+  public suspend fun updateList(request: UpdateListRequest, id: String): UpdateListResponse
 
   /**
    * Delete a list
    */
-  public suspend fun deleteList(id: String): DeleteListResponse {
-    try {
-      val response = configuration.client.delete("api/v1/lists/{id}".replace("/{id}", "/${id.encodeURLPathPart()}")) {
-      }
-      return when (response.status.value) {
-        200 -> DeleteListResponseSuccess(response.headers)
-        401, 404, 429, 503 -> DeleteListResponseFailure401(response.body<Error>(), response.headers)
-        410 -> DeleteListResponseFailure410(response.headers)
-        422 -> DeleteListResponseFailure(response.body<ValidationError>(), response.headers)
-        else -> DeleteListResponseUnknownFailure(response.status.value, response.headers)
-      }
-    }
-    catch(e: CancellationException) {
-      throw e
-    }
-    catch(e: Exception) {
-      configuration.exceptionLogger(e)
-      return DeleteListResponseUnknownFailure(500)
-    }
-  }
+  public suspend fun deleteList(id: String): DeleteListResponse
 
   /**
    * View accounts in a list
@@ -160,91 +61,17 @@ public class ListsClient(
     maxId: String? = null,
     minId: String? = null,
     sinceId: String? = null,
-  ): GetListAccountsResponse {
-    try {
-      val response = configuration.client.`get`("api/v1/lists/{id}/accounts".replace("/{id}", "/${id.encodeURLPathPart()}")) {
-        url {
-          if (limit != null) {
-            parameters.append("limit", limit.toString())
-          }
-          if (maxId != null) {
-            parameters.append("max_id", maxId)
-          }
-          if (minId != null) {
-            parameters.append("min_id", minId)
-          }
-          if (sinceId != null) {
-            parameters.append("since_id", sinceId)
-          }
-        }
-      }
-      return when (response.status.value) {
-        200 -> GetListAccountsResponseSuccess(response.body<CollectionsList<Account>>(), response.headers)
-        401, 404, 429, 503 -> GetListAccountsResponseFailure401(response.body<Error>(), response.headers)
-        410 -> GetListAccountsResponseFailure410(response.headers)
-        422 -> GetListAccountsResponseFailure(response.body<ValidationError>(), response.headers)
-        else -> GetListAccountsResponseUnknownFailure(response.status.value, response.headers)
-      }
-    }
-    catch(e: CancellationException) {
-      throw e
-    }
-    catch(e: Exception) {
-      configuration.exceptionLogger(e)
-      return GetListAccountsResponseUnknownFailure(500)
-    }
-  }
+  ): GetListAccountsResponse
 
   /**
    * Add accounts to a list
    */
-  public suspend fun postListAccounts(request: PostListAccountsRequest, id: String): PostListAccountsResponse {
-    try {
-      val response = configuration.client.post("api/v1/lists/{id}/accounts".replace("/{id}", "/${id.encodeURLPathPart()}")) {
-        setBody(request)
-        contentType(ContentType.Application.Json)
-      }
-      return when (response.status.value) {
-        200 -> PostListAccountsResponseSuccess(response.headers)
-        401, 404, 422, 429, 503 -> PostListAccountsResponseFailure401(response.body<Error>(), response.headers)
-        410 -> PostListAccountsResponseFailure(response.headers)
-        else -> PostListAccountsResponseUnknownFailure(response.status.value, response.headers)
-      }
-    }
-    catch(e: CancellationException) {
-      throw e
-    }
-    catch(e: Exception) {
-      configuration.exceptionLogger(e)
-      return PostListAccountsResponseUnknownFailure(500)
-    }
-  }
+  public suspend fun postListAccounts(request: PostListAccountsRequest, id: String): PostListAccountsResponse
 
   /**
    * Remove accounts from list
    */
-  public suspend fun deleteListAccounts(request: DeleteListAccountsRequest, id: String): DeleteListAccountsResponse {
-    try {
-      val response = configuration.client.delete("api/v1/lists/{id}/accounts".replace("/{id}", "/${id.encodeURLPathPart()}")) {
-        setBody(request)
-        contentType(ContentType.Application.Json)
-      }
-      return when (response.status.value) {
-        200 -> DeleteListAccountsResponseSuccess(response.headers)
-        401, 404, 429, 503 -> DeleteListAccountsResponseFailure401(response.body<Error>(), response.headers)
-        410 -> DeleteListAccountsResponseFailure410(response.headers)
-        422 -> DeleteListAccountsResponseFailure(response.body<ValidationError>(), response.headers)
-        else -> DeleteListAccountsResponseUnknownFailure(response.status.value, response.headers)
-      }
-    }
-    catch(e: CancellationException) {
-      throw e
-    }
-    catch(e: Exception) {
-      configuration.exceptionLogger(e)
-      return DeleteListAccountsResponseUnknownFailure(500)
-    }
-  }
+  public suspend fun deleteListAccounts(request: DeleteListAccountsRequest, id: String): DeleteListAccountsResponse
 
   @Serializable
   public sealed class GetListsResponse {
@@ -711,4 +538,203 @@ public class ListsClient(
     @Transient
     override val headers: Headers = Headers.Empty,
   ) : DeleteListAccountsResponse()
+}
+
+public fun ListsClient(configuration: ClientConfiguration = defaultClientConfiguration): ListsClient = DefaultListsClient(configuration)
+
+public class DefaultListsClient(
+  private val configuration: ClientConfiguration = defaultClientConfiguration,
+) : ListsClient {
+  override suspend fun getLists(): ListsClient.GetListsResponse {
+    try {
+      val response = configuration.client.`get`("api/v1/lists") {
+      }
+      return when (response.status.value) {
+        200 -> ListsClient.GetListsResponseSuccess(response.body<CollectionsList<ModelList>>(), response.headers)
+        401, 404, 429, 503 -> ListsClient.GetListsResponseFailure401(response.body<Error>(), response.headers)
+        410 -> ListsClient.GetListsResponseFailure410(response.headers)
+        422 -> ListsClient.GetListsResponseFailure(response.body<ValidationError>(), response.headers)
+        else -> ListsClient.GetListsResponseUnknownFailure(response.status.value, response.headers)
+      }
+    }
+    catch(e: CancellationException) {
+      throw e
+    }
+    catch(e: Exception) {
+      configuration.exceptionLogger(e)
+      return ListsClient.GetListsResponseUnknownFailure(500)
+    }
+  }
+
+  override suspend fun createList(request: ListsClient.CreateListRequest): ListsClient.CreateListResponse {
+    try {
+      val response = configuration.client.post("api/v1/lists") {
+        setBody(request)
+        contentType(ContentType.Application.Json)
+      }
+      return when (response.status.value) {
+        200 -> ListsClient.CreateListResponseSuccess(response.body<ModelList>(), response.headers)
+        401, 404, 422, 429, 503 -> ListsClient.CreateListResponseFailure401(response.body<Error>(), response.headers)
+        410 -> ListsClient.CreateListResponseFailure(response.headers)
+        else -> ListsClient.CreateListResponseUnknownFailure(response.status.value, response.headers)
+      }
+    }
+    catch(e: CancellationException) {
+      throw e
+    }
+    catch(e: Exception) {
+      configuration.exceptionLogger(e)
+      return ListsClient.CreateListResponseUnknownFailure(500)
+    }
+  }
+
+  override suspend fun getList(id: String): ListsClient.GetListResponse {
+    try {
+      val response = configuration.client.`get`("api/v1/lists/{id}".replace("/{id}", "/${id.encodeURLPathPart()}")) {
+      }
+      return when (response.status.value) {
+        200 -> ListsClient.GetListResponseSuccess(response.body<ModelList>(), response.headers)
+        401, 404, 429, 503 -> ListsClient.GetListResponseFailure401(response.body<Error>(), response.headers)
+        410 -> ListsClient.GetListResponseFailure410(response.headers)
+        422 -> ListsClient.GetListResponseFailure(response.body<ValidationError>(), response.headers)
+        else -> ListsClient.GetListResponseUnknownFailure(response.status.value, response.headers)
+      }
+    }
+    catch(e: CancellationException) {
+      throw e
+    }
+    catch(e: Exception) {
+      configuration.exceptionLogger(e)
+      return ListsClient.GetListResponseUnknownFailure(500)
+    }
+  }
+
+  override suspend fun updateList(request: ListsClient.UpdateListRequest, id: String): ListsClient.UpdateListResponse {
+    try {
+      val response = configuration.client.put("api/v1/lists/{id}".replace("/{id}", "/${id.encodeURLPathPart()}")) {
+        setBody(request)
+        contentType(ContentType.Application.Json)
+      }
+      return when (response.status.value) {
+        200 -> ListsClient.UpdateListResponseSuccess(response.body<ModelList>(), response.headers)
+        401, 404, 422, 429, 503 -> ListsClient.UpdateListResponseFailure401(response.body<Error>(), response.headers)
+        410 -> ListsClient.UpdateListResponseFailure(response.headers)
+        else -> ListsClient.UpdateListResponseUnknownFailure(response.status.value, response.headers)
+      }
+    }
+    catch(e: CancellationException) {
+      throw e
+    }
+    catch(e: Exception) {
+      configuration.exceptionLogger(e)
+      return ListsClient.UpdateListResponseUnknownFailure(500)
+    }
+  }
+
+  override suspend fun deleteList(id: String): ListsClient.DeleteListResponse {
+    try {
+      val response = configuration.client.delete("api/v1/lists/{id}".replace("/{id}", "/${id.encodeURLPathPart()}")) {
+      }
+      return when (response.status.value) {
+        200 -> ListsClient.DeleteListResponseSuccess(response.headers)
+        401, 404, 429, 503 -> ListsClient.DeleteListResponseFailure401(response.body<Error>(), response.headers)
+        410 -> ListsClient.DeleteListResponseFailure410(response.headers)
+        422 -> ListsClient.DeleteListResponseFailure(response.body<ValidationError>(), response.headers)
+        else -> ListsClient.DeleteListResponseUnknownFailure(response.status.value, response.headers)
+      }
+    }
+    catch(e: CancellationException) {
+      throw e
+    }
+    catch(e: Exception) {
+      configuration.exceptionLogger(e)
+      return ListsClient.DeleteListResponseUnknownFailure(500)
+    }
+  }
+
+  override suspend fun getListAccounts(
+    id: String,
+    limit: Long?,
+    maxId: String?,
+    minId: String?,
+    sinceId: String?,
+  ): ListsClient.GetListAccountsResponse {
+    try {
+      val response = configuration.client.`get`("api/v1/lists/{id}/accounts".replace("/{id}", "/${id.encodeURLPathPart()}")) {
+        url {
+          if (limit != null) {
+            parameters.append("limit", limit.toString())
+          }
+          if (maxId != null) {
+            parameters.append("max_id", maxId)
+          }
+          if (minId != null) {
+            parameters.append("min_id", minId)
+          }
+          if (sinceId != null) {
+            parameters.append("since_id", sinceId)
+          }
+        }
+      }
+      return when (response.status.value) {
+        200 -> ListsClient.GetListAccountsResponseSuccess(response.body<CollectionsList<Account>>(), response.headers)
+        401, 404, 429, 503 -> ListsClient.GetListAccountsResponseFailure401(response.body<Error>(), response.headers)
+        410 -> ListsClient.GetListAccountsResponseFailure410(response.headers)
+        422 -> ListsClient.GetListAccountsResponseFailure(response.body<ValidationError>(), response.headers)
+        else -> ListsClient.GetListAccountsResponseUnknownFailure(response.status.value, response.headers)
+      }
+    }
+    catch(e: CancellationException) {
+      throw e
+    }
+    catch(e: Exception) {
+      configuration.exceptionLogger(e)
+      return ListsClient.GetListAccountsResponseUnknownFailure(500)
+    }
+  }
+
+  override suspend fun postListAccounts(request: ListsClient.PostListAccountsRequest, id: String): ListsClient.PostListAccountsResponse {
+    try {
+      val response = configuration.client.post("api/v1/lists/{id}/accounts".replace("/{id}", "/${id.encodeURLPathPart()}")) {
+        setBody(request)
+        contentType(ContentType.Application.Json)
+      }
+      return when (response.status.value) {
+        200 -> ListsClient.PostListAccountsResponseSuccess(response.headers)
+        401, 404, 422, 429, 503 -> ListsClient.PostListAccountsResponseFailure401(response.body<Error>(), response.headers)
+        410 -> ListsClient.PostListAccountsResponseFailure(response.headers)
+        else -> ListsClient.PostListAccountsResponseUnknownFailure(response.status.value, response.headers)
+      }
+    }
+    catch(e: CancellationException) {
+      throw e
+    }
+    catch(e: Exception) {
+      configuration.exceptionLogger(e)
+      return ListsClient.PostListAccountsResponseUnknownFailure(500)
+    }
+  }
+
+  override suspend fun deleteListAccounts(request: ListsClient.DeleteListAccountsRequest, id: String): ListsClient.DeleteListAccountsResponse {
+    try {
+      val response = configuration.client.delete("api/v1/lists/{id}/accounts".replace("/{id}", "/${id.encodeURLPathPart()}")) {
+        setBody(request)
+        contentType(ContentType.Application.Json)
+      }
+      return when (response.status.value) {
+        200 -> ListsClient.DeleteListAccountsResponseSuccess(response.headers)
+        401, 404, 429, 503 -> ListsClient.DeleteListAccountsResponseFailure401(response.body<Error>(), response.headers)
+        410 -> ListsClient.DeleteListAccountsResponseFailure410(response.headers)
+        422 -> ListsClient.DeleteListAccountsResponseFailure(response.body<ValidationError>(), response.headers)
+        else -> ListsClient.DeleteListAccountsResponseUnknownFailure(response.status.value, response.headers)
+      }
+    }
+    catch(e: CancellationException) {
+      throw e
+    }
+    catch(e: Exception) {
+      configuration.exceptionLogger(e)
+      return ListsClient.DeleteListAccountsResponseUnknownFailure(500)
+    }
+  }
 }

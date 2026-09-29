@@ -20,57 +20,16 @@ import mastodon.api.model.Error
 import mastodon.api.model.Poll
 import mastodon.api.model.ValidationError
 
-public class PollsClient(
-  private val configuration: ClientConfiguration = defaultClientConfiguration,
-) {
+public interface PollsClient {
   /**
    * View a poll
    */
-  public suspend fun getPoll(id: String): GetPollResponse {
-    try {
-      val response = configuration.client.`get`("api/v1/polls/{id}".replace("/{id}", "/${id.encodeURLPathPart()}")) {
-      }
-      return when (response.status.value) {
-        200 -> GetPollResponseSuccess(response.body<Poll>(), response.headers)
-        401, 404, 429, 503 -> GetPollResponseFailure401(response.body<Error>(), response.headers)
-        410 -> GetPollResponseFailure410(response.headers)
-        422 -> GetPollResponseFailure(response.body<ValidationError>(), response.headers)
-        else -> GetPollResponseUnknownFailure(response.status.value, response.headers)
-      }
-    }
-    catch(e: CancellationException) {
-      throw e
-    }
-    catch(e: Exception) {
-      configuration.exceptionLogger(e)
-      return GetPollResponseUnknownFailure(500)
-    }
-  }
+  public suspend fun getPoll(id: String): GetPollResponse
 
   /**
    * Vote on a poll
    */
-  public suspend fun postPollVotes(request: PostPollVotesRequest, id: String): PostPollVotesResponse {
-    try {
-      val response = configuration.client.post("api/v1/polls/{id}/votes".replace("/{id}", "/${id.encodeURLPathPart()}")) {
-        setBody(request)
-        contentType(ContentType.Application.Json)
-      }
-      return when (response.status.value) {
-        200 -> PostPollVotesResponseSuccess(response.body<Poll>(), response.headers)
-        401, 404, 422, 429, 503 -> PostPollVotesResponseFailure401(response.body<Error>(), response.headers)
-        410 -> PostPollVotesResponseFailure(response.headers)
-        else -> PostPollVotesResponseUnknownFailure(response.status.value, response.headers)
-      }
-    }
-    catch(e: CancellationException) {
-      throw e
-    }
-    catch(e: Exception) {
-      configuration.exceptionLogger(e)
-      return PostPollVotesResponseUnknownFailure(500)
-    }
-  }
+  public suspend fun postPollVotes(request: PostPollVotesRequest, id: String): PostPollVotesResponse
 
   @Serializable
   public sealed class GetPollResponse {
@@ -183,4 +142,53 @@ public class PollsClient(
     @Transient
     override val headers: Headers = Headers.Empty,
   ) : PostPollVotesResponse()
+}
+
+public fun PollsClient(configuration: ClientConfiguration = defaultClientConfiguration): PollsClient = DefaultPollsClient(configuration)
+
+public class DefaultPollsClient(
+  private val configuration: ClientConfiguration = defaultClientConfiguration,
+) : PollsClient {
+  override suspend fun getPoll(id: String): PollsClient.GetPollResponse {
+    try {
+      val response = configuration.client.`get`("api/v1/polls/{id}".replace("/{id}", "/${id.encodeURLPathPart()}")) {
+      }
+      return when (response.status.value) {
+        200 -> PollsClient.GetPollResponseSuccess(response.body<Poll>(), response.headers)
+        401, 404, 429, 503 -> PollsClient.GetPollResponseFailure401(response.body<Error>(), response.headers)
+        410 -> PollsClient.GetPollResponseFailure410(response.headers)
+        422 -> PollsClient.GetPollResponseFailure(response.body<ValidationError>(), response.headers)
+        else -> PollsClient.GetPollResponseUnknownFailure(response.status.value, response.headers)
+      }
+    }
+    catch(e: CancellationException) {
+      throw e
+    }
+    catch(e: Exception) {
+      configuration.exceptionLogger(e)
+      return PollsClient.GetPollResponseUnknownFailure(500)
+    }
+  }
+
+  override suspend fun postPollVotes(request: PollsClient.PostPollVotesRequest, id: String): PollsClient.PostPollVotesResponse {
+    try {
+      val response = configuration.client.post("api/v1/polls/{id}/votes".replace("/{id}", "/${id.encodeURLPathPart()}")) {
+        setBody(request)
+        contentType(ContentType.Application.Json)
+      }
+      return when (response.status.value) {
+        200 -> PollsClient.PostPollVotesResponseSuccess(response.body<Poll>(), response.headers)
+        401, 404, 422, 429, 503 -> PollsClient.PostPollVotesResponseFailure401(response.body<Error>(), response.headers)
+        410 -> PollsClient.PostPollVotesResponseFailure(response.headers)
+        else -> PollsClient.PostPollVotesResponseUnknownFailure(response.status.value, response.headers)
+      }
+    }
+    catch(e: CancellationException) {
+      throw e
+    }
+    catch(e: Exception) {
+      configuration.exceptionLogger(e)
+      return PollsClient.PostPollVotesResponseUnknownFailure(500)
+    }
+  }
 }

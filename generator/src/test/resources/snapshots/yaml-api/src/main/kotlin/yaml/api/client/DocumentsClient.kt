@@ -15,52 +15,16 @@ import kotlinx.serialization.Transient
 import yaml.api.client.ClientConfiguration.Companion.defaultClientConfiguration
 import yaml.api.model.Document
 
-public class DocumentsClient(
-  private val configuration: ClientConfiguration = defaultClientConfiguration,
-) {
+public interface DocumentsClient {
   /**
    * List all documents
    */
-  public suspend fun listDocuments(): ListDocumentsResponse {
-    try {
-      val response = configuration.client.`get`("documents") {
-      }
-      return when (response.status.value) {
-        200 -> ListDocumentsResponseSuccess(response.body<List<Document>>(), response.headers)
-        else -> ListDocumentsResponseUnknownFailure(response.status.value, response.headers)
-      }
-    }
-    catch(e: CancellationException) {
-      throw e
-    }
-    catch(e: Exception) {
-      configuration.exceptionLogger(e)
-      return ListDocumentsResponseUnknownFailure(500)
-    }
-  }
+  public suspend fun listDocuments(): ListDocumentsResponse
 
   /**
    * Create a document
    */
-  public suspend fun createDocument(request: Document): CreateDocumentResponse {
-    try {
-      val response = configuration.client.post("documents") {
-        setBody(request)
-        contentType(ContentType("application", "yaml"))
-      }
-      return when (response.status.value) {
-        200 -> CreateDocumentResponseSuccess(response.body<Document>(), response.headers)
-        else -> CreateDocumentResponseUnknownFailure(response.status.value, response.headers)
-      }
-    }
-    catch(e: CancellationException) {
-      throw e
-    }
-    catch(e: Exception) {
-      configuration.exceptionLogger(e)
-      return CreateDocumentResponseUnknownFailure(500)
-    }
-  }
+  public suspend fun createDocument(request: Document): CreateDocumentResponse
 
   @Serializable
   public sealed class ListDocumentsResponse {
@@ -99,4 +63,48 @@ public class DocumentsClient(
     @Transient
     override val headers: Headers = Headers.Empty,
   ) : CreateDocumentResponse()
+}
+
+public fun DocumentsClient(configuration: ClientConfiguration = defaultClientConfiguration): DocumentsClient = DefaultDocumentsClient(configuration)
+
+public class DefaultDocumentsClient(
+  private val configuration: ClientConfiguration = defaultClientConfiguration,
+) : DocumentsClient {
+  override suspend fun listDocuments(): DocumentsClient.ListDocumentsResponse {
+    try {
+      val response = configuration.client.`get`("documents") {
+      }
+      return when (response.status.value) {
+        200 -> DocumentsClient.ListDocumentsResponseSuccess(response.body<List<Document>>(), response.headers)
+        else -> DocumentsClient.ListDocumentsResponseUnknownFailure(response.status.value, response.headers)
+      }
+    }
+    catch(e: CancellationException) {
+      throw e
+    }
+    catch(e: Exception) {
+      configuration.exceptionLogger(e)
+      return DocumentsClient.ListDocumentsResponseUnknownFailure(500)
+    }
+  }
+
+  override suspend fun createDocument(request: Document): DocumentsClient.CreateDocumentResponse {
+    try {
+      val response = configuration.client.post("documents") {
+        setBody(request)
+        contentType(ContentType("application", "yaml"))
+      }
+      return when (response.status.value) {
+        200 -> DocumentsClient.CreateDocumentResponseSuccess(response.body<Document>(), response.headers)
+        else -> DocumentsClient.CreateDocumentResponseUnknownFailure(response.status.value, response.headers)
+      }
+    }
+    catch(e: CancellationException) {
+      throw e
+    }
+    catch(e: Exception) {
+      configuration.exceptionLogger(e)
+      return DocumentsClient.CreateDocumentResponseUnknownFailure(500)
+    }
+  }
 }

@@ -15,9 +15,7 @@ import mastodon.api.model.Account
 import mastodon.api.model.Error
 import mastodon.api.model.ValidationError
 
-public class EndorsementsClient(
-  private val configuration: ClientConfiguration = defaultClientConfiguration,
-) {
+public interface EndorsementsClient {
   /**
    * View currently featured profiles
    */
@@ -25,37 +23,7 @@ public class EndorsementsClient(
     limit: Long? = 40,
     maxId: String? = null,
     sinceId: String? = null,
-  ): GetEndorsementsResponse {
-    try {
-      val response = configuration.client.`get`("api/v1/endorsements") {
-        url {
-          if (limit != null) {
-            parameters.append("limit", limit.toString())
-          }
-          if (maxId != null) {
-            parameters.append("max_id", maxId)
-          }
-          if (sinceId != null) {
-            parameters.append("since_id", sinceId)
-          }
-        }
-      }
-      return when (response.status.value) {
-        200 -> GetEndorsementsResponseSuccess(response.body<List<Account>>(), response.headers)
-        401, 404, 429, 503 -> GetEndorsementsResponseFailure401(response.body<Error>(), response.headers)
-        410 -> GetEndorsementsResponseFailure410(response.headers)
-        422 -> GetEndorsementsResponseFailure(response.body<ValidationError>(), response.headers)
-        else -> GetEndorsementsResponseUnknownFailure(response.status.value, response.headers)
-      }
-    }
-    catch(e: CancellationException) {
-      throw e
-    }
-    catch(e: Exception) {
-      configuration.exceptionLogger(e)
-      return GetEndorsementsResponseUnknownFailure(500)
-    }
-  }
+  ): GetEndorsementsResponse
 
   @Serializable
   public sealed class GetEndorsementsResponse {
@@ -119,4 +87,46 @@ public class EndorsementsClient(
     @Transient
     override val headers: Headers = Headers.Empty,
   ) : GetEndorsementsResponse()
+}
+
+public fun EndorsementsClient(configuration: ClientConfiguration = defaultClientConfiguration): EndorsementsClient = DefaultEndorsementsClient(configuration)
+
+public class DefaultEndorsementsClient(
+  private val configuration: ClientConfiguration = defaultClientConfiguration,
+) : EndorsementsClient {
+  override suspend fun getEndorsements(
+    limit: Long?,
+    maxId: String?,
+    sinceId: String?,
+  ): EndorsementsClient.GetEndorsementsResponse {
+    try {
+      val response = configuration.client.`get`("api/v1/endorsements") {
+        url {
+          if (limit != null) {
+            parameters.append("limit", limit.toString())
+          }
+          if (maxId != null) {
+            parameters.append("max_id", maxId)
+          }
+          if (sinceId != null) {
+            parameters.append("since_id", sinceId)
+          }
+        }
+      }
+      return when (response.status.value) {
+        200 -> EndorsementsClient.GetEndorsementsResponseSuccess(response.body<List<Account>>(), response.headers)
+        401, 404, 429, 503 -> EndorsementsClient.GetEndorsementsResponseFailure401(response.body<Error>(), response.headers)
+        410 -> EndorsementsClient.GetEndorsementsResponseFailure410(response.headers)
+        422 -> EndorsementsClient.GetEndorsementsResponseFailure(response.body<ValidationError>(), response.headers)
+        else -> EndorsementsClient.GetEndorsementsResponseUnknownFailure(response.status.value, response.headers)
+      }
+    }
+    catch(e: CancellationException) {
+      throw e
+    }
+    catch(e: Exception) {
+      configuration.exceptionLogger(e)
+      return EndorsementsClient.GetEndorsementsResponseUnknownFailure(500)
+    }
+  }
 }

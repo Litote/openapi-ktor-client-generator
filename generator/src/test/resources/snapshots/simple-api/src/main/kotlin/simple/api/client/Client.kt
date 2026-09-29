@@ -16,9 +16,7 @@ import simple.api.client.ClientConfiguration.Companion.defaultClientConfiguratio
 import simple.api.model.TestRequest
 import simple.api.model.TestResponse
 
-public class Client(
-  private val configuration: ClientConfiguration = defaultClientConfiguration,
-) {
+public interface Client {
   /**
    * Create a test
    */
@@ -26,30 +24,7 @@ public class Client(
     request: TestRequest,
     testId: String,
     skip: Int? = null,
-  ): PostTestWithTestIdResponse {
-    try {
-      val response = configuration.client.post("test/{testId}".replace("/{testId}", "/${testId.encodeURLPathPart()}")) {
-        url {
-          if (skip != null) {
-            parameters.append("skip", skip.toString())
-          }
-        }
-        setBody(request)
-        contentType(ContentType.Application.Json)
-      }
-      return when (response.status.value) {
-        201 -> PostTestWithTestIdResponseSuccess(response.body<TestResponse>(), response.headers)
-        else -> PostTestWithTestIdResponseUnknownFailure(response.status.value, response.headers)
-      }
-    }
-    catch(e: CancellationException) {
-      throw e
-    }
-    catch(e: Exception) {
-      configuration.exceptionLogger(e)
-      return PostTestWithTestIdResponseUnknownFailure(500)
-    }
-  }
+  ): PostTestWithTestIdResponse
 
   @Serializable
   public sealed class PostTestWithTestIdResponse {
@@ -69,4 +44,39 @@ public class Client(
     @Transient
     override val headers: Headers = Headers.Empty,
   ) : PostTestWithTestIdResponse()
+}
+
+public fun Client(configuration: ClientConfiguration = defaultClientConfiguration): Client = DefaultClient(configuration)
+
+public class DefaultClient(
+  private val configuration: ClientConfiguration = defaultClientConfiguration,
+) : Client {
+  override suspend fun postTestWithTestId(
+    request: TestRequest,
+    testId: String,
+    skip: Int?,
+  ): Client.PostTestWithTestIdResponse {
+    try {
+      val response = configuration.client.post("test/{testId}".replace("/{testId}", "/${testId.encodeURLPathPart()}")) {
+        url {
+          if (skip != null) {
+            parameters.append("skip", skip.toString())
+          }
+        }
+        setBody(request)
+        contentType(ContentType.Application.Json)
+      }
+      return when (response.status.value) {
+        201 -> Client.PostTestWithTestIdResponseSuccess(response.body<TestResponse>(), response.headers)
+        else -> Client.PostTestWithTestIdResponseUnknownFailure(response.status.value, response.headers)
+      }
+    }
+    catch(e: CancellationException) {
+      throw e
+    }
+    catch(e: Exception) {
+      configuration.exceptionLogger(e)
+      return Client.PostTestWithTestIdResponseUnknownFailure(500)
+    }
+  }
 }

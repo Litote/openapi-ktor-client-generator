@@ -14,32 +14,11 @@ import mastodon.api.model.CustomEmoji
 import mastodon.api.model.Error
 import mastodon.api.model.ValidationError
 
-public class CustomEmojisClient(
-  private val configuration: ClientConfiguration = defaultClientConfiguration,
-) {
+public interface CustomEmojisClient {
   /**
    * View all custom emoji
    */
-  public suspend fun getCustomEmojis(): GetCustomEmojisResponse {
-    try {
-      val response = configuration.client.`get`("api/v1/custom_emojis") {
-      }
-      return when (response.status.value) {
-        200 -> GetCustomEmojisResponseSuccess(response.body<List<CustomEmoji>>(), response.headers)
-        401, 404, 429, 503 -> GetCustomEmojisResponseFailure401(response.body<Error>(), response.headers)
-        410 -> GetCustomEmojisResponseFailure410(response.headers)
-        422 -> GetCustomEmojisResponseFailure(response.body<ValidationError>(), response.headers)
-        else -> GetCustomEmojisResponseUnknownFailure(response.status.value, response.headers)
-      }
-    }
-    catch(e: CancellationException) {
-      throw e
-    }
-    catch(e: Exception) {
-      configuration.exceptionLogger(e)
-      return GetCustomEmojisResponseUnknownFailure(500)
-    }
-  }
+  public suspend fun getCustomEmojis(): GetCustomEmojisResponse
 
   @Serializable
   public sealed class GetCustomEmojisResponse {
@@ -97,4 +76,31 @@ public class CustomEmojisClient(
     @Transient
     override val headers: Headers = Headers.Empty,
   ) : GetCustomEmojisResponse()
+}
+
+public fun CustomEmojisClient(configuration: ClientConfiguration = defaultClientConfiguration): CustomEmojisClient = DefaultCustomEmojisClient(configuration)
+
+public class DefaultCustomEmojisClient(
+  private val configuration: ClientConfiguration = defaultClientConfiguration,
+) : CustomEmojisClient {
+  override suspend fun getCustomEmojis(): CustomEmojisClient.GetCustomEmojisResponse {
+    try {
+      val response = configuration.client.`get`("api/v1/custom_emojis") {
+      }
+      return when (response.status.value) {
+        200 -> CustomEmojisClient.GetCustomEmojisResponseSuccess(response.body<List<CustomEmoji>>(), response.headers)
+        401, 404, 429, 503 -> CustomEmojisClient.GetCustomEmojisResponseFailure401(response.body<Error>(), response.headers)
+        410 -> CustomEmojisClient.GetCustomEmojisResponseFailure410(response.headers)
+        422 -> CustomEmojisClient.GetCustomEmojisResponseFailure(response.body<ValidationError>(), response.headers)
+        else -> CustomEmojisClient.GetCustomEmojisResponseUnknownFailure(response.status.value, response.headers)
+      }
+    }
+    catch(e: CancellationException) {
+      throw e
+    }
+    catch(e: Exception) {
+      configuration.exceptionLogger(e)
+      return CustomEmojisClient.GetCustomEmojisResponseUnknownFailure(500)
+    }
+  }
 }

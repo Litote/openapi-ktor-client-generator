@@ -12,32 +12,11 @@ import mastodon.api.client.ClientConfiguration.Companion.defaultClientConfigurat
 import mastodon.api.model.Error
 import mastodon.api.model.ValidationError
 
-public class PreferencesClient(
-  private val configuration: ClientConfiguration = defaultClientConfiguration,
-) {
+public interface PreferencesClient {
   /**
    * View user preferences
    */
-  public suspend fun getPreferences(): GetPreferencesResponse {
-    try {
-      val response = configuration.client.`get`("api/v1/preferences") {
-      }
-      return when (response.status.value) {
-        200 -> GetPreferencesResponseSuccess(response.headers)
-        401, 404, 429, 503 -> GetPreferencesResponseFailure401(response.body<Error>(), response.headers)
-        410 -> GetPreferencesResponseFailure410(response.headers)
-        422 -> GetPreferencesResponseFailure(response.body<ValidationError>(), response.headers)
-        else -> GetPreferencesResponseUnknownFailure(response.status.value, response.headers)
-      }
-    }
-    catch(e: CancellationException) {
-      throw e
-    }
-    catch(e: Exception) {
-      configuration.exceptionLogger(e)
-      return GetPreferencesResponseUnknownFailure(500)
-    }
-  }
+  public suspend fun getPreferences(): GetPreferencesResponse
 
   @Serializable
   public sealed class GetPreferencesResponse {
@@ -94,4 +73,31 @@ public class PreferencesClient(
     @Transient
     override val headers: Headers = Headers.Empty,
   ) : GetPreferencesResponse()
+}
+
+public fun PreferencesClient(configuration: ClientConfiguration = defaultClientConfiguration): PreferencesClient = DefaultPreferencesClient(configuration)
+
+public class DefaultPreferencesClient(
+  private val configuration: ClientConfiguration = defaultClientConfiguration,
+) : PreferencesClient {
+  override suspend fun getPreferences(): PreferencesClient.GetPreferencesResponse {
+    try {
+      val response = configuration.client.`get`("api/v1/preferences") {
+      }
+      return when (response.status.value) {
+        200 -> PreferencesClient.GetPreferencesResponseSuccess(response.headers)
+        401, 404, 429, 503 -> PreferencesClient.GetPreferencesResponseFailure401(response.body<Error>(), response.headers)
+        410 -> PreferencesClient.GetPreferencesResponseFailure410(response.headers)
+        422 -> PreferencesClient.GetPreferencesResponseFailure(response.body<ValidationError>(), response.headers)
+        else -> PreferencesClient.GetPreferencesResponseUnknownFailure(response.status.value, response.headers)
+      }
+    }
+    catch(e: CancellationException) {
+      throw e
+    }
+    catch(e: Exception) {
+      configuration.exceptionLogger(e)
+      return PreferencesClient.GetPreferencesResponseUnknownFailure(500)
+    }
+  }
 }

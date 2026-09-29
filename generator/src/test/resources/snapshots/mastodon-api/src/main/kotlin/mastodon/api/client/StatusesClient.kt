@@ -24,6 +24,7 @@ import mastodon.api.client.ClientConfiguration.Companion.defaultClientConfigurat
 import mastodon.api.model.Account
 import mastodon.api.model.Context
 import mastodon.api.model.CreateStatusRequest
+import mastodon.api.model.CreateStatusResponse
 import mastodon.api.model.Error
 import mastodon.api.model.Status
 import mastodon.api.model.StatusEdit
@@ -33,215 +34,46 @@ import mastodon.api.model.Translation
 import mastodon.api.model.ValidationError
 import io.ktor.client.request.`header` as setHeader
 
-public class StatusesClient(
-  private val configuration: ClientConfiguration = defaultClientConfiguration,
-) {
+public interface StatusesClient {
   /**
    * View multiple statuses
    */
-  public suspend fun getStatuses(id: List<String>? = null): GetStatusesResponse {
-    try {
-      val response = configuration.client.`get`("api/v1/statuses") {
-        url {
-          if (id != null) {
-            parameters.appendAll("id", id)
-          }
-        }
-      }
-      return when (response.status.value) {
-        200 -> GetStatusesResponseSuccess(response.body<List<Status>>(), response.headers)
-        401, 404, 429, 503 -> GetStatusesResponseFailure401(response.body<Error>(), response.headers)
-        410 -> GetStatusesResponseFailure410(response.headers)
-        422 -> GetStatusesResponseFailure(response.body<ValidationError>(), response.headers)
-        else -> GetStatusesResponseUnknownFailure(response.status.value, response.headers)
-      }
-    }
-    catch(e: CancellationException) {
-      throw e
-    }
-    catch(e: Exception) {
-      configuration.exceptionLogger(e)
-      return GetStatusesResponseUnknownFailure(500)
-    }
-  }
+  public suspend fun getStatuses(id: List<String>? = null): GetStatusesResponse
 
   /**
    * Post a new status
    */
-  public suspend fun createStatus(request: CreateStatusRequest, idempotencyKey: JsonElement? = null): CreateStatusResponse {
-    try {
-      val response = configuration.client.post("api/v1/statuses") {
-        if (idempotencyKey != null) {
-          setHeader("Idempotency-Key", idempotencyKey)
-        }
-        setBody(request)
-        contentType(ContentType.Application.Json)
-      }
-      return when (response.status.value) {
-        200 -> CreateStatusResponseSuccess(response.body<mastodon.api.model.CreateStatusResponse>(), response.headers)
-        401, 404, 422, 429, 503 -> CreateStatusResponseFailure401(response.body<Error>(), response.headers)
-        410 -> CreateStatusResponseFailure(response.headers)
-        else -> CreateStatusResponseUnknownFailure(response.status.value, response.headers)
-      }
-    }
-    catch(e: CancellationException) {
-      throw e
-    }
-    catch(e: Exception) {
-      configuration.exceptionLogger(e)
-      return CreateStatusResponseUnknownFailure(500)
-    }
-  }
+  public suspend fun createStatus(request: CreateStatusRequest, idempotencyKey: JsonElement? = null): CreateStatusResponse
 
   /**
    * View a single status
    */
-  public suspend fun getStatus(id: String): GetStatusResponse {
-    try {
-      val response = configuration.client.`get`("api/v1/statuses/{id}".replace("/{id}", "/${id.encodeURLPathPart()}")) {
-      }
-      return when (response.status.value) {
-        200 -> GetStatusResponseSuccess(response.body<Status>(), response.headers)
-        401, 404, 429, 503 -> GetStatusResponseFailure401(response.body<Error>(), response.headers)
-        410 -> GetStatusResponseFailure410(response.headers)
-        422 -> GetStatusResponseFailure(response.body<ValidationError>(), response.headers)
-        else -> GetStatusResponseUnknownFailure(response.status.value, response.headers)
-      }
-    }
-    catch(e: CancellationException) {
-      throw e
-    }
-    catch(e: Exception) {
-      configuration.exceptionLogger(e)
-      return GetStatusResponseUnknownFailure(500)
-    }
-  }
+  public suspend fun getStatus(id: String): GetStatusResponse
 
   /**
    * Edit a status
    */
-  public suspend fun updateStatus(request: UpdateStatusRequest, id: String): UpdateStatusResponse {
-    try {
-      val response = configuration.client.put("api/v1/statuses/{id}".replace("/{id}", "/${id.encodeURLPathPart()}")) {
-        setBody(request)
-        contentType(ContentType.Application.Json)
-      }
-      return when (response.status.value) {
-        200 -> UpdateStatusResponseSuccess(response.body<Status>(), response.headers)
-        401, 404, 422, 429, 503 -> UpdateStatusResponseFailure401(response.body<Error>(), response.headers)
-        410 -> UpdateStatusResponseFailure(response.headers)
-        else -> UpdateStatusResponseUnknownFailure(response.status.value, response.headers)
-      }
-    }
-    catch(e: CancellationException) {
-      throw e
-    }
-    catch(e: Exception) {
-      configuration.exceptionLogger(e)
-      return UpdateStatusResponseUnknownFailure(500)
-    }
-  }
+  public suspend fun updateStatus(request: UpdateStatusRequest, id: String): UpdateStatusResponse
 
   /**
    * Delete a status
    */
-  public suspend fun deleteStatus(id: String, deleteMedia: Boolean? = null): DeleteStatusResponse {
-    try {
-      val response = configuration.client.delete("api/v1/statuses/{id}".replace("/{id}", "/${id.encodeURLPathPart()}")) {
-        url {
-          if (deleteMedia != null) {
-            parameters.append("delete_media", deleteMedia.toString())
-          }
-        }
-      }
-      return when (response.status.value) {
-        200 -> DeleteStatusResponseSuccess(response.body<Status>(), response.headers)
-        401, 404, 429, 503 -> DeleteStatusResponseFailure401(response.body<Error>(), response.headers)
-        410 -> DeleteStatusResponseFailure410(response.headers)
-        422 -> DeleteStatusResponseFailure(response.body<ValidationError>(), response.headers)
-        else -> DeleteStatusResponseUnknownFailure(response.status.value, response.headers)
-      }
-    }
-    catch(e: CancellationException) {
-      throw e
-    }
-    catch(e: Exception) {
-      configuration.exceptionLogger(e)
-      return DeleteStatusResponseUnknownFailure(500)
-    }
-  }
+  public suspend fun deleteStatus(id: String, deleteMedia: Boolean? = null): DeleteStatusResponse
 
   /**
    * Bookmark a status
    */
-  public suspend fun postStatusBookmark(id: String): PostStatusBookmarkResponse {
-    try {
-      val response = configuration.client.post("api/v1/statuses/{id}/bookmark".replace("/{id}", "/${id.encodeURLPathPart()}")) {
-      }
-      return when (response.status.value) {
-        200 -> PostStatusBookmarkResponseSuccess(response.body<Status>(), response.headers)
-        401, 404, 429, 503 -> PostStatusBookmarkResponseFailure401(response.body<Error>(), response.headers)
-        410 -> PostStatusBookmarkResponseFailure410(response.headers)
-        422 -> PostStatusBookmarkResponseFailure(response.body<ValidationError>(), response.headers)
-        else -> PostStatusBookmarkResponseUnknownFailure(response.status.value, response.headers)
-      }
-    }
-    catch(e: CancellationException) {
-      throw e
-    }
-    catch(e: Exception) {
-      configuration.exceptionLogger(e)
-      return PostStatusBookmarkResponseUnknownFailure(500)
-    }
-  }
+  public suspend fun postStatusBookmark(id: String): PostStatusBookmarkResponse
 
   /**
    * Get parent and child statuses in context
    */
-  public suspend fun getStatusContext(id: String): GetStatusContextResponse {
-    try {
-      val response = configuration.client.`get`("api/v1/statuses/{id}/context".replace("/{id}", "/${id.encodeURLPathPart()}")) {
-      }
-      return when (response.status.value) {
-        200 -> GetStatusContextResponseSuccess(response.body<Context>(), response.headers)
-        401, 404, 429, 503 -> GetStatusContextResponseFailure401(response.body<Error>(), response.headers)
-        410 -> GetStatusContextResponseFailure410(response.headers)
-        422 -> GetStatusContextResponseFailure(response.body<ValidationError>(), response.headers)
-        else -> GetStatusContextResponseUnknownFailure(response.status.value, response.headers)
-      }
-    }
-    catch(e: CancellationException) {
-      throw e
-    }
-    catch(e: Exception) {
-      configuration.exceptionLogger(e)
-      return GetStatusContextResponseUnknownFailure(500)
-    }
-  }
+  public suspend fun getStatusContext(id: String): GetStatusContextResponse
 
   /**
    * Favourite a status
    */
-  public suspend fun postStatusFavourite(id: String): PostStatusFavouriteResponse {
-    try {
-      val response = configuration.client.post("api/v1/statuses/{id}/favourite".replace("/{id}", "/${id.encodeURLPathPart()}")) {
-      }
-      return when (response.status.value) {
-        200 -> PostStatusFavouriteResponseSuccess(response.body<Status>(), response.headers)
-        401, 404, 429, 503 -> PostStatusFavouriteResponseFailure401(response.body<Error>(), response.headers)
-        410 -> PostStatusFavouriteResponseFailure410(response.headers)
-        422 -> PostStatusFavouriteResponseFailure(response.body<ValidationError>(), response.headers)
-        else -> PostStatusFavouriteResponseUnknownFailure(response.status.value, response.headers)
-      }
-    }
-    catch(e: CancellationException) {
-      throw e
-    }
-    catch(e: Exception) {
-      configuration.exceptionLogger(e)
-      return PostStatusFavouriteResponseUnknownFailure(500)
-    }
-  }
+  public suspend fun postStatusFavourite(id: String): PostStatusFavouriteResponse
 
   /**
    * See who favourited a status
@@ -251,134 +83,27 @@ public class StatusesClient(
     limit: Long? = 40,
     maxId: String? = null,
     sinceId: String? = null,
-  ): GetStatusFavouritedByResponse {
-    try {
-      val response = configuration.client.`get`("api/v1/statuses/{id}/favourited_by".replace("/{id}", "/${id.encodeURLPathPart()}")) {
-        url {
-          if (limit != null) {
-            parameters.append("limit", limit.toString())
-          }
-          if (maxId != null) {
-            parameters.append("max_id", maxId)
-          }
-          if (sinceId != null) {
-            parameters.append("since_id", sinceId)
-          }
-        }
-      }
-      return when (response.status.value) {
-        200 -> GetStatusFavouritedByResponseSuccess(response.body<List<Account>>(), response.headers)
-        401, 404, 429, 503 -> GetStatusFavouritedByResponseFailure401(response.body<Error>(), response.headers)
-        410 -> GetStatusFavouritedByResponseFailure410(response.headers)
-        422 -> GetStatusFavouritedByResponseFailure(response.body<ValidationError>(), response.headers)
-        else -> GetStatusFavouritedByResponseUnknownFailure(response.status.value, response.headers)
-      }
-    }
-    catch(e: CancellationException) {
-      throw e
-    }
-    catch(e: Exception) {
-      configuration.exceptionLogger(e)
-      return GetStatusFavouritedByResponseUnknownFailure(500)
-    }
-  }
+  ): GetStatusFavouritedByResponse
 
   /**
    * View edit history of a status
    */
-  public suspend fun getStatusHistory(id: String): GetStatusHistoryResponse {
-    try {
-      val response = configuration.client.`get`("api/v1/statuses/{id}/history".replace("/{id}", "/${id.encodeURLPathPart()}")) {
-      }
-      return when (response.status.value) {
-        200 -> GetStatusHistoryResponseSuccess(response.body<List<StatusEdit>>(), response.headers)
-        401, 404, 429, 503 -> GetStatusHistoryResponseFailure401(response.body<Error>(), response.headers)
-        410 -> GetStatusHistoryResponseFailure410(response.headers)
-        422 -> GetStatusHistoryResponseFailure(response.body<ValidationError>(), response.headers)
-        else -> GetStatusHistoryResponseUnknownFailure(response.status.value, response.headers)
-      }
-    }
-    catch(e: CancellationException) {
-      throw e
-    }
-    catch(e: Exception) {
-      configuration.exceptionLogger(e)
-      return GetStatusHistoryResponseUnknownFailure(500)
-    }
-  }
+  public suspend fun getStatusHistory(id: String): GetStatusHistoryResponse
 
   /**
    * Edit a status' interaction policies
    */
-  public suspend fun updateStatusInteractionPolicy(request: UpdateStatusInteractionPolicyRequest, id: String): UpdateStatusInteractionPolicyResponse {
-    try {
-      val response = configuration.client.put("api/v1/statuses/{id}/interaction_policy".replace("/{id}", "/${id.encodeURLPathPart()}")) {
-        setBody(request)
-        contentType(ContentType.Application.Json)
-      }
-      return when (response.status.value) {
-        200 -> UpdateStatusInteractionPolicyResponseSuccess(response.body<Status>(), response.headers)
-        401, 404, 429, 503 -> UpdateStatusInteractionPolicyResponseFailure401(response.body<Error>(), response.headers)
-        410 -> UpdateStatusInteractionPolicyResponseFailure410(response.headers)
-        422 -> UpdateStatusInteractionPolicyResponseFailure(response.body<ValidationError>(), response.headers)
-        else -> UpdateStatusInteractionPolicyResponseUnknownFailure(response.status.value, response.headers)
-      }
-    }
-    catch(e: CancellationException) {
-      throw e
-    }
-    catch(e: Exception) {
-      configuration.exceptionLogger(e)
-      return UpdateStatusInteractionPolicyResponseUnknownFailure(500)
-    }
-  }
+  public suspend fun updateStatusInteractionPolicy(request: UpdateStatusInteractionPolicyRequest, id: String): UpdateStatusInteractionPolicyResponse
 
   /**
    * Mute a conversation
    */
-  public suspend fun postStatusMute(id: String): PostStatusMuteResponse {
-    try {
-      val response = configuration.client.post("api/v1/statuses/{id}/mute".replace("/{id}", "/${id.encodeURLPathPart()}")) {
-      }
-      return when (response.status.value) {
-        200 -> PostStatusMuteResponseSuccess(response.body<Status>(), response.headers)
-        401, 404, 429, 503 -> PostStatusMuteResponseFailure401(response.body<Error>(), response.headers)
-        410 -> PostStatusMuteResponseFailure410(response.headers)
-        422 -> PostStatusMuteResponseFailure(response.body<ValidationError>(), response.headers)
-        else -> PostStatusMuteResponseUnknownFailure(response.status.value, response.headers)
-      }
-    }
-    catch(e: CancellationException) {
-      throw e
-    }
-    catch(e: Exception) {
-      configuration.exceptionLogger(e)
-      return PostStatusMuteResponseUnknownFailure(500)
-    }
-  }
+  public suspend fun postStatusMute(id: String): PostStatusMuteResponse
 
   /**
    * Pin status to profile
    */
-  public suspend fun postStatusPin(id: String): PostStatusPinResponse {
-    try {
-      val response = configuration.client.post("api/v1/statuses/{id}/pin".replace("/{id}", "/${id.encodeURLPathPart()}")) {
-      }
-      return when (response.status.value) {
-        200 -> PostStatusPinResponseSuccess(response.body<Status>(), response.headers)
-        401, 404, 422, 429, 503 -> PostStatusPinResponseFailure401(response.body<Error>(), response.headers)
-        410 -> PostStatusPinResponseFailure(response.headers)
-        else -> PostStatusPinResponseUnknownFailure(response.status.value, response.headers)
-      }
-    }
-    catch(e: CancellationException) {
-      throw e
-    }
-    catch(e: Exception) {
-      configuration.exceptionLogger(e)
-      return PostStatusPinResponseUnknownFailure(500)
-    }
-  }
+  public suspend fun postStatusPin(id: String): PostStatusPinResponse
 
   /**
    * See quotes of a status
@@ -388,87 +113,17 @@ public class StatusesClient(
     limit: Long? = 20,
     maxId: String? = null,
     sinceId: String? = null,
-  ): GetStatusQuotesResponse {
-    try {
-      val response = configuration.client.`get`("api/v1/statuses/{id}/quotes".replace("/{id}", "/${id.encodeURLPathPart()}")) {
-        url {
-          if (limit != null) {
-            parameters.append("limit", limit.toString())
-          }
-          if (maxId != null) {
-            parameters.append("max_id", maxId)
-          }
-          if (sinceId != null) {
-            parameters.append("since_id", sinceId)
-          }
-        }
-      }
-      return when (response.status.value) {
-        200 -> GetStatusQuotesResponseSuccess(response.body<List<Status>>(), response.headers)
-        401, 404, 429, 503 -> GetStatusQuotesResponseFailure401(response.body<Error>(), response.headers)
-        410 -> GetStatusQuotesResponseFailure410(response.headers)
-        422 -> GetStatusQuotesResponseFailure(response.body<ValidationError>(), response.headers)
-        else -> GetStatusQuotesResponseUnknownFailure(response.status.value, response.headers)
-      }
-    }
-    catch(e: CancellationException) {
-      throw e
-    }
-    catch(e: Exception) {
-      configuration.exceptionLogger(e)
-      return GetStatusQuotesResponseUnknownFailure(500)
-    }
-  }
+  ): GetStatusQuotesResponse
 
   /**
    * Revoke a quote post
    */
-  public suspend fun postStatusesByIdQuotesByQuotingStatusIdRevoke(id: String, quotingStatusId: String): PostStatusesByIdQuotesByQuotingStatusIdRevokeResponse {
-    try {
-      val response = configuration.client.post("api/v1/statuses/{id}/quotes/{quoting_status_id}/revoke".replace("/{id}", "/${id.encodeURLPathPart()}").replace("/{quoting_status_id}", "/${quotingStatusId.encodeURLPathPart()}")) {
-      }
-      return when (response.status.value) {
-        200 -> PostStatusesByIdQuotesByQuotingStatusIdRevokeResponseSuccess(response.body<Status>(), response.headers)
-        401, 403, 404, 429, 503 -> PostStatusesByIdQuotesByQuotingStatusIdRevokeResponseFailure401(response.body<Error>(), response.headers)
-        410 -> PostStatusesByIdQuotesByQuotingStatusIdRevokeResponseFailure410(response.headers)
-        422 -> PostStatusesByIdQuotesByQuotingStatusIdRevokeResponseFailure(response.body<ValidationError>(), response.headers)
-        else -> PostStatusesByIdQuotesByQuotingStatusIdRevokeResponseUnknownFailure(response.status.value, response.headers)
-      }
-    }
-    catch(e: CancellationException) {
-      throw e
-    }
-    catch(e: Exception) {
-      configuration.exceptionLogger(e)
-      return PostStatusesByIdQuotesByQuotingStatusIdRevokeResponseUnknownFailure(500)
-    }
-  }
+  public suspend fun postStatusesByIdQuotesByQuotingStatusIdRevoke(id: String, quotingStatusId: String): PostStatusesByIdQuotesByQuotingStatusIdRevokeResponse
 
   /**
    * Boost a status
    */
-  public suspend fun postStatusReblog(request: PostStatusReblogRequest, id: String): PostStatusReblogResponse {
-    try {
-      val response = configuration.client.post("api/v1/statuses/{id}/reblog".replace("/{id}", "/${id.encodeURLPathPart()}")) {
-        setBody(request)
-        contentType(ContentType.Application.Json)
-      }
-      return when (response.status.value) {
-        200 -> PostStatusReblogResponseSuccess(response.body<Status>(), response.headers)
-        401, 404, 429, 503 -> PostStatusReblogResponseFailure401(response.body<Error>(), response.headers)
-        410 -> PostStatusReblogResponseFailure410(response.headers)
-        422 -> PostStatusReblogResponseFailure(response.body<ValidationError>(), response.headers)
-        else -> PostStatusReblogResponseUnknownFailure(response.status.value, response.headers)
-      }
-    }
-    catch(e: CancellationException) {
-      throw e
-    }
-    catch(e: Exception) {
-      configuration.exceptionLogger(e)
-      return PostStatusReblogResponseUnknownFailure(500)
-    }
-  }
+  public suspend fun postStatusReblog(request: PostStatusReblogRequest, id: String): PostStatusReblogResponse
 
   /**
    * See who boosted a status
@@ -478,207 +133,42 @@ public class StatusesClient(
     limit: Long? = 40,
     maxId: String? = null,
     sinceId: String? = null,
-  ): GetStatusRebloggedByResponse {
-    try {
-      val response = configuration.client.`get`("api/v1/statuses/{id}/reblogged_by".replace("/{id}", "/${id.encodeURLPathPart()}")) {
-        url {
-          if (limit != null) {
-            parameters.append("limit", limit.toString())
-          }
-          if (maxId != null) {
-            parameters.append("max_id", maxId)
-          }
-          if (sinceId != null) {
-            parameters.append("since_id", sinceId)
-          }
-        }
-      }
-      return when (response.status.value) {
-        200 -> GetStatusRebloggedByResponseSuccess(response.body<List<Account>>(), response.headers)
-        401, 404, 429, 503 -> GetStatusRebloggedByResponseFailure401(response.body<Error>(), response.headers)
-        410 -> GetStatusRebloggedByResponseFailure410(response.headers)
-        422 -> GetStatusRebloggedByResponseFailure(response.body<ValidationError>(), response.headers)
-        else -> GetStatusRebloggedByResponseUnknownFailure(response.status.value, response.headers)
-      }
-    }
-    catch(e: CancellationException) {
-      throw e
-    }
-    catch(e: Exception) {
-      configuration.exceptionLogger(e)
-      return GetStatusRebloggedByResponseUnknownFailure(500)
-    }
-  }
+  ): GetStatusRebloggedByResponse
 
   /**
    * View status source
    */
-  public suspend fun getStatusSource(id: String): GetStatusSourceResponse {
-    try {
-      val response = configuration.client.`get`("api/v1/statuses/{id}/source".replace("/{id}", "/${id.encodeURLPathPart()}")) {
-      }
-      return when (response.status.value) {
-        200 -> GetStatusSourceResponseSuccess(response.body<StatusSource>(), response.headers)
-        401, 404, 429, 503 -> GetStatusSourceResponseFailure401(response.body<Error>(), response.headers)
-        410 -> GetStatusSourceResponseFailure410(response.headers)
-        422 -> GetStatusSourceResponseFailure(response.body<ValidationError>(), response.headers)
-        else -> GetStatusSourceResponseUnknownFailure(response.status.value, response.headers)
-      }
-    }
-    catch(e: CancellationException) {
-      throw e
-    }
-    catch(e: Exception) {
-      configuration.exceptionLogger(e)
-      return GetStatusSourceResponseUnknownFailure(500)
-    }
-  }
+  public suspend fun getStatusSource(id: String): GetStatusSourceResponse
 
   /**
    * Translate a status
    */
-  public suspend fun postStatusTranslate(request: PostStatusTranslateRequest, id: String): PostStatusTranslateResponse {
-    try {
-      val response = configuration.client.post("api/v1/statuses/{id}/translate".replace("/{id}", "/${id.encodeURLPathPart()}")) {
-        setBody(request)
-        contentType(ContentType.Application.Json)
-      }
-      return when (response.status.value) {
-        200 -> PostStatusTranslateResponseSuccess(response.body<Translation>(), response.headers)
-        401, 403, 404, 429, 503 -> PostStatusTranslateResponseFailure401(response.body<Error>(), response.headers)
-        410 -> PostStatusTranslateResponseFailure410(response.headers)
-        422 -> PostStatusTranslateResponseFailure(response.body<ValidationError>(), response.headers)
-        else -> PostStatusTranslateResponseUnknownFailure(response.status.value, response.headers)
-      }
-    }
-    catch(e: CancellationException) {
-      throw e
-    }
-    catch(e: Exception) {
-      configuration.exceptionLogger(e)
-      return PostStatusTranslateResponseUnknownFailure(500)
-    }
-  }
+  public suspend fun postStatusTranslate(request: PostStatusTranslateRequest, id: String): PostStatusTranslateResponse
 
   /**
    * Undo bookmark of a status
    */
-  public suspend fun postStatusUnbookmark(id: String): PostStatusUnbookmarkResponse {
-    try {
-      val response = configuration.client.post("api/v1/statuses/{id}/unbookmark".replace("/{id}", "/${id.encodeURLPathPart()}")) {
-      }
-      return when (response.status.value) {
-        200 -> PostStatusUnbookmarkResponseSuccess(response.body<Status>(), response.headers)
-        401, 404, 429, 503 -> PostStatusUnbookmarkResponseFailure401(response.body<Error>(), response.headers)
-        410 -> PostStatusUnbookmarkResponseFailure410(response.headers)
-        422 -> PostStatusUnbookmarkResponseFailure(response.body<ValidationError>(), response.headers)
-        else -> PostStatusUnbookmarkResponseUnknownFailure(response.status.value, response.headers)
-      }
-    }
-    catch(e: CancellationException) {
-      throw e
-    }
-    catch(e: Exception) {
-      configuration.exceptionLogger(e)
-      return PostStatusUnbookmarkResponseUnknownFailure(500)
-    }
-  }
+  public suspend fun postStatusUnbookmark(id: String): PostStatusUnbookmarkResponse
 
   /**
    * Undo favourite of a status
    */
-  public suspend fun postStatusUnfavourite(id: String): PostStatusUnfavouriteResponse {
-    try {
-      val response = configuration.client.post("api/v1/statuses/{id}/unfavourite".replace("/{id}", "/${id.encodeURLPathPart()}")) {
-      }
-      return when (response.status.value) {
-        200 -> PostStatusUnfavouriteResponseSuccess(response.body<Status>(), response.headers)
-        401, 404, 429, 503 -> PostStatusUnfavouriteResponseFailure401(response.body<Error>(), response.headers)
-        410 -> PostStatusUnfavouriteResponseFailure410(response.headers)
-        422 -> PostStatusUnfavouriteResponseFailure(response.body<ValidationError>(), response.headers)
-        else -> PostStatusUnfavouriteResponseUnknownFailure(response.status.value, response.headers)
-      }
-    }
-    catch(e: CancellationException) {
-      throw e
-    }
-    catch(e: Exception) {
-      configuration.exceptionLogger(e)
-      return PostStatusUnfavouriteResponseUnknownFailure(500)
-    }
-  }
+  public suspend fun postStatusUnfavourite(id: String): PostStatusUnfavouriteResponse
 
   /**
    * Unmute a conversation
    */
-  public suspend fun postStatusUnmute(id: String): PostStatusUnmuteResponse {
-    try {
-      val response = configuration.client.post("api/v1/statuses/{id}/unmute".replace("/{id}", "/${id.encodeURLPathPart()}")) {
-      }
-      return when (response.status.value) {
-        200 -> PostStatusUnmuteResponseSuccess(response.body<Status>(), response.headers)
-        401, 404, 429, 503 -> PostStatusUnmuteResponseFailure401(response.body<Error>(), response.headers)
-        410 -> PostStatusUnmuteResponseFailure410(response.headers)
-        422 -> PostStatusUnmuteResponseFailure(response.body<ValidationError>(), response.headers)
-        else -> PostStatusUnmuteResponseUnknownFailure(response.status.value, response.headers)
-      }
-    }
-    catch(e: CancellationException) {
-      throw e
-    }
-    catch(e: Exception) {
-      configuration.exceptionLogger(e)
-      return PostStatusUnmuteResponseUnknownFailure(500)
-    }
-  }
+  public suspend fun postStatusUnmute(id: String): PostStatusUnmuteResponse
 
   /**
    * Unpin status from profile
    */
-  public suspend fun postStatusUnpin(id: String): PostStatusUnpinResponse {
-    try {
-      val response = configuration.client.post("api/v1/statuses/{id}/unpin".replace("/{id}", "/${id.encodeURLPathPart()}")) {
-      }
-      return when (response.status.value) {
-        200 -> PostStatusUnpinResponseSuccess(response.body<Status>(), response.headers)
-        401, 404, 429, 503 -> PostStatusUnpinResponseFailure401(response.body<Error>(), response.headers)
-        410 -> PostStatusUnpinResponseFailure410(response.headers)
-        422 -> PostStatusUnpinResponseFailure(response.body<ValidationError>(), response.headers)
-        else -> PostStatusUnpinResponseUnknownFailure(response.status.value, response.headers)
-      }
-    }
-    catch(e: CancellationException) {
-      throw e
-    }
-    catch(e: Exception) {
-      configuration.exceptionLogger(e)
-      return PostStatusUnpinResponseUnknownFailure(500)
-    }
-  }
+  public suspend fun postStatusUnpin(id: String): PostStatusUnpinResponse
 
   /**
    * Undo boost of a status
    */
-  public suspend fun postStatusUnreblog(id: String): PostStatusUnreblogResponse {
-    try {
-      val response = configuration.client.post("api/v1/statuses/{id}/unreblog".replace("/{id}", "/${id.encodeURLPathPart()}")) {
-      }
-      return when (response.status.value) {
-        200 -> PostStatusUnreblogResponseSuccess(response.body<Status>(), response.headers)
-        401, 404, 429, 503 -> PostStatusUnreblogResponseFailure401(response.body<Error>(), response.headers)
-        410 -> PostStatusUnreblogResponseFailure410(response.headers)
-        422 -> PostStatusUnreblogResponseFailure(response.body<ValidationError>(), response.headers)
-        else -> PostStatusUnreblogResponseUnknownFailure(response.status.value, response.headers)
-      }
-    }
-    catch(e: CancellationException) {
-      throw e
-    }
-    catch(e: Exception) {
-      configuration.exceptionLogger(e)
-      return PostStatusUnreblogResponseUnknownFailure(500)
-    }
-  }
+  public suspend fun postStatusUnreblog(id: String): PostStatusUnreblogResponse
 
   @Serializable
   public sealed class GetStatusesResponse {
@@ -2092,4 +1582,582 @@ public class StatusesClient(
     @Transient
     override val headers: Headers = Headers.Empty,
   ) : PostStatusUnreblogResponse()
+}
+
+public fun StatusesClient(configuration: ClientConfiguration = defaultClientConfiguration): StatusesClient = DefaultStatusesClient(configuration)
+
+public class DefaultStatusesClient(
+  private val configuration: ClientConfiguration = defaultClientConfiguration,
+) : StatusesClient {
+  override suspend fun getStatuses(id: List<String>?): StatusesClient.GetStatusesResponse {
+    try {
+      val response = configuration.client.`get`("api/v1/statuses") {
+        url {
+          if (id != null) {
+            parameters.appendAll("id", id)
+          }
+        }
+      }
+      return when (response.status.value) {
+        200 -> StatusesClient.GetStatusesResponseSuccess(response.body<List<Status>>(), response.headers)
+        401, 404, 429, 503 -> StatusesClient.GetStatusesResponseFailure401(response.body<Error>(), response.headers)
+        410 -> StatusesClient.GetStatusesResponseFailure410(response.headers)
+        422 -> StatusesClient.GetStatusesResponseFailure(response.body<ValidationError>(), response.headers)
+        else -> StatusesClient.GetStatusesResponseUnknownFailure(response.status.value, response.headers)
+      }
+    }
+    catch(e: CancellationException) {
+      throw e
+    }
+    catch(e: Exception) {
+      configuration.exceptionLogger(e)
+      return StatusesClient.GetStatusesResponseUnknownFailure(500)
+    }
+  }
+
+  override suspend fun createStatus(request: CreateStatusRequest, idempotencyKey: JsonElement?): StatusesClient.CreateStatusResponse {
+    try {
+      val response = configuration.client.post("api/v1/statuses") {
+        if (idempotencyKey != null) {
+          setHeader("Idempotency-Key", idempotencyKey)
+        }
+        setBody(request)
+        contentType(ContentType.Application.Json)
+      }
+      return when (response.status.value) {
+        200 -> StatusesClient.CreateStatusResponseSuccess(response.body<CreateStatusResponse>(), response.headers)
+        401, 404, 422, 429, 503 -> StatusesClient.CreateStatusResponseFailure401(response.body<Error>(), response.headers)
+        410 -> StatusesClient.CreateStatusResponseFailure(response.headers)
+        else -> StatusesClient.CreateStatusResponseUnknownFailure(response.status.value, response.headers)
+      }
+    }
+    catch(e: CancellationException) {
+      throw e
+    }
+    catch(e: Exception) {
+      configuration.exceptionLogger(e)
+      return StatusesClient.CreateStatusResponseUnknownFailure(500)
+    }
+  }
+
+  override suspend fun getStatus(id: String): StatusesClient.GetStatusResponse {
+    try {
+      val response = configuration.client.`get`("api/v1/statuses/{id}".replace("/{id}", "/${id.encodeURLPathPart()}")) {
+      }
+      return when (response.status.value) {
+        200 -> StatusesClient.GetStatusResponseSuccess(response.body<Status>(), response.headers)
+        401, 404, 429, 503 -> StatusesClient.GetStatusResponseFailure401(response.body<Error>(), response.headers)
+        410 -> StatusesClient.GetStatusResponseFailure410(response.headers)
+        422 -> StatusesClient.GetStatusResponseFailure(response.body<ValidationError>(), response.headers)
+        else -> StatusesClient.GetStatusResponseUnknownFailure(response.status.value, response.headers)
+      }
+    }
+    catch(e: CancellationException) {
+      throw e
+    }
+    catch(e: Exception) {
+      configuration.exceptionLogger(e)
+      return StatusesClient.GetStatusResponseUnknownFailure(500)
+    }
+  }
+
+  override suspend fun updateStatus(request: StatusesClient.UpdateStatusRequest, id: String): StatusesClient.UpdateStatusResponse {
+    try {
+      val response = configuration.client.put("api/v1/statuses/{id}".replace("/{id}", "/${id.encodeURLPathPart()}")) {
+        setBody(request)
+        contentType(ContentType.Application.Json)
+      }
+      return when (response.status.value) {
+        200 -> StatusesClient.UpdateStatusResponseSuccess(response.body<Status>(), response.headers)
+        401, 404, 422, 429, 503 -> StatusesClient.UpdateStatusResponseFailure401(response.body<Error>(), response.headers)
+        410 -> StatusesClient.UpdateStatusResponseFailure(response.headers)
+        else -> StatusesClient.UpdateStatusResponseUnknownFailure(response.status.value, response.headers)
+      }
+    }
+    catch(e: CancellationException) {
+      throw e
+    }
+    catch(e: Exception) {
+      configuration.exceptionLogger(e)
+      return StatusesClient.UpdateStatusResponseUnknownFailure(500)
+    }
+  }
+
+  override suspend fun deleteStatus(id: String, deleteMedia: Boolean?): StatusesClient.DeleteStatusResponse {
+    try {
+      val response = configuration.client.delete("api/v1/statuses/{id}".replace("/{id}", "/${id.encodeURLPathPart()}")) {
+        url {
+          if (deleteMedia != null) {
+            parameters.append("delete_media", deleteMedia.toString())
+          }
+        }
+      }
+      return when (response.status.value) {
+        200 -> StatusesClient.DeleteStatusResponseSuccess(response.body<Status>(), response.headers)
+        401, 404, 429, 503 -> StatusesClient.DeleteStatusResponseFailure401(response.body<Error>(), response.headers)
+        410 -> StatusesClient.DeleteStatusResponseFailure410(response.headers)
+        422 -> StatusesClient.DeleteStatusResponseFailure(response.body<ValidationError>(), response.headers)
+        else -> StatusesClient.DeleteStatusResponseUnknownFailure(response.status.value, response.headers)
+      }
+    }
+    catch(e: CancellationException) {
+      throw e
+    }
+    catch(e: Exception) {
+      configuration.exceptionLogger(e)
+      return StatusesClient.DeleteStatusResponseUnknownFailure(500)
+    }
+  }
+
+  override suspend fun postStatusBookmark(id: String): StatusesClient.PostStatusBookmarkResponse {
+    try {
+      val response = configuration.client.post("api/v1/statuses/{id}/bookmark".replace("/{id}", "/${id.encodeURLPathPart()}")) {
+      }
+      return when (response.status.value) {
+        200 -> StatusesClient.PostStatusBookmarkResponseSuccess(response.body<Status>(), response.headers)
+        401, 404, 429, 503 -> StatusesClient.PostStatusBookmarkResponseFailure401(response.body<Error>(), response.headers)
+        410 -> StatusesClient.PostStatusBookmarkResponseFailure410(response.headers)
+        422 -> StatusesClient.PostStatusBookmarkResponseFailure(response.body<ValidationError>(), response.headers)
+        else -> StatusesClient.PostStatusBookmarkResponseUnknownFailure(response.status.value, response.headers)
+      }
+    }
+    catch(e: CancellationException) {
+      throw e
+    }
+    catch(e: Exception) {
+      configuration.exceptionLogger(e)
+      return StatusesClient.PostStatusBookmarkResponseUnknownFailure(500)
+    }
+  }
+
+  override suspend fun getStatusContext(id: String): StatusesClient.GetStatusContextResponse {
+    try {
+      val response = configuration.client.`get`("api/v1/statuses/{id}/context".replace("/{id}", "/${id.encodeURLPathPart()}")) {
+      }
+      return when (response.status.value) {
+        200 -> StatusesClient.GetStatusContextResponseSuccess(response.body<Context>(), response.headers)
+        401, 404, 429, 503 -> StatusesClient.GetStatusContextResponseFailure401(response.body<Error>(), response.headers)
+        410 -> StatusesClient.GetStatusContextResponseFailure410(response.headers)
+        422 -> StatusesClient.GetStatusContextResponseFailure(response.body<ValidationError>(), response.headers)
+        else -> StatusesClient.GetStatusContextResponseUnknownFailure(response.status.value, response.headers)
+      }
+    }
+    catch(e: CancellationException) {
+      throw e
+    }
+    catch(e: Exception) {
+      configuration.exceptionLogger(e)
+      return StatusesClient.GetStatusContextResponseUnknownFailure(500)
+    }
+  }
+
+  override suspend fun postStatusFavourite(id: String): StatusesClient.PostStatusFavouriteResponse {
+    try {
+      val response = configuration.client.post("api/v1/statuses/{id}/favourite".replace("/{id}", "/${id.encodeURLPathPart()}")) {
+      }
+      return when (response.status.value) {
+        200 -> StatusesClient.PostStatusFavouriteResponseSuccess(response.body<Status>(), response.headers)
+        401, 404, 429, 503 -> StatusesClient.PostStatusFavouriteResponseFailure401(response.body<Error>(), response.headers)
+        410 -> StatusesClient.PostStatusFavouriteResponseFailure410(response.headers)
+        422 -> StatusesClient.PostStatusFavouriteResponseFailure(response.body<ValidationError>(), response.headers)
+        else -> StatusesClient.PostStatusFavouriteResponseUnknownFailure(response.status.value, response.headers)
+      }
+    }
+    catch(e: CancellationException) {
+      throw e
+    }
+    catch(e: Exception) {
+      configuration.exceptionLogger(e)
+      return StatusesClient.PostStatusFavouriteResponseUnknownFailure(500)
+    }
+  }
+
+  override suspend fun getStatusFavouritedBy(
+    id: String,
+    limit: Long?,
+    maxId: String?,
+    sinceId: String?,
+  ): StatusesClient.GetStatusFavouritedByResponse {
+    try {
+      val response = configuration.client.`get`("api/v1/statuses/{id}/favourited_by".replace("/{id}", "/${id.encodeURLPathPart()}")) {
+        url {
+          if (limit != null) {
+            parameters.append("limit", limit.toString())
+          }
+          if (maxId != null) {
+            parameters.append("max_id", maxId)
+          }
+          if (sinceId != null) {
+            parameters.append("since_id", sinceId)
+          }
+        }
+      }
+      return when (response.status.value) {
+        200 -> StatusesClient.GetStatusFavouritedByResponseSuccess(response.body<List<Account>>(), response.headers)
+        401, 404, 429, 503 -> StatusesClient.GetStatusFavouritedByResponseFailure401(response.body<Error>(), response.headers)
+        410 -> StatusesClient.GetStatusFavouritedByResponseFailure410(response.headers)
+        422 -> StatusesClient.GetStatusFavouritedByResponseFailure(response.body<ValidationError>(), response.headers)
+        else -> StatusesClient.GetStatusFavouritedByResponseUnknownFailure(response.status.value, response.headers)
+      }
+    }
+    catch(e: CancellationException) {
+      throw e
+    }
+    catch(e: Exception) {
+      configuration.exceptionLogger(e)
+      return StatusesClient.GetStatusFavouritedByResponseUnknownFailure(500)
+    }
+  }
+
+  override suspend fun getStatusHistory(id: String): StatusesClient.GetStatusHistoryResponse {
+    try {
+      val response = configuration.client.`get`("api/v1/statuses/{id}/history".replace("/{id}", "/${id.encodeURLPathPart()}")) {
+      }
+      return when (response.status.value) {
+        200 -> StatusesClient.GetStatusHistoryResponseSuccess(response.body<List<StatusEdit>>(), response.headers)
+        401, 404, 429, 503 -> StatusesClient.GetStatusHistoryResponseFailure401(response.body<Error>(), response.headers)
+        410 -> StatusesClient.GetStatusHistoryResponseFailure410(response.headers)
+        422 -> StatusesClient.GetStatusHistoryResponseFailure(response.body<ValidationError>(), response.headers)
+        else -> StatusesClient.GetStatusHistoryResponseUnknownFailure(response.status.value, response.headers)
+      }
+    }
+    catch(e: CancellationException) {
+      throw e
+    }
+    catch(e: Exception) {
+      configuration.exceptionLogger(e)
+      return StatusesClient.GetStatusHistoryResponseUnknownFailure(500)
+    }
+  }
+
+  override suspend fun updateStatusInteractionPolicy(request: StatusesClient.UpdateStatusInteractionPolicyRequest, id: String): StatusesClient.UpdateStatusInteractionPolicyResponse {
+    try {
+      val response = configuration.client.put("api/v1/statuses/{id}/interaction_policy".replace("/{id}", "/${id.encodeURLPathPart()}")) {
+        setBody(request)
+        contentType(ContentType.Application.Json)
+      }
+      return when (response.status.value) {
+        200 -> StatusesClient.UpdateStatusInteractionPolicyResponseSuccess(response.body<Status>(), response.headers)
+        401, 404, 429, 503 -> StatusesClient.UpdateStatusInteractionPolicyResponseFailure401(response.body<Error>(), response.headers)
+        410 -> StatusesClient.UpdateStatusInteractionPolicyResponseFailure410(response.headers)
+        422 -> StatusesClient.UpdateStatusInteractionPolicyResponseFailure(response.body<ValidationError>(), response.headers)
+        else -> StatusesClient.UpdateStatusInteractionPolicyResponseUnknownFailure(response.status.value, response.headers)
+      }
+    }
+    catch(e: CancellationException) {
+      throw e
+    }
+    catch(e: Exception) {
+      configuration.exceptionLogger(e)
+      return StatusesClient.UpdateStatusInteractionPolicyResponseUnknownFailure(500)
+    }
+  }
+
+  override suspend fun postStatusMute(id: String): StatusesClient.PostStatusMuteResponse {
+    try {
+      val response = configuration.client.post("api/v1/statuses/{id}/mute".replace("/{id}", "/${id.encodeURLPathPart()}")) {
+      }
+      return when (response.status.value) {
+        200 -> StatusesClient.PostStatusMuteResponseSuccess(response.body<Status>(), response.headers)
+        401, 404, 429, 503 -> StatusesClient.PostStatusMuteResponseFailure401(response.body<Error>(), response.headers)
+        410 -> StatusesClient.PostStatusMuteResponseFailure410(response.headers)
+        422 -> StatusesClient.PostStatusMuteResponseFailure(response.body<ValidationError>(), response.headers)
+        else -> StatusesClient.PostStatusMuteResponseUnknownFailure(response.status.value, response.headers)
+      }
+    }
+    catch(e: CancellationException) {
+      throw e
+    }
+    catch(e: Exception) {
+      configuration.exceptionLogger(e)
+      return StatusesClient.PostStatusMuteResponseUnknownFailure(500)
+    }
+  }
+
+  override suspend fun postStatusPin(id: String): StatusesClient.PostStatusPinResponse {
+    try {
+      val response = configuration.client.post("api/v1/statuses/{id}/pin".replace("/{id}", "/${id.encodeURLPathPart()}")) {
+      }
+      return when (response.status.value) {
+        200 -> StatusesClient.PostStatusPinResponseSuccess(response.body<Status>(), response.headers)
+        401, 404, 422, 429, 503 -> StatusesClient.PostStatusPinResponseFailure401(response.body<Error>(), response.headers)
+        410 -> StatusesClient.PostStatusPinResponseFailure(response.headers)
+        else -> StatusesClient.PostStatusPinResponseUnknownFailure(response.status.value, response.headers)
+      }
+    }
+    catch(e: CancellationException) {
+      throw e
+    }
+    catch(e: Exception) {
+      configuration.exceptionLogger(e)
+      return StatusesClient.PostStatusPinResponseUnknownFailure(500)
+    }
+  }
+
+  override suspend fun getStatusQuotes(
+    id: String,
+    limit: Long?,
+    maxId: String?,
+    sinceId: String?,
+  ): StatusesClient.GetStatusQuotesResponse {
+    try {
+      val response = configuration.client.`get`("api/v1/statuses/{id}/quotes".replace("/{id}", "/${id.encodeURLPathPart()}")) {
+        url {
+          if (limit != null) {
+            parameters.append("limit", limit.toString())
+          }
+          if (maxId != null) {
+            parameters.append("max_id", maxId)
+          }
+          if (sinceId != null) {
+            parameters.append("since_id", sinceId)
+          }
+        }
+      }
+      return when (response.status.value) {
+        200 -> StatusesClient.GetStatusQuotesResponseSuccess(response.body<List<Status>>(), response.headers)
+        401, 404, 429, 503 -> StatusesClient.GetStatusQuotesResponseFailure401(response.body<Error>(), response.headers)
+        410 -> StatusesClient.GetStatusQuotesResponseFailure410(response.headers)
+        422 -> StatusesClient.GetStatusQuotesResponseFailure(response.body<ValidationError>(), response.headers)
+        else -> StatusesClient.GetStatusQuotesResponseUnknownFailure(response.status.value, response.headers)
+      }
+    }
+    catch(e: CancellationException) {
+      throw e
+    }
+    catch(e: Exception) {
+      configuration.exceptionLogger(e)
+      return StatusesClient.GetStatusQuotesResponseUnknownFailure(500)
+    }
+  }
+
+  override suspend fun postStatusesByIdQuotesByQuotingStatusIdRevoke(id: String, quotingStatusId: String): StatusesClient.PostStatusesByIdQuotesByQuotingStatusIdRevokeResponse {
+    try {
+      val response = configuration.client.post("api/v1/statuses/{id}/quotes/{quoting_status_id}/revoke".replace("/{id}", "/${id.encodeURLPathPart()}").replace("/{quoting_status_id}", "/${quotingStatusId.encodeURLPathPart()}")) {
+      }
+      return when (response.status.value) {
+        200 -> StatusesClient.PostStatusesByIdQuotesByQuotingStatusIdRevokeResponseSuccess(response.body<Status>(), response.headers)
+        401, 403, 404, 429, 503 -> StatusesClient.PostStatusesByIdQuotesByQuotingStatusIdRevokeResponseFailure401(response.body<Error>(), response.headers)
+        410 -> StatusesClient.PostStatusesByIdQuotesByQuotingStatusIdRevokeResponseFailure410(response.headers)
+        422 -> StatusesClient.PostStatusesByIdQuotesByQuotingStatusIdRevokeResponseFailure(response.body<ValidationError>(), response.headers)
+        else -> StatusesClient.PostStatusesByIdQuotesByQuotingStatusIdRevokeResponseUnknownFailure(response.status.value, response.headers)
+      }
+    }
+    catch(e: CancellationException) {
+      throw e
+    }
+    catch(e: Exception) {
+      configuration.exceptionLogger(e)
+      return StatusesClient.PostStatusesByIdQuotesByQuotingStatusIdRevokeResponseUnknownFailure(500)
+    }
+  }
+
+  override suspend fun postStatusReblog(request: StatusesClient.PostStatusReblogRequest, id: String): StatusesClient.PostStatusReblogResponse {
+    try {
+      val response = configuration.client.post("api/v1/statuses/{id}/reblog".replace("/{id}", "/${id.encodeURLPathPart()}")) {
+        setBody(request)
+        contentType(ContentType.Application.Json)
+      }
+      return when (response.status.value) {
+        200 -> StatusesClient.PostStatusReblogResponseSuccess(response.body<Status>(), response.headers)
+        401, 404, 429, 503 -> StatusesClient.PostStatusReblogResponseFailure401(response.body<Error>(), response.headers)
+        410 -> StatusesClient.PostStatusReblogResponseFailure410(response.headers)
+        422 -> StatusesClient.PostStatusReblogResponseFailure(response.body<ValidationError>(), response.headers)
+        else -> StatusesClient.PostStatusReblogResponseUnknownFailure(response.status.value, response.headers)
+      }
+    }
+    catch(e: CancellationException) {
+      throw e
+    }
+    catch(e: Exception) {
+      configuration.exceptionLogger(e)
+      return StatusesClient.PostStatusReblogResponseUnknownFailure(500)
+    }
+  }
+
+  override suspend fun getStatusRebloggedBy(
+    id: String,
+    limit: Long?,
+    maxId: String?,
+    sinceId: String?,
+  ): StatusesClient.GetStatusRebloggedByResponse {
+    try {
+      val response = configuration.client.`get`("api/v1/statuses/{id}/reblogged_by".replace("/{id}", "/${id.encodeURLPathPart()}")) {
+        url {
+          if (limit != null) {
+            parameters.append("limit", limit.toString())
+          }
+          if (maxId != null) {
+            parameters.append("max_id", maxId)
+          }
+          if (sinceId != null) {
+            parameters.append("since_id", sinceId)
+          }
+        }
+      }
+      return when (response.status.value) {
+        200 -> StatusesClient.GetStatusRebloggedByResponseSuccess(response.body<List<Account>>(), response.headers)
+        401, 404, 429, 503 -> StatusesClient.GetStatusRebloggedByResponseFailure401(response.body<Error>(), response.headers)
+        410 -> StatusesClient.GetStatusRebloggedByResponseFailure410(response.headers)
+        422 -> StatusesClient.GetStatusRebloggedByResponseFailure(response.body<ValidationError>(), response.headers)
+        else -> StatusesClient.GetStatusRebloggedByResponseUnknownFailure(response.status.value, response.headers)
+      }
+    }
+    catch(e: CancellationException) {
+      throw e
+    }
+    catch(e: Exception) {
+      configuration.exceptionLogger(e)
+      return StatusesClient.GetStatusRebloggedByResponseUnknownFailure(500)
+    }
+  }
+
+  override suspend fun getStatusSource(id: String): StatusesClient.GetStatusSourceResponse {
+    try {
+      val response = configuration.client.`get`("api/v1/statuses/{id}/source".replace("/{id}", "/${id.encodeURLPathPart()}")) {
+      }
+      return when (response.status.value) {
+        200 -> StatusesClient.GetStatusSourceResponseSuccess(response.body<StatusSource>(), response.headers)
+        401, 404, 429, 503 -> StatusesClient.GetStatusSourceResponseFailure401(response.body<Error>(), response.headers)
+        410 -> StatusesClient.GetStatusSourceResponseFailure410(response.headers)
+        422 -> StatusesClient.GetStatusSourceResponseFailure(response.body<ValidationError>(), response.headers)
+        else -> StatusesClient.GetStatusSourceResponseUnknownFailure(response.status.value, response.headers)
+      }
+    }
+    catch(e: CancellationException) {
+      throw e
+    }
+    catch(e: Exception) {
+      configuration.exceptionLogger(e)
+      return StatusesClient.GetStatusSourceResponseUnknownFailure(500)
+    }
+  }
+
+  override suspend fun postStatusTranslate(request: StatusesClient.PostStatusTranslateRequest, id: String): StatusesClient.PostStatusTranslateResponse {
+    try {
+      val response = configuration.client.post("api/v1/statuses/{id}/translate".replace("/{id}", "/${id.encodeURLPathPart()}")) {
+        setBody(request)
+        contentType(ContentType.Application.Json)
+      }
+      return when (response.status.value) {
+        200 -> StatusesClient.PostStatusTranslateResponseSuccess(response.body<Translation>(), response.headers)
+        401, 403, 404, 429, 503 -> StatusesClient.PostStatusTranslateResponseFailure401(response.body<Error>(), response.headers)
+        410 -> StatusesClient.PostStatusTranslateResponseFailure410(response.headers)
+        422 -> StatusesClient.PostStatusTranslateResponseFailure(response.body<ValidationError>(), response.headers)
+        else -> StatusesClient.PostStatusTranslateResponseUnknownFailure(response.status.value, response.headers)
+      }
+    }
+    catch(e: CancellationException) {
+      throw e
+    }
+    catch(e: Exception) {
+      configuration.exceptionLogger(e)
+      return StatusesClient.PostStatusTranslateResponseUnknownFailure(500)
+    }
+  }
+
+  override suspend fun postStatusUnbookmark(id: String): StatusesClient.PostStatusUnbookmarkResponse {
+    try {
+      val response = configuration.client.post("api/v1/statuses/{id}/unbookmark".replace("/{id}", "/${id.encodeURLPathPart()}")) {
+      }
+      return when (response.status.value) {
+        200 -> StatusesClient.PostStatusUnbookmarkResponseSuccess(response.body<Status>(), response.headers)
+        401, 404, 429, 503 -> StatusesClient.PostStatusUnbookmarkResponseFailure401(response.body<Error>(), response.headers)
+        410 -> StatusesClient.PostStatusUnbookmarkResponseFailure410(response.headers)
+        422 -> StatusesClient.PostStatusUnbookmarkResponseFailure(response.body<ValidationError>(), response.headers)
+        else -> StatusesClient.PostStatusUnbookmarkResponseUnknownFailure(response.status.value, response.headers)
+      }
+    }
+    catch(e: CancellationException) {
+      throw e
+    }
+    catch(e: Exception) {
+      configuration.exceptionLogger(e)
+      return StatusesClient.PostStatusUnbookmarkResponseUnknownFailure(500)
+    }
+  }
+
+  override suspend fun postStatusUnfavourite(id: String): StatusesClient.PostStatusUnfavouriteResponse {
+    try {
+      val response = configuration.client.post("api/v1/statuses/{id}/unfavourite".replace("/{id}", "/${id.encodeURLPathPart()}")) {
+      }
+      return when (response.status.value) {
+        200 -> StatusesClient.PostStatusUnfavouriteResponseSuccess(response.body<Status>(), response.headers)
+        401, 404, 429, 503 -> StatusesClient.PostStatusUnfavouriteResponseFailure401(response.body<Error>(), response.headers)
+        410 -> StatusesClient.PostStatusUnfavouriteResponseFailure410(response.headers)
+        422 -> StatusesClient.PostStatusUnfavouriteResponseFailure(response.body<ValidationError>(), response.headers)
+        else -> StatusesClient.PostStatusUnfavouriteResponseUnknownFailure(response.status.value, response.headers)
+      }
+    }
+    catch(e: CancellationException) {
+      throw e
+    }
+    catch(e: Exception) {
+      configuration.exceptionLogger(e)
+      return StatusesClient.PostStatusUnfavouriteResponseUnknownFailure(500)
+    }
+  }
+
+  override suspend fun postStatusUnmute(id: String): StatusesClient.PostStatusUnmuteResponse {
+    try {
+      val response = configuration.client.post("api/v1/statuses/{id}/unmute".replace("/{id}", "/${id.encodeURLPathPart()}")) {
+      }
+      return when (response.status.value) {
+        200 -> StatusesClient.PostStatusUnmuteResponseSuccess(response.body<Status>(), response.headers)
+        401, 404, 429, 503 -> StatusesClient.PostStatusUnmuteResponseFailure401(response.body<Error>(), response.headers)
+        410 -> StatusesClient.PostStatusUnmuteResponseFailure410(response.headers)
+        422 -> StatusesClient.PostStatusUnmuteResponseFailure(response.body<ValidationError>(), response.headers)
+        else -> StatusesClient.PostStatusUnmuteResponseUnknownFailure(response.status.value, response.headers)
+      }
+    }
+    catch(e: CancellationException) {
+      throw e
+    }
+    catch(e: Exception) {
+      configuration.exceptionLogger(e)
+      return StatusesClient.PostStatusUnmuteResponseUnknownFailure(500)
+    }
+  }
+
+  override suspend fun postStatusUnpin(id: String): StatusesClient.PostStatusUnpinResponse {
+    try {
+      val response = configuration.client.post("api/v1/statuses/{id}/unpin".replace("/{id}", "/${id.encodeURLPathPart()}")) {
+      }
+      return when (response.status.value) {
+        200 -> StatusesClient.PostStatusUnpinResponseSuccess(response.body<Status>(), response.headers)
+        401, 404, 429, 503 -> StatusesClient.PostStatusUnpinResponseFailure401(response.body<Error>(), response.headers)
+        410 -> StatusesClient.PostStatusUnpinResponseFailure410(response.headers)
+        422 -> StatusesClient.PostStatusUnpinResponseFailure(response.body<ValidationError>(), response.headers)
+        else -> StatusesClient.PostStatusUnpinResponseUnknownFailure(response.status.value, response.headers)
+      }
+    }
+    catch(e: CancellationException) {
+      throw e
+    }
+    catch(e: Exception) {
+      configuration.exceptionLogger(e)
+      return StatusesClient.PostStatusUnpinResponseUnknownFailure(500)
+    }
+  }
+
+  override suspend fun postStatusUnreblog(id: String): StatusesClient.PostStatusUnreblogResponse {
+    try {
+      val response = configuration.client.post("api/v1/statuses/{id}/unreblog".replace("/{id}", "/${id.encodeURLPathPart()}")) {
+      }
+      return when (response.status.value) {
+        200 -> StatusesClient.PostStatusUnreblogResponseSuccess(response.body<Status>(), response.headers)
+        401, 404, 429, 503 -> StatusesClient.PostStatusUnreblogResponseFailure401(response.body<Error>(), response.headers)
+        410 -> StatusesClient.PostStatusUnreblogResponseFailure410(response.headers)
+        422 -> StatusesClient.PostStatusUnreblogResponseFailure(response.body<ValidationError>(), response.headers)
+        else -> StatusesClient.PostStatusUnreblogResponseUnknownFailure(response.status.value, response.headers)
+      }
+    }
+    catch(e: CancellationException) {
+      throw e
+    }
+    catch(e: Exception) {
+      configuration.exceptionLogger(e)
+      return StatusesClient.PostStatusUnreblogResponseUnknownFailure(500)
+    }
+  }
 }

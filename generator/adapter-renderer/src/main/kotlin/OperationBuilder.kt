@@ -49,10 +49,13 @@ internal class OperationBuilder(
     )
 
     private data class ResponseBuildContext(
+        val sealedClass: ClassName,
         val entries: List<RenderedResponseEntry>,
         val baseName: String,
         val acceptContentTypes: List<String>,
-    )
+    ) {
+        val unknownFailureClass: ClassName get() = sealedClass.peerClass("${baseName}ResponseUnknownFailure")
+    }
 
     private companion object {
         private const val KTOR_HTTP = "io.ktor.http"
@@ -78,11 +81,13 @@ internal class OperationBuilder(
     }
 
     /**
-     * Builds an operation (method) and adds it to the client class.
+     * Builds an operation: its types and abstract declaration are added to the client interface,
+     * its implementation to the client class.
      */
     fun buildOperation(
         context: ClientGenerationContext,
         operationInfo: OperationSpec,
+        interfaceBuilder: TypeSpec.Builder,
         clientBuilder: TypeSpec.Builder,
         clientName: String,
     ) {
@@ -93,13 +98,13 @@ internal class OperationBuilder(
         val requestBody = operationInfo.requestBody
         requestBody?.let {
             if (it.isMultipartFormData || it.isUrlEncodedForm) {
-                buildFormBodyDefinition(it, responseBaseName, clientBuilder)
+                buildFormBodyDefinition(it, responseBaseName, interfaceBuilder)
             }
         }
 
         // Inline models (e.g. inline request body objects)
         operationInfo.inlineModels.forEach { modelSpec ->
-            modelGenerator.buildModel(modelSpec)?.let { clientBuilder.addType(it) }
+            modelGenerator.buildModel(modelSpec)?.let { interfaceBuilder.addType(it) }
         }
 
         val parameters = operationInfo.parameters
@@ -122,25 +127,27 @@ internal class OperationBuilder(
                 trimmedPath = trimmedPath,
             )
 
+        val interfaceClass = ClassName(clientPackage, clientName)
         if (operationInfo.isSse) {
             context.hasSseOperations = true
             buildSseOperation(
                 operationInfo = operationInfo,
+                interfaceBuilder = interfaceBuilder,
+                interfaceClass = interfaceClass,
                 clientBuilder = clientBuilder,
                 functionName = functionName,
-                requestBody = requestBody,
                 params = operationParams,
             )
             return
         }
 
         val responseSealedName = "${responseBaseName}Response"
-        val responseSealedClass = ClassName(clientPackage, clientName, responseSealedName)
-        clientBuilder.addType(responseBuilder.createSealedResponseClass(responseSealedName))
+        val responseSealedClass = interfaceClass.nestedClass(responseSealedName)
+        interfaceBuilder.addType(responseBuilder.createSealedResponseClass(responseSealedName))
         val responseEntries =
             responseBuilder.buildResponseTypes(
                 operationInfo.responses,
-                clientBuilder,
+                interfaceBuilder,
                 responseBaseName,
                 responseSealedClass,
                 modelPackage,
@@ -149,21 +156,9 @@ internal class OperationBuilder(
 
         val methodMember = MemberName(KTOR_REQUEST, operationInfo.method)
         val funBuilder =
-            FunSpec
-                .builder(functionName)
-                .addModifiers(KModifier.SUSPEND)
-                .returns(responseSealedClass)
-
-        operationInfo.summary?.let { funBuilder.addKdoc("%L\n", it) }
-
-        requestBody?.let {
-            val requestTypeName = it.type.toTypeName(modelPackage, modelPackageOverrides, stringFormatTypes)
-            funBuilder.addParameter(it.parameterName, requestTypeName)
-        }
-        addParameters(funBuilder, pathParameters)
-        addParameters(funBuilder, queryParameters)
-        addParameters(funBuilder, headerParameters)
-        addParameters(funBuilder, cookieParameters)
+            declareOperation(interfaceBuilder, interfaceClass, operationInfo, functionName, operationParams) {
+                returns(responseSealedClass)
+            }
 
         val requestContentTypes = requestBody?.contentTypes
         val hasJsonContentType =
@@ -185,6 +180,7 @@ internal class OperationBuilder(
                     ),
                 responseCtx =
                     ResponseBuildContext(
+                        sealedClass = responseSealedClass,
                         entries = responseEntries,
                         baseName = responseBaseName,
                         acceptContentTypes =
@@ -202,7 +198,7 @@ internal class OperationBuilder(
     private fun buildFormBodyDefinition(
         requestBody: RequestBodySpec,
         responseBaseName: String,
-        clientBuilder: TypeSpec.Builder,
+        interfaceBuilder: TypeSpec.Builder,
     ) {
         val typeName = "${responseBaseName}Form"
         val fileClassName = ClassName("", "${typeName}File")
@@ -246,8 +242,8 @@ internal class OperationBuilder(
                     }
                 }.build()
 
-        clientBuilder.addType(typeSpec)
-        fileTypeSpec?.let { clientBuilder.addType(it) }
+        interfaceBuilder.addType(typeSpec)
+        fileTypeSpec?.let { interfaceBuilder.addType(it) }
     }
 
     private fun buildFormFileType(fileClassName: ClassName): TypeSpec =
@@ -282,11 +278,49 @@ internal class OperationBuilder(
                     .build(),
             ).build()
 
+    /**
+     * Adds the abstract declaration of the operation to the client interface, with the KDoc and the default values,
+     * and returns the builder of its override, whose parameters have no default values.
+     */
+    private fun declareOperation(
+        interfaceBuilder: TypeSpec.Builder,
+        interfaceClass: ClassName,
+        operationInfo: OperationSpec,
+        functionName: String,
+        params: OperationParameters,
+        configure: FunSpec.Builder.() -> Unit,
+    ): FunSpec.Builder {
+        fun signature(withDefaults: Boolean): FunSpec.Builder =
+            FunSpec
+                .builder(functionName)
+                .addModifiers(KModifier.SUSPEND)
+                .apply {
+                    operationInfo.requestBody?.let {
+                        val requestTypeName = it.type.toTypeName(modelPackage, modelPackageOverrides, stringFormatTypes, interfaceClass)
+                        addParameter(it.parameterName, requestTypeName)
+                    }
+                    addParameters(this, params.pathParameters, withDefaults, interfaceClass)
+                    addParameters(this, params.queryParameters, withDefaults, interfaceClass)
+                    addParameters(this, params.headerParameters, withDefaults, interfaceClass)
+                    addParameters(this, params.cookieParameters, withDefaults, interfaceClass)
+                    configure()
+                }
+
+        interfaceBuilder.addFunction(
+            signature(withDefaults = true)
+                .addModifiers(KModifier.ABSTRACT)
+                .apply { operationInfo.summary?.let { addKdoc("%L\n", it) } }
+                .build(),
+        )
+        return signature(withDefaults = false).addModifiers(KModifier.OVERRIDE)
+    }
+
     private fun buildSseOperation(
         operationInfo: OperationSpec,
+        interfaceBuilder: TypeSpec.Builder,
+        interfaceClass: ClassName,
         clientBuilder: TypeSpec.Builder,
         functionName: String,
-        requestBody: RequestBodySpec?,
         params: OperationParameters,
     ) {
         val blockType =
@@ -297,21 +331,9 @@ internal class OperationBuilder(
                 ).copy(suspending = true)
 
         val funBuilder =
-            FunSpec
-                .builder(functionName)
-                .addModifiers(KModifier.SUSPEND)
-
-        operationInfo.summary?.let { funBuilder.addKdoc("%L\n", it) }
-
-        requestBody?.let {
-            val requestTypeName = it.type.toTypeName(modelPackage, modelPackageOverrides, stringFormatTypes)
-            funBuilder.addParameter(it.parameterName, requestTypeName)
-        }
-        addParameters(funBuilder, params.pathParameters)
-        addParameters(funBuilder, params.queryParameters)
-        addParameters(funBuilder, params.headerParameters)
-        addParameters(funBuilder, params.cookieParameters)
-        funBuilder.addParameter(ParameterSpec.builder("block", blockType).build())
+            declareOperation(interfaceBuilder, interfaceClass, operationInfo, functionName, params) {
+                addParameter(ParameterSpec.builder("block", blockType).build())
+            }
 
         funBuilder.addCode(buildSseFunctionBody(params))
 
@@ -483,11 +505,17 @@ internal class OperationBuilder(
     private fun addParameters(
         funBuilder: FunSpec.Builder,
         parameters: List<OperationParameterSpec>,
+        withDefaults: Boolean,
+        interfaceClass: ClassName,
     ) {
         parameters.forEach { param ->
-            val paramTypeName = param.type.toTypeName(modelPackage, modelPackageOverrides, stringFormatTypes)
+            val paramTypeName = param.type.toTypeName(modelPackage, modelPackageOverrides, stringFormatTypes, interfaceClass)
             val builder = ParameterSpec.builder(param.camelCaseName, paramTypeName)
             when {
+                !withDefaults -> {
+                    // Overrides cannot redeclare default values: they are inherited from the interface.
+                }
+
                 param.constDefaultName != null -> {
                     builder.defaultValue(
                         "%T.%L",
@@ -531,7 +559,6 @@ internal class OperationBuilder(
         requestBodyCtx: RequestBodyContext,
         responseCtx: ResponseBuildContext,
     ): CodeBlock {
-        val responseBaseName = responseCtx.baseName
         val builder = CodeBlock.builder()
         builder.beginControlFlow("try")
         builder.beginControlFlow("val response = configuration.client.%M(%L)", methodMember, operationParams.trimmedPath)
@@ -544,13 +571,13 @@ internal class OperationBuilder(
         addRequestBodyCode(builder, requestBodyCtx)
         builder.endControlFlow()
         builder.beginControlFlow("return when (response.status.value)")
-        addResponseCases(builder, responseCtx, responseBaseName)
+        addResponseCases(builder, responseCtx)
         builder.endControlFlow()
         builder.endControlFlow()
         addCancellationRethrow(builder)
         builder.beginControlFlow("catch(e: Exception)")
         builder.addStatement("%L(%L)", "configuration.exceptionLogger", "e")
-        builder.addStatement("return %L(%L)", "${responseBaseName}ResponseUnknownFailure", InternalServerError.value)
+        builder.addStatement("return %T(%L)", responseCtx.unknownFailureClass, InternalServerError.value)
         builder.endControlFlow()
         return builder.build()
     }
@@ -625,23 +652,22 @@ internal class OperationBuilder(
     private fun addResponseCases(
         builder: CodeBlock.Builder,
         responseCtx: ResponseBuildContext,
-        responseBaseName: String,
     ) {
         responseCtx.entries.forEach { entry ->
             val codesLiteral = entry.statusCodes.joinToString()
             if (entry.bodyTypeName == null) {
-                builder.addStatement("%L -> %N(response.headers)", codesLiteral, entry.type)
+                builder.addStatement("%L -> %T(response.headers)", codesLiteral, entry.className)
             } else {
                 builder.addStatement(
-                    "%L -> %N(response.%M<%T>(), response.headers)",
+                    "%L -> %T(response.%M<%T>(), response.headers)",
                     codesLiteral,
-                    entry.type,
+                    entry.className,
                     bodyMember,
                     entry.bodyTypeName,
                 )
             }
         }
-        builder.addStatement("else -> %L(response.status.value, response.headers)", "${responseBaseName}ResponseUnknownFailure")
+        builder.addStatement("else -> %T(response.status.value, response.headers)", responseCtx.unknownFailureClass)
     }
 
     private fun buildMultipartFormData(requestBody: RequestBodySpec): CodeBlock {

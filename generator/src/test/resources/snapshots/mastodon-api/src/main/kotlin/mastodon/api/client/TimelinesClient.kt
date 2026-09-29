@@ -17,9 +17,7 @@ import mastodon.api.model.Error
 import mastodon.api.model.Status
 import mastodon.api.model.ValidationError
 
-public class TimelinesClient(
-  private val configuration: ClientConfiguration = defaultClientConfiguration,
-) {
+public interface TimelinesClient {
   /**
    * View direct timeline
    */
@@ -28,40 +26,7 @@ public class TimelinesClient(
     maxId: String? = null,
     minId: String? = null,
     sinceId: String? = null,
-  ): GetTimelineDirectResponse {
-    try {
-      val response = configuration.client.`get`("api/v1/timelines/direct") {
-        url {
-          if (limit != null) {
-            parameters.append("limit", limit.toString())
-          }
-          if (maxId != null) {
-            parameters.append("max_id", maxId)
-          }
-          if (minId != null) {
-            parameters.append("min_id", minId)
-          }
-          if (sinceId != null) {
-            parameters.append("since_id", sinceId)
-          }
-        }
-      }
-      return when (response.status.value) {
-        200 -> GetTimelineDirectResponseSuccess(response.body<List<Status>>(), response.headers)
-        401, 404, 429, 503 -> GetTimelineDirectResponseFailure401(response.body<Error>(), response.headers)
-        410 -> GetTimelineDirectResponseFailure410(response.headers)
-        422 -> GetTimelineDirectResponseFailure(response.body<ValidationError>(), response.headers)
-        else -> GetTimelineDirectResponseUnknownFailure(response.status.value, response.headers)
-      }
-    }
-    catch(e: CancellationException) {
-      throw e
-    }
-    catch(e: Exception) {
-      configuration.exceptionLogger(e)
-      return GetTimelineDirectResponseUnknownFailure(500)
-    }
-  }
+  ): GetTimelineDirectResponse
 
   /**
    * View home timeline
@@ -71,41 +36,7 @@ public class TimelinesClient(
     maxId: String? = null,
     minId: String? = null,
     sinceId: String? = null,
-  ): GetTimelineHomeResponse {
-    try {
-      val response = configuration.client.`get`("api/v1/timelines/home") {
-        url {
-          if (limit != null) {
-            parameters.append("limit", limit.toString())
-          }
-          if (maxId != null) {
-            parameters.append("max_id", maxId)
-          }
-          if (minId != null) {
-            parameters.append("min_id", minId)
-          }
-          if (sinceId != null) {
-            parameters.append("since_id", sinceId)
-          }
-        }
-      }
-      return when (response.status.value) {
-        200 -> GetTimelineHomeResponseSuccess200(response.body<List<Status>>(), response.headers)
-        206 -> GetTimelineHomeResponseSuccess(response.headers)
-        401, 404, 429, 503 -> GetTimelineHomeResponseFailure401(response.body<Error>(), response.headers)
-        410 -> GetTimelineHomeResponseFailure410(response.headers)
-        422 -> GetTimelineHomeResponseFailure(response.body<ValidationError>(), response.headers)
-        else -> GetTimelineHomeResponseUnknownFailure(response.status.value, response.headers)
-      }
-    }
-    catch(e: CancellationException) {
-      throw e
-    }
-    catch(e: Exception) {
-      configuration.exceptionLogger(e)
-      return GetTimelineHomeResponseUnknownFailure(500)
-    }
-  }
+  ): GetTimelineHomeResponse
 
   /**
    * View link timeline
@@ -116,41 +47,7 @@ public class TimelinesClient(
     maxId: String? = null,
     minId: String? = null,
     sinceId: String? = null,
-  ): GetTimelineLinkResponse {
-    try {
-      val response = configuration.client.`get`("api/v1/timelines/link") {
-        url {
-          parameters.append("url", url)
-          if (limit != null) {
-            parameters.append("limit", limit.toString())
-          }
-          if (maxId != null) {
-            parameters.append("max_id", maxId)
-          }
-          if (minId != null) {
-            parameters.append("min_id", minId)
-          }
-          if (sinceId != null) {
-            parameters.append("since_id", sinceId)
-          }
-        }
-      }
-      return when (response.status.value) {
-        200 -> GetTimelineLinkResponseSuccess(response.body<List<Status>>(), response.headers)
-        401, 404, 429, 503 -> GetTimelineLinkResponseFailure401(response.body<Error>(), response.headers)
-        410 -> GetTimelineLinkResponseFailure410(response.headers)
-        422 -> GetTimelineLinkResponseFailure(response.body<ValidationError>(), response.headers)
-        else -> GetTimelineLinkResponseUnknownFailure(response.status.value, response.headers)
-      }
-    }
-    catch(e: CancellationException) {
-      throw e
-    }
-    catch(e: Exception) {
-      configuration.exceptionLogger(e)
-      return GetTimelineLinkResponseUnknownFailure(500)
-    }
-  }
+  ): GetTimelineLinkResponse
 
   /**
    * View list timeline
@@ -161,40 +58,7 @@ public class TimelinesClient(
     maxId: String? = null,
     minId: String? = null,
     sinceId: String? = null,
-  ): GetTimelinesListByListIdResponse {
-    try {
-      val response = configuration.client.`get`("api/v1/timelines/list/{list_id}".replace("/{list_id}", "/${listId.encodeURLPathPart()}")) {
-        url {
-          if (limit != null) {
-            parameters.append("limit", limit.toString())
-          }
-          if (maxId != null) {
-            parameters.append("max_id", maxId)
-          }
-          if (minId != null) {
-            parameters.append("min_id", minId)
-          }
-          if (sinceId != null) {
-            parameters.append("since_id", sinceId)
-          }
-        }
-      }
-      return when (response.status.value) {
-        200 -> GetTimelinesListByListIdResponseSuccess(response.body<List<Status>>(), response.headers)
-        401, 404, 429, 503 -> GetTimelinesListByListIdResponseFailure401(response.body<Error>(), response.headers)
-        410 -> GetTimelinesListByListIdResponseFailure410(response.headers)
-        422 -> GetTimelinesListByListIdResponseFailure(response.body<ValidationError>(), response.headers)
-        else -> GetTimelinesListByListIdResponseUnknownFailure(response.status.value, response.headers)
-      }
-    }
-    catch(e: CancellationException) {
-      throw e
-    }
-    catch(e: Exception) {
-      configuration.exceptionLogger(e)
-      return GetTimelinesListByListIdResponseUnknownFailure(500)
-    }
-  }
+  ): GetTimelinesListByListIdResponse
 
   /**
    * View public timeline
@@ -207,49 +71,7 @@ public class TimelinesClient(
     onlyMedia: Boolean? = false,
     remote: Boolean? = false,
     sinceId: String? = null,
-  ): GetTimelinePublicResponse {
-    try {
-      val response = configuration.client.`get`("api/v1/timelines/public") {
-        url {
-          if (limit != null) {
-            parameters.append("limit", limit.toString())
-          }
-          if (local != null) {
-            parameters.append("local", local.toString())
-          }
-          if (maxId != null) {
-            parameters.append("max_id", maxId)
-          }
-          if (minId != null) {
-            parameters.append("min_id", minId)
-          }
-          if (onlyMedia != null) {
-            parameters.append("only_media", onlyMedia.toString())
-          }
-          if (remote != null) {
-            parameters.append("remote", remote.toString())
-          }
-          if (sinceId != null) {
-            parameters.append("since_id", sinceId)
-          }
-        }
-      }
-      return when (response.status.value) {
-        200 -> GetTimelinePublicResponseSuccess(response.body<List<Status>>(), response.headers)
-        401, 404, 429, 503 -> GetTimelinePublicResponseFailure401(response.body<Error>(), response.headers)
-        410 -> GetTimelinePublicResponseFailure410(response.headers)
-        422 -> GetTimelinePublicResponseFailure(response.body<ValidationError>(), response.headers)
-        else -> GetTimelinePublicResponseUnknownFailure(response.status.value, response.headers)
-      }
-    }
-    catch(e: CancellationException) {
-      throw e
-    }
-    catch(e: Exception) {
-      configuration.exceptionLogger(e)
-      return GetTimelinePublicResponseUnknownFailure(500)
-    }
-  }
+  ): GetTimelinePublicResponse
 
   /**
    * View hashtag timeline
@@ -266,58 +88,7 @@ public class TimelinesClient(
     onlyMedia: Boolean? = false,
     remote: Boolean? = false,
     sinceId: String? = null,
-  ): GetTimelinesTagByHashtagResponse {
-    try {
-      val response = configuration.client.`get`("api/v1/timelines/tag/{hashtag}".replace("/{hashtag}", "/${hashtag.encodeURLPathPart()}")) {
-        url {
-          if (all != null) {
-            parameters.appendAll("all", all)
-          }
-          if (any != null) {
-            parameters.appendAll("any", any)
-          }
-          if (limit != null) {
-            parameters.append("limit", limit.toString())
-          }
-          if (local != null) {
-            parameters.append("local", local.toString())
-          }
-          if (maxId != null) {
-            parameters.append("max_id", maxId)
-          }
-          if (minId != null) {
-            parameters.append("min_id", minId)
-          }
-          if (none != null) {
-            parameters.appendAll("none", none)
-          }
-          if (onlyMedia != null) {
-            parameters.append("only_media", onlyMedia.toString())
-          }
-          if (remote != null) {
-            parameters.append("remote", remote.toString())
-          }
-          if (sinceId != null) {
-            parameters.append("since_id", sinceId)
-          }
-        }
-      }
-      return when (response.status.value) {
-        200 -> GetTimelinesTagByHashtagResponseSuccess(response.body<List<Status>>(), response.headers)
-        401, 404, 429, 503 -> GetTimelinesTagByHashtagResponseFailure401(response.body<Error>(), response.headers)
-        410 -> GetTimelinesTagByHashtagResponseFailure410(response.headers)
-        422 -> GetTimelinesTagByHashtagResponseFailure(response.body<ValidationError>(), response.headers)
-        else -> GetTimelinesTagByHashtagResponseUnknownFailure(response.status.value, response.headers)
-      }
-    }
-    catch(e: CancellationException) {
-      throw e
-    }
-    catch(e: Exception) {
-      configuration.exceptionLogger(e)
-      return GetTimelinesTagByHashtagResponseUnknownFailure(500)
-    }
-  }
+  ): GetTimelinesTagByHashtagResponse
 
   @Serializable
   public sealed class GetTimelineDirectResponse {
@@ -726,4 +497,291 @@ public class TimelinesClient(
     @Transient
     override val headers: Headers = Headers.Empty,
   ) : GetTimelinesTagByHashtagResponse()
+}
+
+public fun TimelinesClient(configuration: ClientConfiguration = defaultClientConfiguration): TimelinesClient = DefaultTimelinesClient(configuration)
+
+public class DefaultTimelinesClient(
+  private val configuration: ClientConfiguration = defaultClientConfiguration,
+) : TimelinesClient {
+  override suspend fun getTimelineDirect(
+    limit: Long?,
+    maxId: String?,
+    minId: String?,
+    sinceId: String?,
+  ): TimelinesClient.GetTimelineDirectResponse {
+    try {
+      val response = configuration.client.`get`("api/v1/timelines/direct") {
+        url {
+          if (limit != null) {
+            parameters.append("limit", limit.toString())
+          }
+          if (maxId != null) {
+            parameters.append("max_id", maxId)
+          }
+          if (minId != null) {
+            parameters.append("min_id", minId)
+          }
+          if (sinceId != null) {
+            parameters.append("since_id", sinceId)
+          }
+        }
+      }
+      return when (response.status.value) {
+        200 -> TimelinesClient.GetTimelineDirectResponseSuccess(response.body<List<Status>>(), response.headers)
+        401, 404, 429, 503 -> TimelinesClient.GetTimelineDirectResponseFailure401(response.body<Error>(), response.headers)
+        410 -> TimelinesClient.GetTimelineDirectResponseFailure410(response.headers)
+        422 -> TimelinesClient.GetTimelineDirectResponseFailure(response.body<ValidationError>(), response.headers)
+        else -> TimelinesClient.GetTimelineDirectResponseUnknownFailure(response.status.value, response.headers)
+      }
+    }
+    catch(e: CancellationException) {
+      throw e
+    }
+    catch(e: Exception) {
+      configuration.exceptionLogger(e)
+      return TimelinesClient.GetTimelineDirectResponseUnknownFailure(500)
+    }
+  }
+
+  override suspend fun getTimelineHome(
+    limit: Long?,
+    maxId: String?,
+    minId: String?,
+    sinceId: String?,
+  ): TimelinesClient.GetTimelineHomeResponse {
+    try {
+      val response = configuration.client.`get`("api/v1/timelines/home") {
+        url {
+          if (limit != null) {
+            parameters.append("limit", limit.toString())
+          }
+          if (maxId != null) {
+            parameters.append("max_id", maxId)
+          }
+          if (minId != null) {
+            parameters.append("min_id", minId)
+          }
+          if (sinceId != null) {
+            parameters.append("since_id", sinceId)
+          }
+        }
+      }
+      return when (response.status.value) {
+        200 -> TimelinesClient.GetTimelineHomeResponseSuccess200(response.body<List<Status>>(), response.headers)
+        206 -> TimelinesClient.GetTimelineHomeResponseSuccess(response.headers)
+        401, 404, 429, 503 -> TimelinesClient.GetTimelineHomeResponseFailure401(response.body<Error>(), response.headers)
+        410 -> TimelinesClient.GetTimelineHomeResponseFailure410(response.headers)
+        422 -> TimelinesClient.GetTimelineHomeResponseFailure(response.body<ValidationError>(), response.headers)
+        else -> TimelinesClient.GetTimelineHomeResponseUnknownFailure(response.status.value, response.headers)
+      }
+    }
+    catch(e: CancellationException) {
+      throw e
+    }
+    catch(e: Exception) {
+      configuration.exceptionLogger(e)
+      return TimelinesClient.GetTimelineHomeResponseUnknownFailure(500)
+    }
+  }
+
+  override suspend fun getTimelineLink(
+    url: String,
+    limit: Long?,
+    maxId: String?,
+    minId: String?,
+    sinceId: String?,
+  ): TimelinesClient.GetTimelineLinkResponse {
+    try {
+      val response = configuration.client.`get`("api/v1/timelines/link") {
+        url {
+          parameters.append("url", url)
+          if (limit != null) {
+            parameters.append("limit", limit.toString())
+          }
+          if (maxId != null) {
+            parameters.append("max_id", maxId)
+          }
+          if (minId != null) {
+            parameters.append("min_id", minId)
+          }
+          if (sinceId != null) {
+            parameters.append("since_id", sinceId)
+          }
+        }
+      }
+      return when (response.status.value) {
+        200 -> TimelinesClient.GetTimelineLinkResponseSuccess(response.body<List<Status>>(), response.headers)
+        401, 404, 429, 503 -> TimelinesClient.GetTimelineLinkResponseFailure401(response.body<Error>(), response.headers)
+        410 -> TimelinesClient.GetTimelineLinkResponseFailure410(response.headers)
+        422 -> TimelinesClient.GetTimelineLinkResponseFailure(response.body<ValidationError>(), response.headers)
+        else -> TimelinesClient.GetTimelineLinkResponseUnknownFailure(response.status.value, response.headers)
+      }
+    }
+    catch(e: CancellationException) {
+      throw e
+    }
+    catch(e: Exception) {
+      configuration.exceptionLogger(e)
+      return TimelinesClient.GetTimelineLinkResponseUnknownFailure(500)
+    }
+  }
+
+  override suspend fun getTimelinesListByListId(
+    listId: String,
+    limit: Long?,
+    maxId: String?,
+    minId: String?,
+    sinceId: String?,
+  ): TimelinesClient.GetTimelinesListByListIdResponse {
+    try {
+      val response = configuration.client.`get`("api/v1/timelines/list/{list_id}".replace("/{list_id}", "/${listId.encodeURLPathPart()}")) {
+        url {
+          if (limit != null) {
+            parameters.append("limit", limit.toString())
+          }
+          if (maxId != null) {
+            parameters.append("max_id", maxId)
+          }
+          if (minId != null) {
+            parameters.append("min_id", minId)
+          }
+          if (sinceId != null) {
+            parameters.append("since_id", sinceId)
+          }
+        }
+      }
+      return when (response.status.value) {
+        200 -> TimelinesClient.GetTimelinesListByListIdResponseSuccess(response.body<List<Status>>(), response.headers)
+        401, 404, 429, 503 -> TimelinesClient.GetTimelinesListByListIdResponseFailure401(response.body<Error>(), response.headers)
+        410 -> TimelinesClient.GetTimelinesListByListIdResponseFailure410(response.headers)
+        422 -> TimelinesClient.GetTimelinesListByListIdResponseFailure(response.body<ValidationError>(), response.headers)
+        else -> TimelinesClient.GetTimelinesListByListIdResponseUnknownFailure(response.status.value, response.headers)
+      }
+    }
+    catch(e: CancellationException) {
+      throw e
+    }
+    catch(e: Exception) {
+      configuration.exceptionLogger(e)
+      return TimelinesClient.GetTimelinesListByListIdResponseUnknownFailure(500)
+    }
+  }
+
+  override suspend fun getTimelinePublic(
+    limit: Long?,
+    local: Boolean?,
+    maxId: String?,
+    minId: String?,
+    onlyMedia: Boolean?,
+    remote: Boolean?,
+    sinceId: String?,
+  ): TimelinesClient.GetTimelinePublicResponse {
+    try {
+      val response = configuration.client.`get`("api/v1/timelines/public") {
+        url {
+          if (limit != null) {
+            parameters.append("limit", limit.toString())
+          }
+          if (local != null) {
+            parameters.append("local", local.toString())
+          }
+          if (maxId != null) {
+            parameters.append("max_id", maxId)
+          }
+          if (minId != null) {
+            parameters.append("min_id", minId)
+          }
+          if (onlyMedia != null) {
+            parameters.append("only_media", onlyMedia.toString())
+          }
+          if (remote != null) {
+            parameters.append("remote", remote.toString())
+          }
+          if (sinceId != null) {
+            parameters.append("since_id", sinceId)
+          }
+        }
+      }
+      return when (response.status.value) {
+        200 -> TimelinesClient.GetTimelinePublicResponseSuccess(response.body<List<Status>>(), response.headers)
+        401, 404, 429, 503 -> TimelinesClient.GetTimelinePublicResponseFailure401(response.body<Error>(), response.headers)
+        410 -> TimelinesClient.GetTimelinePublicResponseFailure410(response.headers)
+        422 -> TimelinesClient.GetTimelinePublicResponseFailure(response.body<ValidationError>(), response.headers)
+        else -> TimelinesClient.GetTimelinePublicResponseUnknownFailure(response.status.value, response.headers)
+      }
+    }
+    catch(e: CancellationException) {
+      throw e
+    }
+    catch(e: Exception) {
+      configuration.exceptionLogger(e)
+      return TimelinesClient.GetTimelinePublicResponseUnknownFailure(500)
+    }
+  }
+
+  override suspend fun getTimelinesTagByHashtag(
+    hashtag: String,
+    all: List<String>?,
+    any: List<String>?,
+    limit: Long?,
+    local: Boolean?,
+    maxId: String?,
+    minId: String?,
+    none: List<String>?,
+    onlyMedia: Boolean?,
+    remote: Boolean?,
+    sinceId: String?,
+  ): TimelinesClient.GetTimelinesTagByHashtagResponse {
+    try {
+      val response = configuration.client.`get`("api/v1/timelines/tag/{hashtag}".replace("/{hashtag}", "/${hashtag.encodeURLPathPart()}")) {
+        url {
+          if (all != null) {
+            parameters.appendAll("all", all)
+          }
+          if (any != null) {
+            parameters.appendAll("any", any)
+          }
+          if (limit != null) {
+            parameters.append("limit", limit.toString())
+          }
+          if (local != null) {
+            parameters.append("local", local.toString())
+          }
+          if (maxId != null) {
+            parameters.append("max_id", maxId)
+          }
+          if (minId != null) {
+            parameters.append("min_id", minId)
+          }
+          if (none != null) {
+            parameters.appendAll("none", none)
+          }
+          if (onlyMedia != null) {
+            parameters.append("only_media", onlyMedia.toString())
+          }
+          if (remote != null) {
+            parameters.append("remote", remote.toString())
+          }
+          if (sinceId != null) {
+            parameters.append("since_id", sinceId)
+          }
+        }
+      }
+      return when (response.status.value) {
+        200 -> TimelinesClient.GetTimelinesTagByHashtagResponseSuccess(response.body<List<Status>>(), response.headers)
+        401, 404, 429, 503 -> TimelinesClient.GetTimelinesTagByHashtagResponseFailure401(response.body<Error>(), response.headers)
+        410 -> TimelinesClient.GetTimelinesTagByHashtagResponseFailure410(response.headers)
+        422 -> TimelinesClient.GetTimelinesTagByHashtagResponseFailure(response.body<ValidationError>(), response.headers)
+        else -> TimelinesClient.GetTimelinesTagByHashtagResponseUnknownFailure(response.status.value, response.headers)
+      }
+    }
+    catch(e: CancellationException) {
+      throw e
+    }
+    catch(e: Exception) {
+      configuration.exceptionLogger(e)
+      return TimelinesClient.GetTimelinesTagByHashtagResponseUnknownFailure(500)
+    }
+  }
 }

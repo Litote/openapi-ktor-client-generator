@@ -18,102 +18,26 @@ import mastodon.api.model.Announcement
 import mastodon.api.model.Error
 import mastodon.api.model.ValidationError
 
-public class AnnouncementsClient(
-  private val configuration: ClientConfiguration = defaultClientConfiguration,
-) {
+public interface AnnouncementsClient {
   /**
    * View all announcements
    */
-  public suspend fun getAnnouncements(): GetAnnouncementsResponse {
-    try {
-      val response = configuration.client.`get`("api/v1/announcements") {
-      }
-      return when (response.status.value) {
-        200 -> GetAnnouncementsResponseSuccess(response.body<List<Announcement>>(), response.headers)
-        401, 404, 429, 503 -> GetAnnouncementsResponseFailure401(response.body<Error>(), response.headers)
-        410 -> GetAnnouncementsResponseFailure410(response.headers)
-        422 -> GetAnnouncementsResponseFailure(response.body<ValidationError>(), response.headers)
-        else -> GetAnnouncementsResponseUnknownFailure(response.status.value, response.headers)
-      }
-    }
-    catch(e: CancellationException) {
-      throw e
-    }
-    catch(e: Exception) {
-      configuration.exceptionLogger(e)
-      return GetAnnouncementsResponseUnknownFailure(500)
-    }
-  }
+  public suspend fun getAnnouncements(): GetAnnouncementsResponse
 
   /**
    * Dismiss an announcement
    */
-  public suspend fun postAnnouncementDismiss(id: String): PostAnnouncementDismissResponse {
-    try {
-      val response = configuration.client.post("api/v1/announcements/{id}/dismiss".replace("/{id}", "/${id.encodeURLPathPart()}")) {
-      }
-      return when (response.status.value) {
-        200 -> PostAnnouncementDismissResponseSuccess(response.headers)
-        401, 404, 429, 503 -> PostAnnouncementDismissResponseFailure401(response.body<Error>(), response.headers)
-        410 -> PostAnnouncementDismissResponseFailure410(response.headers)
-        422 -> PostAnnouncementDismissResponseFailure(response.body<ValidationError>(), response.headers)
-        else -> PostAnnouncementDismissResponseUnknownFailure(response.status.value, response.headers)
-      }
-    }
-    catch(e: CancellationException) {
-      throw e
-    }
-    catch(e: Exception) {
-      configuration.exceptionLogger(e)
-      return PostAnnouncementDismissResponseUnknownFailure(500)
-    }
-  }
+  public suspend fun postAnnouncementDismiss(id: String): PostAnnouncementDismissResponse
 
   /**
    * Add a reaction to an announcement
    */
-  public suspend fun updateAnnouncementReaction(id: String, name: String): UpdateAnnouncementReactionResponse {
-    try {
-      val response = configuration.client.put("api/v1/announcements/{id}/reactions/{name}".replace("/{id}", "/${id.encodeURLPathPart()}").replace("/{name}", "/${name.encodeURLPathPart()}")) {
-      }
-      return when (response.status.value) {
-        200 -> UpdateAnnouncementReactionResponseSuccess(response.headers)
-        401, 404, 422, 429, 503 -> UpdateAnnouncementReactionResponseFailure401(response.body<Error>(), response.headers)
-        410 -> UpdateAnnouncementReactionResponseFailure(response.headers)
-        else -> UpdateAnnouncementReactionResponseUnknownFailure(response.status.value, response.headers)
-      }
-    }
-    catch(e: CancellationException) {
-      throw e
-    }
-    catch(e: Exception) {
-      configuration.exceptionLogger(e)
-      return UpdateAnnouncementReactionResponseUnknownFailure(500)
-    }
-  }
+  public suspend fun updateAnnouncementReaction(id: String, name: String): UpdateAnnouncementReactionResponse
 
   /**
    * Remove a reaction from an announcement
    */
-  public suspend fun deleteAnnouncementReaction(id: String, name: String): DeleteAnnouncementReactionResponse {
-    try {
-      val response = configuration.client.delete("api/v1/announcements/{id}/reactions/{name}".replace("/{id}", "/${id.encodeURLPathPart()}").replace("/{name}", "/${name.encodeURLPathPart()}")) {
-      }
-      return when (response.status.value) {
-        200 -> DeleteAnnouncementReactionResponseSuccess(response.headers)
-        401, 404, 422, 429, 503 -> DeleteAnnouncementReactionResponseFailure401(response.body<Error>(), response.headers)
-        410 -> DeleteAnnouncementReactionResponseFailure(response.headers)
-        else -> DeleteAnnouncementReactionResponseUnknownFailure(response.status.value, response.headers)
-      }
-    }
-    catch(e: CancellationException) {
-      throw e
-    }
-    catch(e: Exception) {
-      configuration.exceptionLogger(e)
-      return DeleteAnnouncementReactionResponseUnknownFailure(500)
-    }
-  }
+  public suspend fun deleteAnnouncementReaction(id: String, name: String): DeleteAnnouncementReactionResponse
 
   @Serializable
   public sealed class GetAnnouncementsResponse {
@@ -325,4 +249,92 @@ public class AnnouncementsClient(
     @Transient
     override val headers: Headers = Headers.Empty,
   ) : DeleteAnnouncementReactionResponse()
+}
+
+public fun AnnouncementsClient(configuration: ClientConfiguration = defaultClientConfiguration): AnnouncementsClient = DefaultAnnouncementsClient(configuration)
+
+public class DefaultAnnouncementsClient(
+  private val configuration: ClientConfiguration = defaultClientConfiguration,
+) : AnnouncementsClient {
+  override suspend fun getAnnouncements(): AnnouncementsClient.GetAnnouncementsResponse {
+    try {
+      val response = configuration.client.`get`("api/v1/announcements") {
+      }
+      return when (response.status.value) {
+        200 -> AnnouncementsClient.GetAnnouncementsResponseSuccess(response.body<List<Announcement>>(), response.headers)
+        401, 404, 429, 503 -> AnnouncementsClient.GetAnnouncementsResponseFailure401(response.body<Error>(), response.headers)
+        410 -> AnnouncementsClient.GetAnnouncementsResponseFailure410(response.headers)
+        422 -> AnnouncementsClient.GetAnnouncementsResponseFailure(response.body<ValidationError>(), response.headers)
+        else -> AnnouncementsClient.GetAnnouncementsResponseUnknownFailure(response.status.value, response.headers)
+      }
+    }
+    catch(e: CancellationException) {
+      throw e
+    }
+    catch(e: Exception) {
+      configuration.exceptionLogger(e)
+      return AnnouncementsClient.GetAnnouncementsResponseUnknownFailure(500)
+    }
+  }
+
+  override suspend fun postAnnouncementDismiss(id: String): AnnouncementsClient.PostAnnouncementDismissResponse {
+    try {
+      val response = configuration.client.post("api/v1/announcements/{id}/dismiss".replace("/{id}", "/${id.encodeURLPathPart()}")) {
+      }
+      return when (response.status.value) {
+        200 -> AnnouncementsClient.PostAnnouncementDismissResponseSuccess(response.headers)
+        401, 404, 429, 503 -> AnnouncementsClient.PostAnnouncementDismissResponseFailure401(response.body<Error>(), response.headers)
+        410 -> AnnouncementsClient.PostAnnouncementDismissResponseFailure410(response.headers)
+        422 -> AnnouncementsClient.PostAnnouncementDismissResponseFailure(response.body<ValidationError>(), response.headers)
+        else -> AnnouncementsClient.PostAnnouncementDismissResponseUnknownFailure(response.status.value, response.headers)
+      }
+    }
+    catch(e: CancellationException) {
+      throw e
+    }
+    catch(e: Exception) {
+      configuration.exceptionLogger(e)
+      return AnnouncementsClient.PostAnnouncementDismissResponseUnknownFailure(500)
+    }
+  }
+
+  override suspend fun updateAnnouncementReaction(id: String, name: String): AnnouncementsClient.UpdateAnnouncementReactionResponse {
+    try {
+      val response = configuration.client.put("api/v1/announcements/{id}/reactions/{name}".replace("/{id}", "/${id.encodeURLPathPart()}").replace("/{name}", "/${name.encodeURLPathPart()}")) {
+      }
+      return when (response.status.value) {
+        200 -> AnnouncementsClient.UpdateAnnouncementReactionResponseSuccess(response.headers)
+        401, 404, 422, 429, 503 -> AnnouncementsClient.UpdateAnnouncementReactionResponseFailure401(response.body<Error>(), response.headers)
+        410 -> AnnouncementsClient.UpdateAnnouncementReactionResponseFailure(response.headers)
+        else -> AnnouncementsClient.UpdateAnnouncementReactionResponseUnknownFailure(response.status.value, response.headers)
+      }
+    }
+    catch(e: CancellationException) {
+      throw e
+    }
+    catch(e: Exception) {
+      configuration.exceptionLogger(e)
+      return AnnouncementsClient.UpdateAnnouncementReactionResponseUnknownFailure(500)
+    }
+  }
+
+  override suspend fun deleteAnnouncementReaction(id: String, name: String): AnnouncementsClient.DeleteAnnouncementReactionResponse {
+    try {
+      val response = configuration.client.delete("api/v1/announcements/{id}/reactions/{name}".replace("/{id}", "/${id.encodeURLPathPart()}").replace("/{name}", "/${name.encodeURLPathPart()}")) {
+      }
+      return when (response.status.value) {
+        200 -> AnnouncementsClient.DeleteAnnouncementReactionResponseSuccess(response.headers)
+        401, 404, 422, 429, 503 -> AnnouncementsClient.DeleteAnnouncementReactionResponseFailure401(response.body<Error>(), response.headers)
+        410 -> AnnouncementsClient.DeleteAnnouncementReactionResponseFailure(response.headers)
+        else -> AnnouncementsClient.DeleteAnnouncementReactionResponseUnknownFailure(response.status.value, response.headers)
+      }
+    }
+    catch(e: CancellationException) {
+      throw e
+    }
+    catch(e: Exception) {
+      configuration.exceptionLogger(e)
+      return AnnouncementsClient.DeleteAnnouncementReactionResponseUnknownFailure(500)
+    }
+  }
 }

@@ -15,9 +15,7 @@ import mastodon.api.model.Error
 import mastodon.api.model.Tag
 import mastodon.api.model.ValidationError
 
-public class FollowedTagsClient(
-  private val configuration: ClientConfiguration = defaultClientConfiguration,
-) {
+public interface FollowedTagsClient {
   /**
    * View all followed tags
    */
@@ -26,40 +24,7 @@ public class FollowedTagsClient(
     maxId: String? = null,
     minId: String? = null,
     sinceId: String? = null,
-  ): GetFollowedTagsResponse {
-    try {
-      val response = configuration.client.`get`("api/v1/followed_tags") {
-        url {
-          if (limit != null) {
-            parameters.append("limit", limit.toString())
-          }
-          if (maxId != null) {
-            parameters.append("max_id", maxId)
-          }
-          if (minId != null) {
-            parameters.append("min_id", minId)
-          }
-          if (sinceId != null) {
-            parameters.append("since_id", sinceId)
-          }
-        }
-      }
-      return when (response.status.value) {
-        200 -> GetFollowedTagsResponseSuccess(response.body<List<Tag>>(), response.headers)
-        401, 404, 429, 503 -> GetFollowedTagsResponseFailure401(response.body<Error>(), response.headers)
-        410 -> GetFollowedTagsResponseFailure410(response.headers)
-        422 -> GetFollowedTagsResponseFailure(response.body<ValidationError>(), response.headers)
-        else -> GetFollowedTagsResponseUnknownFailure(response.status.value, response.headers)
-      }
-    }
-    catch(e: CancellationException) {
-      throw e
-    }
-    catch(e: Exception) {
-      configuration.exceptionLogger(e)
-      return GetFollowedTagsResponseUnknownFailure(500)
-    }
-  }
+  ): GetFollowedTagsResponse
 
   @Serializable
   public sealed class GetFollowedTagsResponse {
@@ -123,4 +88,50 @@ public class FollowedTagsClient(
     @Transient
     override val headers: Headers = Headers.Empty,
   ) : GetFollowedTagsResponse()
+}
+
+public fun FollowedTagsClient(configuration: ClientConfiguration = defaultClientConfiguration): FollowedTagsClient = DefaultFollowedTagsClient(configuration)
+
+public class DefaultFollowedTagsClient(
+  private val configuration: ClientConfiguration = defaultClientConfiguration,
+) : FollowedTagsClient {
+  override suspend fun getFollowedTags(
+    limit: Long?,
+    maxId: String?,
+    minId: String?,
+    sinceId: String?,
+  ): FollowedTagsClient.GetFollowedTagsResponse {
+    try {
+      val response = configuration.client.`get`("api/v1/followed_tags") {
+        url {
+          if (limit != null) {
+            parameters.append("limit", limit.toString())
+          }
+          if (maxId != null) {
+            parameters.append("max_id", maxId)
+          }
+          if (minId != null) {
+            parameters.append("min_id", minId)
+          }
+          if (sinceId != null) {
+            parameters.append("since_id", sinceId)
+          }
+        }
+      }
+      return when (response.status.value) {
+        200 -> FollowedTagsClient.GetFollowedTagsResponseSuccess(response.body<List<Tag>>(), response.headers)
+        401, 404, 429, 503 -> FollowedTagsClient.GetFollowedTagsResponseFailure401(response.body<Error>(), response.headers)
+        410 -> FollowedTagsClient.GetFollowedTagsResponseFailure410(response.headers)
+        422 -> FollowedTagsClient.GetFollowedTagsResponseFailure(response.body<ValidationError>(), response.headers)
+        else -> FollowedTagsClient.GetFollowedTagsResponseUnknownFailure(response.status.value, response.headers)
+      }
+    }
+    catch(e: CancellationException) {
+      throw e
+    }
+    catch(e: Exception) {
+      configuration.exceptionLogger(e)
+      return FollowedTagsClient.GetFollowedTagsResponseUnknownFailure(500)
+    }
+  }
 }

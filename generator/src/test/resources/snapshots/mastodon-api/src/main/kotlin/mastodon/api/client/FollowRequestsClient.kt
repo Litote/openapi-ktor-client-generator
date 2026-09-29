@@ -18,9 +18,7 @@ import mastodon.api.model.Error
 import mastodon.api.model.Relationship
 import mastodon.api.model.ValidationError
 
-public class FollowRequestsClient(
-  private val configuration: ClientConfiguration = defaultClientConfiguration,
-) {
+public interface FollowRequestsClient {
   /**
    * View pending follow requests
    */
@@ -28,85 +26,17 @@ public class FollowRequestsClient(
     limit: Long? = 40,
     maxId: String? = null,
     sinceId: String? = null,
-  ): GetFollowRequestsResponse {
-    try {
-      val response = configuration.client.`get`("api/v1/follow_requests") {
-        url {
-          if (limit != null) {
-            parameters.append("limit", limit.toString())
-          }
-          if (maxId != null) {
-            parameters.append("max_id", maxId)
-          }
-          if (sinceId != null) {
-            parameters.append("since_id", sinceId)
-          }
-        }
-      }
-      return when (response.status.value) {
-        200 -> GetFollowRequestsResponseSuccess(response.body<List<Account>>(), response.headers)
-        401, 404, 429, 503 -> GetFollowRequestsResponseFailure401(response.body<Error>(), response.headers)
-        410 -> GetFollowRequestsResponseFailure410(response.headers)
-        422 -> GetFollowRequestsResponseFailure(response.body<ValidationError>(), response.headers)
-        else -> GetFollowRequestsResponseUnknownFailure(response.status.value, response.headers)
-      }
-    }
-    catch(e: CancellationException) {
-      throw e
-    }
-    catch(e: Exception) {
-      configuration.exceptionLogger(e)
-      return GetFollowRequestsResponseUnknownFailure(500)
-    }
-  }
+  ): GetFollowRequestsResponse
 
   /**
    * Accept follow request
    */
-  public suspend fun postFollowRequestAuthorize(accountId: String): PostFollowRequestAuthorizeResponse {
-    try {
-      val response = configuration.client.post("api/v1/follow_requests/{account_id}/authorize".replace("/{account_id}", "/${accountId.encodeURLPathPart()}")) {
-      }
-      return when (response.status.value) {
-        200 -> PostFollowRequestAuthorizeResponseSuccess(response.body<Relationship>(), response.headers)
-        401, 404, 429, 503 -> PostFollowRequestAuthorizeResponseFailure401(response.body<Error>(), response.headers)
-        410 -> PostFollowRequestAuthorizeResponseFailure410(response.headers)
-        422 -> PostFollowRequestAuthorizeResponseFailure(response.body<ValidationError>(), response.headers)
-        else -> PostFollowRequestAuthorizeResponseUnknownFailure(response.status.value, response.headers)
-      }
-    }
-    catch(e: CancellationException) {
-      throw e
-    }
-    catch(e: Exception) {
-      configuration.exceptionLogger(e)
-      return PostFollowRequestAuthorizeResponseUnknownFailure(500)
-    }
-  }
+  public suspend fun postFollowRequestAuthorize(accountId: String): PostFollowRequestAuthorizeResponse
 
   /**
    * Reject follow request
    */
-  public suspend fun postFollowRequestReject(accountId: String): PostFollowRequestRejectResponse {
-    try {
-      val response = configuration.client.post("api/v1/follow_requests/{account_id}/reject".replace("/{account_id}", "/${accountId.encodeURLPathPart()}")) {
-      }
-      return when (response.status.value) {
-        200 -> PostFollowRequestRejectResponseSuccess(response.body<Relationship>(), response.headers)
-        401, 404, 429, 503 -> PostFollowRequestRejectResponseFailure401(response.body<Error>(), response.headers)
-        410 -> PostFollowRequestRejectResponseFailure410(response.headers)
-        422 -> PostFollowRequestRejectResponseFailure(response.body<ValidationError>(), response.headers)
-        else -> PostFollowRequestRejectResponseUnknownFailure(response.status.value, response.headers)
-      }
-    }
-    catch(e: CancellationException) {
-      throw e
-    }
-    catch(e: Exception) {
-      configuration.exceptionLogger(e)
-      return PostFollowRequestRejectResponseUnknownFailure(500)
-    }
-  }
+  public suspend fun postFollowRequestReject(accountId: String): PostFollowRequestRejectResponse
 
   @Serializable
   public sealed class GetFollowRequestsResponse {
@@ -284,4 +214,88 @@ public class FollowRequestsClient(
     @Transient
     override val headers: Headers = Headers.Empty,
   ) : PostFollowRequestRejectResponse()
+}
+
+public fun FollowRequestsClient(configuration: ClientConfiguration = defaultClientConfiguration): FollowRequestsClient = DefaultFollowRequestsClient(configuration)
+
+public class DefaultFollowRequestsClient(
+  private val configuration: ClientConfiguration = defaultClientConfiguration,
+) : FollowRequestsClient {
+  override suspend fun getFollowRequests(
+    limit: Long?,
+    maxId: String?,
+    sinceId: String?,
+  ): FollowRequestsClient.GetFollowRequestsResponse {
+    try {
+      val response = configuration.client.`get`("api/v1/follow_requests") {
+        url {
+          if (limit != null) {
+            parameters.append("limit", limit.toString())
+          }
+          if (maxId != null) {
+            parameters.append("max_id", maxId)
+          }
+          if (sinceId != null) {
+            parameters.append("since_id", sinceId)
+          }
+        }
+      }
+      return when (response.status.value) {
+        200 -> FollowRequestsClient.GetFollowRequestsResponseSuccess(response.body<List<Account>>(), response.headers)
+        401, 404, 429, 503 -> FollowRequestsClient.GetFollowRequestsResponseFailure401(response.body<Error>(), response.headers)
+        410 -> FollowRequestsClient.GetFollowRequestsResponseFailure410(response.headers)
+        422 -> FollowRequestsClient.GetFollowRequestsResponseFailure(response.body<ValidationError>(), response.headers)
+        else -> FollowRequestsClient.GetFollowRequestsResponseUnknownFailure(response.status.value, response.headers)
+      }
+    }
+    catch(e: CancellationException) {
+      throw e
+    }
+    catch(e: Exception) {
+      configuration.exceptionLogger(e)
+      return FollowRequestsClient.GetFollowRequestsResponseUnknownFailure(500)
+    }
+  }
+
+  override suspend fun postFollowRequestAuthorize(accountId: String): FollowRequestsClient.PostFollowRequestAuthorizeResponse {
+    try {
+      val response = configuration.client.post("api/v1/follow_requests/{account_id}/authorize".replace("/{account_id}", "/${accountId.encodeURLPathPart()}")) {
+      }
+      return when (response.status.value) {
+        200 -> FollowRequestsClient.PostFollowRequestAuthorizeResponseSuccess(response.body<Relationship>(), response.headers)
+        401, 404, 429, 503 -> FollowRequestsClient.PostFollowRequestAuthorizeResponseFailure401(response.body<Error>(), response.headers)
+        410 -> FollowRequestsClient.PostFollowRequestAuthorizeResponseFailure410(response.headers)
+        422 -> FollowRequestsClient.PostFollowRequestAuthorizeResponseFailure(response.body<ValidationError>(), response.headers)
+        else -> FollowRequestsClient.PostFollowRequestAuthorizeResponseUnknownFailure(response.status.value, response.headers)
+      }
+    }
+    catch(e: CancellationException) {
+      throw e
+    }
+    catch(e: Exception) {
+      configuration.exceptionLogger(e)
+      return FollowRequestsClient.PostFollowRequestAuthorizeResponseUnknownFailure(500)
+    }
+  }
+
+  override suspend fun postFollowRequestReject(accountId: String): FollowRequestsClient.PostFollowRequestRejectResponse {
+    try {
+      val response = configuration.client.post("api/v1/follow_requests/{account_id}/reject".replace("/{account_id}", "/${accountId.encodeURLPathPart()}")) {
+      }
+      return when (response.status.value) {
+        200 -> FollowRequestsClient.PostFollowRequestRejectResponseSuccess(response.body<Relationship>(), response.headers)
+        401, 404, 429, 503 -> FollowRequestsClient.PostFollowRequestRejectResponseFailure401(response.body<Error>(), response.headers)
+        410 -> FollowRequestsClient.PostFollowRequestRejectResponseFailure410(response.headers)
+        422 -> FollowRequestsClient.PostFollowRequestRejectResponseFailure(response.body<ValidationError>(), response.headers)
+        else -> FollowRequestsClient.PostFollowRequestRejectResponseUnknownFailure(response.status.value, response.headers)
+      }
+    }
+    catch(e: CancellationException) {
+      throw e
+    }
+    catch(e: Exception) {
+      configuration.exceptionLogger(e)
+      return FollowRequestsClient.PostFollowRequestRejectResponseUnknownFailure(500)
+    }
+  }
 }

@@ -15,9 +15,7 @@ import mastodon.api.model.Account
 import mastodon.api.model.Error
 import mastodon.api.model.ValidationError
 
-public class MutesClient(
-  private val configuration: ClientConfiguration = defaultClientConfiguration,
-) {
+public interface MutesClient {
   /**
    * View muted accounts
    */
@@ -25,37 +23,7 @@ public class MutesClient(
     limit: Long? = 40,
     maxId: String? = null,
     sinceId: String? = null,
-  ): GetMutesResponse {
-    try {
-      val response = configuration.client.`get`("api/v1/mutes") {
-        url {
-          if (limit != null) {
-            parameters.append("limit", limit.toString())
-          }
-          if (maxId != null) {
-            parameters.append("max_id", maxId)
-          }
-          if (sinceId != null) {
-            parameters.append("since_id", sinceId)
-          }
-        }
-      }
-      return when (response.status.value) {
-        200 -> GetMutesResponseSuccess(response.body<List<Account>>(), response.headers)
-        401, 404, 429, 503 -> GetMutesResponseFailure401(response.body<Error>(), response.headers)
-        410 -> GetMutesResponseFailure410(response.headers)
-        422 -> GetMutesResponseFailure(response.body<ValidationError>(), response.headers)
-        else -> GetMutesResponseUnknownFailure(response.status.value, response.headers)
-      }
-    }
-    catch(e: CancellationException) {
-      throw e
-    }
-    catch(e: Exception) {
-      configuration.exceptionLogger(e)
-      return GetMutesResponseUnknownFailure(500)
-    }
-  }
+  ): GetMutesResponse
 
   @Serializable
   public sealed class GetMutesResponse {
@@ -119,4 +87,46 @@ public class MutesClient(
     @Transient
     override val headers: Headers = Headers.Empty,
   ) : GetMutesResponse()
+}
+
+public fun MutesClient(configuration: ClientConfiguration = defaultClientConfiguration): MutesClient = DefaultMutesClient(configuration)
+
+public class DefaultMutesClient(
+  private val configuration: ClientConfiguration = defaultClientConfiguration,
+) : MutesClient {
+  override suspend fun getMutes(
+    limit: Long?,
+    maxId: String?,
+    sinceId: String?,
+  ): MutesClient.GetMutesResponse {
+    try {
+      val response = configuration.client.`get`("api/v1/mutes") {
+        url {
+          if (limit != null) {
+            parameters.append("limit", limit.toString())
+          }
+          if (maxId != null) {
+            parameters.append("max_id", maxId)
+          }
+          if (sinceId != null) {
+            parameters.append("since_id", sinceId)
+          }
+        }
+      }
+      return when (response.status.value) {
+        200 -> MutesClient.GetMutesResponseSuccess(response.body<List<Account>>(), response.headers)
+        401, 404, 429, 503 -> MutesClient.GetMutesResponseFailure401(response.body<Error>(), response.headers)
+        410 -> MutesClient.GetMutesResponseFailure410(response.headers)
+        422 -> MutesClient.GetMutesResponseFailure(response.body<ValidationError>(), response.headers)
+        else -> MutesClient.GetMutesResponseUnknownFailure(response.status.value, response.headers)
+      }
+    }
+    catch(e: CancellationException) {
+      throw e
+    }
+    catch(e: Exception) {
+      configuration.exceptionLogger(e)
+      return MutesClient.GetMutesResponseUnknownFailure(500)
+    }
+  }
 }

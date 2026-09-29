@@ -21,65 +21,12 @@ import kotlinx.serialization.Transient
 import response.headers.api.client.ClientConfiguration.Companion.defaultClientConfiguration
 import response.headers.api.model.Item
 
-public class ItemsClient(
-  private val configuration: ClientConfiguration = defaultClientConfiguration,
-) {
-  public suspend fun listItems(): ListItemsResponse {
-    try {
-      val response = configuration.client.`get`("items") {
-      }
-      return when (response.status.value) {
-        200 -> ListItemsResponseSuccess(response.body<List<Item>>(), response.headers)
-        429 -> ListItemsResponseFailure(response.headers)
-        else -> ListItemsResponseUnknownFailure(response.status.value, response.headers)
-      }
-    }
-    catch(e: CancellationException) {
-      throw e
-    }
-    catch(e: Exception) {
-      configuration.exceptionLogger(e)
-      return ListItemsResponseUnknownFailure(500)
-    }
-  }
+public interface ItemsClient {
+  public suspend fun listItems(): ListItemsResponse
 
-  public suspend fun createItem(request: Item): CreateItemResponse {
-    try {
-      val response = configuration.client.post("items") {
-        setBody(request)
-        contentType(ContentType.Application.Json)
-      }
-      return when (response.status.value) {
-        201, 202 -> CreateItemResponseSuccess(response.body<Item>(), response.headers)
-        else -> CreateItemResponseUnknownFailure(response.status.value, response.headers)
-      }
-    }
-    catch(e: CancellationException) {
-      throw e
-    }
-    catch(e: Exception) {
-      configuration.exceptionLogger(e)
-      return CreateItemResponseUnknownFailure(500)
-    }
-  }
+  public suspend fun createItem(request: Item): CreateItemResponse
 
-  public suspend fun deleteItem(id: String): DeleteItemResponse {
-    try {
-      val response = configuration.client.delete("items/{id}".replace("/{id}", "/${id.encodeURLPathPart()}")) {
-      }
-      return when (response.status.value) {
-        204 -> DeleteItemResponseSuccess(response.headers)
-        else -> DeleteItemResponseUnknownFailure(response.status.value, response.headers)
-      }
-    }
-    catch(e: CancellationException) {
-      throw e
-    }
-    catch(e: Exception) {
-      configuration.exceptionLogger(e)
-      return DeleteItemResponseUnknownFailure(500)
-    }
-  }
+  public suspend fun deleteItem(id: String): DeleteItemResponse
 
   @Serializable
   public sealed class ListItemsResponse {
@@ -190,4 +137,67 @@ public class ItemsClient(
     @Transient
     override val headers: Headers = Headers.Empty,
   ) : DeleteItemResponse()
+}
+
+public fun ItemsClient(configuration: ClientConfiguration = defaultClientConfiguration): ItemsClient = DefaultItemsClient(configuration)
+
+public class DefaultItemsClient(
+  private val configuration: ClientConfiguration = defaultClientConfiguration,
+) : ItemsClient {
+  override suspend fun listItems(): ItemsClient.ListItemsResponse {
+    try {
+      val response = configuration.client.`get`("items") {
+      }
+      return when (response.status.value) {
+        200 -> ItemsClient.ListItemsResponseSuccess(response.body<List<Item>>(), response.headers)
+        429 -> ItemsClient.ListItemsResponseFailure(response.headers)
+        else -> ItemsClient.ListItemsResponseUnknownFailure(response.status.value, response.headers)
+      }
+    }
+    catch(e: CancellationException) {
+      throw e
+    }
+    catch(e: Exception) {
+      configuration.exceptionLogger(e)
+      return ItemsClient.ListItemsResponseUnknownFailure(500)
+    }
+  }
+
+  override suspend fun createItem(request: Item): ItemsClient.CreateItemResponse {
+    try {
+      val response = configuration.client.post("items") {
+        setBody(request)
+        contentType(ContentType.Application.Json)
+      }
+      return when (response.status.value) {
+        201, 202 -> ItemsClient.CreateItemResponseSuccess(response.body<Item>(), response.headers)
+        else -> ItemsClient.CreateItemResponseUnknownFailure(response.status.value, response.headers)
+      }
+    }
+    catch(e: CancellationException) {
+      throw e
+    }
+    catch(e: Exception) {
+      configuration.exceptionLogger(e)
+      return ItemsClient.CreateItemResponseUnknownFailure(500)
+    }
+  }
+
+  override suspend fun deleteItem(id: String): ItemsClient.DeleteItemResponse {
+    try {
+      val response = configuration.client.delete("items/{id}".replace("/{id}", "/${id.encodeURLPathPart()}")) {
+      }
+      return when (response.status.value) {
+        204 -> ItemsClient.DeleteItemResponseSuccess(response.headers)
+        else -> ItemsClient.DeleteItemResponseUnknownFailure(response.status.value, response.headers)
+      }
+    }
+    catch(e: CancellationException) {
+      throw e
+    }
+    catch(e: Exception) {
+      configuration.exceptionLogger(e)
+      return ItemsClient.DeleteItemResponseUnknownFailure(500)
+    }
+  }
 }

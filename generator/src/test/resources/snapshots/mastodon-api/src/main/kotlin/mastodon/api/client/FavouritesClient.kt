@@ -15,9 +15,7 @@ import mastodon.api.model.Error
 import mastodon.api.model.Status
 import mastodon.api.model.ValidationError
 
-public class FavouritesClient(
-  private val configuration: ClientConfiguration = defaultClientConfiguration,
-) {
+public interface FavouritesClient {
   /**
    * View favourited statuses
    */
@@ -26,40 +24,7 @@ public class FavouritesClient(
     maxId: String? = null,
     minId: String? = null,
     sinceId: String? = null,
-  ): GetFavouritesResponse {
-    try {
-      val response = configuration.client.`get`("api/v1/favourites") {
-        url {
-          if (limit != null) {
-            parameters.append("limit", limit.toString())
-          }
-          if (maxId != null) {
-            parameters.append("max_id", maxId)
-          }
-          if (minId != null) {
-            parameters.append("min_id", minId)
-          }
-          if (sinceId != null) {
-            parameters.append("since_id", sinceId)
-          }
-        }
-      }
-      return when (response.status.value) {
-        200 -> GetFavouritesResponseSuccess(response.body<List<Status>>(), response.headers)
-        401, 404, 429, 503 -> GetFavouritesResponseFailure401(response.body<Error>(), response.headers)
-        410 -> GetFavouritesResponseFailure410(response.headers)
-        422 -> GetFavouritesResponseFailure(response.body<ValidationError>(), response.headers)
-        else -> GetFavouritesResponseUnknownFailure(response.status.value, response.headers)
-      }
-    }
-    catch(e: CancellationException) {
-      throw e
-    }
-    catch(e: Exception) {
-      configuration.exceptionLogger(e)
-      return GetFavouritesResponseUnknownFailure(500)
-    }
-  }
+  ): GetFavouritesResponse
 
   @Serializable
   public sealed class GetFavouritesResponse {
@@ -123,4 +88,50 @@ public class FavouritesClient(
     @Transient
     override val headers: Headers = Headers.Empty,
   ) : GetFavouritesResponse()
+}
+
+public fun FavouritesClient(configuration: ClientConfiguration = defaultClientConfiguration): FavouritesClient = DefaultFavouritesClient(configuration)
+
+public class DefaultFavouritesClient(
+  private val configuration: ClientConfiguration = defaultClientConfiguration,
+) : FavouritesClient {
+  override suspend fun getFavourites(
+    limit: Long?,
+    maxId: String?,
+    minId: String?,
+    sinceId: String?,
+  ): FavouritesClient.GetFavouritesResponse {
+    try {
+      val response = configuration.client.`get`("api/v1/favourites") {
+        url {
+          if (limit != null) {
+            parameters.append("limit", limit.toString())
+          }
+          if (maxId != null) {
+            parameters.append("max_id", maxId)
+          }
+          if (minId != null) {
+            parameters.append("min_id", minId)
+          }
+          if (sinceId != null) {
+            parameters.append("since_id", sinceId)
+          }
+        }
+      }
+      return when (response.status.value) {
+        200 -> FavouritesClient.GetFavouritesResponseSuccess(response.body<List<Status>>(), response.headers)
+        401, 404, 429, 503 -> FavouritesClient.GetFavouritesResponseFailure401(response.body<Error>(), response.headers)
+        410 -> FavouritesClient.GetFavouritesResponseFailure410(response.headers)
+        422 -> FavouritesClient.GetFavouritesResponseFailure(response.body<ValidationError>(), response.headers)
+        else -> FavouritesClient.GetFavouritesResponseUnknownFailure(response.status.value, response.headers)
+      }
+    }
+    catch(e: CancellationException) {
+      throw e
+    }
+    catch(e: Exception) {
+      configuration.exceptionLogger(e)
+      return FavouritesClient.GetFavouritesResponseUnknownFailure(500)
+    }
+  }
 }
