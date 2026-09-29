@@ -1,5 +1,30 @@
 # Changelog
 
+## [0.8.0](https://github.com/Litote/openapi-ktor-client-generator/compare/v0.7.0...v0.8.0) (2026-09-29)
+
+
+### ⚠ BREAKING CHANGES
+
+* generate an interface and a factory function for each client ([#86](https://github.com/Litote/openapi-ktor-client-generator/issues/86))
+* parameters serialization ([#85](https://github.com/Litote/openapi-ktor-client-generator/issues/85))
+* retrieve response headers ([#84](https://github.com/Litote/openapi-ktor-client-generator/issues/84))
+
+### Features
+
+* add binary response support ([#83](https://github.com/Litote/openapi-ktor-client-generator/issues/83)) ([596d4b7](https://github.com/Litote/openapi-ktor-client-generator/commit/596d4b714c08b94e5b93cc81c181242e97f40534))
+* add uuid and datetime modules ([#82](https://github.com/Litote/openapi-ktor-client-generator/issues/82)) ([222786a](https://github.com/Litote/openapi-ktor-client-generator/commit/222786ae21e5c8921432dc138ab513663b136fcd))
+* generate an interface and a factory function for each client ([#86](https://github.com/Litote/openapi-ktor-client-generator/issues/86)) ([f6631ec](https://github.com/Litote/openapi-ktor-client-generator/commit/f6631ecb83883528492f4f8e83d24a14333bb694))
+* parameters serialization ([#85](https://github.com/Litote/openapi-ktor-client-generator/issues/85)) ([0fb6754](https://github.com/Litote/openapi-ktor-client-generator/commit/0fb675453cacde143bb3425124c7b128c69466e2))
+* retrieve response headers ([#84](https://github.com/Litote/openapi-ktor-client-generator/issues/84)) ([06848a2](https://github.com/Litote/openapi-ktor-client-generator/commit/06848a2967a0eff2e8821cc1e3f29261a12aa5a3))
+
+
+### Bug Fixes
+
+* **ci:** add exact version for actions ([eda7f43](https://github.com/Litote/openapi-ktor-client-generator/commit/eda7f430db80e0d99697ffed551896923d1774a8))
+* **ci:** avoid dependabot race condition ([#81](https://github.com/Litote/openapi-ktor-client-generator/issues/81)) ([71d78dd](https://github.com/Litote/openapi-ktor-client-generator/commit/71d78dd99806d2cd13a02dc4605d3d0f8bbde9b5))
+* **ci:** regenerate Kotlin Wasm yarn lock in dependabot automation ([#61](https://github.com/Litote/openapi-ktor-client-generator/issues/61)) ([405d930](https://github.com/Litote/openapi-ktor-client-generator/commit/405d9300f0d1e22b5917a0089097733945be8863))
+* do not catch CancellationException - support coroutine cancellation ([#80](https://github.com/Litote/openapi-ktor-client-generator/issues/80)) ([08eb5d0](https://github.com/Litote/openapi-ktor-client-generator/commit/08eb5d03cf27310312b8255bcb3687b74ada128d))
+
 ## [0.7.0](https://github.com/Litote/openapi-ktor-client-generator/compare/v0.6.1...v0.7.0) (2026-06-02)
 
 
