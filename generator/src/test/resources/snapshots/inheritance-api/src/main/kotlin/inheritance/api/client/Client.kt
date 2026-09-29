@@ -7,10 +7,12 @@ import io.ktor.client.call.body
 import io.ktor.client.request.post
 import io.ktor.client.request.setBody
 import io.ktor.http.ContentType
+import io.ktor.http.Headers
 import io.ktor.http.contentType
 import kotlin.Int
 import kotlin.coroutines.cancellation.CancellationException
 import kotlinx.serialization.Serializable
+import kotlinx.serialization.Transient
 
 public class Client(
   private val configuration: ClientConfiguration = defaultClientConfiguration,
@@ -22,8 +24,8 @@ public class Client(
         contentType(ContentType.Application.Json)
       }
       return when (response.status.value) {
-        200 -> CreateStatusResponseSuccess(response.body<StatusCreated>())
-        else -> CreateStatusResponseUnknownFailure(response.status.value)
+        200 -> CreateStatusResponseSuccess(response.body<StatusCreated>(), response.headers)
+        else -> CreateStatusResponseUnknownFailure(response.status.value, response.headers)
       }
     }
     catch(e: CancellationException) {
@@ -36,15 +38,21 @@ public class Client(
   }
 
   @Serializable
-  public sealed class CreateStatusResponse
+  public sealed class CreateStatusResponse {
+    public abstract val headers: Headers
+  }
 
   @Serializable
   public data class CreateStatusResponseSuccess(
     public val body: StatusCreated,
+    @Transient
+    override val headers: Headers = Headers.Empty,
   ) : CreateStatusResponse()
 
   @Serializable
   public data class CreateStatusResponseUnknownFailure(
     public val statusCode: Int,
+    @Transient
+    override val headers: Headers = Headers.Empty,
   ) : CreateStatusResponse()
 }

@@ -1,0 +1,154 @@
+{
+  "openapi": "3.0.3",
+  "info": {
+    "title": "Response headers API",
+    "version": "1.0.0"
+  },
+  "paths": {
+    "/items": {
+      "get": {
+        "tags": ["items"],
+        "operationId": "listItems",
+        "responses": {
+          "200": {
+            "description": "Items",
+            "headers": {
+              "X-Total-Count": {
+                "description": "Total number of items",
+                "schema": { "type": "integer", "format": "int32" }
+              },
+              "Link": { "$ref": "#/components/headers/Link" },
+              "X-Big-Counter": {
+                "schema": { "type": "integer", "format": "int64" }
+              },
+              "X-Score": {
+                "schema": { "type": "number" }
+              },
+              "X-Cached": {
+                "schema": { "type": "boolean" }
+              },
+              "X-Expires-At": {
+                "schema": { "type": "string", "format": "date-time" }
+              },
+              "X-Mode": {
+                "schema": { "type": "string", "enum": ["fast", "slow"] }
+              },
+              "X-Tags": {
+                "schema": { "type": "array", "items": { "type": "string" } }
+              },
+              "Content-Type": {
+                "schema": { "type": "string" }
+              },
+              "Body": {
+                "schema": { "type": "string" }
+              }
+            },
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "array",
+                  "items": { "$ref": "#/components/schemas/Item" }
+                }
+              }
+            }
+          },
+          "429": {
+            "description": "Too many requests",
+            "headers": {
+              "Retry-After": {
+                "schema": { "type": "integer" }
+              }
+            }
+          }
+        }
+      },
+      "post": {
+        "tags": ["items"],
+        "operationId": "createItem",
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": { "$ref": "#/components/schemas/Item" }
+            }
+          }
+        },
+        "responses": {
+          "201": {
+            "description": "Created",
+            "headers": {
+              "Location": {
+                "schema": { "type": "string" }
+              }
+            },
+            "content": {
+              "application/json": {
+                "schema": { "$ref": "#/components/schemas/Item" }
+              }
+            }
+          },
+          "202": {
+            "description": "Accepted",
+            "headers": {
+              "ETag": {
+                "schema": { "type": "string" }
+              },
+              "location": {
+                "schema": { "type": "string" }
+              }
+            },
+            "content": {
+              "application/json": {
+                "schema": { "$ref": "#/components/schemas/Item" }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/items/{id}": {
+      "delete": {
+        "tags": ["items"],
+        "operationId": "deleteItem",
+        "parameters": [
+          {
+            "name": "id",
+            "in": "path",
+            "required": true,
+            "schema": { "type": "string" }
+          }
+        ],
+        "responses": {
+          "204": {
+            "description": "Deleted",
+            "headers": {
+              "Headers": {
+                "schema": { "type": "string" }
+              },
+              "Status-Code": {
+                "schema": { "type": "string" }
+              }
+            }
+          }
+        }
+      }
+    }
+  },
+  "components": {
+    "headers": {
+      "Link": {
+        "description": "Pagination links",
+        "schema": { "type": "string" }
+      }
+    },
+    "schemas": {
+      "Item": {
+        "type": "object",
+        "required": ["id"],
+        "properties": {
+          "id": { "type": "string" }
+        }
+      }
+    }
+  }
+}

@@ -5,6 +5,7 @@ import io.ktor.client.request.`get`
 import io.ktor.client.request.post
 import io.ktor.client.request.setBody
 import io.ktor.http.ContentType
+import io.ktor.http.Headers
 import io.ktor.http.contentType
 import kotlin.Boolean
 import kotlin.Int
@@ -12,6 +13,7 @@ import kotlin.String
 import kotlin.coroutines.cancellation.CancellationException
 import kotlinx.serialization.SerialName
 import kotlinx.serialization.Serializable
+import kotlinx.serialization.Transient
 import mastodon.api.client.ClientConfiguration.Companion.defaultClientConfiguration
 import mastodon.api.model.Error
 import mastodon.api.model.Token
@@ -61,11 +63,11 @@ public class OauthClient(
         }
       }
       return when (response.status.value) {
-        200 -> GetOauthAuthorizeResponseSuccess
-        400, 401, 404, 429, 503 -> GetOauthAuthorizeResponseFailure400(response.body<Error>())
-        410 -> GetOauthAuthorizeResponseFailure410
-        422 -> GetOauthAuthorizeResponseFailure(response.body<ValidationError>())
-        else -> GetOauthAuthorizeResponseUnknownFailure(response.status.value)
+        200 -> GetOauthAuthorizeResponseSuccess(response.headers)
+        400, 401, 404, 429, 503 -> GetOauthAuthorizeResponseFailure400(response.body<Error>(), response.headers)
+        410 -> GetOauthAuthorizeResponseFailure410(response.headers)
+        422 -> GetOauthAuthorizeResponseFailure(response.body<ValidationError>(), response.headers)
+        else -> GetOauthAuthorizeResponseUnknownFailure(response.status.value, response.headers)
       }
     }
     catch(e: CancellationException) {
@@ -87,11 +89,11 @@ public class OauthClient(
         contentType(ContentType.Application.Json)
       }
       return when (response.status.value) {
-        200 -> PostOauthRevokeResponseSuccess
-        401, 403, 404, 429, 503 -> PostOauthRevokeResponseFailure401(response.body<Error>())
-        410 -> PostOauthRevokeResponseFailure410
-        422 -> PostOauthRevokeResponseFailure(response.body<ValidationError>())
-        else -> PostOauthRevokeResponseUnknownFailure(response.status.value)
+        200 -> PostOauthRevokeResponseSuccess(response.headers)
+        401, 403, 404, 429, 503 -> PostOauthRevokeResponseFailure401(response.body<Error>(), response.headers)
+        410 -> PostOauthRevokeResponseFailure410(response.headers)
+        422 -> PostOauthRevokeResponseFailure(response.body<ValidationError>(), response.headers)
+        else -> PostOauthRevokeResponseUnknownFailure(response.status.value, response.headers)
       }
     }
     catch(e: CancellationException) {
@@ -113,11 +115,11 @@ public class OauthClient(
         contentType(ContentType.Application.Json)
       }
       return when (response.status.value) {
-        200 -> PostOauthTokenResponseSuccess(response.body<Token>())
-        400, 401, 404, 429, 503 -> PostOauthTokenResponseFailure400(response.body<Error>())
-        410 -> PostOauthTokenResponseFailure410
-        422 -> PostOauthTokenResponseFailure(response.body<ValidationError>())
-        else -> PostOauthTokenResponseUnknownFailure(response.status.value)
+        200 -> PostOauthTokenResponseSuccess(response.body<Token>(), response.headers)
+        400, 401, 404, 429, 503 -> PostOauthTokenResponseFailure400(response.body<Error>(), response.headers)
+        410 -> PostOauthTokenResponseFailure410(response.headers)
+        422 -> PostOauthTokenResponseFailure(response.body<ValidationError>(), response.headers)
+        else -> PostOauthTokenResponseUnknownFailure(response.status.value, response.headers)
       }
     }
     catch(e: CancellationException) {
@@ -137,11 +139,11 @@ public class OauthClient(
       val response = configuration.client.`get`("oauth/userinfo") {
       }
       return when (response.status.value) {
-        200 -> GetOauthUserinfoResponseSuccess
-        401, 403, 404, 429, 503 -> GetOauthUserinfoResponseFailure401(response.body<Error>())
-        410 -> GetOauthUserinfoResponseFailure410
-        422 -> GetOauthUserinfoResponseFailure(response.body<ValidationError>())
-        else -> GetOauthUserinfoResponseUnknownFailure(response.status.value)
+        200 -> GetOauthUserinfoResponseSuccess(response.headers)
+        401, 403, 404, 429, 503 -> GetOauthUserinfoResponseFailure401(response.body<Error>(), response.headers)
+        410 -> GetOauthUserinfoResponseFailure410(response.headers)
+        422 -> GetOauthUserinfoResponseFailure(response.body<ValidationError>(), response.headers)
+        else -> GetOauthUserinfoResponseUnknownFailure(response.status.value, response.headers)
       }
     }
     catch(e: CancellationException) {
@@ -154,27 +156,59 @@ public class OauthClient(
   }
 
   @Serializable
-  public sealed class GetOauthAuthorizeResponse
+  public sealed class GetOauthAuthorizeResponse {
+    public abstract val headers: Headers
+  }
 
   @Serializable
-  public object GetOauthAuthorizeResponseSuccess : GetOauthAuthorizeResponse()
+  public data class GetOauthAuthorizeResponseSuccess(
+    @Transient
+    override val headers: Headers = Headers.Empty,
+  ) : GetOauthAuthorizeResponse() {
+    /**
+     * Number of requests permitted per time period
+     */
+    public val xRateLimitLimit: Int?
+      get() = headers["X-RateLimit-Limit"]?.toIntOrNull()
+
+    /**
+     * Number of requests you can still make
+     */
+    public val xRateLimitRemaining: Int?
+      get() = headers["X-RateLimit-Remaining"]?.toIntOrNull()
+
+    /**
+     * Timestamp when your rate limit will reset
+     */
+    public val xRateLimitReset: String?
+      get() = headers["X-RateLimit-Reset"]
+  }
 
   @Serializable
   public data class GetOauthAuthorizeResponseFailure400(
     public val body: Error,
+    @Transient
+    override val headers: Headers = Headers.Empty,
   ) : GetOauthAuthorizeResponse()
 
   @Serializable
-  public object GetOauthAuthorizeResponseFailure410 : GetOauthAuthorizeResponse()
+  public data class GetOauthAuthorizeResponseFailure410(
+    @Transient
+    override val headers: Headers = Headers.Empty,
+  ) : GetOauthAuthorizeResponse()
 
   @Serializable
   public data class GetOauthAuthorizeResponseFailure(
     public val body: ValidationError,
+    @Transient
+    override val headers: Headers = Headers.Empty,
   ) : GetOauthAuthorizeResponse()
 
   @Serializable
   public data class GetOauthAuthorizeResponseUnknownFailure(
     public val statusCode: Int,
+    @Transient
+    override val headers: Headers = Headers.Empty,
   ) : GetOauthAuthorizeResponse()
 
   @Serializable
@@ -187,27 +221,59 @@ public class OauthClient(
   )
 
   @Serializable
-  public sealed class PostOauthRevokeResponse
+  public sealed class PostOauthRevokeResponse {
+    public abstract val headers: Headers
+  }
 
   @Serializable
-  public object PostOauthRevokeResponseSuccess : PostOauthRevokeResponse()
+  public data class PostOauthRevokeResponseSuccess(
+    @Transient
+    override val headers: Headers = Headers.Empty,
+  ) : PostOauthRevokeResponse() {
+    /**
+     * Number of requests permitted per time period
+     */
+    public val xRateLimitLimit: Int?
+      get() = headers["X-RateLimit-Limit"]?.toIntOrNull()
+
+    /**
+     * Number of requests you can still make
+     */
+    public val xRateLimitRemaining: Int?
+      get() = headers["X-RateLimit-Remaining"]?.toIntOrNull()
+
+    /**
+     * Timestamp when your rate limit will reset
+     */
+    public val xRateLimitReset: String?
+      get() = headers["X-RateLimit-Reset"]
+  }
 
   @Serializable
   public data class PostOauthRevokeResponseFailure401(
     public val body: Error,
+    @Transient
+    override val headers: Headers = Headers.Empty,
   ) : PostOauthRevokeResponse()
 
   @Serializable
-  public object PostOauthRevokeResponseFailure410 : PostOauthRevokeResponse()
+  public data class PostOauthRevokeResponseFailure410(
+    @Transient
+    override val headers: Headers = Headers.Empty,
+  ) : PostOauthRevokeResponse()
 
   @Serializable
   public data class PostOauthRevokeResponseFailure(
     public val body: ValidationError,
+    @Transient
+    override val headers: Headers = Headers.Empty,
   ) : PostOauthRevokeResponse()
 
   @Serializable
   public data class PostOauthRevokeResponseUnknownFailure(
     public val statusCode: Int,
+    @Transient
+    override val headers: Headers = Headers.Empty,
   ) : PostOauthRevokeResponse()
 
   @Serializable
@@ -227,52 +293,115 @@ public class OauthClient(
   )
 
   @Serializable
-  public sealed class PostOauthTokenResponse
+  public sealed class PostOauthTokenResponse {
+    public abstract val headers: Headers
+  }
 
   @Serializable
   public data class PostOauthTokenResponseSuccess(
     public val body: Token,
-  ) : PostOauthTokenResponse()
+    @Transient
+    override val headers: Headers = Headers.Empty,
+  ) : PostOauthTokenResponse() {
+    /**
+     * Number of requests permitted per time period
+     */
+    public val xRateLimitLimit: Int?
+      get() = headers["X-RateLimit-Limit"]?.toIntOrNull()
+
+    /**
+     * Number of requests you can still make
+     */
+    public val xRateLimitRemaining: Int?
+      get() = headers["X-RateLimit-Remaining"]?.toIntOrNull()
+
+    /**
+     * Timestamp when your rate limit will reset
+     */
+    public val xRateLimitReset: String?
+      get() = headers["X-RateLimit-Reset"]
+  }
 
   @Serializable
   public data class PostOauthTokenResponseFailure400(
     public val body: Error,
+    @Transient
+    override val headers: Headers = Headers.Empty,
   ) : PostOauthTokenResponse()
 
   @Serializable
-  public object PostOauthTokenResponseFailure410 : PostOauthTokenResponse()
+  public data class PostOauthTokenResponseFailure410(
+    @Transient
+    override val headers: Headers = Headers.Empty,
+  ) : PostOauthTokenResponse()
 
   @Serializable
   public data class PostOauthTokenResponseFailure(
     public val body: ValidationError,
+    @Transient
+    override val headers: Headers = Headers.Empty,
   ) : PostOauthTokenResponse()
 
   @Serializable
   public data class PostOauthTokenResponseUnknownFailure(
     public val statusCode: Int,
+    @Transient
+    override val headers: Headers = Headers.Empty,
   ) : PostOauthTokenResponse()
 
   @Serializable
-  public sealed class GetOauthUserinfoResponse
+  public sealed class GetOauthUserinfoResponse {
+    public abstract val headers: Headers
+  }
 
   @Serializable
-  public object GetOauthUserinfoResponseSuccess : GetOauthUserinfoResponse()
+  public data class GetOauthUserinfoResponseSuccess(
+    @Transient
+    override val headers: Headers = Headers.Empty,
+  ) : GetOauthUserinfoResponse() {
+    /**
+     * Number of requests permitted per time period
+     */
+    public val xRateLimitLimit: Int?
+      get() = headers["X-RateLimit-Limit"]?.toIntOrNull()
+
+    /**
+     * Number of requests you can still make
+     */
+    public val xRateLimitRemaining: Int?
+      get() = headers["X-RateLimit-Remaining"]?.toIntOrNull()
+
+    /**
+     * Timestamp when your rate limit will reset
+     */
+    public val xRateLimitReset: String?
+      get() = headers["X-RateLimit-Reset"]
+  }
 
   @Serializable
   public data class GetOauthUserinfoResponseFailure401(
     public val body: Error,
+    @Transient
+    override val headers: Headers = Headers.Empty,
   ) : GetOauthUserinfoResponse()
 
   @Serializable
-  public object GetOauthUserinfoResponseFailure410 : GetOauthUserinfoResponse()
+  public data class GetOauthUserinfoResponseFailure410(
+    @Transient
+    override val headers: Headers = Headers.Empty,
+  ) : GetOauthUserinfoResponse()
 
   @Serializable
   public data class GetOauthUserinfoResponseFailure(
     public val body: ValidationError,
+    @Transient
+    override val headers: Headers = Headers.Empty,
   ) : GetOauthUserinfoResponse()
 
   @Serializable
   public data class GetOauthUserinfoResponseUnknownFailure(
     public val statusCode: Int,
+    @Transient
+    override val headers: Headers = Headers.Empty,
   ) : GetOauthUserinfoResponse()
 }

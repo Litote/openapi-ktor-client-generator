@@ -7,6 +7,7 @@ import io.ktor.client.request.post
 import io.ktor.client.request.put
 import io.ktor.client.request.setBody
 import io.ktor.http.ContentType
+import io.ktor.http.Headers
 import io.ktor.http.contentType
 import io.ktor.http.encodeURLPathPart
 import kotlin.Boolean
@@ -16,6 +17,7 @@ import kotlin.String
 import kotlin.coroutines.cancellation.CancellationException
 import kotlinx.serialization.SerialName
 import kotlinx.serialization.Serializable
+import kotlinx.serialization.Transient
 import mastodon.api.client.ClientConfiguration.Companion.defaultClientConfiguration
 import mastodon.api.model.Account
 import mastodon.api.model.Error
@@ -35,11 +37,11 @@ public class ListsClient(
       val response = configuration.client.`get`("api/v1/lists") {
       }
       return when (response.status.value) {
-        200 -> GetListsResponseSuccess(response.body<CollectionsList<ModelList>>())
-        401, 404, 429, 503 -> GetListsResponseFailure401(response.body<Error>())
-        410 -> GetListsResponseFailure410
-        422 -> GetListsResponseFailure(response.body<ValidationError>())
-        else -> GetListsResponseUnknownFailure(response.status.value)
+        200 -> GetListsResponseSuccess(response.body<CollectionsList<ModelList>>(), response.headers)
+        401, 404, 429, 503 -> GetListsResponseFailure401(response.body<Error>(), response.headers)
+        410 -> GetListsResponseFailure410(response.headers)
+        422 -> GetListsResponseFailure(response.body<ValidationError>(), response.headers)
+        else -> GetListsResponseUnknownFailure(response.status.value, response.headers)
       }
     }
     catch(e: CancellationException) {
@@ -61,10 +63,10 @@ public class ListsClient(
         contentType(ContentType.Application.Json)
       }
       return when (response.status.value) {
-        200 -> CreateListResponseSuccess(response.body<ModelList>())
-        401, 404, 422, 429, 503 -> CreateListResponseFailure401(response.body<Error>())
-        410 -> CreateListResponseFailure
-        else -> CreateListResponseUnknownFailure(response.status.value)
+        200 -> CreateListResponseSuccess(response.body<ModelList>(), response.headers)
+        401, 404, 422, 429, 503 -> CreateListResponseFailure401(response.body<Error>(), response.headers)
+        410 -> CreateListResponseFailure(response.headers)
+        else -> CreateListResponseUnknownFailure(response.status.value, response.headers)
       }
     }
     catch(e: CancellationException) {
@@ -84,11 +86,11 @@ public class ListsClient(
       val response = configuration.client.`get`("api/v1/lists/{id}".replace("/{id}", "/${id.encodeURLPathPart()}")) {
       }
       return when (response.status.value) {
-        200 -> GetListResponseSuccess(response.body<ModelList>())
-        401, 404, 429, 503 -> GetListResponseFailure401(response.body<Error>())
-        410 -> GetListResponseFailure410
-        422 -> GetListResponseFailure(response.body<ValidationError>())
-        else -> GetListResponseUnknownFailure(response.status.value)
+        200 -> GetListResponseSuccess(response.body<ModelList>(), response.headers)
+        401, 404, 429, 503 -> GetListResponseFailure401(response.body<Error>(), response.headers)
+        410 -> GetListResponseFailure410(response.headers)
+        422 -> GetListResponseFailure(response.body<ValidationError>(), response.headers)
+        else -> GetListResponseUnknownFailure(response.status.value, response.headers)
       }
     }
     catch(e: CancellationException) {
@@ -110,10 +112,10 @@ public class ListsClient(
         contentType(ContentType.Application.Json)
       }
       return when (response.status.value) {
-        200 -> UpdateListResponseSuccess(response.body<ModelList>())
-        401, 404, 422, 429, 503 -> UpdateListResponseFailure401(response.body<Error>())
-        410 -> UpdateListResponseFailure
-        else -> UpdateListResponseUnknownFailure(response.status.value)
+        200 -> UpdateListResponseSuccess(response.body<ModelList>(), response.headers)
+        401, 404, 422, 429, 503 -> UpdateListResponseFailure401(response.body<Error>(), response.headers)
+        410 -> UpdateListResponseFailure(response.headers)
+        else -> UpdateListResponseUnknownFailure(response.status.value, response.headers)
       }
     }
     catch(e: CancellationException) {
@@ -133,11 +135,11 @@ public class ListsClient(
       val response = configuration.client.delete("api/v1/lists/{id}".replace("/{id}", "/${id.encodeURLPathPart()}")) {
       }
       return when (response.status.value) {
-        200 -> DeleteListResponseSuccess
-        401, 404, 429, 503 -> DeleteListResponseFailure401(response.body<Error>())
-        410 -> DeleteListResponseFailure410
-        422 -> DeleteListResponseFailure(response.body<ValidationError>())
-        else -> DeleteListResponseUnknownFailure(response.status.value)
+        200 -> DeleteListResponseSuccess(response.headers)
+        401, 404, 429, 503 -> DeleteListResponseFailure401(response.body<Error>(), response.headers)
+        410 -> DeleteListResponseFailure410(response.headers)
+        422 -> DeleteListResponseFailure(response.body<ValidationError>(), response.headers)
+        else -> DeleteListResponseUnknownFailure(response.status.value, response.headers)
       }
     }
     catch(e: CancellationException) {
@@ -177,11 +179,11 @@ public class ListsClient(
         }
       }
       return when (response.status.value) {
-        200 -> GetListAccountsResponseSuccess(response.body<CollectionsList<Account>>())
-        401, 404, 429, 503 -> GetListAccountsResponseFailure401(response.body<Error>())
-        410 -> GetListAccountsResponseFailure410
-        422 -> GetListAccountsResponseFailure(response.body<ValidationError>())
-        else -> GetListAccountsResponseUnknownFailure(response.status.value)
+        200 -> GetListAccountsResponseSuccess(response.body<CollectionsList<Account>>(), response.headers)
+        401, 404, 429, 503 -> GetListAccountsResponseFailure401(response.body<Error>(), response.headers)
+        410 -> GetListAccountsResponseFailure410(response.headers)
+        422 -> GetListAccountsResponseFailure(response.body<ValidationError>(), response.headers)
+        else -> GetListAccountsResponseUnknownFailure(response.status.value, response.headers)
       }
     }
     catch(e: CancellationException) {
@@ -203,10 +205,10 @@ public class ListsClient(
         contentType(ContentType.Application.Json)
       }
       return when (response.status.value) {
-        200 -> PostListAccountsResponseSuccess
-        401, 404, 422, 429, 503 -> PostListAccountsResponseFailure401(response.body<Error>())
-        410 -> PostListAccountsResponseFailure
-        else -> PostListAccountsResponseUnknownFailure(response.status.value)
+        200 -> PostListAccountsResponseSuccess(response.headers)
+        401, 404, 422, 429, 503 -> PostListAccountsResponseFailure401(response.body<Error>(), response.headers)
+        410 -> PostListAccountsResponseFailure(response.headers)
+        else -> PostListAccountsResponseUnknownFailure(response.status.value, response.headers)
       }
     }
     catch(e: CancellationException) {
@@ -228,11 +230,11 @@ public class ListsClient(
         contentType(ContentType.Application.Json)
       }
       return when (response.status.value) {
-        200 -> DeleteListAccountsResponseSuccess
-        401, 404, 429, 503 -> DeleteListAccountsResponseFailure401(response.body<Error>())
-        410 -> DeleteListAccountsResponseFailure410
-        422 -> DeleteListAccountsResponseFailure(response.body<ValidationError>())
-        else -> DeleteListAccountsResponseUnknownFailure(response.status.value)
+        200 -> DeleteListAccountsResponseSuccess(response.headers)
+        401, 404, 429, 503 -> DeleteListAccountsResponseFailure401(response.body<Error>(), response.headers)
+        410 -> DeleteListAccountsResponseFailure410(response.headers)
+        422 -> DeleteListAccountsResponseFailure(response.body<ValidationError>(), response.headers)
+        else -> DeleteListAccountsResponseUnknownFailure(response.status.value, response.headers)
       }
     }
     catch(e: CancellationException) {
@@ -245,29 +247,60 @@ public class ListsClient(
   }
 
   @Serializable
-  public sealed class GetListsResponse
+  public sealed class GetListsResponse {
+    public abstract val headers: Headers
+  }
 
   @Serializable
   public data class GetListsResponseSuccess(
     public val body: CollectionsList<ModelList>,
-  ) : GetListsResponse()
+    @Transient
+    override val headers: Headers = Headers.Empty,
+  ) : GetListsResponse() {
+    /**
+     * Number of requests permitted per time period
+     */
+    public val xRateLimitLimit: Int?
+      get() = headers["X-RateLimit-Limit"]?.toIntOrNull()
+
+    /**
+     * Number of requests you can still make
+     */
+    public val xRateLimitRemaining: Int?
+      get() = headers["X-RateLimit-Remaining"]?.toIntOrNull()
+
+    /**
+     * Timestamp when your rate limit will reset
+     */
+    public val xRateLimitReset: String?
+      get() = headers["X-RateLimit-Reset"]
+  }
 
   @Serializable
   public data class GetListsResponseFailure401(
     public val body: Error,
+    @Transient
+    override val headers: Headers = Headers.Empty,
   ) : GetListsResponse()
 
   @Serializable
-  public object GetListsResponseFailure410 : GetListsResponse()
+  public data class GetListsResponseFailure410(
+    @Transient
+    override val headers: Headers = Headers.Empty,
+  ) : GetListsResponse()
 
   @Serializable
   public data class GetListsResponseFailure(
     public val body: ValidationError,
+    @Transient
+    override val headers: Headers = Headers.Empty,
   ) : GetListsResponse()
 
   @Serializable
   public data class GetListsResponseUnknownFailure(
     public val statusCode: Int,
+    @Transient
+    override val headers: Headers = Headers.Empty,
   ) : GetListsResponse()
 
   @Serializable
@@ -279,50 +312,110 @@ public class ListsClient(
   )
 
   @Serializable
-  public sealed class CreateListResponse
+  public sealed class CreateListResponse {
+    public abstract val headers: Headers
+  }
 
   @Serializable
   public data class CreateListResponseSuccess(
     public val body: ModelList,
-  ) : CreateListResponse()
+    @Transient
+    override val headers: Headers = Headers.Empty,
+  ) : CreateListResponse() {
+    /**
+     * Number of requests permitted per time period
+     */
+    public val xRateLimitLimit: Int?
+      get() = headers["X-RateLimit-Limit"]?.toIntOrNull()
+
+    /**
+     * Number of requests you can still make
+     */
+    public val xRateLimitRemaining: Int?
+      get() = headers["X-RateLimit-Remaining"]?.toIntOrNull()
+
+    /**
+     * Timestamp when your rate limit will reset
+     */
+    public val xRateLimitReset: String?
+      get() = headers["X-RateLimit-Reset"]
+  }
 
   @Serializable
   public data class CreateListResponseFailure401(
     public val body: Error,
+    @Transient
+    override val headers: Headers = Headers.Empty,
   ) : CreateListResponse()
 
   @Serializable
-  public object CreateListResponseFailure : CreateListResponse()
+  public data class CreateListResponseFailure(
+    @Transient
+    override val headers: Headers = Headers.Empty,
+  ) : CreateListResponse()
 
   @Serializable
   public data class CreateListResponseUnknownFailure(
     public val statusCode: Int,
+    @Transient
+    override val headers: Headers = Headers.Empty,
   ) : CreateListResponse()
 
   @Serializable
-  public sealed class GetListResponse
+  public sealed class GetListResponse {
+    public abstract val headers: Headers
+  }
 
   @Serializable
   public data class GetListResponseSuccess(
     public val body: ModelList,
-  ) : GetListResponse()
+    @Transient
+    override val headers: Headers = Headers.Empty,
+  ) : GetListResponse() {
+    /**
+     * Number of requests permitted per time period
+     */
+    public val xRateLimitLimit: Int?
+      get() = headers["X-RateLimit-Limit"]?.toIntOrNull()
+
+    /**
+     * Number of requests you can still make
+     */
+    public val xRateLimitRemaining: Int?
+      get() = headers["X-RateLimit-Remaining"]?.toIntOrNull()
+
+    /**
+     * Timestamp when your rate limit will reset
+     */
+    public val xRateLimitReset: String?
+      get() = headers["X-RateLimit-Reset"]
+  }
 
   @Serializable
   public data class GetListResponseFailure401(
     public val body: Error,
+    @Transient
+    override val headers: Headers = Headers.Empty,
   ) : GetListResponse()
 
   @Serializable
-  public object GetListResponseFailure410 : GetListResponse()
+  public data class GetListResponseFailure410(
+    @Transient
+    override val headers: Headers = Headers.Empty,
+  ) : GetListResponse()
 
   @Serializable
   public data class GetListResponseFailure(
     public val body: ValidationError,
+    @Transient
+    override val headers: Headers = Headers.Empty,
   ) : GetListResponse()
 
   @Serializable
   public data class GetListResponseUnknownFailure(
     public val statusCode: Int,
+    @Transient
+    override val headers: Headers = Headers.Empty,
   ) : GetListResponse()
 
   @Serializable
@@ -334,74 +427,172 @@ public class ListsClient(
   )
 
   @Serializable
-  public sealed class UpdateListResponse
+  public sealed class UpdateListResponse {
+    public abstract val headers: Headers
+  }
 
   @Serializable
   public data class UpdateListResponseSuccess(
     public val body: ModelList,
-  ) : UpdateListResponse()
+    @Transient
+    override val headers: Headers = Headers.Empty,
+  ) : UpdateListResponse() {
+    /**
+     * Number of requests permitted per time period
+     */
+    public val xRateLimitLimit: Int?
+      get() = headers["X-RateLimit-Limit"]?.toIntOrNull()
+
+    /**
+     * Number of requests you can still make
+     */
+    public val xRateLimitRemaining: Int?
+      get() = headers["X-RateLimit-Remaining"]?.toIntOrNull()
+
+    /**
+     * Timestamp when your rate limit will reset
+     */
+    public val xRateLimitReset: String?
+      get() = headers["X-RateLimit-Reset"]
+  }
 
   @Serializable
   public data class UpdateListResponseFailure401(
     public val body: Error,
+    @Transient
+    override val headers: Headers = Headers.Empty,
   ) : UpdateListResponse()
 
   @Serializable
-  public object UpdateListResponseFailure : UpdateListResponse()
+  public data class UpdateListResponseFailure(
+    @Transient
+    override val headers: Headers = Headers.Empty,
+  ) : UpdateListResponse()
 
   @Serializable
   public data class UpdateListResponseUnknownFailure(
     public val statusCode: Int,
+    @Transient
+    override val headers: Headers = Headers.Empty,
   ) : UpdateListResponse()
 
   @Serializable
-  public sealed class DeleteListResponse
+  public sealed class DeleteListResponse {
+    public abstract val headers: Headers
+  }
 
   @Serializable
-  public object DeleteListResponseSuccess : DeleteListResponse()
+  public data class DeleteListResponseSuccess(
+    @Transient
+    override val headers: Headers = Headers.Empty,
+  ) : DeleteListResponse() {
+    /**
+     * Number of requests permitted per time period
+     */
+    public val xRateLimitLimit: Int?
+      get() = headers["X-RateLimit-Limit"]?.toIntOrNull()
+
+    /**
+     * Number of requests you can still make
+     */
+    public val xRateLimitRemaining: Int?
+      get() = headers["X-RateLimit-Remaining"]?.toIntOrNull()
+
+    /**
+     * Timestamp when your rate limit will reset
+     */
+    public val xRateLimitReset: String?
+      get() = headers["X-RateLimit-Reset"]
+  }
 
   @Serializable
   public data class DeleteListResponseFailure401(
     public val body: Error,
+    @Transient
+    override val headers: Headers = Headers.Empty,
   ) : DeleteListResponse()
 
   @Serializable
-  public object DeleteListResponseFailure410 : DeleteListResponse()
+  public data class DeleteListResponseFailure410(
+    @Transient
+    override val headers: Headers = Headers.Empty,
+  ) : DeleteListResponse()
 
   @Serializable
   public data class DeleteListResponseFailure(
     public val body: ValidationError,
+    @Transient
+    override val headers: Headers = Headers.Empty,
   ) : DeleteListResponse()
 
   @Serializable
   public data class DeleteListResponseUnknownFailure(
     public val statusCode: Int,
+    @Transient
+    override val headers: Headers = Headers.Empty,
   ) : DeleteListResponse()
 
   @Serializable
-  public sealed class GetListAccountsResponse
+  public sealed class GetListAccountsResponse {
+    public abstract val headers: Headers
+  }
 
   @Serializable
   public data class GetListAccountsResponseSuccess(
     public val body: CollectionsList<Account>,
-  ) : GetListAccountsResponse()
+    @Transient
+    override val headers: Headers = Headers.Empty,
+  ) : GetListAccountsResponse() {
+    /**
+     * Pagination links for browsing older or newer results. Format: Link: <https://mastodon.example/api/v1/endpoint?max_id=7163058>; rel="next", <https://mastodon.example/api/v1/endpoint?min_id=7275607>; rel="prev". See [RFC 8288](https://www.rfc-editor.org/rfc/rfc8288) for more information.
+     */
+    public val link: String?
+      get() = headers["Link"]
+
+    /**
+     * Number of requests permitted per time period
+     */
+    public val xRateLimitLimit: Int?
+      get() = headers["X-RateLimit-Limit"]?.toIntOrNull()
+
+    /**
+     * Number of requests you can still make
+     */
+    public val xRateLimitRemaining: Int?
+      get() = headers["X-RateLimit-Remaining"]?.toIntOrNull()
+
+    /**
+     * Timestamp when your rate limit will reset
+     */
+    public val xRateLimitReset: String?
+      get() = headers["X-RateLimit-Reset"]
+  }
 
   @Serializable
   public data class GetListAccountsResponseFailure401(
     public val body: Error,
+    @Transient
+    override val headers: Headers = Headers.Empty,
   ) : GetListAccountsResponse()
 
   @Serializable
-  public object GetListAccountsResponseFailure410 : GetListAccountsResponse()
+  public data class GetListAccountsResponseFailure410(
+    @Transient
+    override val headers: Headers = Headers.Empty,
+  ) : GetListAccountsResponse()
 
   @Serializable
   public data class GetListAccountsResponseFailure(
     public val body: ValidationError,
+    @Transient
+    override val headers: Headers = Headers.Empty,
   ) : GetListAccountsResponse()
 
   @Serializable
   public data class GetListAccountsResponseUnknownFailure(
     public val statusCode: Int,
+    @Transient
+    override val headers: Headers = Headers.Empty,
   ) : GetListAccountsResponse()
 
   @Serializable
@@ -411,22 +602,52 @@ public class ListsClient(
   )
 
   @Serializable
-  public sealed class PostListAccountsResponse
+  public sealed class PostListAccountsResponse {
+    public abstract val headers: Headers
+  }
 
   @Serializable
-  public object PostListAccountsResponseSuccess : PostListAccountsResponse()
+  public data class PostListAccountsResponseSuccess(
+    @Transient
+    override val headers: Headers = Headers.Empty,
+  ) : PostListAccountsResponse() {
+    /**
+     * Number of requests permitted per time period
+     */
+    public val xRateLimitLimit: Int?
+      get() = headers["X-RateLimit-Limit"]?.toIntOrNull()
+
+    /**
+     * Number of requests you can still make
+     */
+    public val xRateLimitRemaining: Int?
+      get() = headers["X-RateLimit-Remaining"]?.toIntOrNull()
+
+    /**
+     * Timestamp when your rate limit will reset
+     */
+    public val xRateLimitReset: String?
+      get() = headers["X-RateLimit-Reset"]
+  }
 
   @Serializable
   public data class PostListAccountsResponseFailure401(
     public val body: Error,
+    @Transient
+    override val headers: Headers = Headers.Empty,
   ) : PostListAccountsResponse()
 
   @Serializable
-  public object PostListAccountsResponseFailure : PostListAccountsResponse()
+  public data class PostListAccountsResponseFailure(
+    @Transient
+    override val headers: Headers = Headers.Empty,
+  ) : PostListAccountsResponse()
 
   @Serializable
   public data class PostListAccountsResponseUnknownFailure(
     public val statusCode: Int,
+    @Transient
+    override val headers: Headers = Headers.Empty,
   ) : PostListAccountsResponse()
 
   @Serializable
@@ -436,26 +657,58 @@ public class ListsClient(
   )
 
   @Serializable
-  public sealed class DeleteListAccountsResponse
+  public sealed class DeleteListAccountsResponse {
+    public abstract val headers: Headers
+  }
 
   @Serializable
-  public object DeleteListAccountsResponseSuccess : DeleteListAccountsResponse()
+  public data class DeleteListAccountsResponseSuccess(
+    @Transient
+    override val headers: Headers = Headers.Empty,
+  ) : DeleteListAccountsResponse() {
+    /**
+     * Number of requests permitted per time period
+     */
+    public val xRateLimitLimit: Int?
+      get() = headers["X-RateLimit-Limit"]?.toIntOrNull()
+
+    /**
+     * Number of requests you can still make
+     */
+    public val xRateLimitRemaining: Int?
+      get() = headers["X-RateLimit-Remaining"]?.toIntOrNull()
+
+    /**
+     * Timestamp when your rate limit will reset
+     */
+    public val xRateLimitReset: String?
+      get() = headers["X-RateLimit-Reset"]
+  }
 
   @Serializable
   public data class DeleteListAccountsResponseFailure401(
     public val body: Error,
+    @Transient
+    override val headers: Headers = Headers.Empty,
   ) : DeleteListAccountsResponse()
 
   @Serializable
-  public object DeleteListAccountsResponseFailure410 : DeleteListAccountsResponse()
+  public data class DeleteListAccountsResponseFailure410(
+    @Transient
+    override val headers: Headers = Headers.Empty,
+  ) : DeleteListAccountsResponse()
 
   @Serializable
   public data class DeleteListAccountsResponseFailure(
     public val body: ValidationError,
+    @Transient
+    override val headers: Headers = Headers.Empty,
   ) : DeleteListAccountsResponse()
 
   @Serializable
   public data class DeleteListAccountsResponseUnknownFailure(
     public val statusCode: Int,
+    @Transient
+    override val headers: Headers = Headers.Empty,
   ) : DeleteListAccountsResponse()
 }

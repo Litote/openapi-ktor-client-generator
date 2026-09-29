@@ -5,10 +5,14 @@ import com.squareup.kotlinpoet.ClassName
 import com.squareup.kotlinpoet.FunSpec
 import com.squareup.kotlinpoet.INT
 import com.squareup.kotlinpoet.KModifier
+import com.squareup.kotlinpoet.ParameterSpec
 import com.squareup.kotlinpoet.PropertySpec
 import com.squareup.kotlinpoet.TypeName
 import com.squareup.kotlinpoet.TypeSpec
 import kotlinx.serialization.Serializable
+import kotlinx.serialization.Transient
+import org.litote.openapi.ktor.client.generator.domain.DomainTypeSpec.PrimitiveSpec.KindSpec
+import org.litote.openapi.ktor.client.generator.domain.ResponseHeaderSpec
 import org.litote.openapi.ktor.client.generator.port.StringFormatType
 import org.litote.openapi.ktor.client.generator.domain.ResponseEntrySpec as DomainResponseEntry
 
@@ -20,7 +24,17 @@ internal class ResponseBuilder(
 ) {
     private companion object {
         val serializableAnnotation: AnnotationSpec = AnnotationSpec.builder(Serializable::class).build()
+        val transientAnnotation: AnnotationSpec = AnnotationSpec.builder(Transient::class).build()
+        val headersClass: ClassName = ClassName("io.ktor.http", "Headers")
+        const val HEADERS_PROPERTY = "headers"
     }
+
+    private data class ResponseGroup(
+        val typeName: TypeName?,
+        val isSuccess: Boolean,
+        val statusCodes: List<Int>,
+        val headers: List<ResponseHeaderSpec>,
+    )
 
     /**
      * Builds the sealed response class and its subclasses for an operation.
@@ -44,6 +58,7 @@ internal class ResponseBuilder(
             .classBuilder(responseSealedName)
             .addModifiers(KModifier.SEALED)
             .addAnnotation(serializableAnnotation)
+            .addProperty(PropertySpec.builder(HEADERS_PROPERTY, headersClass, KModifier.ABSTRACT).build())
             .build()
 
     private fun buildResponseEntries(
@@ -54,24 +69,25 @@ internal class ResponseBuilder(
         modelPackage: String,
         modelPackageOverrides: Map<String, String> = emptyMap(),
     ): List<RenderedResponseEntry> {
-        val grouped: List<Triple<TypeName?, Boolean, List<Int>>> =
+        val grouped: List<ResponseGroup> =
             responses.map { entry ->
-                val typeName = entry.bodyType?.toTypeName(modelPackage, modelPackageOverrides, stringFormatTypes)
-                Triple(typeName, entry.isSuccess, entry.statusCodes)
+                ResponseGroup(
+                    typeName = entry.bodyType?.toTypeName(modelPackage, modelPackageOverrides, stringFormatTypes),
+                    isSuccess = entry.isSuccess,
+                    statusCodes = entry.statusCodes,
+                    headers = entry.headers,
+                )
             }
 
         if (grouped.isEmpty()) {
             error("no response specified")
         }
 
-        return grouped.mapIndexed { index, triple ->
-            val typeName = triple.first
-            val success = triple.second
-            val statusCodes = triple.third
-            val suffix = determineClassNameSuffix(index, success, statusCodes, grouped)
-            val responseType = createResponseType("${responseBaseName}Response$suffix", typeName, responseSealedClass)
+        return grouped.mapIndexed { index, group ->
+            val suffix = determineClassNameSuffix(index, group.isSuccess, group.statusCodes, grouped)
+            val responseType = createResponseType("${responseBaseName}Response$suffix", group, responseSealedClass)
             clientBuilder.addType(responseType)
-            RenderedResponseEntry(statusCodes, typeName, responseType)
+            RenderedResponseEntry(group.statusCodes, group.typeName, responseType)
         }
     }
 
@@ -79,35 +95,76 @@ internal class ResponseBuilder(
         index: Int,
         success: Boolean,
         statusCodes: List<Int>,
-        all: List<Triple<TypeName?, Boolean, List<Int>>>,
+        all: List<ResponseGroup>,
     ): String =
         when {
-            success -> if (all.getOrNull(index + 1)?.second == true) "Success${statusCodes.first()}" else "Success"
+            success -> if (all.getOrNull(index + 1)?.isSuccess == true) "Success${statusCodes.first()}" else "Success"
             all.getOrNull(index + 1) != null -> "Failure${statusCodes.first()}"
             else -> "Failure"
         }
 
     private fun createResponseType(
         name: String,
-        typeName: TypeName?,
+        group: ResponseGroup,
         superclass: ClassName,
-    ): TypeSpec =
-        if (typeName == null) {
-            TypeSpec
-                .objectBuilder(name)
-                .addAnnotation(serializableAnnotation)
-                .superclass(superclass)
-                .build()
-        } else {
+    ): TypeSpec {
+        val constructorBuilder = FunSpec.constructorBuilder()
+        val typeBuilder =
             TypeSpec
                 .classBuilder(name)
                 .addModifiers(KModifier.DATA)
                 .addAnnotation(serializableAnnotation)
-                .primaryConstructor(FunSpec.constructorBuilder().addParameter("body", typeName).build())
-                .addProperty(PropertySpec.builder("body", typeName).initializer("body").build())
                 .superclass(superclass)
-                .build()
+        group.typeName?.let { typeName ->
+            constructorBuilder.addParameter("body", typeName)
+            typeBuilder.addProperty(PropertySpec.builder("body", typeName).initializer("body").build())
         }
+        addHeadersProperty(constructorBuilder, typeBuilder)
+        group.headers.forEach { typeBuilder.addProperty(buildTypedHeaderProperty(it)) }
+        return typeBuilder.primaryConstructor(constructorBuilder.build()).build()
+    }
+
+    private fun addHeadersProperty(
+        constructorBuilder: FunSpec.Builder,
+        typeBuilder: TypeSpec.Builder,
+    ) {
+        constructorBuilder.addParameter(
+            ParameterSpec
+                .builder(HEADERS_PROPERTY, headersClass)
+                .defaultValue("%T.Empty", headersClass)
+                .build(),
+        )
+        typeBuilder.addProperty(
+            PropertySpec
+                .builder(HEADERS_PROPERTY, headersClass, KModifier.OVERRIDE)
+                .addAnnotation(transientAnnotation)
+                .initializer(HEADERS_PROPERTY)
+                .build(),
+        )
+    }
+
+    private fun buildTypedHeaderProperty(header: ResponseHeaderSpec): PropertySpec {
+        val conversion =
+            when (header.type.kind) {
+                KindSpec.STRING -> ""
+                KindSpec.INT -> "?.toIntOrNull()"
+                KindSpec.LONG -> "?.toLongOrNull()"
+                KindSpec.DOUBLE -> "?.toDoubleOrNull()"
+                KindSpec.FLOAT -> "?.toFloatOrNull()"
+                KindSpec.BOOLEAN -> "?.toBooleanStrictOrNull()"
+            }
+        val builder =
+            PropertySpec
+                .builder(header.propertyName, header.type.toTypeName("").copy(nullable = true))
+                .getter(
+                    FunSpec
+                        .getterBuilder()
+                        .addStatement("return %N[%S]$conversion", HEADERS_PROPERTY, header.originalName)
+                        .build(),
+                )
+        header.description?.let { builder.addKdoc("%L\n", it) }
+        return builder.build()
+    }
 
     private fun addUnknownFailureType(
         clientBuilder: TypeSpec.Builder,
@@ -119,10 +176,13 @@ internal class ResponseBuilder(
                 .classBuilder("${responseBaseName}ResponseUnknownFailure")
                 .addModifiers(KModifier.DATA)
                 .addAnnotation(serializableAnnotation)
-                .primaryConstructor(FunSpec.constructorBuilder().addParameter("statusCode", INT).build())
                 .addProperty(PropertySpec.builder("statusCode", INT).initializer("statusCode").build())
                 .superclass(superclass)
-                .build(),
+                .apply {
+                    val constructorBuilder = FunSpec.constructorBuilder().addParameter("statusCode", INT)
+                    addHeadersProperty(constructorBuilder, this)
+                    primaryConstructor(constructorBuilder.build())
+                }.build(),
         )
     }
 }

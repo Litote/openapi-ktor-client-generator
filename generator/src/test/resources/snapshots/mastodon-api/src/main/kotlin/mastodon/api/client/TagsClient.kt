@@ -3,11 +3,13 @@ package mastodon.api.client
 import io.ktor.client.call.body
 import io.ktor.client.request.`get`
 import io.ktor.client.request.post
+import io.ktor.http.Headers
 import io.ktor.http.encodeURLPathPart
 import kotlin.Int
 import kotlin.String
 import kotlin.coroutines.cancellation.CancellationException
 import kotlinx.serialization.Serializable
+import kotlinx.serialization.Transient
 import mastodon.api.client.ClientConfiguration.Companion.defaultClientConfiguration
 import mastodon.api.model.Error
 import mastodon.api.model.Tag
@@ -24,11 +26,11 @@ public class TagsClient(
       val response = configuration.client.post("api/v1/tags/{id}/feature".replace("/{id}", "/${id.encodeURLPathPart()}")) {
       }
       return when (response.status.value) {
-        200 -> PostTagFeatureResponseSuccess(response.body<Tag>())
-        401, 404, 429, 503 -> PostTagFeatureResponseFailure401(response.body<Error>())
-        410 -> PostTagFeatureResponseFailure410
-        422 -> PostTagFeatureResponseFailure(response.body<ValidationError>())
-        else -> PostTagFeatureResponseUnknownFailure(response.status.value)
+        200 -> PostTagFeatureResponseSuccess(response.body<Tag>(), response.headers)
+        401, 404, 429, 503 -> PostTagFeatureResponseFailure401(response.body<Error>(), response.headers)
+        410 -> PostTagFeatureResponseFailure410(response.headers)
+        422 -> PostTagFeatureResponseFailure(response.body<ValidationError>(), response.headers)
+        else -> PostTagFeatureResponseUnknownFailure(response.status.value, response.headers)
       }
     }
     catch(e: CancellationException) {
@@ -48,11 +50,11 @@ public class TagsClient(
       val response = configuration.client.post("api/v1/tags/{id}/unfeature".replace("/{id}", "/${id.encodeURLPathPart()}")) {
       }
       return when (response.status.value) {
-        200 -> PostTagUnfeatureResponseSuccess(response.body<Tag>())
-        401, 404, 429, 503 -> PostTagUnfeatureResponseFailure401(response.body<Error>())
-        410 -> PostTagUnfeatureResponseFailure410
-        422 -> PostTagUnfeatureResponseFailure(response.body<ValidationError>())
-        else -> PostTagUnfeatureResponseUnknownFailure(response.status.value)
+        200 -> PostTagUnfeatureResponseSuccess(response.body<Tag>(), response.headers)
+        401, 404, 429, 503 -> PostTagUnfeatureResponseFailure401(response.body<Error>(), response.headers)
+        410 -> PostTagUnfeatureResponseFailure410(response.headers)
+        422 -> PostTagUnfeatureResponseFailure(response.body<ValidationError>(), response.headers)
+        else -> PostTagUnfeatureResponseUnknownFailure(response.status.value, response.headers)
       }
     }
     catch(e: CancellationException) {
@@ -72,11 +74,11 @@ public class TagsClient(
       val response = configuration.client.`get`("api/v1/tags/{name}".replace("/{name}", "/${name.encodeURLPathPart()}")) {
       }
       return when (response.status.value) {
-        200 -> GetTagsByNameResponseSuccess(response.body<Tag>())
-        401, 404, 429, 503 -> GetTagsByNameResponseFailure401(response.body<Error>())
-        410 -> GetTagsByNameResponseFailure410
-        422 -> GetTagsByNameResponseFailure(response.body<ValidationError>())
-        else -> GetTagsByNameResponseUnknownFailure(response.status.value)
+        200 -> GetTagsByNameResponseSuccess(response.body<Tag>(), response.headers)
+        401, 404, 429, 503 -> GetTagsByNameResponseFailure401(response.body<Error>(), response.headers)
+        410 -> GetTagsByNameResponseFailure410(response.headers)
+        422 -> GetTagsByNameResponseFailure(response.body<ValidationError>(), response.headers)
+        else -> GetTagsByNameResponseUnknownFailure(response.status.value, response.headers)
       }
     }
     catch(e: CancellationException) {
@@ -96,10 +98,10 @@ public class TagsClient(
       val response = configuration.client.post("api/v1/tags/{name}/follow".replace("/{name}", "/${name.encodeURLPathPart()}")) {
       }
       return when (response.status.value) {
-        200 -> PostTagFollowResponseSuccess(response.body<Tag>())
-        401, 404, 422, 429, 503 -> PostTagFollowResponseFailure401(response.body<Error>())
-        410 -> PostTagFollowResponseFailure
-        else -> PostTagFollowResponseUnknownFailure(response.status.value)
+        200 -> PostTagFollowResponseSuccess(response.body<Tag>(), response.headers)
+        401, 404, 422, 429, 503 -> PostTagFollowResponseFailure401(response.body<Error>(), response.headers)
+        410 -> PostTagFollowResponseFailure(response.headers)
+        else -> PostTagFollowResponseUnknownFailure(response.status.value, response.headers)
       }
     }
     catch(e: CancellationException) {
@@ -119,11 +121,11 @@ public class TagsClient(
       val response = configuration.client.post("api/v1/tags/{name}/unfollow".replace("/{name}", "/${name.encodeURLPathPart()}")) {
       }
       return when (response.status.value) {
-        200 -> PostTagUnfollowResponseSuccess(response.body<Tag>())
-        401, 404, 429, 503 -> PostTagUnfollowResponseFailure401(response.body<Error>())
-        410 -> PostTagUnfollowResponseFailure410
-        422 -> PostTagUnfollowResponseFailure(response.body<ValidationError>())
-        else -> PostTagUnfollowResponseUnknownFailure(response.status.value)
+        200 -> PostTagUnfollowResponseSuccess(response.body<Tag>(), response.headers)
+        401, 404, 429, 503 -> PostTagUnfollowResponseFailure401(response.body<Error>(), response.headers)
+        410 -> PostTagUnfollowResponseFailure410(response.headers)
+        422 -> PostTagUnfollowResponseFailure(response.body<ValidationError>(), response.headers)
+        else -> PostTagUnfollowResponseUnknownFailure(response.status.value, response.headers)
       }
     }
     catch(e: CancellationException) {
@@ -136,127 +138,280 @@ public class TagsClient(
   }
 
   @Serializable
-  public sealed class PostTagFeatureResponse
+  public sealed class PostTagFeatureResponse {
+    public abstract val headers: Headers
+  }
 
   @Serializable
   public data class PostTagFeatureResponseSuccess(
     public val body: Tag,
-  ) : PostTagFeatureResponse()
+    @Transient
+    override val headers: Headers = Headers.Empty,
+  ) : PostTagFeatureResponse() {
+    /**
+     * Number of requests permitted per time period
+     */
+    public val xRateLimitLimit: Int?
+      get() = headers["X-RateLimit-Limit"]?.toIntOrNull()
+
+    /**
+     * Number of requests you can still make
+     */
+    public val xRateLimitRemaining: Int?
+      get() = headers["X-RateLimit-Remaining"]?.toIntOrNull()
+
+    /**
+     * Timestamp when your rate limit will reset
+     */
+    public val xRateLimitReset: String?
+      get() = headers["X-RateLimit-Reset"]
+  }
 
   @Serializable
   public data class PostTagFeatureResponseFailure401(
     public val body: Error,
+    @Transient
+    override val headers: Headers = Headers.Empty,
   ) : PostTagFeatureResponse()
 
   @Serializable
-  public object PostTagFeatureResponseFailure410 : PostTagFeatureResponse()
+  public data class PostTagFeatureResponseFailure410(
+    @Transient
+    override val headers: Headers = Headers.Empty,
+  ) : PostTagFeatureResponse()
 
   @Serializable
   public data class PostTagFeatureResponseFailure(
     public val body: ValidationError,
+    @Transient
+    override val headers: Headers = Headers.Empty,
   ) : PostTagFeatureResponse()
 
   @Serializable
   public data class PostTagFeatureResponseUnknownFailure(
     public val statusCode: Int,
+    @Transient
+    override val headers: Headers = Headers.Empty,
   ) : PostTagFeatureResponse()
 
   @Serializable
-  public sealed class PostTagUnfeatureResponse
+  public sealed class PostTagUnfeatureResponse {
+    public abstract val headers: Headers
+  }
 
   @Serializable
   public data class PostTagUnfeatureResponseSuccess(
     public val body: Tag,
-  ) : PostTagUnfeatureResponse()
+    @Transient
+    override val headers: Headers = Headers.Empty,
+  ) : PostTagUnfeatureResponse() {
+    /**
+     * Number of requests permitted per time period
+     */
+    public val xRateLimitLimit: Int?
+      get() = headers["X-RateLimit-Limit"]?.toIntOrNull()
+
+    /**
+     * Number of requests you can still make
+     */
+    public val xRateLimitRemaining: Int?
+      get() = headers["X-RateLimit-Remaining"]?.toIntOrNull()
+
+    /**
+     * Timestamp when your rate limit will reset
+     */
+    public val xRateLimitReset: String?
+      get() = headers["X-RateLimit-Reset"]
+  }
 
   @Serializable
   public data class PostTagUnfeatureResponseFailure401(
     public val body: Error,
+    @Transient
+    override val headers: Headers = Headers.Empty,
   ) : PostTagUnfeatureResponse()
 
   @Serializable
-  public object PostTagUnfeatureResponseFailure410 : PostTagUnfeatureResponse()
+  public data class PostTagUnfeatureResponseFailure410(
+    @Transient
+    override val headers: Headers = Headers.Empty,
+  ) : PostTagUnfeatureResponse()
 
   @Serializable
   public data class PostTagUnfeatureResponseFailure(
     public val body: ValidationError,
+    @Transient
+    override val headers: Headers = Headers.Empty,
   ) : PostTagUnfeatureResponse()
 
   @Serializable
   public data class PostTagUnfeatureResponseUnknownFailure(
     public val statusCode: Int,
+    @Transient
+    override val headers: Headers = Headers.Empty,
   ) : PostTagUnfeatureResponse()
 
   @Serializable
-  public sealed class GetTagsByNameResponse
+  public sealed class GetTagsByNameResponse {
+    public abstract val headers: Headers
+  }
 
   @Serializable
   public data class GetTagsByNameResponseSuccess(
     public val body: Tag,
-  ) : GetTagsByNameResponse()
+    @Transient
+    override val headers: Headers = Headers.Empty,
+  ) : GetTagsByNameResponse() {
+    /**
+     * Number of requests permitted per time period
+     */
+    public val xRateLimitLimit: Int?
+      get() = headers["X-RateLimit-Limit"]?.toIntOrNull()
+
+    /**
+     * Number of requests you can still make
+     */
+    public val xRateLimitRemaining: Int?
+      get() = headers["X-RateLimit-Remaining"]?.toIntOrNull()
+
+    /**
+     * Timestamp when your rate limit will reset
+     */
+    public val xRateLimitReset: String?
+      get() = headers["X-RateLimit-Reset"]
+  }
 
   @Serializable
   public data class GetTagsByNameResponseFailure401(
     public val body: Error,
+    @Transient
+    override val headers: Headers = Headers.Empty,
   ) : GetTagsByNameResponse()
 
   @Serializable
-  public object GetTagsByNameResponseFailure410 : GetTagsByNameResponse()
+  public data class GetTagsByNameResponseFailure410(
+    @Transient
+    override val headers: Headers = Headers.Empty,
+  ) : GetTagsByNameResponse()
 
   @Serializable
   public data class GetTagsByNameResponseFailure(
     public val body: ValidationError,
+    @Transient
+    override val headers: Headers = Headers.Empty,
   ) : GetTagsByNameResponse()
 
   @Serializable
   public data class GetTagsByNameResponseUnknownFailure(
     public val statusCode: Int,
+    @Transient
+    override val headers: Headers = Headers.Empty,
   ) : GetTagsByNameResponse()
 
   @Serializable
-  public sealed class PostTagFollowResponse
+  public sealed class PostTagFollowResponse {
+    public abstract val headers: Headers
+  }
 
   @Serializable
   public data class PostTagFollowResponseSuccess(
     public val body: Tag,
-  ) : PostTagFollowResponse()
+    @Transient
+    override val headers: Headers = Headers.Empty,
+  ) : PostTagFollowResponse() {
+    /**
+     * Number of requests permitted per time period
+     */
+    public val xRateLimitLimit: Int?
+      get() = headers["X-RateLimit-Limit"]?.toIntOrNull()
+
+    /**
+     * Number of requests you can still make
+     */
+    public val xRateLimitRemaining: Int?
+      get() = headers["X-RateLimit-Remaining"]?.toIntOrNull()
+
+    /**
+     * Timestamp when your rate limit will reset
+     */
+    public val xRateLimitReset: String?
+      get() = headers["X-RateLimit-Reset"]
+  }
 
   @Serializable
   public data class PostTagFollowResponseFailure401(
     public val body: Error,
+    @Transient
+    override val headers: Headers = Headers.Empty,
   ) : PostTagFollowResponse()
 
   @Serializable
-  public object PostTagFollowResponseFailure : PostTagFollowResponse()
+  public data class PostTagFollowResponseFailure(
+    @Transient
+    override val headers: Headers = Headers.Empty,
+  ) : PostTagFollowResponse()
 
   @Serializable
   public data class PostTagFollowResponseUnknownFailure(
     public val statusCode: Int,
+    @Transient
+    override val headers: Headers = Headers.Empty,
   ) : PostTagFollowResponse()
 
   @Serializable
-  public sealed class PostTagUnfollowResponse
+  public sealed class PostTagUnfollowResponse {
+    public abstract val headers: Headers
+  }
 
   @Serializable
   public data class PostTagUnfollowResponseSuccess(
     public val body: Tag,
-  ) : PostTagUnfollowResponse()
+    @Transient
+    override val headers: Headers = Headers.Empty,
+  ) : PostTagUnfollowResponse() {
+    /**
+     * Number of requests permitted per time period
+     */
+    public val xRateLimitLimit: Int?
+      get() = headers["X-RateLimit-Limit"]?.toIntOrNull()
+
+    /**
+     * Number of requests you can still make
+     */
+    public val xRateLimitRemaining: Int?
+      get() = headers["X-RateLimit-Remaining"]?.toIntOrNull()
+
+    /**
+     * Timestamp when your rate limit will reset
+     */
+    public val xRateLimitReset: String?
+      get() = headers["X-RateLimit-Reset"]
+  }
 
   @Serializable
   public data class PostTagUnfollowResponseFailure401(
     public val body: Error,
+    @Transient
+    override val headers: Headers = Headers.Empty,
   ) : PostTagUnfollowResponse()
 
   @Serializable
-  public object PostTagUnfollowResponseFailure410 : PostTagUnfollowResponse()
+  public data class PostTagUnfollowResponseFailure410(
+    @Transient
+    override val headers: Headers = Headers.Empty,
+  ) : PostTagUnfollowResponse()
 
   @Serializable
   public data class PostTagUnfollowResponseFailure(
     public val body: ValidationError,
+    @Transient
+    override val headers: Headers = Headers.Empty,
   ) : PostTagUnfollowResponse()
 
   @Serializable
   public data class PostTagUnfollowResponseUnknownFailure(
     public val statusCode: Int,
+    @Transient
+    override val headers: Headers = Headers.Empty,
   ) : PostTagUnfollowResponse()
 }

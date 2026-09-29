@@ -14,6 +14,8 @@ import com.squareup.kotlinpoet.STRING
 import com.squareup.kotlinpoet.TypeName
 import com.squareup.kotlinpoet.asClassName
 import community.flock.kotlinx.openapi.bindings.BooleanValue
+import community.flock.kotlinx.openapi.bindings.Header
+import community.flock.kotlinx.openapi.bindings.HeaderOrReference
 import community.flock.kotlinx.openapi.bindings.OpenAPIV3
 import community.flock.kotlinx.openapi.bindings.OpenAPIV3Model
 import community.flock.kotlinx.openapi.bindings.Operation
@@ -409,6 +411,19 @@ internal class ApiModel private constructor(
                 val refName = parameterOrReference.refClassName
                 val resolved = model.componentParameters?.get(refName)
                 if (resolved == null || resolved === parameterOrReference) null else resolveParameter(resolved)
+            }
+        }
+
+    internal fun resolveHeader(headerOrReference: HeaderOrReference): Header? =
+        when (headerOrReference) {
+            is Header -> {
+                headerOrReference
+            }
+
+            is Reference -> {
+                val refName = headerOrReference.refClassName
+                val resolved = model.componentHeaders?.get(refName)
+                if (resolved == null || resolved === headerOrReference) null else resolveHeader(resolved)
             }
         }
 

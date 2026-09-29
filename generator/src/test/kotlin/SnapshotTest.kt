@@ -82,6 +82,14 @@ class SnapshotTest {
     }
 
     @Test
+    fun `GIVEN response headers spec WHEN generating THEN output matches snapshot`() {
+        runSnapshotTest(
+            snapshotName = "response-headers-api",
+            openApiFile = "src/test/resources/response-headers.json",
+        )
+    }
+
+    @Test
     fun `GIVEN openapi spec in yaml format WHEN generating THEN output matches json spec snapshot`() {
         runSnapshotTest(
             snapshotName = "simple-api",

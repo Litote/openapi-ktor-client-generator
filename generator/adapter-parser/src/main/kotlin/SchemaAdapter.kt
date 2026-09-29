@@ -1,7 +1,10 @@
 package org.litote.openapi.ktor.client.generator.adapter.parser
 
+import community.flock.kotlinx.openapi.bindings.Header
+import community.flock.kotlinx.openapi.bindings.HeaderOrReference
 import community.flock.kotlinx.openapi.bindings.MediaType
 import community.flock.kotlinx.openapi.bindings.MediaTypeObject
+import community.flock.kotlinx.openapi.bindings.OpenAPIV30Header
 import community.flock.kotlinx.openapi.bindings.OpenAPIV30Model
 import community.flock.kotlinx.openapi.bindings.OpenAPIV30Parameter
 import community.flock.kotlinx.openapi.bindings.OpenAPIV30ParameterLocation
@@ -13,6 +16,7 @@ import community.flock.kotlinx.openapi.bindings.OpenAPIV30SecuritySchemeType
 import community.flock.kotlinx.openapi.bindings.OpenAPIV30SingleType
 import community.flock.kotlinx.openapi.bindings.OpenAPIV30Type
 import community.flock.kotlinx.openapi.bindings.OpenAPIV30TypeArray
+import community.flock.kotlinx.openapi.bindings.OpenAPIV31Header
 import community.flock.kotlinx.openapi.bindings.OpenAPIV31Model
 import community.flock.kotlinx.openapi.bindings.OpenAPIV31Parameter
 import community.flock.kotlinx.openapi.bindings.OpenAPIV31ParameterLocation
@@ -24,6 +28,7 @@ import community.flock.kotlinx.openapi.bindings.OpenAPIV31SecuritySchemeType
 import community.flock.kotlinx.openapi.bindings.OpenAPIV31SingleType
 import community.flock.kotlinx.openapi.bindings.OpenAPIV31Type
 import community.flock.kotlinx.openapi.bindings.OpenAPIV31TypeArray
+import community.flock.kotlinx.openapi.bindings.OpenAPIV32Header
 import community.flock.kotlinx.openapi.bindings.OpenAPIV32Model
 import community.flock.kotlinx.openapi.bindings.OpenAPIV32Parameter
 import community.flock.kotlinx.openapi.bindings.OpenAPIV32ParameterLocation
@@ -261,6 +266,23 @@ internal val OpenAPIV3Model.componentParameters: Map<String, ParameterOrReferenc
             is OpenAPIV30Model -> components?.parameters
             is OpenAPIV31Model -> components?.parameters
             is OpenAPIV32Model -> components?.parameters
+        }
+
+internal val OpenAPIV3Model.componentHeaders: Map<String, HeaderOrReference>?
+    get() =
+        when (this) {
+            is OpenAPIV30Model -> components?.headers
+            is OpenAPIV31Model -> components?.headers
+            is OpenAPIV32Model -> components?.headers
+        }
+
+internal val Header.headerSchema: SchemaOrReference?
+    get() =
+        when (this) {
+            is OpenAPIV30Header -> schema
+            is OpenAPIV31Header -> schema
+            is OpenAPIV32Header -> schema
+            else -> null
         }
 
 internal val OpenAPIV3Model.componentSecuritySchemes: Map<String, SecuritySchemeOrReference>?

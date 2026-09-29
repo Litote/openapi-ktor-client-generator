@@ -7,6 +7,7 @@ import io.ktor.client.request.post
 import io.ktor.client.request.put
 import io.ktor.client.request.setBody
 import io.ktor.http.ContentType
+import io.ktor.http.Headers
 import io.ktor.http.contentType
 import io.ktor.http.encodeURLPathPart
 import kotlin.Boolean
@@ -17,6 +18,7 @@ import kotlin.collections.List
 import kotlin.coroutines.cancellation.CancellationException
 import kotlinx.serialization.SerialName
 import kotlinx.serialization.Serializable
+import kotlinx.serialization.Transient
 import kotlinx.serialization.json.JsonElement
 import mastodon.api.client.ClientConfiguration.Companion.defaultClientConfiguration
 import mastodon.api.model.Error
@@ -38,11 +40,11 @@ public class FiltersClient(
       val response = configuration.client.`get`("api/v1/filters") {
       }
       return when (response.status.value) {
-        200 -> GetFiltersResponseSuccess(response.body<V1Filter>())
-        401, 404, 429, 503 -> GetFiltersResponseFailure401(response.body<Error>())
-        410 -> GetFiltersResponseFailure410
-        422 -> GetFiltersResponseFailure(response.body<ValidationError>())
-        else -> GetFiltersResponseUnknownFailure(response.status.value)
+        200 -> GetFiltersResponseSuccess(response.body<V1Filter>(), response.headers)
+        401, 404, 429, 503 -> GetFiltersResponseFailure401(response.body<Error>(), response.headers)
+        410 -> GetFiltersResponseFailure410(response.headers)
+        422 -> GetFiltersResponseFailure(response.body<ValidationError>(), response.headers)
+        else -> GetFiltersResponseUnknownFailure(response.status.value, response.headers)
       }
     }
     catch(e: CancellationException) {
@@ -64,10 +66,10 @@ public class FiltersClient(
         contentType(ContentType.Application.Json)
       }
       return when (response.status.value) {
-        200 -> CreateFilterResponseSuccess(response.body<V1Filter>())
-        401, 404, 422, 429, 503 -> CreateFilterResponseFailure401(response.body<Error>())
-        410 -> CreateFilterResponseFailure
-        else -> CreateFilterResponseUnknownFailure(response.status.value)
+        200 -> CreateFilterResponseSuccess(response.body<V1Filter>(), response.headers)
+        401, 404, 422, 429, 503 -> CreateFilterResponseFailure401(response.body<Error>(), response.headers)
+        410 -> CreateFilterResponseFailure(response.headers)
+        else -> CreateFilterResponseUnknownFailure(response.status.value, response.headers)
       }
     }
     catch(e: CancellationException) {
@@ -87,11 +89,11 @@ public class FiltersClient(
       val response = configuration.client.`get`("api/v1/filters/{id}".replace("/{id}", "/${id.encodeURLPathPart()}")) {
       }
       return when (response.status.value) {
-        200 -> GetFilterResponseSuccess(response.body<V1Filter>())
-        401, 404, 429, 503 -> GetFilterResponseFailure401(response.body<Error>())
-        410 -> GetFilterResponseFailure410
-        422 -> GetFilterResponseFailure(response.body<ValidationError>())
-        else -> GetFilterResponseUnknownFailure(response.status.value)
+        200 -> GetFilterResponseSuccess(response.body<V1Filter>(), response.headers)
+        401, 404, 429, 503 -> GetFilterResponseFailure401(response.body<Error>(), response.headers)
+        410 -> GetFilterResponseFailure410(response.headers)
+        422 -> GetFilterResponseFailure(response.body<ValidationError>(), response.headers)
+        else -> GetFilterResponseUnknownFailure(response.status.value, response.headers)
       }
     }
     catch(e: CancellationException) {
@@ -113,10 +115,10 @@ public class FiltersClient(
         contentType(ContentType.Application.Json)
       }
       return when (response.status.value) {
-        200 -> UpdateFilterResponseSuccess(response.body<V1Filter>())
-        401, 404, 422, 429, 503 -> UpdateFilterResponseFailure401(response.body<Error>())
-        410 -> UpdateFilterResponseFailure
-        else -> UpdateFilterResponseUnknownFailure(response.status.value)
+        200 -> UpdateFilterResponseSuccess(response.body<V1Filter>(), response.headers)
+        401, 404, 422, 429, 503 -> UpdateFilterResponseFailure401(response.body<Error>(), response.headers)
+        410 -> UpdateFilterResponseFailure(response.headers)
+        else -> UpdateFilterResponseUnknownFailure(response.status.value, response.headers)
       }
     }
     catch(e: CancellationException) {
@@ -136,11 +138,11 @@ public class FiltersClient(
       val response = configuration.client.delete("api/v1/filters/{id}".replace("/{id}", "/${id.encodeURLPathPart()}")) {
       }
       return when (response.status.value) {
-        200 -> DeleteFilterResponseSuccess
-        401, 404, 429, 503 -> DeleteFilterResponseFailure401(response.body<Error>())
-        410 -> DeleteFilterResponseFailure410
-        422 -> DeleteFilterResponseFailure(response.body<ValidationError>())
-        else -> DeleteFilterResponseUnknownFailure(response.status.value)
+        200 -> DeleteFilterResponseSuccess(response.headers)
+        401, 404, 429, 503 -> DeleteFilterResponseFailure401(response.body<Error>(), response.headers)
+        410 -> DeleteFilterResponseFailure410(response.headers)
+        422 -> DeleteFilterResponseFailure(response.body<ValidationError>(), response.headers)
+        else -> DeleteFilterResponseUnknownFailure(response.status.value, response.headers)
       }
     }
     catch(e: CancellationException) {
@@ -160,11 +162,11 @@ public class FiltersClient(
       val response = configuration.client.`get`("api/v2/filters") {
       }
       return when (response.status.value) {
-        200 -> GetFiltersV2ResponseSuccess(response.body<List<Filter>>())
-        401, 404, 429, 503 -> GetFiltersV2ResponseFailure401(response.body<Error>())
-        410 -> GetFiltersV2ResponseFailure410
-        422 -> GetFiltersV2ResponseFailure(response.body<ValidationError>())
-        else -> GetFiltersV2ResponseUnknownFailure(response.status.value)
+        200 -> GetFiltersV2ResponseSuccess(response.body<List<Filter>>(), response.headers)
+        401, 404, 429, 503 -> GetFiltersV2ResponseFailure401(response.body<Error>(), response.headers)
+        410 -> GetFiltersV2ResponseFailure410(response.headers)
+        422 -> GetFiltersV2ResponseFailure(response.body<ValidationError>(), response.headers)
+        else -> GetFiltersV2ResponseUnknownFailure(response.status.value, response.headers)
       }
     }
     catch(e: CancellationException) {
@@ -186,10 +188,10 @@ public class FiltersClient(
         contentType(ContentType.Application.Json)
       }
       return when (response.status.value) {
-        200 -> CreateFilterV2ResponseSuccess(response.body<Filter>())
-        401, 404, 422, 429, 503 -> CreateFilterV2ResponseFailure401(response.body<Error>())
-        410 -> CreateFilterV2ResponseFailure
-        else -> CreateFilterV2ResponseUnknownFailure(response.status.value)
+        200 -> CreateFilterV2ResponseSuccess(response.body<Filter>(), response.headers)
+        401, 404, 422, 429, 503 -> CreateFilterV2ResponseFailure401(response.body<Error>(), response.headers)
+        410 -> CreateFilterV2ResponseFailure(response.headers)
+        else -> CreateFilterV2ResponseUnknownFailure(response.status.value, response.headers)
       }
     }
     catch(e: CancellationException) {
@@ -209,11 +211,11 @@ public class FiltersClient(
       val response = configuration.client.`get`("api/v2/filters/{filter_id}/keywords".replace("/{filter_id}", "/${filterId.encodeURLPathPart()}")) {
       }
       return when (response.status.value) {
-        200 -> GetFilterKeywordsV2ResponseSuccess(response.body<List<FilterKeyword>>())
-        401, 404, 429, 503 -> GetFilterKeywordsV2ResponseFailure401(response.body<Error>())
-        410 -> GetFilterKeywordsV2ResponseFailure410
-        422 -> GetFilterKeywordsV2ResponseFailure(response.body<ValidationError>())
-        else -> GetFilterKeywordsV2ResponseUnknownFailure(response.status.value)
+        200 -> GetFilterKeywordsV2ResponseSuccess(response.body<List<FilterKeyword>>(), response.headers)
+        401, 404, 429, 503 -> GetFilterKeywordsV2ResponseFailure401(response.body<Error>(), response.headers)
+        410 -> GetFilterKeywordsV2ResponseFailure410(response.headers)
+        422 -> GetFilterKeywordsV2ResponseFailure(response.body<ValidationError>(), response.headers)
+        else -> GetFilterKeywordsV2ResponseUnknownFailure(response.status.value, response.headers)
       }
     }
     catch(e: CancellationException) {
@@ -235,10 +237,10 @@ public class FiltersClient(
         contentType(ContentType.Application.Json)
       }
       return when (response.status.value) {
-        200 -> PostFilterKeywordsV2ResponseSuccess(response.body<FilterKeyword>())
-        401, 404, 422, 429, 503 -> PostFilterKeywordsV2ResponseFailure401(response.body<Error>())
-        410 -> PostFilterKeywordsV2ResponseFailure
-        else -> PostFilterKeywordsV2ResponseUnknownFailure(response.status.value)
+        200 -> PostFilterKeywordsV2ResponseSuccess(response.body<FilterKeyword>(), response.headers)
+        401, 404, 422, 429, 503 -> PostFilterKeywordsV2ResponseFailure401(response.body<Error>(), response.headers)
+        410 -> PostFilterKeywordsV2ResponseFailure(response.headers)
+        else -> PostFilterKeywordsV2ResponseUnknownFailure(response.status.value, response.headers)
       }
     }
     catch(e: CancellationException) {
@@ -258,11 +260,11 @@ public class FiltersClient(
       val response = configuration.client.`get`("api/v2/filters/{filter_id}/statuses".replace("/{filter_id}", "/${filterId.encodeURLPathPart()}")) {
       }
       return when (response.status.value) {
-        200 -> GetFilterStatusesV2ResponseSuccess(response.body<List<FilterStatus>>())
-        401, 404, 429, 503 -> GetFilterStatusesV2ResponseFailure401(response.body<Error>())
-        410 -> GetFilterStatusesV2ResponseFailure410
-        422 -> GetFilterStatusesV2ResponseFailure(response.body<ValidationError>())
-        else -> GetFilterStatusesV2ResponseUnknownFailure(response.status.value)
+        200 -> GetFilterStatusesV2ResponseSuccess(response.body<List<FilterStatus>>(), response.headers)
+        401, 404, 429, 503 -> GetFilterStatusesV2ResponseFailure401(response.body<Error>(), response.headers)
+        410 -> GetFilterStatusesV2ResponseFailure410(response.headers)
+        422 -> GetFilterStatusesV2ResponseFailure(response.body<ValidationError>(), response.headers)
+        else -> GetFilterStatusesV2ResponseUnknownFailure(response.status.value, response.headers)
       }
     }
     catch(e: CancellationException) {
@@ -284,11 +286,11 @@ public class FiltersClient(
         contentType(ContentType.Application.Json)
       }
       return when (response.status.value) {
-        200 -> PostFilterStatusesV2ResponseSuccess(response.body<FilterStatus>())
-        401, 404, 429, 503 -> PostFilterStatusesV2ResponseFailure401(response.body<Error>())
-        410 -> PostFilterStatusesV2ResponseFailure410
-        422 -> PostFilterStatusesV2ResponseFailure(response.body<ValidationError>())
-        else -> PostFilterStatusesV2ResponseUnknownFailure(response.status.value)
+        200 -> PostFilterStatusesV2ResponseSuccess(response.body<FilterStatus>(), response.headers)
+        401, 404, 429, 503 -> PostFilterStatusesV2ResponseFailure401(response.body<Error>(), response.headers)
+        410 -> PostFilterStatusesV2ResponseFailure410(response.headers)
+        422 -> PostFilterStatusesV2ResponseFailure(response.body<ValidationError>(), response.headers)
+        else -> PostFilterStatusesV2ResponseUnknownFailure(response.status.value, response.headers)
       }
     }
     catch(e: CancellationException) {
@@ -308,11 +310,11 @@ public class FiltersClient(
       val response = configuration.client.`get`("api/v2/filters/{id}".replace("/{id}", "/${id.encodeURLPathPart()}")) {
       }
       return when (response.status.value) {
-        200 -> GetFilterV2ResponseSuccess(response.body<Filter>())
-        401, 404, 429, 503 -> GetFilterV2ResponseFailure401(response.body<Error>())
-        410 -> GetFilterV2ResponseFailure410
-        422 -> GetFilterV2ResponseFailure(response.body<ValidationError>())
-        else -> GetFilterV2ResponseUnknownFailure(response.status.value)
+        200 -> GetFilterV2ResponseSuccess(response.body<Filter>(), response.headers)
+        401, 404, 429, 503 -> GetFilterV2ResponseFailure401(response.body<Error>(), response.headers)
+        410 -> GetFilterV2ResponseFailure410(response.headers)
+        422 -> GetFilterV2ResponseFailure(response.body<ValidationError>(), response.headers)
+        else -> GetFilterV2ResponseUnknownFailure(response.status.value, response.headers)
       }
     }
     catch(e: CancellationException) {
@@ -334,11 +336,11 @@ public class FiltersClient(
         contentType(ContentType.Application.Json)
       }
       return when (response.status.value) {
-        200 -> UpdateFilterV2ResponseSuccess(response.body<Filter>())
-        401, 404, 429, 503 -> UpdateFilterV2ResponseFailure401(response.body<Error>())
-        410 -> UpdateFilterV2ResponseFailure410
-        422 -> UpdateFilterV2ResponseFailure(response.body<ValidationError>())
-        else -> UpdateFilterV2ResponseUnknownFailure(response.status.value)
+        200 -> UpdateFilterV2ResponseSuccess(response.body<Filter>(), response.headers)
+        401, 404, 429, 503 -> UpdateFilterV2ResponseFailure401(response.body<Error>(), response.headers)
+        410 -> UpdateFilterV2ResponseFailure410(response.headers)
+        422 -> UpdateFilterV2ResponseFailure(response.body<ValidationError>(), response.headers)
+        else -> UpdateFilterV2ResponseUnknownFailure(response.status.value, response.headers)
       }
     }
     catch(e: CancellationException) {
@@ -358,11 +360,11 @@ public class FiltersClient(
       val response = configuration.client.delete("api/v2/filters/{id}".replace("/{id}", "/${id.encodeURLPathPart()}")) {
       }
       return when (response.status.value) {
-        200 -> DeleteFilterV2ResponseSuccess
-        401, 404, 429, 503 -> DeleteFilterV2ResponseFailure401(response.body<Error>())
-        410 -> DeleteFilterV2ResponseFailure410
-        422 -> DeleteFilterV2ResponseFailure(response.body<ValidationError>())
-        else -> DeleteFilterV2ResponseUnknownFailure(response.status.value)
+        200 -> DeleteFilterV2ResponseSuccess(response.headers)
+        401, 404, 429, 503 -> DeleteFilterV2ResponseFailure401(response.body<Error>(), response.headers)
+        410 -> DeleteFilterV2ResponseFailure410(response.headers)
+        422 -> DeleteFilterV2ResponseFailure(response.body<ValidationError>(), response.headers)
+        else -> DeleteFilterV2ResponseUnknownFailure(response.status.value, response.headers)
       }
     }
     catch(e: CancellationException) {
@@ -382,11 +384,11 @@ public class FiltersClient(
       val response = configuration.client.`get`("api/v2/filters/keywords/{id}".replace("/{id}", "/${id.encodeURLPathPart()}")) {
       }
       return when (response.status.value) {
-        200 -> GetFiltersKeywordsByIdV2ResponseSuccess(response.body<FilterKeyword>())
-        401, 404, 429, 503 -> GetFiltersKeywordsByIdV2ResponseFailure401(response.body<Error>())
-        410 -> GetFiltersKeywordsByIdV2ResponseFailure410
-        422 -> GetFiltersKeywordsByIdV2ResponseFailure(response.body<ValidationError>())
-        else -> GetFiltersKeywordsByIdV2ResponseUnknownFailure(response.status.value)
+        200 -> GetFiltersKeywordsByIdV2ResponseSuccess(response.body<FilterKeyword>(), response.headers)
+        401, 404, 429, 503 -> GetFiltersKeywordsByIdV2ResponseFailure401(response.body<Error>(), response.headers)
+        410 -> GetFiltersKeywordsByIdV2ResponseFailure410(response.headers)
+        422 -> GetFiltersKeywordsByIdV2ResponseFailure(response.body<ValidationError>(), response.headers)
+        else -> GetFiltersKeywordsByIdV2ResponseUnknownFailure(response.status.value, response.headers)
       }
     }
     catch(e: CancellationException) {
@@ -408,10 +410,10 @@ public class FiltersClient(
         contentType(ContentType.Application.Json)
       }
       return when (response.status.value) {
-        200 -> UpdateFiltersKeywordsByIdV2ResponseSuccess(response.body<FilterKeyword>())
-        401, 404, 422, 429, 503 -> UpdateFiltersKeywordsByIdV2ResponseFailure401(response.body<Error>())
-        410 -> UpdateFiltersKeywordsByIdV2ResponseFailure
-        else -> UpdateFiltersKeywordsByIdV2ResponseUnknownFailure(response.status.value)
+        200 -> UpdateFiltersKeywordsByIdV2ResponseSuccess(response.body<FilterKeyword>(), response.headers)
+        401, 404, 422, 429, 503 -> UpdateFiltersKeywordsByIdV2ResponseFailure401(response.body<Error>(), response.headers)
+        410 -> UpdateFiltersKeywordsByIdV2ResponseFailure(response.headers)
+        else -> UpdateFiltersKeywordsByIdV2ResponseUnknownFailure(response.status.value, response.headers)
       }
     }
     catch(e: CancellationException) {
@@ -431,11 +433,11 @@ public class FiltersClient(
       val response = configuration.client.delete("api/v2/filters/keywords/{id}".replace("/{id}", "/${id.encodeURLPathPart()}")) {
       }
       return when (response.status.value) {
-        200 -> DeleteFiltersKeywordsByIdV2ResponseSuccess
-        401, 404, 429, 503 -> DeleteFiltersKeywordsByIdV2ResponseFailure401(response.body<Error>())
-        410 -> DeleteFiltersKeywordsByIdV2ResponseFailure410
-        422 -> DeleteFiltersKeywordsByIdV2ResponseFailure(response.body<ValidationError>())
-        else -> DeleteFiltersKeywordsByIdV2ResponseUnknownFailure(response.status.value)
+        200 -> DeleteFiltersKeywordsByIdV2ResponseSuccess(response.headers)
+        401, 404, 429, 503 -> DeleteFiltersKeywordsByIdV2ResponseFailure401(response.body<Error>(), response.headers)
+        410 -> DeleteFiltersKeywordsByIdV2ResponseFailure410(response.headers)
+        422 -> DeleteFiltersKeywordsByIdV2ResponseFailure(response.body<ValidationError>(), response.headers)
+        else -> DeleteFiltersKeywordsByIdV2ResponseUnknownFailure(response.status.value, response.headers)
       }
     }
     catch(e: CancellationException) {
@@ -455,11 +457,11 @@ public class FiltersClient(
       val response = configuration.client.`get`("api/v2/filters/statuses/{id}".replace("/{id}", "/${id.encodeURLPathPart()}")) {
       }
       return when (response.status.value) {
-        200 -> GetFiltersStatusesByIdV2ResponseSuccess(response.body<FilterStatus>())
-        401, 404, 429, 503 -> GetFiltersStatusesByIdV2ResponseFailure401(response.body<Error>())
-        410 -> GetFiltersStatusesByIdV2ResponseFailure410
-        422 -> GetFiltersStatusesByIdV2ResponseFailure(response.body<ValidationError>())
-        else -> GetFiltersStatusesByIdV2ResponseUnknownFailure(response.status.value)
+        200 -> GetFiltersStatusesByIdV2ResponseSuccess(response.body<FilterStatus>(), response.headers)
+        401, 404, 429, 503 -> GetFiltersStatusesByIdV2ResponseFailure401(response.body<Error>(), response.headers)
+        410 -> GetFiltersStatusesByIdV2ResponseFailure410(response.headers)
+        422 -> GetFiltersStatusesByIdV2ResponseFailure(response.body<ValidationError>(), response.headers)
+        else -> GetFiltersStatusesByIdV2ResponseUnknownFailure(response.status.value, response.headers)
       }
     }
     catch(e: CancellationException) {
@@ -479,11 +481,11 @@ public class FiltersClient(
       val response = configuration.client.delete("api/v2/filters/statuses/{id}".replace("/{id}", "/${id.encodeURLPathPart()}")) {
       }
       return when (response.status.value) {
-        200 -> DeleteFiltersStatusesByIdV2ResponseSuccess(response.body<FilterStatus>())
-        401, 404, 429, 503 -> DeleteFiltersStatusesByIdV2ResponseFailure401(response.body<Error>())
-        410 -> DeleteFiltersStatusesByIdV2ResponseFailure410
-        422 -> DeleteFiltersStatusesByIdV2ResponseFailure(response.body<ValidationError>())
-        else -> DeleteFiltersStatusesByIdV2ResponseUnknownFailure(response.status.value)
+        200 -> DeleteFiltersStatusesByIdV2ResponseSuccess(response.body<FilterStatus>(), response.headers)
+        401, 404, 429, 503 -> DeleteFiltersStatusesByIdV2ResponseFailure401(response.body<Error>(), response.headers)
+        410 -> DeleteFiltersStatusesByIdV2ResponseFailure410(response.headers)
+        422 -> DeleteFiltersStatusesByIdV2ResponseFailure(response.body<ValidationError>(), response.headers)
+        else -> DeleteFiltersStatusesByIdV2ResponseUnknownFailure(response.status.value, response.headers)
       }
     }
     catch(e: CancellationException) {
@@ -496,29 +498,60 @@ public class FiltersClient(
   }
 
   @Serializable
-  public sealed class GetFiltersResponse
+  public sealed class GetFiltersResponse {
+    public abstract val headers: Headers
+  }
 
   @Serializable
   public data class GetFiltersResponseSuccess(
     public val body: V1Filter,
-  ) : GetFiltersResponse()
+    @Transient
+    override val headers: Headers = Headers.Empty,
+  ) : GetFiltersResponse() {
+    /**
+     * Number of requests permitted per time period
+     */
+    public val xRateLimitLimit: Int?
+      get() = headers["X-RateLimit-Limit"]?.toIntOrNull()
+
+    /**
+     * Number of requests you can still make
+     */
+    public val xRateLimitRemaining: Int?
+      get() = headers["X-RateLimit-Remaining"]?.toIntOrNull()
+
+    /**
+     * Timestamp when your rate limit will reset
+     */
+    public val xRateLimitReset: String?
+      get() = headers["X-RateLimit-Reset"]
+  }
 
   @Serializable
   public data class GetFiltersResponseFailure401(
     public val body: Error,
+    @Transient
+    override val headers: Headers = Headers.Empty,
   ) : GetFiltersResponse()
 
   @Serializable
-  public object GetFiltersResponseFailure410 : GetFiltersResponse()
+  public data class GetFiltersResponseFailure410(
+    @Transient
+    override val headers: Headers = Headers.Empty,
+  ) : GetFiltersResponse()
 
   @Serializable
   public data class GetFiltersResponseFailure(
     public val body: ValidationError,
+    @Transient
+    override val headers: Headers = Headers.Empty,
   ) : GetFiltersResponse()
 
   @Serializable
   public data class GetFiltersResponseUnknownFailure(
     public val statusCode: Int,
+    @Transient
+    override val headers: Headers = Headers.Empty,
   ) : GetFiltersResponse()
 
   @Serializable
@@ -533,50 +566,110 @@ public class FiltersClient(
   )
 
   @Serializable
-  public sealed class CreateFilterResponse
+  public sealed class CreateFilterResponse {
+    public abstract val headers: Headers
+  }
 
   @Serializable
   public data class CreateFilterResponseSuccess(
     public val body: V1Filter,
-  ) : CreateFilterResponse()
+    @Transient
+    override val headers: Headers = Headers.Empty,
+  ) : CreateFilterResponse() {
+    /**
+     * Number of requests permitted per time period
+     */
+    public val xRateLimitLimit: Int?
+      get() = headers["X-RateLimit-Limit"]?.toIntOrNull()
+
+    /**
+     * Number of requests you can still make
+     */
+    public val xRateLimitRemaining: Int?
+      get() = headers["X-RateLimit-Remaining"]?.toIntOrNull()
+
+    /**
+     * Timestamp when your rate limit will reset
+     */
+    public val xRateLimitReset: String?
+      get() = headers["X-RateLimit-Reset"]
+  }
 
   @Serializable
   public data class CreateFilterResponseFailure401(
     public val body: Error,
+    @Transient
+    override val headers: Headers = Headers.Empty,
   ) : CreateFilterResponse()
 
   @Serializable
-  public object CreateFilterResponseFailure : CreateFilterResponse()
+  public data class CreateFilterResponseFailure(
+    @Transient
+    override val headers: Headers = Headers.Empty,
+  ) : CreateFilterResponse()
 
   @Serializable
   public data class CreateFilterResponseUnknownFailure(
     public val statusCode: Int,
+    @Transient
+    override val headers: Headers = Headers.Empty,
   ) : CreateFilterResponse()
 
   @Serializable
-  public sealed class GetFilterResponse
+  public sealed class GetFilterResponse {
+    public abstract val headers: Headers
+  }
 
   @Serializable
   public data class GetFilterResponseSuccess(
     public val body: V1Filter,
-  ) : GetFilterResponse()
+    @Transient
+    override val headers: Headers = Headers.Empty,
+  ) : GetFilterResponse() {
+    /**
+     * Number of requests permitted per time period
+     */
+    public val xRateLimitLimit: Int?
+      get() = headers["X-RateLimit-Limit"]?.toIntOrNull()
+
+    /**
+     * Number of requests you can still make
+     */
+    public val xRateLimitRemaining: Int?
+      get() = headers["X-RateLimit-Remaining"]?.toIntOrNull()
+
+    /**
+     * Timestamp when your rate limit will reset
+     */
+    public val xRateLimitReset: String?
+      get() = headers["X-RateLimit-Reset"]
+  }
 
   @Serializable
   public data class GetFilterResponseFailure401(
     public val body: Error,
+    @Transient
+    override val headers: Headers = Headers.Empty,
   ) : GetFilterResponse()
 
   @Serializable
-  public object GetFilterResponseFailure410 : GetFilterResponse()
+  public data class GetFilterResponseFailure410(
+    @Transient
+    override val headers: Headers = Headers.Empty,
+  ) : GetFilterResponse()
 
   @Serializable
   public data class GetFilterResponseFailure(
     public val body: ValidationError,
+    @Transient
+    override val headers: Headers = Headers.Empty,
   ) : GetFilterResponse()
 
   @Serializable
   public data class GetFilterResponseUnknownFailure(
     public val statusCode: Int,
+    @Transient
+    override val headers: Headers = Headers.Empty,
   ) : GetFilterResponse()
 
   @Serializable
@@ -591,74 +684,166 @@ public class FiltersClient(
   )
 
   @Serializable
-  public sealed class UpdateFilterResponse
+  public sealed class UpdateFilterResponse {
+    public abstract val headers: Headers
+  }
 
   @Serializable
   public data class UpdateFilterResponseSuccess(
     public val body: V1Filter,
-  ) : UpdateFilterResponse()
+    @Transient
+    override val headers: Headers = Headers.Empty,
+  ) : UpdateFilterResponse() {
+    /**
+     * Number of requests permitted per time period
+     */
+    public val xRateLimitLimit: Int?
+      get() = headers["X-RateLimit-Limit"]?.toIntOrNull()
+
+    /**
+     * Number of requests you can still make
+     */
+    public val xRateLimitRemaining: Int?
+      get() = headers["X-RateLimit-Remaining"]?.toIntOrNull()
+
+    /**
+     * Timestamp when your rate limit will reset
+     */
+    public val xRateLimitReset: String?
+      get() = headers["X-RateLimit-Reset"]
+  }
 
   @Serializable
   public data class UpdateFilterResponseFailure401(
     public val body: Error,
+    @Transient
+    override val headers: Headers = Headers.Empty,
   ) : UpdateFilterResponse()
 
   @Serializable
-  public object UpdateFilterResponseFailure : UpdateFilterResponse()
+  public data class UpdateFilterResponseFailure(
+    @Transient
+    override val headers: Headers = Headers.Empty,
+  ) : UpdateFilterResponse()
 
   @Serializable
   public data class UpdateFilterResponseUnknownFailure(
     public val statusCode: Int,
+    @Transient
+    override val headers: Headers = Headers.Empty,
   ) : UpdateFilterResponse()
 
   @Serializable
-  public sealed class DeleteFilterResponse
+  public sealed class DeleteFilterResponse {
+    public abstract val headers: Headers
+  }
 
   @Serializable
-  public object DeleteFilterResponseSuccess : DeleteFilterResponse()
+  public data class DeleteFilterResponseSuccess(
+    @Transient
+    override val headers: Headers = Headers.Empty,
+  ) : DeleteFilterResponse() {
+    /**
+     * Number of requests permitted per time period
+     */
+    public val xRateLimitLimit: Int?
+      get() = headers["X-RateLimit-Limit"]?.toIntOrNull()
+
+    /**
+     * Number of requests you can still make
+     */
+    public val xRateLimitRemaining: Int?
+      get() = headers["X-RateLimit-Remaining"]?.toIntOrNull()
+
+    /**
+     * Timestamp when your rate limit will reset
+     */
+    public val xRateLimitReset: String?
+      get() = headers["X-RateLimit-Reset"]
+  }
 
   @Serializable
   public data class DeleteFilterResponseFailure401(
     public val body: Error,
+    @Transient
+    override val headers: Headers = Headers.Empty,
   ) : DeleteFilterResponse()
 
   @Serializable
-  public object DeleteFilterResponseFailure410 : DeleteFilterResponse()
+  public data class DeleteFilterResponseFailure410(
+    @Transient
+    override val headers: Headers = Headers.Empty,
+  ) : DeleteFilterResponse()
 
   @Serializable
   public data class DeleteFilterResponseFailure(
     public val body: ValidationError,
+    @Transient
+    override val headers: Headers = Headers.Empty,
   ) : DeleteFilterResponse()
 
   @Serializable
   public data class DeleteFilterResponseUnknownFailure(
     public val statusCode: Int,
+    @Transient
+    override val headers: Headers = Headers.Empty,
   ) : DeleteFilterResponse()
 
   @Serializable
-  public sealed class GetFiltersV2Response
+  public sealed class GetFiltersV2Response {
+    public abstract val headers: Headers
+  }
 
   @Serializable
   public data class GetFiltersV2ResponseSuccess(
     public val body: List<Filter>,
-  ) : GetFiltersV2Response()
+    @Transient
+    override val headers: Headers = Headers.Empty,
+  ) : GetFiltersV2Response() {
+    /**
+     * Number of requests permitted per time period
+     */
+    public val xRateLimitLimit: Int?
+      get() = headers["X-RateLimit-Limit"]?.toIntOrNull()
+
+    /**
+     * Number of requests you can still make
+     */
+    public val xRateLimitRemaining: Int?
+      get() = headers["X-RateLimit-Remaining"]?.toIntOrNull()
+
+    /**
+     * Timestamp when your rate limit will reset
+     */
+    public val xRateLimitReset: String?
+      get() = headers["X-RateLimit-Reset"]
+  }
 
   @Serializable
   public data class GetFiltersV2ResponseFailure401(
     public val body: Error,
+    @Transient
+    override val headers: Headers = Headers.Empty,
   ) : GetFiltersV2Response()
 
   @Serializable
-  public object GetFiltersV2ResponseFailure410 : GetFiltersV2Response()
+  public data class GetFiltersV2ResponseFailure410(
+    @Transient
+    override val headers: Headers = Headers.Empty,
+  ) : GetFiltersV2Response()
 
   @Serializable
   public data class GetFiltersV2ResponseFailure(
     public val body: ValidationError,
+    @Transient
+    override val headers: Headers = Headers.Empty,
   ) : GetFiltersV2Response()
 
   @Serializable
   public data class GetFiltersV2ResponseUnknownFailure(
     public val statusCode: Int,
+    @Transient
+    override val headers: Headers = Headers.Empty,
   ) : GetFiltersV2Response()
 
   @Serializable
@@ -674,50 +859,110 @@ public class FiltersClient(
   )
 
   @Serializable
-  public sealed class CreateFilterV2Response
+  public sealed class CreateFilterV2Response {
+    public abstract val headers: Headers
+  }
 
   @Serializable
   public data class CreateFilterV2ResponseSuccess(
     public val body: Filter,
-  ) : CreateFilterV2Response()
+    @Transient
+    override val headers: Headers = Headers.Empty,
+  ) : CreateFilterV2Response() {
+    /**
+     * Number of requests permitted per time period
+     */
+    public val xRateLimitLimit: Int?
+      get() = headers["X-RateLimit-Limit"]?.toIntOrNull()
+
+    /**
+     * Number of requests you can still make
+     */
+    public val xRateLimitRemaining: Int?
+      get() = headers["X-RateLimit-Remaining"]?.toIntOrNull()
+
+    /**
+     * Timestamp when your rate limit will reset
+     */
+    public val xRateLimitReset: String?
+      get() = headers["X-RateLimit-Reset"]
+  }
 
   @Serializable
   public data class CreateFilterV2ResponseFailure401(
     public val body: Error,
+    @Transient
+    override val headers: Headers = Headers.Empty,
   ) : CreateFilterV2Response()
 
   @Serializable
-  public object CreateFilterV2ResponseFailure : CreateFilterV2Response()
+  public data class CreateFilterV2ResponseFailure(
+    @Transient
+    override val headers: Headers = Headers.Empty,
+  ) : CreateFilterV2Response()
 
   @Serializable
   public data class CreateFilterV2ResponseUnknownFailure(
     public val statusCode: Int,
+    @Transient
+    override val headers: Headers = Headers.Empty,
   ) : CreateFilterV2Response()
 
   @Serializable
-  public sealed class GetFilterKeywordsV2Response
+  public sealed class GetFilterKeywordsV2Response {
+    public abstract val headers: Headers
+  }
 
   @Serializable
   public data class GetFilterKeywordsV2ResponseSuccess(
     public val body: List<FilterKeyword>,
-  ) : GetFilterKeywordsV2Response()
+    @Transient
+    override val headers: Headers = Headers.Empty,
+  ) : GetFilterKeywordsV2Response() {
+    /**
+     * Number of requests permitted per time period
+     */
+    public val xRateLimitLimit: Int?
+      get() = headers["X-RateLimit-Limit"]?.toIntOrNull()
+
+    /**
+     * Number of requests you can still make
+     */
+    public val xRateLimitRemaining: Int?
+      get() = headers["X-RateLimit-Remaining"]?.toIntOrNull()
+
+    /**
+     * Timestamp when your rate limit will reset
+     */
+    public val xRateLimitReset: String?
+      get() = headers["X-RateLimit-Reset"]
+  }
 
   @Serializable
   public data class GetFilterKeywordsV2ResponseFailure401(
     public val body: Error,
+    @Transient
+    override val headers: Headers = Headers.Empty,
   ) : GetFilterKeywordsV2Response()
 
   @Serializable
-  public object GetFilterKeywordsV2ResponseFailure410 : GetFilterKeywordsV2Response()
+  public data class GetFilterKeywordsV2ResponseFailure410(
+    @Transient
+    override val headers: Headers = Headers.Empty,
+  ) : GetFilterKeywordsV2Response()
 
   @Serializable
   public data class GetFilterKeywordsV2ResponseFailure(
     public val body: ValidationError,
+    @Transient
+    override val headers: Headers = Headers.Empty,
   ) : GetFilterKeywordsV2Response()
 
   @Serializable
   public data class GetFilterKeywordsV2ResponseUnknownFailure(
     public val statusCode: Int,
+    @Transient
+    override val headers: Headers = Headers.Empty,
   ) : GetFilterKeywordsV2Response()
 
   @Serializable
@@ -728,50 +973,110 @@ public class FiltersClient(
   )
 
   @Serializable
-  public sealed class PostFilterKeywordsV2Response
+  public sealed class PostFilterKeywordsV2Response {
+    public abstract val headers: Headers
+  }
 
   @Serializable
   public data class PostFilterKeywordsV2ResponseSuccess(
     public val body: FilterKeyword,
-  ) : PostFilterKeywordsV2Response()
+    @Transient
+    override val headers: Headers = Headers.Empty,
+  ) : PostFilterKeywordsV2Response() {
+    /**
+     * Number of requests permitted per time period
+     */
+    public val xRateLimitLimit: Int?
+      get() = headers["X-RateLimit-Limit"]?.toIntOrNull()
+
+    /**
+     * Number of requests you can still make
+     */
+    public val xRateLimitRemaining: Int?
+      get() = headers["X-RateLimit-Remaining"]?.toIntOrNull()
+
+    /**
+     * Timestamp when your rate limit will reset
+     */
+    public val xRateLimitReset: String?
+      get() = headers["X-RateLimit-Reset"]
+  }
 
   @Serializable
   public data class PostFilterKeywordsV2ResponseFailure401(
     public val body: Error,
+    @Transient
+    override val headers: Headers = Headers.Empty,
   ) : PostFilterKeywordsV2Response()
 
   @Serializable
-  public object PostFilterKeywordsV2ResponseFailure : PostFilterKeywordsV2Response()
+  public data class PostFilterKeywordsV2ResponseFailure(
+    @Transient
+    override val headers: Headers = Headers.Empty,
+  ) : PostFilterKeywordsV2Response()
 
   @Serializable
   public data class PostFilterKeywordsV2ResponseUnknownFailure(
     public val statusCode: Int,
+    @Transient
+    override val headers: Headers = Headers.Empty,
   ) : PostFilterKeywordsV2Response()
 
   @Serializable
-  public sealed class GetFilterStatusesV2Response
+  public sealed class GetFilterStatusesV2Response {
+    public abstract val headers: Headers
+  }
 
   @Serializable
   public data class GetFilterStatusesV2ResponseSuccess(
     public val body: List<FilterStatus>,
-  ) : GetFilterStatusesV2Response()
+    @Transient
+    override val headers: Headers = Headers.Empty,
+  ) : GetFilterStatusesV2Response() {
+    /**
+     * Number of requests permitted per time period
+     */
+    public val xRateLimitLimit: Int?
+      get() = headers["X-RateLimit-Limit"]?.toIntOrNull()
+
+    /**
+     * Number of requests you can still make
+     */
+    public val xRateLimitRemaining: Int?
+      get() = headers["X-RateLimit-Remaining"]?.toIntOrNull()
+
+    /**
+     * Timestamp when your rate limit will reset
+     */
+    public val xRateLimitReset: String?
+      get() = headers["X-RateLimit-Reset"]
+  }
 
   @Serializable
   public data class GetFilterStatusesV2ResponseFailure401(
     public val body: Error,
+    @Transient
+    override val headers: Headers = Headers.Empty,
   ) : GetFilterStatusesV2Response()
 
   @Serializable
-  public object GetFilterStatusesV2ResponseFailure410 : GetFilterStatusesV2Response()
+  public data class GetFilterStatusesV2ResponseFailure410(
+    @Transient
+    override val headers: Headers = Headers.Empty,
+  ) : GetFilterStatusesV2Response()
 
   @Serializable
   public data class GetFilterStatusesV2ResponseFailure(
     public val body: ValidationError,
+    @Transient
+    override val headers: Headers = Headers.Empty,
   ) : GetFilterStatusesV2Response()
 
   @Serializable
   public data class GetFilterStatusesV2ResponseUnknownFailure(
     public val statusCode: Int,
+    @Transient
+    override val headers: Headers = Headers.Empty,
   ) : GetFilterStatusesV2Response()
 
   @Serializable
@@ -781,55 +1086,117 @@ public class FiltersClient(
   )
 
   @Serializable
-  public sealed class PostFilterStatusesV2Response
+  public sealed class PostFilterStatusesV2Response {
+    public abstract val headers: Headers
+  }
 
   @Serializable
   public data class PostFilterStatusesV2ResponseSuccess(
     public val body: FilterStatus,
-  ) : PostFilterStatusesV2Response()
+    @Transient
+    override val headers: Headers = Headers.Empty,
+  ) : PostFilterStatusesV2Response() {
+    /**
+     * Number of requests permitted per time period
+     */
+    public val xRateLimitLimit: Int?
+      get() = headers["X-RateLimit-Limit"]?.toIntOrNull()
+
+    /**
+     * Number of requests you can still make
+     */
+    public val xRateLimitRemaining: Int?
+      get() = headers["X-RateLimit-Remaining"]?.toIntOrNull()
+
+    /**
+     * Timestamp when your rate limit will reset
+     */
+    public val xRateLimitReset: String?
+      get() = headers["X-RateLimit-Reset"]
+  }
 
   @Serializable
   public data class PostFilterStatusesV2ResponseFailure401(
     public val body: Error,
+    @Transient
+    override val headers: Headers = Headers.Empty,
   ) : PostFilterStatusesV2Response()
 
   @Serializable
-  public object PostFilterStatusesV2ResponseFailure410 : PostFilterStatusesV2Response()
+  public data class PostFilterStatusesV2ResponseFailure410(
+    @Transient
+    override val headers: Headers = Headers.Empty,
+  ) : PostFilterStatusesV2Response()
 
   @Serializable
   public data class PostFilterStatusesV2ResponseFailure(
     public val body: ValidationError,
+    @Transient
+    override val headers: Headers = Headers.Empty,
   ) : PostFilterStatusesV2Response()
 
   @Serializable
   public data class PostFilterStatusesV2ResponseUnknownFailure(
     public val statusCode: Int,
+    @Transient
+    override val headers: Headers = Headers.Empty,
   ) : PostFilterStatusesV2Response()
 
   @Serializable
-  public sealed class GetFilterV2Response
+  public sealed class GetFilterV2Response {
+    public abstract val headers: Headers
+  }
 
   @Serializable
   public data class GetFilterV2ResponseSuccess(
     public val body: Filter,
-  ) : GetFilterV2Response()
+    @Transient
+    override val headers: Headers = Headers.Empty,
+  ) : GetFilterV2Response() {
+    /**
+     * Number of requests permitted per time period
+     */
+    public val xRateLimitLimit: Int?
+      get() = headers["X-RateLimit-Limit"]?.toIntOrNull()
+
+    /**
+     * Number of requests you can still make
+     */
+    public val xRateLimitRemaining: Int?
+      get() = headers["X-RateLimit-Remaining"]?.toIntOrNull()
+
+    /**
+     * Timestamp when your rate limit will reset
+     */
+    public val xRateLimitReset: String?
+      get() = headers["X-RateLimit-Reset"]
+  }
 
   @Serializable
   public data class GetFilterV2ResponseFailure401(
     public val body: Error,
+    @Transient
+    override val headers: Headers = Headers.Empty,
   ) : GetFilterV2Response()
 
   @Serializable
-  public object GetFilterV2ResponseFailure410 : GetFilterV2Response()
+  public data class GetFilterV2ResponseFailure410(
+    @Transient
+    override val headers: Headers = Headers.Empty,
+  ) : GetFilterV2Response()
 
   @Serializable
   public data class GetFilterV2ResponseFailure(
     public val body: ValidationError,
+    @Transient
+    override val headers: Headers = Headers.Empty,
   ) : GetFilterV2Response()
 
   @Serializable
   public data class GetFilterV2ResponseUnknownFailure(
     public val statusCode: Int,
+    @Transient
+    override val headers: Headers = Headers.Empty,
   ) : GetFilterV2Response()
 
   @Serializable
@@ -845,79 +1212,173 @@ public class FiltersClient(
   )
 
   @Serializable
-  public sealed class UpdateFilterV2Response
+  public sealed class UpdateFilterV2Response {
+    public abstract val headers: Headers
+  }
 
   @Serializable
   public data class UpdateFilterV2ResponseSuccess(
     public val body: Filter,
-  ) : UpdateFilterV2Response()
+    @Transient
+    override val headers: Headers = Headers.Empty,
+  ) : UpdateFilterV2Response() {
+    /**
+     * Number of requests permitted per time period
+     */
+    public val xRateLimitLimit: Int?
+      get() = headers["X-RateLimit-Limit"]?.toIntOrNull()
+
+    /**
+     * Number of requests you can still make
+     */
+    public val xRateLimitRemaining: Int?
+      get() = headers["X-RateLimit-Remaining"]?.toIntOrNull()
+
+    /**
+     * Timestamp when your rate limit will reset
+     */
+    public val xRateLimitReset: String?
+      get() = headers["X-RateLimit-Reset"]
+  }
 
   @Serializable
   public data class UpdateFilterV2ResponseFailure401(
     public val body: Error,
+    @Transient
+    override val headers: Headers = Headers.Empty,
   ) : UpdateFilterV2Response()
 
   @Serializable
-  public object UpdateFilterV2ResponseFailure410 : UpdateFilterV2Response()
+  public data class UpdateFilterV2ResponseFailure410(
+    @Transient
+    override val headers: Headers = Headers.Empty,
+  ) : UpdateFilterV2Response()
 
   @Serializable
   public data class UpdateFilterV2ResponseFailure(
     public val body: ValidationError,
+    @Transient
+    override val headers: Headers = Headers.Empty,
   ) : UpdateFilterV2Response()
 
   @Serializable
   public data class UpdateFilterV2ResponseUnknownFailure(
     public val statusCode: Int,
+    @Transient
+    override val headers: Headers = Headers.Empty,
   ) : UpdateFilterV2Response()
 
   @Serializable
-  public sealed class DeleteFilterV2Response
+  public sealed class DeleteFilterV2Response {
+    public abstract val headers: Headers
+  }
 
   @Serializable
-  public object DeleteFilterV2ResponseSuccess : DeleteFilterV2Response()
+  public data class DeleteFilterV2ResponseSuccess(
+    @Transient
+    override val headers: Headers = Headers.Empty,
+  ) : DeleteFilterV2Response() {
+    /**
+     * Number of requests permitted per time period
+     */
+    public val xRateLimitLimit: Int?
+      get() = headers["X-RateLimit-Limit"]?.toIntOrNull()
+
+    /**
+     * Number of requests you can still make
+     */
+    public val xRateLimitRemaining: Int?
+      get() = headers["X-RateLimit-Remaining"]?.toIntOrNull()
+
+    /**
+     * Timestamp when your rate limit will reset
+     */
+    public val xRateLimitReset: String?
+      get() = headers["X-RateLimit-Reset"]
+  }
 
   @Serializable
   public data class DeleteFilterV2ResponseFailure401(
     public val body: Error,
+    @Transient
+    override val headers: Headers = Headers.Empty,
   ) : DeleteFilterV2Response()
 
   @Serializable
-  public object DeleteFilterV2ResponseFailure410 : DeleteFilterV2Response()
+  public data class DeleteFilterV2ResponseFailure410(
+    @Transient
+    override val headers: Headers = Headers.Empty,
+  ) : DeleteFilterV2Response()
 
   @Serializable
   public data class DeleteFilterV2ResponseFailure(
     public val body: ValidationError,
+    @Transient
+    override val headers: Headers = Headers.Empty,
   ) : DeleteFilterV2Response()
 
   @Serializable
   public data class DeleteFilterV2ResponseUnknownFailure(
     public val statusCode: Int,
+    @Transient
+    override val headers: Headers = Headers.Empty,
   ) : DeleteFilterV2Response()
 
   @Serializable
-  public sealed class GetFiltersKeywordsByIdV2Response
+  public sealed class GetFiltersKeywordsByIdV2Response {
+    public abstract val headers: Headers
+  }
 
   @Serializable
   public data class GetFiltersKeywordsByIdV2ResponseSuccess(
     public val body: FilterKeyword,
-  ) : GetFiltersKeywordsByIdV2Response()
+    @Transient
+    override val headers: Headers = Headers.Empty,
+  ) : GetFiltersKeywordsByIdV2Response() {
+    /**
+     * Number of requests permitted per time period
+     */
+    public val xRateLimitLimit: Int?
+      get() = headers["X-RateLimit-Limit"]?.toIntOrNull()
+
+    /**
+     * Number of requests you can still make
+     */
+    public val xRateLimitRemaining: Int?
+      get() = headers["X-RateLimit-Remaining"]?.toIntOrNull()
+
+    /**
+     * Timestamp when your rate limit will reset
+     */
+    public val xRateLimitReset: String?
+      get() = headers["X-RateLimit-Reset"]
+  }
 
   @Serializable
   public data class GetFiltersKeywordsByIdV2ResponseFailure401(
     public val body: Error,
+    @Transient
+    override val headers: Headers = Headers.Empty,
   ) : GetFiltersKeywordsByIdV2Response()
 
   @Serializable
-  public object GetFiltersKeywordsByIdV2ResponseFailure410 : GetFiltersKeywordsByIdV2Response()
+  public data class GetFiltersKeywordsByIdV2ResponseFailure410(
+    @Transient
+    override val headers: Headers = Headers.Empty,
+  ) : GetFiltersKeywordsByIdV2Response()
 
   @Serializable
   public data class GetFiltersKeywordsByIdV2ResponseFailure(
     public val body: ValidationError,
+    @Transient
+    override val headers: Headers = Headers.Empty,
   ) : GetFiltersKeywordsByIdV2Response()
 
   @Serializable
   public data class GetFiltersKeywordsByIdV2ResponseUnknownFailure(
     public val statusCode: Int,
+    @Transient
+    override val headers: Headers = Headers.Empty,
   ) : GetFiltersKeywordsByIdV2Response()
 
   @Serializable
@@ -928,99 +1389,222 @@ public class FiltersClient(
   )
 
   @Serializable
-  public sealed class UpdateFiltersKeywordsByIdV2Response
+  public sealed class UpdateFiltersKeywordsByIdV2Response {
+    public abstract val headers: Headers
+  }
 
   @Serializable
   public data class UpdateFiltersKeywordsByIdV2ResponseSuccess(
     public val body: FilterKeyword,
-  ) : UpdateFiltersKeywordsByIdV2Response()
+    @Transient
+    override val headers: Headers = Headers.Empty,
+  ) : UpdateFiltersKeywordsByIdV2Response() {
+    /**
+     * Number of requests permitted per time period
+     */
+    public val xRateLimitLimit: Int?
+      get() = headers["X-RateLimit-Limit"]?.toIntOrNull()
+
+    /**
+     * Number of requests you can still make
+     */
+    public val xRateLimitRemaining: Int?
+      get() = headers["X-RateLimit-Remaining"]?.toIntOrNull()
+
+    /**
+     * Timestamp when your rate limit will reset
+     */
+    public val xRateLimitReset: String?
+      get() = headers["X-RateLimit-Reset"]
+  }
 
   @Serializable
   public data class UpdateFiltersKeywordsByIdV2ResponseFailure401(
     public val body: Error,
+    @Transient
+    override val headers: Headers = Headers.Empty,
   ) : UpdateFiltersKeywordsByIdV2Response()
 
   @Serializable
-  public object UpdateFiltersKeywordsByIdV2ResponseFailure : UpdateFiltersKeywordsByIdV2Response()
+  public data class UpdateFiltersKeywordsByIdV2ResponseFailure(
+    @Transient
+    override val headers: Headers = Headers.Empty,
+  ) : UpdateFiltersKeywordsByIdV2Response()
 
   @Serializable
   public data class UpdateFiltersKeywordsByIdV2ResponseUnknownFailure(
     public val statusCode: Int,
+    @Transient
+    override val headers: Headers = Headers.Empty,
   ) : UpdateFiltersKeywordsByIdV2Response()
 
   @Serializable
-  public sealed class DeleteFiltersKeywordsByIdV2Response
+  public sealed class DeleteFiltersKeywordsByIdV2Response {
+    public abstract val headers: Headers
+  }
 
   @Serializable
-  public object DeleteFiltersKeywordsByIdV2ResponseSuccess : DeleteFiltersKeywordsByIdV2Response()
+  public data class DeleteFiltersKeywordsByIdV2ResponseSuccess(
+    @Transient
+    override val headers: Headers = Headers.Empty,
+  ) : DeleteFiltersKeywordsByIdV2Response() {
+    /**
+     * Number of requests permitted per time period
+     */
+    public val xRateLimitLimit: Int?
+      get() = headers["X-RateLimit-Limit"]?.toIntOrNull()
+
+    /**
+     * Number of requests you can still make
+     */
+    public val xRateLimitRemaining: Int?
+      get() = headers["X-RateLimit-Remaining"]?.toIntOrNull()
+
+    /**
+     * Timestamp when your rate limit will reset
+     */
+    public val xRateLimitReset: String?
+      get() = headers["X-RateLimit-Reset"]
+  }
 
   @Serializable
   public data class DeleteFiltersKeywordsByIdV2ResponseFailure401(
     public val body: Error,
+    @Transient
+    override val headers: Headers = Headers.Empty,
   ) : DeleteFiltersKeywordsByIdV2Response()
 
   @Serializable
-  public object DeleteFiltersKeywordsByIdV2ResponseFailure410 : DeleteFiltersKeywordsByIdV2Response()
+  public data class DeleteFiltersKeywordsByIdV2ResponseFailure410(
+    @Transient
+    override val headers: Headers = Headers.Empty,
+  ) : DeleteFiltersKeywordsByIdV2Response()
 
   @Serializable
   public data class DeleteFiltersKeywordsByIdV2ResponseFailure(
     public val body: ValidationError,
+    @Transient
+    override val headers: Headers = Headers.Empty,
   ) : DeleteFiltersKeywordsByIdV2Response()
 
   @Serializable
   public data class DeleteFiltersKeywordsByIdV2ResponseUnknownFailure(
     public val statusCode: Int,
+    @Transient
+    override val headers: Headers = Headers.Empty,
   ) : DeleteFiltersKeywordsByIdV2Response()
 
   @Serializable
-  public sealed class GetFiltersStatusesByIdV2Response
+  public sealed class GetFiltersStatusesByIdV2Response {
+    public abstract val headers: Headers
+  }
 
   @Serializable
   public data class GetFiltersStatusesByIdV2ResponseSuccess(
     public val body: FilterStatus,
-  ) : GetFiltersStatusesByIdV2Response()
+    @Transient
+    override val headers: Headers = Headers.Empty,
+  ) : GetFiltersStatusesByIdV2Response() {
+    /**
+     * Number of requests permitted per time period
+     */
+    public val xRateLimitLimit: Int?
+      get() = headers["X-RateLimit-Limit"]?.toIntOrNull()
+
+    /**
+     * Number of requests you can still make
+     */
+    public val xRateLimitRemaining: Int?
+      get() = headers["X-RateLimit-Remaining"]?.toIntOrNull()
+
+    /**
+     * Timestamp when your rate limit will reset
+     */
+    public val xRateLimitReset: String?
+      get() = headers["X-RateLimit-Reset"]
+  }
 
   @Serializable
   public data class GetFiltersStatusesByIdV2ResponseFailure401(
     public val body: Error,
+    @Transient
+    override val headers: Headers = Headers.Empty,
   ) : GetFiltersStatusesByIdV2Response()
 
   @Serializable
-  public object GetFiltersStatusesByIdV2ResponseFailure410 : GetFiltersStatusesByIdV2Response()
+  public data class GetFiltersStatusesByIdV2ResponseFailure410(
+    @Transient
+    override val headers: Headers = Headers.Empty,
+  ) : GetFiltersStatusesByIdV2Response()
 
   @Serializable
   public data class GetFiltersStatusesByIdV2ResponseFailure(
     public val body: ValidationError,
+    @Transient
+    override val headers: Headers = Headers.Empty,
   ) : GetFiltersStatusesByIdV2Response()
 
   @Serializable
   public data class GetFiltersStatusesByIdV2ResponseUnknownFailure(
     public val statusCode: Int,
+    @Transient
+    override val headers: Headers = Headers.Empty,
   ) : GetFiltersStatusesByIdV2Response()
 
   @Serializable
-  public sealed class DeleteFiltersStatusesByIdV2Response
+  public sealed class DeleteFiltersStatusesByIdV2Response {
+    public abstract val headers: Headers
+  }
 
   @Serializable
   public data class DeleteFiltersStatusesByIdV2ResponseSuccess(
     public val body: FilterStatus,
-  ) : DeleteFiltersStatusesByIdV2Response()
+    @Transient
+    override val headers: Headers = Headers.Empty,
+  ) : DeleteFiltersStatusesByIdV2Response() {
+    /**
+     * Number of requests permitted per time period
+     */
+    public val xRateLimitLimit: Int?
+      get() = headers["X-RateLimit-Limit"]?.toIntOrNull()
+
+    /**
+     * Number of requests you can still make
+     */
+    public val xRateLimitRemaining: Int?
+      get() = headers["X-RateLimit-Remaining"]?.toIntOrNull()
+
+    /**
+     * Timestamp when your rate limit will reset
+     */
+    public val xRateLimitReset: String?
+      get() = headers["X-RateLimit-Reset"]
+  }
 
   @Serializable
   public data class DeleteFiltersStatusesByIdV2ResponseFailure401(
     public val body: Error,
+    @Transient
+    override val headers: Headers = Headers.Empty,
   ) : DeleteFiltersStatusesByIdV2Response()
 
   @Serializable
-  public object DeleteFiltersStatusesByIdV2ResponseFailure410 : DeleteFiltersStatusesByIdV2Response()
+  public data class DeleteFiltersStatusesByIdV2ResponseFailure410(
+    @Transient
+    override val headers: Headers = Headers.Empty,
+  ) : DeleteFiltersStatusesByIdV2Response()
 
   @Serializable
   public data class DeleteFiltersStatusesByIdV2ResponseFailure(
     public val body: ValidationError,
+    @Transient
+    override val headers: Headers = Headers.Empty,
   ) : DeleteFiltersStatusesByIdV2Response()
 
   @Serializable
   public data class DeleteFiltersStatusesByIdV2ResponseUnknownFailure(
     public val statusCode: Int,
+    @Transient
+    override val headers: Headers = Headers.Empty,
   ) : DeleteFiltersStatusesByIdV2Response()
 }

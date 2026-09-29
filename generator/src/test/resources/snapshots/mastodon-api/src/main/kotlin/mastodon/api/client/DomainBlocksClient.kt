@@ -6,6 +6,7 @@ import io.ktor.client.request.delete
 import io.ktor.client.request.post
 import io.ktor.client.request.setBody
 import io.ktor.http.ContentType
+import io.ktor.http.Headers
 import io.ktor.http.contentType
 import kotlin.Int
 import kotlin.Long
@@ -13,6 +14,7 @@ import kotlin.String
 import kotlin.collections.List
 import kotlin.coroutines.cancellation.CancellationException
 import kotlinx.serialization.Serializable
+import kotlinx.serialization.Transient
 import mastodon.api.client.ClientConfiguration.Companion.defaultClientConfiguration
 import mastodon.api.model.Error
 import mastodon.api.model.ValidationError
@@ -47,11 +49,11 @@ public class DomainBlocksClient(
         }
       }
       return when (response.status.value) {
-        200 -> GetDomainBlocksResponseSuccess(response.body<List<String>>())
-        401, 404, 429, 503 -> GetDomainBlocksResponseFailure401(response.body<Error>())
-        410 -> GetDomainBlocksResponseFailure410
-        422 -> GetDomainBlocksResponseFailure(response.body<ValidationError>())
-        else -> GetDomainBlocksResponseUnknownFailure(response.status.value)
+        200 -> GetDomainBlocksResponseSuccess(response.body<List<String>>(), response.headers)
+        401, 404, 429, 503 -> GetDomainBlocksResponseFailure401(response.body<Error>(), response.headers)
+        410 -> GetDomainBlocksResponseFailure410(response.headers)
+        422 -> GetDomainBlocksResponseFailure(response.body<ValidationError>(), response.headers)
+        else -> GetDomainBlocksResponseUnknownFailure(response.status.value, response.headers)
       }
     }
     catch(e: CancellationException) {
@@ -73,10 +75,10 @@ public class DomainBlocksClient(
         contentType(ContentType.Application.Json)
       }
       return when (response.status.value) {
-        200 -> CreateDomainBlockResponseSuccess
-        401, 404, 422, 429, 503 -> CreateDomainBlockResponseFailure401(response.body<Error>())
-        410 -> CreateDomainBlockResponseFailure
-        else -> CreateDomainBlockResponseUnknownFailure(response.status.value)
+        200 -> CreateDomainBlockResponseSuccess(response.headers)
+        401, 404, 422, 429, 503 -> CreateDomainBlockResponseFailure401(response.body<Error>(), response.headers)
+        410 -> CreateDomainBlockResponseFailure(response.headers)
+        else -> CreateDomainBlockResponseUnknownFailure(response.status.value, response.headers)
       }
     }
     catch(e: CancellationException) {
@@ -98,10 +100,10 @@ public class DomainBlocksClient(
         contentType(ContentType.Application.Json)
       }
       return when (response.status.value) {
-        200 -> DeleteDomainBlocksResponseSuccess
-        401, 404, 422, 429, 503 -> DeleteDomainBlocksResponseFailure401(response.body<Error>())
-        410 -> DeleteDomainBlocksResponseFailure
-        else -> DeleteDomainBlocksResponseUnknownFailure(response.status.value)
+        200 -> DeleteDomainBlocksResponseSuccess(response.headers)
+        401, 404, 422, 429, 503 -> DeleteDomainBlocksResponseFailure401(response.body<Error>(), response.headers)
+        410 -> DeleteDomainBlocksResponseFailure(response.headers)
+        else -> DeleteDomainBlocksResponseUnknownFailure(response.status.value, response.headers)
       }
     }
     catch(e: CancellationException) {
@@ -114,29 +116,66 @@ public class DomainBlocksClient(
   }
 
   @Serializable
-  public sealed class GetDomainBlocksResponse
+  public sealed class GetDomainBlocksResponse {
+    public abstract val headers: Headers
+  }
 
   @Serializable
   public data class GetDomainBlocksResponseSuccess(
     public val body: List<String>,
-  ) : GetDomainBlocksResponse()
+    @Transient
+    override val headers: Headers = Headers.Empty,
+  ) : GetDomainBlocksResponse() {
+    /**
+     * Pagination links for browsing older or newer results. Format: Link: <https://mastodon.example/api/v1/endpoint?max_id=7163058>; rel="next", <https://mastodon.example/api/v1/endpoint?min_id=7275607>; rel="prev". See [RFC 8288](https://www.rfc-editor.org/rfc/rfc8288) for more information.
+     */
+    public val link: String?
+      get() = headers["Link"]
+
+    /**
+     * Number of requests permitted per time period
+     */
+    public val xRateLimitLimit: Int?
+      get() = headers["X-RateLimit-Limit"]?.toIntOrNull()
+
+    /**
+     * Number of requests you can still make
+     */
+    public val xRateLimitRemaining: Int?
+      get() = headers["X-RateLimit-Remaining"]?.toIntOrNull()
+
+    /**
+     * Timestamp when your rate limit will reset
+     */
+    public val xRateLimitReset: String?
+      get() = headers["X-RateLimit-Reset"]
+  }
 
   @Serializable
   public data class GetDomainBlocksResponseFailure401(
     public val body: Error,
+    @Transient
+    override val headers: Headers = Headers.Empty,
   ) : GetDomainBlocksResponse()
 
   @Serializable
-  public object GetDomainBlocksResponseFailure410 : GetDomainBlocksResponse()
+  public data class GetDomainBlocksResponseFailure410(
+    @Transient
+    override val headers: Headers = Headers.Empty,
+  ) : GetDomainBlocksResponse()
 
   @Serializable
   public data class GetDomainBlocksResponseFailure(
     public val body: ValidationError,
+    @Transient
+    override val headers: Headers = Headers.Empty,
   ) : GetDomainBlocksResponse()
 
   @Serializable
   public data class GetDomainBlocksResponseUnknownFailure(
     public val statusCode: Int,
+    @Transient
+    override val headers: Headers = Headers.Empty,
   ) : GetDomainBlocksResponse()
 
   @Serializable
@@ -145,22 +184,52 @@ public class DomainBlocksClient(
   )
 
   @Serializable
-  public sealed class CreateDomainBlockResponse
+  public sealed class CreateDomainBlockResponse {
+    public abstract val headers: Headers
+  }
 
   @Serializable
-  public object CreateDomainBlockResponseSuccess : CreateDomainBlockResponse()
+  public data class CreateDomainBlockResponseSuccess(
+    @Transient
+    override val headers: Headers = Headers.Empty,
+  ) : CreateDomainBlockResponse() {
+    /**
+     * Number of requests permitted per time period
+     */
+    public val xRateLimitLimit: Int?
+      get() = headers["X-RateLimit-Limit"]?.toIntOrNull()
+
+    /**
+     * Number of requests you can still make
+     */
+    public val xRateLimitRemaining: Int?
+      get() = headers["X-RateLimit-Remaining"]?.toIntOrNull()
+
+    /**
+     * Timestamp when your rate limit will reset
+     */
+    public val xRateLimitReset: String?
+      get() = headers["X-RateLimit-Reset"]
+  }
 
   @Serializable
   public data class CreateDomainBlockResponseFailure401(
     public val body: Error,
+    @Transient
+    override val headers: Headers = Headers.Empty,
   ) : CreateDomainBlockResponse()
 
   @Serializable
-  public object CreateDomainBlockResponseFailure : CreateDomainBlockResponse()
+  public data class CreateDomainBlockResponseFailure(
+    @Transient
+    override val headers: Headers = Headers.Empty,
+  ) : CreateDomainBlockResponse()
 
   @Serializable
   public data class CreateDomainBlockResponseUnknownFailure(
     public val statusCode: Int,
+    @Transient
+    override val headers: Headers = Headers.Empty,
   ) : CreateDomainBlockResponse()
 
   @Serializable
@@ -169,21 +238,51 @@ public class DomainBlocksClient(
   )
 
   @Serializable
-  public sealed class DeleteDomainBlocksResponse
+  public sealed class DeleteDomainBlocksResponse {
+    public abstract val headers: Headers
+  }
 
   @Serializable
-  public object DeleteDomainBlocksResponseSuccess : DeleteDomainBlocksResponse()
+  public data class DeleteDomainBlocksResponseSuccess(
+    @Transient
+    override val headers: Headers = Headers.Empty,
+  ) : DeleteDomainBlocksResponse() {
+    /**
+     * Number of requests permitted per time period
+     */
+    public val xRateLimitLimit: Int?
+      get() = headers["X-RateLimit-Limit"]?.toIntOrNull()
+
+    /**
+     * Number of requests you can still make
+     */
+    public val xRateLimitRemaining: Int?
+      get() = headers["X-RateLimit-Remaining"]?.toIntOrNull()
+
+    /**
+     * Timestamp when your rate limit will reset
+     */
+    public val xRateLimitReset: String?
+      get() = headers["X-RateLimit-Reset"]
+  }
 
   @Serializable
   public data class DeleteDomainBlocksResponseFailure401(
     public val body: Error,
+    @Transient
+    override val headers: Headers = Headers.Empty,
   ) : DeleteDomainBlocksResponse()
 
   @Serializable
-  public object DeleteDomainBlocksResponseFailure : DeleteDomainBlocksResponse()
+  public data class DeleteDomainBlocksResponseFailure(
+    @Transient
+    override val headers: Headers = Headers.Empty,
+  ) : DeleteDomainBlocksResponse()
 
   @Serializable
   public data class DeleteDomainBlocksResponseUnknownFailure(
     public val statusCode: Int,
+    @Transient
+    override val headers: Headers = Headers.Empty,
   ) : DeleteDomainBlocksResponse()
 }

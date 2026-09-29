@@ -110,6 +110,44 @@ when (val response = client.downloadFile("42")) {
 
 The whole body is loaded into memory. Streaming large files with `ByteReadChannel` is not supported yet.
 
+### Response headers
+
+Every generated response class, including the `*ResponseUnknownFailure` fallback, exposes the raw Ktor
+`headers: Headers` of the HTTP response. The property is declared on the sealed base class, so it is available
+without a cast:
+
+```kotlin
+val response = client.getAccountFollowers(id = "42")
+val rateLimitRemaining = response.headers["X-RateLimit-Remaining"]
+```
+
+When the spec declares `responses.<code>.headers` (inline or `$ref: #/components/headers/...`), the response class
+also gets one typed, nullable property per header. The property returns `null` when the header is missing or
+cannot be parsed:
+
+```kotlin
+when (val response = client.getAccountFollowers(id = "42")) {
+    is GetAccountFollowersResponseSuccess -> {
+        val next = response.link              // String?  ("Link" header)
+        val remaining = response.xRateLimitRemaining // Int?  ("X-RateLimit-Remaining" header)
+    }
+    else -> Unit
+}
+```
+
+| Header schema | Property type |
+|---|---|
+| `integer` (`int64`) | `Long?` |
+| `integer` (other formats) | `Int?` |
+| `number` | `Double?` |
+| `boolean` | `Boolean?` |
+| anything else (`string`, `date-time`, enums, arrays, …) | `String?` (raw value) |
+
+The `Content-Type` response header is ignored, as the OpenAPI specification requires. A header whose property name would clash
+with `body`, `headers` or `statusCode` gets a `Header` suffix (e.g. `bodyHeader`).
+When several status codes share one response class, the class exposes the union of their headers.
+`headers` is `@Transient`, so it is not part of the kotlinx.serialization form of the response classes.
+
 ## Gradle task configuration properties
 
 ### Root properties

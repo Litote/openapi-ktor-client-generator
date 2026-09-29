@@ -111,7 +111,7 @@ See [CONTRIBUTING.md — Gradle Dependency Graph](CONTRIBUTING.md#gradle-depende
 
 | Sub-module | Root package | Key classes |
 |---|---|---|
-| `generator:domain` | `*.domain` | `GenerationSpec`, `ClientSpec`, `OperationSpec`, `ModelSpec` (sealed), `SubtypeHint`, `DomainTypeSpec` (sealed), `ModelPropertySpec`, `OperationParameterSpec`, `RequestBodySpec`, `ResponseEntrySpec`, `FormFieldSpec`, `ClientConfigurationSpec`, `SecuritySchemeSpec`, `ComponentParameterSpec`, `DefaultValueSpec`, `OperationMetaSpec`, `ParameterLocationSpec`, `ModelUsageAnalyzer` (top-level fns), `PartitionedGenerationSpec`, `PerClientGenerationSpec`, `SharedGroupSpec`, `GeneratedFileSpec` |
+| `generator:domain` | `*.domain` | `GenerationSpec`, `ClientSpec`, `OperationSpec`, `ModelSpec` (sealed), `SubtypeHint`, `DomainTypeSpec` (sealed), `ModelPropertySpec`, `OperationParameterSpec`, `RequestBodySpec`, `ResponseEntrySpec`, `ResponseHeaderSpec`, `FormFieldSpec`, `ClientConfigurationSpec`, `SecuritySchemeSpec`, `ComponentParameterSpec`, `DefaultValueSpec`, `OperationMetaSpec`, `ParameterLocationSpec`, `ModelUsageAnalyzer` (top-level fns), `PartitionedGenerationSpec`, `PerClientGenerationSpec`, `SharedGroupSpec`, `GeneratedFileSpec` |
 | `generator:port` | `*.port` | `ApiSpecificationParser` (parse takes only `operationFilter`), `ApiTypeMappingConfig`, `StringFormatType`, `ApiConfigurationRenderer`, `ApiClientRenderer`, `ApiModelRenderer`, `ApiFileSystemWriter`, `ApiConfigurationGeneratorConfig`, `ApiClientGeneratorConfig`, `ApiModelGeneratorConfig` |
 | `generator:config` | `*.generator` | `ApiGeneratorConfiguration`, `ApiGeneratorModule`, `GenerationResult`, `SplitGranularity`, `SharedModelGranularity` |
 | `generator:application` | `*.application` | `GenerateCodeService`, `GenerationSpecPartitioner` |
@@ -469,6 +469,7 @@ graph TD
     OP["OperationParameterSpec"]
     RB["RequestBodySpec"]
     RE["ResponseEntrySpec"]
+    RH["ResponseHeaderSpec"]
     IL["ModelSpec (inline)"]
     MS["ModelSpec\n(DataClassSpec | SealedClassSpec\n| EnumSpec | AliasSpec | ObjectSpec | InterfaceSpec)"]
     MP["ModelPropertySpec"]
@@ -488,6 +489,8 @@ graph TD
     OP -->|type| DT
     RB -->|type| DT
     RE -->|bodyType| DT
+    RE -->|headers| RH
+    RH -->|type: PrimitiveSpec| DT
 ```
 
 **`DomainTypeSpec.ModelReferenceSpec(name)`** is the link between operations/models and named model classes generated in the model package.
@@ -506,6 +509,14 @@ graph TD
 
 `OperationBuilder` emits `accept(ContentType.parse(...))` for the `contentTypes` of success entries, because `ContentNegotiation` only adds `Accept: application/json`.
 Bodies are read with `response.body<ByteArray>()` or `response.body<String>()`, which `ContentNegotiation` ignores by default. There is no `ByteReadChannel` streaming.
+
+### Response headers (`OpenApiSpecificationParser.buildResponseHeaders`)
+
+- Every response class is a `data class` (no more `object` variants) with `@Transient override val headers: Headers = Headers.Empty`. The sealed base declares `abstract val headers: Headers`, and `OperationBuilder` passes `response.headers` in every `when` branch. The exception branch (`UnknownFailure(500)`) uses the empty default.
+- `ResponseEntrySpec.headers` holds the declared `responses.<code>.headers` (inline or `$ref` resolved via `ApiModel.resolveHeader` / `componentHeaders`). It is the union over the grouped status codes, deduplicated and sorted case-insensitively by name. `Content-Type` is skipped.
+- `ResponseHeaderSpec.type` is **always** a `PrimitiveSpec`: `integer`+`int64` → LONG, `integer` → INT, `number` → DOUBLE, `boolean` → BOOLEAN, anything else → STRING. Headers never reference models, so `ModelUsageAnalyzer` ignores them.
+- `ResponseBuilder` renders each header as a nullable computed property (`headers["X"]?.toIntOrNull()`, …). A property name clashing with `body` / `headers` / `statusCode` gets a `Header` suffix.
+- Responses declared as `$ref: #/components/responses/...` are still skipped by `buildResponseEntries`.
 
 ---
 

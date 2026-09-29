@@ -7,12 +7,14 @@ import io.ktor.client.call.body
 import io.ktor.client.request.`get`
 import io.ktor.client.request.accept
 import io.ktor.http.ContentType
+import io.ktor.http.Headers
 import io.ktor.http.encodeURLPathPart
 import kotlin.ByteArray
 import kotlin.Int
 import kotlin.String
 import kotlin.coroutines.cancellation.CancellationException
 import kotlinx.serialization.Serializable
+import kotlinx.serialization.Transient
 
 public class FilesClient(
   private val configuration: ClientConfiguration = defaultClientConfiguration,
@@ -23,9 +25,9 @@ public class FilesClient(
         accept(ContentType.parse("application/octet-stream"))
       }
       return when (response.status.value) {
-        200 -> DownloadFileResponseSuccess(response.body<ByteArray>())
-        404 -> DownloadFileResponseFailure(response.body<Error>())
-        else -> DownloadFileResponseUnknownFailure(response.status.value)
+        200 -> DownloadFileResponseSuccess(response.body<ByteArray>(), response.headers)
+        404 -> DownloadFileResponseFailure(response.body<Error>(), response.headers)
+        else -> DownloadFileResponseUnknownFailure(response.status.value, response.headers)
       }
     }
     catch(e: CancellationException) {
@@ -43,8 +45,8 @@ public class FilesClient(
         accept(ContentType.parse("image/png"))
       }
       return when (response.status.value) {
-        200 -> GetImageResponseSuccess(response.body<ByteArray>())
-        else -> GetImageResponseUnknownFailure(response.status.value)
+        200 -> GetImageResponseSuccess(response.body<ByteArray>(), response.headers)
+        else -> GetImageResponseUnknownFailure(response.status.value, response.headers)
       }
     }
     catch(e: CancellationException) {
@@ -62,8 +64,8 @@ public class FilesClient(
         accept(ContentType.parse("text/plain"))
       }
       return when (response.status.value) {
-        200 -> GetReportResponseSuccess(response.body<String>())
-        else -> GetReportResponseUnknownFailure(response.status.value)
+        200 -> GetReportResponseSuccess(response.body<String>(), response.headers)
+        else -> GetReportResponseUnknownFailure(response.status.value, response.headers)
       }
     }
     catch(e: CancellationException) {
@@ -81,8 +83,8 @@ public class FilesClient(
         accept(ContentType.parse("text/csv"))
       }
       return when (response.status.value) {
-        200 -> ExportCsvResponseSuccess(response.body<String>())
-        else -> ExportCsvResponseUnknownFailure(response.status.value)
+        200 -> ExportCsvResponseSuccess(response.body<String>(), response.headers)
+        else -> ExportCsvResponseUnknownFailure(response.status.value, response.headers)
       }
     }
     catch(e: CancellationException) {
@@ -99,8 +101,8 @@ public class FilesClient(
       val response = configuration.client.`get`("download") {
       }
       return when (response.status.value) {
-        200 -> DownloadResponseSuccess(response.body<ByteArray>())
-        else -> DownloadResponseUnknownFailure(response.status.value)
+        200 -> DownloadResponseSuccess(response.body<ByteArray>(), response.headers)
+        else -> DownloadResponseUnknownFailure(response.status.value, response.headers)
       }
     }
     catch(e: CancellationException) {
@@ -117,8 +119,8 @@ public class FilesClient(
       val response = configuration.client.`get`("documents/{id}".replace("/{id}", "/${id.encodeURLPathPart()}")) {
       }
       return when (response.status.value) {
-        200 -> GetDocumentResponseSuccess(response.body<Document>())
-        else -> GetDocumentResponseUnknownFailure(response.status.value)
+        200 -> GetDocumentResponseSuccess(response.body<Document>(), response.headers)
+        else -> GetDocumentResponseUnknownFailure(response.status.value, response.headers)
       }
     }
     catch(e: CancellationException) {
@@ -131,85 +133,123 @@ public class FilesClient(
   }
 
   @Serializable
-  public sealed class DownloadFileResponse
+  public sealed class DownloadFileResponse {
+    public abstract val headers: Headers
+  }
 
   @Serializable
   public data class DownloadFileResponseSuccess(
     public val body: ByteArray,
+    @Transient
+    override val headers: Headers = Headers.Empty,
   ) : DownloadFileResponse()
 
   @Serializable
   public data class DownloadFileResponseFailure(
     public val body: Error,
+    @Transient
+    override val headers: Headers = Headers.Empty,
   ) : DownloadFileResponse()
 
   @Serializable
   public data class DownloadFileResponseUnknownFailure(
     public val statusCode: Int,
+    @Transient
+    override val headers: Headers = Headers.Empty,
   ) : DownloadFileResponse()
 
   @Serializable
-  public sealed class GetImageResponse
+  public sealed class GetImageResponse {
+    public abstract val headers: Headers
+  }
 
   @Serializable
   public data class GetImageResponseSuccess(
     public val body: ByteArray,
+    @Transient
+    override val headers: Headers = Headers.Empty,
   ) : GetImageResponse()
 
   @Serializable
   public data class GetImageResponseUnknownFailure(
     public val statusCode: Int,
+    @Transient
+    override val headers: Headers = Headers.Empty,
   ) : GetImageResponse()
 
   @Serializable
-  public sealed class GetReportResponse
+  public sealed class GetReportResponse {
+    public abstract val headers: Headers
+  }
 
   @Serializable
   public data class GetReportResponseSuccess(
     public val body: String,
+    @Transient
+    override val headers: Headers = Headers.Empty,
   ) : GetReportResponse()
 
   @Serializable
   public data class GetReportResponseUnknownFailure(
     public val statusCode: Int,
+    @Transient
+    override val headers: Headers = Headers.Empty,
   ) : GetReportResponse()
 
   @Serializable
-  public sealed class ExportCsvResponse
+  public sealed class ExportCsvResponse {
+    public abstract val headers: Headers
+  }
 
   @Serializable
   public data class ExportCsvResponseSuccess(
     public val body: String,
+    @Transient
+    override val headers: Headers = Headers.Empty,
   ) : ExportCsvResponse()
 
   @Serializable
   public data class ExportCsvResponseUnknownFailure(
     public val statusCode: Int,
+    @Transient
+    override val headers: Headers = Headers.Empty,
   ) : ExportCsvResponse()
 
   @Serializable
-  public sealed class DownloadResponse
+  public sealed class DownloadResponse {
+    public abstract val headers: Headers
+  }
 
   @Serializable
   public data class DownloadResponseSuccess(
     public val body: ByteArray,
+    @Transient
+    override val headers: Headers = Headers.Empty,
   ) : DownloadResponse()
 
   @Serializable
   public data class DownloadResponseUnknownFailure(
     public val statusCode: Int,
+    @Transient
+    override val headers: Headers = Headers.Empty,
   ) : DownloadResponse()
 
   @Serializable
-  public sealed class GetDocumentResponse
+  public sealed class GetDocumentResponse {
+    public abstract val headers: Headers
+  }
 
   @Serializable
   public data class GetDocumentResponseSuccess(
     public val body: Document,
+    @Transient
+    override val headers: Headers = Headers.Empty,
   ) : GetDocumentResponse()
 
   @Serializable
   public data class GetDocumentResponseUnknownFailure(
     public val statusCode: Int,
+    @Transient
+    override val headers: Headers = Headers.Empty,
   ) : GetDocumentResponse()
 }

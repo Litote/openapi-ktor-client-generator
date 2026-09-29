@@ -28,6 +28,7 @@ import org.litote.openapi.ktor.client.generator.domain.OperationSpec
 import org.litote.openapi.ktor.client.generator.domain.ParameterLocationSpec
 import org.litote.openapi.ktor.client.generator.domain.RequestBodySpec
 import org.litote.openapi.ktor.client.generator.domain.ResponseEntrySpec
+import org.litote.openapi.ktor.client.generator.domain.ResponseHeaderSpec
 import org.litote.openapi.ktor.client.generator.domain.SubtypeHint
 import org.litote.openapi.ktor.client.generator.port.ApiSpecificationParser
 import org.litote.openapi.ktor.client.generator.shared.capitalize
@@ -41,6 +42,8 @@ public class OpenApiSpecificationParser(
     private companion object {
         private val logger = KotlinLogging.logger {}
         private const val SSE_MEDIA_TYPE = "text/event-stream"
+        private const val CONTENT_TYPE_HEADER = "Content-Type"
+        private val RESERVED_RESPONSE_PROPERTIES = setOf("body", "headers", "statusCode")
         private val STRUCTURED_RESPONSE_MEDIA_TYPES =
             listOf("application/json", "application/yaml", "application/x-yaml", "*/*")
     }
@@ -511,20 +514,74 @@ public class OpenApiSpecificationParser(
                 .mapNotNull { (key, responseOrRef) ->
                     val code = key.value.toIntOrNull() ?: return@mapNotNull null
                     if (responseOrRef !is Response) return@mapNotNull null
-                    code to resolveResponseBody(responseOrRef, operationName, apiModel, modelPackage)
-                }.sortedBy { it.first }
+                    ParsedResponse(
+                        code = code,
+                        body = resolveResponseBody(responseOrRef, operationName, apiModel, modelPackage),
+                        headers = buildResponseHeaders(responseOrRef, apiModel),
+                    )
+                }.sortedBy { it.code }
 
         return parsedResponses
-            .groupBy { (code, body) -> body.type to (code in 200 until 300) }
+            .groupBy { it.body.type to (it.code in 200 until 300) }
             .map { (key, values) ->
                 ResponseEntrySpec(
-                    statusCodes = values.map { it.first },
+                    statusCodes = values.map { it.code },
                     bodyType = key.first,
                     isSuccess = key.second,
-                    contentTypes = values.flatMap { it.second.contentTypes }.distinct(),
+                    contentTypes = values.flatMap { it.body.contentTypes }.distinct(),
+                    headers =
+                        values
+                            .flatMap { it.headers }
+                            .distinctBy { it.originalName.lowercase() }
+                            .sortedBy { it.originalName.lowercase() },
                 )
             }
     }
+
+    private data class ParsedResponse(
+        val code: Int,
+        val body: ResponseBody,
+        val headers: List<ResponseHeaderSpec>,
+    )
+
+    // Builds the typed response headers. Content-Type is ignored (as mandated by the OpenAPI specification)
+    // and non-primitive header schemas fall back to String.
+    private fun buildResponseHeaders(
+        response: Response,
+        apiModel: ApiModel,
+    ): List<ResponseHeaderSpec> =
+        response.headers
+            .orEmpty()
+            .filterKeys { !it.equals(CONTENT_TYPE_HEADER, ignoreCase = true) }
+            .mapNotNull { (name, headerOrReference) ->
+                val header = apiModel.resolveHeader(headerOrReference) ?: return@mapNotNull null
+                val propertyName = parameterVariableName(name)
+                ResponseHeaderSpec(
+                    originalName = name,
+                    propertyName = if (propertyName in RESERVED_RESPONSE_PROPERTIES) "${propertyName}Header" else propertyName,
+                    type = DomainTypeSpec.PrimitiveSpec(apiModel.resolveSchema(header.headerSchema).headerKind()),
+                    description = header.description,
+                )
+            }
+
+    private fun Schema?.headerKind(): DomainTypeSpec.PrimitiveSpec.KindSpec =
+        when (this?.firstApiType) {
+            ApiSchemaType.INTEGER -> {
+                if (format == "int64") DomainTypeSpec.PrimitiveSpec.KindSpec.LONG else DomainTypeSpec.PrimitiveSpec.KindSpec.INT
+            }
+
+            ApiSchemaType.NUMBER -> {
+                DomainTypeSpec.PrimitiveSpec.KindSpec.DOUBLE
+            }
+
+            ApiSchemaType.BOOLEAN -> {
+                DomainTypeSpec.PrimitiveSpec.KindSpec.BOOLEAN
+            }
+
+            else -> {
+                DomainTypeSpec.PrimitiveSpec.KindSpec.STRING
+            }
+        }
 
     private data class ResponseBody(
         val type: DomainTypeSpec?,
