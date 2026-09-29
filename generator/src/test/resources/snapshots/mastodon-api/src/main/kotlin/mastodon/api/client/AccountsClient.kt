@@ -6,6 +6,7 @@ import io.ktor.client.request.patch
 import io.ktor.client.request.post
 import io.ktor.client.request.setBody
 import io.ktor.http.ContentType
+import io.ktor.http.Headers
 import io.ktor.http.contentType
 import io.ktor.http.encodeURLPathPart
 import kotlin.Boolean
@@ -15,6 +16,7 @@ import kotlin.String
 import kotlin.coroutines.cancellation.CancellationException
 import kotlinx.serialization.SerialName
 import kotlinx.serialization.Serializable
+import kotlinx.serialization.Transient
 import kotlinx.serialization.json.JsonElement
 import mastodon.api.client.ClientConfiguration.Companion.defaultClientConfiguration
 import mastodon.api.model.Account
@@ -47,11 +49,11 @@ public class AccountsClient(
         }
       }
       return when (response.status.value) {
-        200 -> GetAccountsResponseSuccess(response.body<CollectionsList<Account>>())
-        401, 404, 429, 503 -> GetAccountsResponseFailure401(response.body<Error>())
-        410 -> GetAccountsResponseFailure410
-        422 -> GetAccountsResponseFailure(response.body<ValidationError>())
-        else -> GetAccountsResponseUnknownFailure(response.status.value)
+        200 -> GetAccountsResponseSuccess(response.body<CollectionsList<Account>>(), response.headers)
+        401, 404, 429, 503 -> GetAccountsResponseFailure401(response.body<Error>(), response.headers)
+        410 -> GetAccountsResponseFailure410(response.headers)
+        422 -> GetAccountsResponseFailure(response.body<ValidationError>(), response.headers)
+        else -> GetAccountsResponseUnknownFailure(response.status.value, response.headers)
       }
     }
     catch(e: CancellationException) {
@@ -73,11 +75,11 @@ public class AccountsClient(
         contentType(ContentType.Application.Json)
       }
       return when (response.status.value) {
-        200 -> CreateAccountResponseSuccess(response.body<Token>())
-        401, 404, 429, 503 -> CreateAccountResponseFailure401(response.body<Error>())
-        410 -> CreateAccountResponseFailure410
-        422 -> CreateAccountResponseFailure(response.body<ValidationError>())
-        else -> CreateAccountResponseUnknownFailure(response.status.value)
+        200 -> CreateAccountResponseSuccess(response.body<Token>(), response.headers)
+        401, 404, 429, 503 -> CreateAccountResponseFailure401(response.body<Error>(), response.headers)
+        410 -> CreateAccountResponseFailure410(response.headers)
+        422 -> CreateAccountResponseFailure(response.body<ValidationError>(), response.headers)
+        else -> CreateAccountResponseUnknownFailure(response.status.value, response.headers)
       }
     }
     catch(e: CancellationException) {
@@ -97,11 +99,11 @@ public class AccountsClient(
       val response = configuration.client.`get`("api/v1/accounts/{id}".replace("/{id}", "/${id.encodeURLPathPart()}")) {
       }
       return when (response.status.value) {
-        200 -> GetAccountResponseSuccess(response.body<Account>())
-        401, 404, 429, 503 -> GetAccountResponseFailure401(response.body<Error>())
-        410 -> GetAccountResponseFailure410
-        422 -> GetAccountResponseFailure(response.body<ValidationError>())
-        else -> GetAccountResponseUnknownFailure(response.status.value)
+        200 -> GetAccountResponseSuccess(response.body<Account>(), response.headers)
+        401, 404, 429, 503 -> GetAccountResponseFailure401(response.body<Error>(), response.headers)
+        410 -> GetAccountResponseFailure410(response.headers)
+        422 -> GetAccountResponseFailure(response.body<ValidationError>(), response.headers)
+        else -> GetAccountResponseUnknownFailure(response.status.value, response.headers)
       }
     }
     catch(e: CancellationException) {
@@ -121,10 +123,10 @@ public class AccountsClient(
       val response = configuration.client.post("api/v1/accounts/{id}/block".replace("/{id}", "/${id.encodeURLPathPart()}")) {
       }
       return when (response.status.value) {
-        200 -> PostAccountBlockResponseSuccess(response.body<Relationship>())
-        401, 404, 422, 429, 503 -> PostAccountBlockResponseFailure401(response.body<Error>())
-        410 -> PostAccountBlockResponseFailure
-        else -> PostAccountBlockResponseUnknownFailure(response.status.value)
+        200 -> PostAccountBlockResponseSuccess(response.body<Relationship>(), response.headers)
+        401, 404, 422, 429, 503 -> PostAccountBlockResponseFailure401(response.body<Error>(), response.headers)
+        410 -> PostAccountBlockResponseFailure(response.headers)
+        else -> PostAccountBlockResponseUnknownFailure(response.status.value, response.headers)
       }
     }
     catch(e: CancellationException) {
@@ -144,10 +146,10 @@ public class AccountsClient(
       val response = configuration.client.post("api/v1/accounts/{id}/endorse".replace("/{id}", "/${id.encodeURLPathPart()}")) {
       }
       return when (response.status.value) {
-        200 -> PostAccountEndorseResponseSuccess(response.body<Relationship>())
-        401, 403, 404, 422, 429, 500, 503 -> PostAccountEndorseResponseFailure401(response.body<Error>())
-        410 -> PostAccountEndorseResponseFailure
-        else -> PostAccountEndorseResponseUnknownFailure(response.status.value)
+        200 -> PostAccountEndorseResponseSuccess(response.body<Relationship>(), response.headers)
+        401, 403, 404, 422, 429, 500, 503 -> PostAccountEndorseResponseFailure401(response.body<Error>(), response.headers)
+        410 -> PostAccountEndorseResponseFailure(response.headers)
+        else -> PostAccountEndorseResponseUnknownFailure(response.status.value, response.headers)
       }
     }
     catch(e: CancellationException) {
@@ -183,11 +185,11 @@ public class AccountsClient(
         }
       }
       return when (response.status.value) {
-        200 -> GetAccountEndorsementsResponseSuccess(response.body<CollectionsList<Account>>())
-        401, 404, 429, 503 -> GetAccountEndorsementsResponseFailure401(response.body<Error>())
-        410 -> GetAccountEndorsementsResponseFailure410
-        422 -> GetAccountEndorsementsResponseFailure(response.body<ValidationError>())
-        else -> GetAccountEndorsementsResponseUnknownFailure(response.status.value)
+        200 -> GetAccountEndorsementsResponseSuccess(response.body<CollectionsList<Account>>(), response.headers)
+        401, 404, 429, 503 -> GetAccountEndorsementsResponseFailure401(response.body<Error>(), response.headers)
+        410 -> GetAccountEndorsementsResponseFailure410(response.headers)
+        422 -> GetAccountEndorsementsResponseFailure(response.body<ValidationError>(), response.headers)
+        else -> GetAccountEndorsementsResponseUnknownFailure(response.status.value, response.headers)
       }
     }
     catch(e: CancellationException) {
@@ -207,11 +209,11 @@ public class AccountsClient(
       val response = configuration.client.`get`("api/v1/accounts/{id}/featured_tags".replace("/{id}", "/${id.encodeURLPathPart()}")) {
       }
       return when (response.status.value) {
-        200 -> GetAccountFeaturedTagsResponseSuccess(response.body<CollectionsList<FeaturedTag>>())
-        401, 404, 429, 503 -> GetAccountFeaturedTagsResponseFailure401(response.body<Error>())
-        410 -> GetAccountFeaturedTagsResponseFailure410
-        422 -> GetAccountFeaturedTagsResponseFailure(response.body<ValidationError>())
-        else -> GetAccountFeaturedTagsResponseUnknownFailure(response.status.value)
+        200 -> GetAccountFeaturedTagsResponseSuccess(response.body<CollectionsList<FeaturedTag>>(), response.headers)
+        401, 404, 429, 503 -> GetAccountFeaturedTagsResponseFailure401(response.body<Error>(), response.headers)
+        410 -> GetAccountFeaturedTagsResponseFailure410(response.headers)
+        422 -> GetAccountFeaturedTagsResponseFailure(response.body<ValidationError>(), response.headers)
+        else -> GetAccountFeaturedTagsResponseUnknownFailure(response.status.value, response.headers)
       }
     }
     catch(e: CancellationException) {
@@ -233,10 +235,10 @@ public class AccountsClient(
         contentType(ContentType.Application.Json)
       }
       return when (response.status.value) {
-        200 -> PostAccountFollowResponseSuccess(response.body<Relationship>())
-        401, 403, 404, 422, 429, 503 -> PostAccountFollowResponseFailure401(response.body<Error>())
-        410 -> PostAccountFollowResponseFailure
-        else -> PostAccountFollowResponseUnknownFailure(response.status.value)
+        200 -> PostAccountFollowResponseSuccess(response.body<Relationship>(), response.headers)
+        401, 403, 404, 422, 429, 503 -> PostAccountFollowResponseFailure401(response.body<Error>(), response.headers)
+        410 -> PostAccountFollowResponseFailure(response.headers)
+        else -> PostAccountFollowResponseUnknownFailure(response.status.value, response.headers)
       }
     }
     catch(e: CancellationException) {
@@ -276,11 +278,11 @@ public class AccountsClient(
         }
       }
       return when (response.status.value) {
-        200 -> GetAccountFollowersResponseSuccess(response.body<CollectionsList<Account>>())
-        401, 404, 429, 503 -> GetAccountFollowersResponseFailure401(response.body<Error>())
-        410 -> GetAccountFollowersResponseFailure410
-        422 -> GetAccountFollowersResponseFailure(response.body<ValidationError>())
-        else -> GetAccountFollowersResponseUnknownFailure(response.status.value)
+        200 -> GetAccountFollowersResponseSuccess(response.body<CollectionsList<Account>>(), response.headers)
+        401, 404, 429, 503 -> GetAccountFollowersResponseFailure401(response.body<Error>(), response.headers)
+        410 -> GetAccountFollowersResponseFailure410(response.headers)
+        422 -> GetAccountFollowersResponseFailure(response.body<ValidationError>(), response.headers)
+        else -> GetAccountFollowersResponseUnknownFailure(response.status.value, response.headers)
       }
     }
     catch(e: CancellationException) {
@@ -320,11 +322,11 @@ public class AccountsClient(
         }
       }
       return when (response.status.value) {
-        200 -> GetAccountFollowingResponseSuccess(response.body<CollectionsList<Account>>())
-        401, 404, 429, 503 -> GetAccountFollowingResponseFailure401(response.body<Error>())
-        410 -> GetAccountFollowingResponseFailure410
-        422 -> GetAccountFollowingResponseFailure(response.body<ValidationError>())
-        else -> GetAccountFollowingResponseUnknownFailure(response.status.value)
+        200 -> GetAccountFollowingResponseSuccess(response.body<CollectionsList<Account>>(), response.headers)
+        401, 404, 429, 503 -> GetAccountFollowingResponseFailure401(response.body<Error>(), response.headers)
+        410 -> GetAccountFollowingResponseFailure410(response.headers)
+        422 -> GetAccountFollowingResponseFailure(response.body<ValidationError>(), response.headers)
+        else -> GetAccountFollowingResponseUnknownFailure(response.status.value, response.headers)
       }
     }
     catch(e: CancellationException) {
@@ -344,10 +346,10 @@ public class AccountsClient(
       val response = configuration.client.`get`("api/v1/accounts/{id}/identity_proofs".replace("/{id}", "/${id.encodeURLPathPart()}")) {
       }
       return when (response.status.value) {
-        200 -> GetAccountIdentityProofsResponseSuccess(response.body<CollectionsList<IdentityProof>>())
-        401, 404, 422, 429, 503 -> GetAccountIdentityProofsResponseFailure401(response.body<Error>())
-        410 -> GetAccountIdentityProofsResponseFailure
-        else -> GetAccountIdentityProofsResponseUnknownFailure(response.status.value)
+        200 -> GetAccountIdentityProofsResponseSuccess(response.body<CollectionsList<IdentityProof>>(), response.headers)
+        401, 404, 422, 429, 503 -> GetAccountIdentityProofsResponseFailure401(response.body<Error>(), response.headers)
+        410 -> GetAccountIdentityProofsResponseFailure(response.headers)
+        else -> GetAccountIdentityProofsResponseUnknownFailure(response.status.value, response.headers)
       }
     }
     catch(e: CancellationException) {
@@ -367,10 +369,10 @@ public class AccountsClient(
       val response = configuration.client.`get`("api/v1/accounts/{id}/lists".replace("/{id}", "/${id.encodeURLPathPart()}")) {
       }
       return when (response.status.value) {
-        200 -> GetAccountListsResponseSuccess(response.body<CollectionsList<ModelList>>())
-        401, 404, 422, 429, 503 -> GetAccountListsResponseFailure401(response.body<Error>())
-        410 -> GetAccountListsResponseFailure
-        else -> GetAccountListsResponseUnknownFailure(response.status.value)
+        200 -> GetAccountListsResponseSuccess(response.body<CollectionsList<ModelList>>(), response.headers)
+        401, 404, 422, 429, 503 -> GetAccountListsResponseFailure401(response.body<Error>(), response.headers)
+        410 -> GetAccountListsResponseFailure(response.headers)
+        else -> GetAccountListsResponseUnknownFailure(response.status.value, response.headers)
       }
     }
     catch(e: CancellationException) {
@@ -392,10 +394,10 @@ public class AccountsClient(
         contentType(ContentType.Application.Json)
       }
       return when (response.status.value) {
-        200 -> PostAccountMuteResponseSuccess(response.body<Relationship>())
-        401, 404, 422, 429, 503 -> PostAccountMuteResponseFailure401(response.body<Error>())
-        410 -> PostAccountMuteResponseFailure
-        else -> PostAccountMuteResponseUnknownFailure(response.status.value)
+        200 -> PostAccountMuteResponseSuccess(response.body<Relationship>(), response.headers)
+        401, 404, 422, 429, 503 -> PostAccountMuteResponseFailure401(response.body<Error>(), response.headers)
+        410 -> PostAccountMuteResponseFailure(response.headers)
+        else -> PostAccountMuteResponseUnknownFailure(response.status.value, response.headers)
       }
     }
     catch(e: CancellationException) {
@@ -417,10 +419,10 @@ public class AccountsClient(
         contentType(ContentType.Application.Json)
       }
       return when (response.status.value) {
-        200 -> PostAccountNoteResponseSuccess(response.body<Relationship>())
-        401, 404, 422, 429, 503 -> PostAccountNoteResponseFailure401(response.body<Error>())
-        410 -> PostAccountNoteResponseFailure
-        else -> PostAccountNoteResponseUnknownFailure(response.status.value)
+        200 -> PostAccountNoteResponseSuccess(response.body<Relationship>(), response.headers)
+        401, 404, 422, 429, 503 -> PostAccountNoteResponseFailure401(response.body<Error>(), response.headers)
+        410 -> PostAccountNoteResponseFailure(response.headers)
+        else -> PostAccountNoteResponseUnknownFailure(response.status.value, response.headers)
       }
     }
     catch(e: CancellationException) {
@@ -440,10 +442,10 @@ public class AccountsClient(
       val response = configuration.client.post("api/v1/accounts/{id}/pin".replace("/{id}", "/${id.encodeURLPathPart()}")) {
       }
       return when (response.status.value) {
-        200 -> PostAccountPinResponseSuccess(response.body<Relationship>())
-        401, 403, 404, 422, 429, 500, 503 -> PostAccountPinResponseFailure401(response.body<Error>())
-        410 -> PostAccountPinResponseFailure
-        else -> PostAccountPinResponseUnknownFailure(response.status.value)
+        200 -> PostAccountPinResponseSuccess(response.body<Relationship>(), response.headers)
+        401, 403, 404, 422, 429, 500, 503 -> PostAccountPinResponseFailure401(response.body<Error>(), response.headers)
+        410 -> PostAccountPinResponseFailure(response.headers)
+        else -> PostAccountPinResponseUnknownFailure(response.status.value, response.headers)
       }
     }
     catch(e: CancellationException) {
@@ -463,10 +465,10 @@ public class AccountsClient(
       val response = configuration.client.post("api/v1/accounts/{id}/remove_from_followers".replace("/{id}", "/${id.encodeURLPathPart()}")) {
       }
       return when (response.status.value) {
-        200 -> PostAccountRemoveFromFollowersResponseSuccess(response.body<Relationship>())
-        401, 404, 422, 429, 503 -> PostAccountRemoveFromFollowersResponseFailure401(response.body<Error>())
-        410 -> PostAccountRemoveFromFollowersResponseFailure
-        else -> PostAccountRemoveFromFollowersResponseUnknownFailure(response.status.value)
+        200 -> PostAccountRemoveFromFollowersResponseSuccess(response.body<Relationship>(), response.headers)
+        401, 404, 422, 429, 503 -> PostAccountRemoveFromFollowersResponseFailure401(response.body<Error>(), response.headers)
+        410 -> PostAccountRemoveFromFollowersResponseFailure(response.headers)
+        else -> PostAccountRemoveFromFollowersResponseUnknownFailure(response.status.value, response.headers)
       }
     }
     catch(e: CancellationException) {
@@ -526,11 +528,11 @@ public class AccountsClient(
         }
       }
       return when (response.status.value) {
-        200 -> GetAccountStatusesResponseSuccess(response.body<CollectionsList<Status>>())
-        401, 404, 429, 503 -> GetAccountStatusesResponseFailure401(response.body<Error>())
-        410 -> GetAccountStatusesResponseFailure410
-        422 -> GetAccountStatusesResponseFailure(response.body<ValidationError>())
-        else -> GetAccountStatusesResponseUnknownFailure(response.status.value)
+        200 -> GetAccountStatusesResponseSuccess(response.body<CollectionsList<Status>>(), response.headers)
+        401, 404, 429, 503 -> GetAccountStatusesResponseFailure401(response.body<Error>(), response.headers)
+        410 -> GetAccountStatusesResponseFailure410(response.headers)
+        422 -> GetAccountStatusesResponseFailure(response.body<ValidationError>(), response.headers)
+        else -> GetAccountStatusesResponseUnknownFailure(response.status.value, response.headers)
       }
     }
     catch(e: CancellationException) {
@@ -550,10 +552,10 @@ public class AccountsClient(
       val response = configuration.client.post("api/v1/accounts/{id}/unblock".replace("/{id}", "/${id.encodeURLPathPart()}")) {
       }
       return when (response.status.value) {
-        200 -> PostAccountUnblockResponseSuccess(response.body<Relationship>())
-        401, 404, 422, 429, 503 -> PostAccountUnblockResponseFailure401(response.body<Error>())
-        410 -> PostAccountUnblockResponseFailure
-        else -> PostAccountUnblockResponseUnknownFailure(response.status.value)
+        200 -> PostAccountUnblockResponseSuccess(response.body<Relationship>(), response.headers)
+        401, 404, 422, 429, 503 -> PostAccountUnblockResponseFailure401(response.body<Error>(), response.headers)
+        410 -> PostAccountUnblockResponseFailure(response.headers)
+        else -> PostAccountUnblockResponseUnknownFailure(response.status.value, response.headers)
       }
     }
     catch(e: CancellationException) {
@@ -573,10 +575,10 @@ public class AccountsClient(
       val response = configuration.client.post("api/v1/accounts/{id}/unendorse".replace("/{id}", "/${id.encodeURLPathPart()}")) {
       }
       return when (response.status.value) {
-        200 -> PostAccountUnendorseResponseSuccess(response.body<Relationship>())
-        401, 404, 422, 429, 503 -> PostAccountUnendorseResponseFailure401(response.body<Error>())
-        410 -> PostAccountUnendorseResponseFailure
-        else -> PostAccountUnendorseResponseUnknownFailure(response.status.value)
+        200 -> PostAccountUnendorseResponseSuccess(response.body<Relationship>(), response.headers)
+        401, 404, 422, 429, 503 -> PostAccountUnendorseResponseFailure401(response.body<Error>(), response.headers)
+        410 -> PostAccountUnendorseResponseFailure(response.headers)
+        else -> PostAccountUnendorseResponseUnknownFailure(response.status.value, response.headers)
       }
     }
     catch(e: CancellationException) {
@@ -596,10 +598,10 @@ public class AccountsClient(
       val response = configuration.client.post("api/v1/accounts/{id}/unfollow".replace("/{id}", "/${id.encodeURLPathPart()}")) {
       }
       return when (response.status.value) {
-        200 -> PostAccountUnfollowResponseSuccess(response.body<Relationship>())
-        401, 404, 422, 429, 503 -> PostAccountUnfollowResponseFailure401(response.body<Error>())
-        410 -> PostAccountUnfollowResponseFailure
-        else -> PostAccountUnfollowResponseUnknownFailure(response.status.value)
+        200 -> PostAccountUnfollowResponseSuccess(response.body<Relationship>(), response.headers)
+        401, 404, 422, 429, 503 -> PostAccountUnfollowResponseFailure401(response.body<Error>(), response.headers)
+        410 -> PostAccountUnfollowResponseFailure(response.headers)
+        else -> PostAccountUnfollowResponseUnknownFailure(response.status.value, response.headers)
       }
     }
     catch(e: CancellationException) {
@@ -619,10 +621,10 @@ public class AccountsClient(
       val response = configuration.client.post("api/v1/accounts/{id}/unmute".replace("/{id}", "/${id.encodeURLPathPart()}")) {
       }
       return when (response.status.value) {
-        200 -> PostAccountUnmuteResponseSuccess(response.body<Relationship>())
-        401, 404, 422, 429, 503 -> PostAccountUnmuteResponseFailure401(response.body<Error>())
-        410 -> PostAccountUnmuteResponseFailure
-        else -> PostAccountUnmuteResponseUnknownFailure(response.status.value)
+        200 -> PostAccountUnmuteResponseSuccess(response.body<Relationship>(), response.headers)
+        401, 404, 422, 429, 503 -> PostAccountUnmuteResponseFailure401(response.body<Error>(), response.headers)
+        410 -> PostAccountUnmuteResponseFailure(response.headers)
+        else -> PostAccountUnmuteResponseUnknownFailure(response.status.value, response.headers)
       }
     }
     catch(e: CancellationException) {
@@ -642,10 +644,10 @@ public class AccountsClient(
       val response = configuration.client.post("api/v1/accounts/{id}/unpin".replace("/{id}", "/${id.encodeURLPathPart()}")) {
       }
       return when (response.status.value) {
-        200 -> PostAccountUnpinResponseSuccess(response.body<Relationship>())
-        401, 404, 422, 429, 503 -> PostAccountUnpinResponseFailure401(response.body<Error>())
-        410 -> PostAccountUnpinResponseFailure
-        else -> PostAccountUnpinResponseUnknownFailure(response.status.value)
+        200 -> PostAccountUnpinResponseSuccess(response.body<Relationship>(), response.headers)
+        401, 404, 422, 429, 503 -> PostAccountUnpinResponseFailure401(response.body<Error>(), response.headers)
+        410 -> PostAccountUnpinResponseFailure(response.headers)
+        else -> PostAccountUnpinResponseUnknownFailure(response.status.value, response.headers)
       }
     }
     catch(e: CancellationException) {
@@ -670,10 +672,10 @@ public class AccountsClient(
         }
       }
       return when (response.status.value) {
-        200 -> GetAccountsFamiliarFollowersResponseSuccess(response.body<CollectionsList<FamiliarFollowers>>())
-        401, 404, 422, 429, 503 -> GetAccountsFamiliarFollowersResponseFailure401(response.body<Error>())
-        410 -> GetAccountsFamiliarFollowersResponseFailure
-        else -> GetAccountsFamiliarFollowersResponseUnknownFailure(response.status.value)
+        200 -> GetAccountsFamiliarFollowersResponseSuccess(response.body<CollectionsList<FamiliarFollowers>>(), response.headers)
+        401, 404, 422, 429, 503 -> GetAccountsFamiliarFollowersResponseFailure401(response.body<Error>(), response.headers)
+        410 -> GetAccountsFamiliarFollowersResponseFailure(response.headers)
+        else -> GetAccountsFamiliarFollowersResponseUnknownFailure(response.status.value, response.headers)
       }
     }
     catch(e: CancellationException) {
@@ -696,11 +698,11 @@ public class AccountsClient(
         }
       }
       return when (response.status.value) {
-        200 -> GetAccountLookupResponseSuccess(response.body<Account>())
-        401, 404, 429, 503 -> GetAccountLookupResponseFailure401(response.body<Error>())
-        410 -> GetAccountLookupResponseFailure410
-        422 -> GetAccountLookupResponseFailure(response.body<ValidationError>())
-        else -> GetAccountLookupResponseUnknownFailure(response.status.value)
+        200 -> GetAccountLookupResponseSuccess(response.body<Account>(), response.headers)
+        401, 404, 429, 503 -> GetAccountLookupResponseFailure401(response.body<Error>(), response.headers)
+        410 -> GetAccountLookupResponseFailure410(response.headers)
+        422 -> GetAccountLookupResponseFailure(response.body<ValidationError>(), response.headers)
+        else -> GetAccountLookupResponseUnknownFailure(response.status.value, response.headers)
       }
     }
     catch(e: CancellationException) {
@@ -728,10 +730,10 @@ public class AccountsClient(
         }
       }
       return when (response.status.value) {
-        200 -> GetAccountRelationshipsResponseSuccess(response.body<CollectionsList<Relationship>>())
-        401, 404, 422, 429, 503 -> GetAccountRelationshipsResponseFailure401(response.body<Error>())
-        410 -> GetAccountRelationshipsResponseFailure
-        else -> GetAccountRelationshipsResponseUnknownFailure(response.status.value)
+        200 -> GetAccountRelationshipsResponseSuccess(response.body<CollectionsList<Relationship>>(), response.headers)
+        401, 404, 422, 429, 503 -> GetAccountRelationshipsResponseFailure401(response.body<Error>(), response.headers)
+        410 -> GetAccountRelationshipsResponseFailure(response.headers)
+        else -> GetAccountRelationshipsResponseUnknownFailure(response.status.value, response.headers)
       }
     }
     catch(e: CancellationException) {
@@ -772,11 +774,11 @@ public class AccountsClient(
         }
       }
       return when (response.status.value) {
-        200 -> GetAccountSearchResponseSuccess(response.body<CollectionsList<Account>>())
-        401, 404, 429, 503 -> GetAccountSearchResponseFailure401(response.body<Error>())
-        410 -> GetAccountSearchResponseFailure410
-        422 -> GetAccountSearchResponseFailure(response.body<ValidationError>())
-        else -> GetAccountSearchResponseUnknownFailure(response.status.value)
+        200 -> GetAccountSearchResponseSuccess(response.body<CollectionsList<Account>>(), response.headers)
+        401, 404, 429, 503 -> GetAccountSearchResponseFailure401(response.body<Error>(), response.headers)
+        410 -> GetAccountSearchResponseFailure410(response.headers)
+        422 -> GetAccountSearchResponseFailure(response.body<ValidationError>(), response.headers)
+        else -> GetAccountSearchResponseUnknownFailure(response.status.value, response.headers)
       }
     }
     catch(e: CancellationException) {
@@ -798,10 +800,10 @@ public class AccountsClient(
         contentType(ContentType.Application.Json)
       }
       return when (response.status.value) {
-        200 -> PatchAccountsUpdateCredentialsResponseSuccess(response.body<CredentialAccount>())
-        401, 404, 422, 429, 503 -> PatchAccountsUpdateCredentialsResponseFailure401(response.body<Error>())
-        410 -> PatchAccountsUpdateCredentialsResponseFailure
-        else -> PatchAccountsUpdateCredentialsResponseUnknownFailure(response.status.value)
+        200 -> PatchAccountsUpdateCredentialsResponseSuccess(response.body<CredentialAccount>(), response.headers)
+        401, 404, 422, 429, 503 -> PatchAccountsUpdateCredentialsResponseFailure401(response.body<Error>(), response.headers)
+        410 -> PatchAccountsUpdateCredentialsResponseFailure(response.headers)
+        else -> PatchAccountsUpdateCredentialsResponseUnknownFailure(response.status.value, response.headers)
       }
     }
     catch(e: CancellationException) {
@@ -821,10 +823,10 @@ public class AccountsClient(
       val response = configuration.client.`get`("api/v1/accounts/verify_credentials") {
       }
       return when (response.status.value) {
-        200 -> GetAccountsVerifyCredentialsResponseSuccess(response.body<CredentialAccount>())
-        401, 403, 404, 422, 429, 503 -> GetAccountsVerifyCredentialsResponseFailure401(response.body<Error>())
-        410 -> GetAccountsVerifyCredentialsResponseFailure
-        else -> GetAccountsVerifyCredentialsResponseUnknownFailure(response.status.value)
+        200 -> GetAccountsVerifyCredentialsResponseSuccess(response.body<CredentialAccount>(), response.headers)
+        401, 403, 404, 422, 429, 503 -> GetAccountsVerifyCredentialsResponseFailure401(response.body<Error>(), response.headers)
+        410 -> GetAccountsVerifyCredentialsResponseFailure(response.headers)
+        else -> GetAccountsVerifyCredentialsResponseUnknownFailure(response.status.value, response.headers)
       }
     }
     catch(e: CancellationException) {
@@ -846,29 +848,60 @@ public class AccountsClient(
   public object GetAccountRelationshipsId
 
   @Serializable
-  public sealed class GetAccountsResponse
+  public sealed class GetAccountsResponse {
+    public abstract val headers: Headers
+  }
 
   @Serializable
   public data class GetAccountsResponseSuccess(
     public val body: CollectionsList<Account>,
-  ) : GetAccountsResponse()
+    @Transient
+    override val headers: Headers = Headers.Empty,
+  ) : GetAccountsResponse() {
+    /**
+     * Number of requests permitted per time period
+     */
+    public val xRateLimitLimit: Int?
+      get() = headers["X-RateLimit-Limit"]?.toIntOrNull()
+
+    /**
+     * Number of requests you can still make
+     */
+    public val xRateLimitRemaining: Int?
+      get() = headers["X-RateLimit-Remaining"]?.toIntOrNull()
+
+    /**
+     * Timestamp when your rate limit will reset
+     */
+    public val xRateLimitReset: String?
+      get() = headers["X-RateLimit-Reset"]
+  }
 
   @Serializable
   public data class GetAccountsResponseFailure401(
     public val body: Error,
+    @Transient
+    override val headers: Headers = Headers.Empty,
   ) : GetAccountsResponse()
 
   @Serializable
-  public object GetAccountsResponseFailure410 : GetAccountsResponse()
+  public data class GetAccountsResponseFailure410(
+    @Transient
+    override val headers: Headers = Headers.Empty,
+  ) : GetAccountsResponse()
 
   @Serializable
   public data class GetAccountsResponseFailure(
     public val body: ValidationError,
+    @Transient
+    override val headers: Headers = Headers.Empty,
   ) : GetAccountsResponse()
 
   @Serializable
   public data class GetAccountsResponseUnknownFailure(
     public val statusCode: Int,
+    @Transient
+    override val headers: Headers = Headers.Empty,
   ) : GetAccountsResponse()
 
   @Serializable
@@ -884,149 +917,337 @@ public class AccountsClient(
   )
 
   @Serializable
-  public sealed class CreateAccountResponse
+  public sealed class CreateAccountResponse {
+    public abstract val headers: Headers
+  }
 
   @Serializable
   public data class CreateAccountResponseSuccess(
     public val body: Token,
-  ) : CreateAccountResponse()
+    @Transient
+    override val headers: Headers = Headers.Empty,
+  ) : CreateAccountResponse() {
+    /**
+     * Number of requests permitted per time period
+     */
+    public val xRateLimitLimit: Int?
+      get() = headers["X-RateLimit-Limit"]?.toIntOrNull()
+
+    /**
+     * Number of requests you can still make
+     */
+    public val xRateLimitRemaining: Int?
+      get() = headers["X-RateLimit-Remaining"]?.toIntOrNull()
+
+    /**
+     * Timestamp when your rate limit will reset
+     */
+    public val xRateLimitReset: String?
+      get() = headers["X-RateLimit-Reset"]
+  }
 
   @Serializable
   public data class CreateAccountResponseFailure401(
     public val body: Error,
+    @Transient
+    override val headers: Headers = Headers.Empty,
   ) : CreateAccountResponse()
 
   @Serializable
-  public object CreateAccountResponseFailure410 : CreateAccountResponse()
+  public data class CreateAccountResponseFailure410(
+    @Transient
+    override val headers: Headers = Headers.Empty,
+  ) : CreateAccountResponse()
 
   @Serializable
   public data class CreateAccountResponseFailure(
     public val body: ValidationError,
+    @Transient
+    override val headers: Headers = Headers.Empty,
   ) : CreateAccountResponse()
 
   @Serializable
   public data class CreateAccountResponseUnknownFailure(
     public val statusCode: Int,
+    @Transient
+    override val headers: Headers = Headers.Empty,
   ) : CreateAccountResponse()
 
   @Serializable
-  public sealed class GetAccountResponse
+  public sealed class GetAccountResponse {
+    public abstract val headers: Headers
+  }
 
   @Serializable
   public data class GetAccountResponseSuccess(
     public val body: Account,
-  ) : GetAccountResponse()
+    @Transient
+    override val headers: Headers = Headers.Empty,
+  ) : GetAccountResponse() {
+    /**
+     * Number of requests permitted per time period
+     */
+    public val xRateLimitLimit: Int?
+      get() = headers["X-RateLimit-Limit"]?.toIntOrNull()
+
+    /**
+     * Number of requests you can still make
+     */
+    public val xRateLimitRemaining: Int?
+      get() = headers["X-RateLimit-Remaining"]?.toIntOrNull()
+
+    /**
+     * Timestamp when your rate limit will reset
+     */
+    public val xRateLimitReset: String?
+      get() = headers["X-RateLimit-Reset"]
+  }
 
   @Serializable
   public data class GetAccountResponseFailure401(
     public val body: Error,
+    @Transient
+    override val headers: Headers = Headers.Empty,
   ) : GetAccountResponse()
 
   @Serializable
-  public object GetAccountResponseFailure410 : GetAccountResponse()
+  public data class GetAccountResponseFailure410(
+    @Transient
+    override val headers: Headers = Headers.Empty,
+  ) : GetAccountResponse()
 
   @Serializable
   public data class GetAccountResponseFailure(
     public val body: ValidationError,
+    @Transient
+    override val headers: Headers = Headers.Empty,
   ) : GetAccountResponse()
 
   @Serializable
   public data class GetAccountResponseUnknownFailure(
     public val statusCode: Int,
+    @Transient
+    override val headers: Headers = Headers.Empty,
   ) : GetAccountResponse()
 
   @Serializable
-  public sealed class PostAccountBlockResponse
+  public sealed class PostAccountBlockResponse {
+    public abstract val headers: Headers
+  }
 
   @Serializable
   public data class PostAccountBlockResponseSuccess(
     public val body: Relationship,
-  ) : PostAccountBlockResponse()
+    @Transient
+    override val headers: Headers = Headers.Empty,
+  ) : PostAccountBlockResponse() {
+    /**
+     * Number of requests permitted per time period
+     */
+    public val xRateLimitLimit: Int?
+      get() = headers["X-RateLimit-Limit"]?.toIntOrNull()
+
+    /**
+     * Number of requests you can still make
+     */
+    public val xRateLimitRemaining: Int?
+      get() = headers["X-RateLimit-Remaining"]?.toIntOrNull()
+
+    /**
+     * Timestamp when your rate limit will reset
+     */
+    public val xRateLimitReset: String?
+      get() = headers["X-RateLimit-Reset"]
+  }
 
   @Serializable
   public data class PostAccountBlockResponseFailure401(
     public val body: Error,
+    @Transient
+    override val headers: Headers = Headers.Empty,
   ) : PostAccountBlockResponse()
 
   @Serializable
-  public object PostAccountBlockResponseFailure : PostAccountBlockResponse()
+  public data class PostAccountBlockResponseFailure(
+    @Transient
+    override val headers: Headers = Headers.Empty,
+  ) : PostAccountBlockResponse()
 
   @Serializable
   public data class PostAccountBlockResponseUnknownFailure(
     public val statusCode: Int,
+    @Transient
+    override val headers: Headers = Headers.Empty,
   ) : PostAccountBlockResponse()
 
   @Serializable
-  public sealed class PostAccountEndorseResponse
+  public sealed class PostAccountEndorseResponse {
+    public abstract val headers: Headers
+  }
 
   @Serializable
   public data class PostAccountEndorseResponseSuccess(
     public val body: Relationship,
-  ) : PostAccountEndorseResponse()
+    @Transient
+    override val headers: Headers = Headers.Empty,
+  ) : PostAccountEndorseResponse() {
+    /**
+     * Number of requests permitted per time period
+     */
+    public val xRateLimitLimit: Int?
+      get() = headers["X-RateLimit-Limit"]?.toIntOrNull()
+
+    /**
+     * Number of requests you can still make
+     */
+    public val xRateLimitRemaining: Int?
+      get() = headers["X-RateLimit-Remaining"]?.toIntOrNull()
+
+    /**
+     * Timestamp when your rate limit will reset
+     */
+    public val xRateLimitReset: String?
+      get() = headers["X-RateLimit-Reset"]
+  }
 
   @Serializable
   public data class PostAccountEndorseResponseFailure401(
     public val body: Error,
+    @Transient
+    override val headers: Headers = Headers.Empty,
   ) : PostAccountEndorseResponse()
 
   @Serializable
-  public object PostAccountEndorseResponseFailure : PostAccountEndorseResponse()
+  public data class PostAccountEndorseResponseFailure(
+    @Transient
+    override val headers: Headers = Headers.Empty,
+  ) : PostAccountEndorseResponse()
 
   @Serializable
   public data class PostAccountEndorseResponseUnknownFailure(
     public val statusCode: Int,
+    @Transient
+    override val headers: Headers = Headers.Empty,
   ) : PostAccountEndorseResponse()
 
   @Serializable
-  public sealed class GetAccountEndorsementsResponse
+  public sealed class GetAccountEndorsementsResponse {
+    public abstract val headers: Headers
+  }
 
   @Serializable
   public data class GetAccountEndorsementsResponseSuccess(
     public val body: CollectionsList<Account>,
-  ) : GetAccountEndorsementsResponse()
+    @Transient
+    override val headers: Headers = Headers.Empty,
+  ) : GetAccountEndorsementsResponse() {
+    /**
+     * Pagination links for browsing older or newer results. Format: Link: <https://mastodon.example/api/v1/endpoint?max_id=7163058>; rel="next", <https://mastodon.example/api/v1/endpoint?min_id=7275607>; rel="prev". See [RFC 8288](https://www.rfc-editor.org/rfc/rfc8288) for more information.
+     */
+    public val link: String?
+      get() = headers["Link"]
+
+    /**
+     * Number of requests permitted per time period
+     */
+    public val xRateLimitLimit: Int?
+      get() = headers["X-RateLimit-Limit"]?.toIntOrNull()
+
+    /**
+     * Number of requests you can still make
+     */
+    public val xRateLimitRemaining: Int?
+      get() = headers["X-RateLimit-Remaining"]?.toIntOrNull()
+
+    /**
+     * Timestamp when your rate limit will reset
+     */
+    public val xRateLimitReset: String?
+      get() = headers["X-RateLimit-Reset"]
+  }
 
   @Serializable
   public data class GetAccountEndorsementsResponseFailure401(
     public val body: Error,
+    @Transient
+    override val headers: Headers = Headers.Empty,
   ) : GetAccountEndorsementsResponse()
 
   @Serializable
-  public object GetAccountEndorsementsResponseFailure410 : GetAccountEndorsementsResponse()
+  public data class GetAccountEndorsementsResponseFailure410(
+    @Transient
+    override val headers: Headers = Headers.Empty,
+  ) : GetAccountEndorsementsResponse()
 
   @Serializable
   public data class GetAccountEndorsementsResponseFailure(
     public val body: ValidationError,
+    @Transient
+    override val headers: Headers = Headers.Empty,
   ) : GetAccountEndorsementsResponse()
 
   @Serializable
   public data class GetAccountEndorsementsResponseUnknownFailure(
     public val statusCode: Int,
+    @Transient
+    override val headers: Headers = Headers.Empty,
   ) : GetAccountEndorsementsResponse()
 
   @Serializable
-  public sealed class GetAccountFeaturedTagsResponse
+  public sealed class GetAccountFeaturedTagsResponse {
+    public abstract val headers: Headers
+  }
 
   @Serializable
   public data class GetAccountFeaturedTagsResponseSuccess(
     public val body: CollectionsList<FeaturedTag>,
-  ) : GetAccountFeaturedTagsResponse()
+    @Transient
+    override val headers: Headers = Headers.Empty,
+  ) : GetAccountFeaturedTagsResponse() {
+    /**
+     * Number of requests permitted per time period
+     */
+    public val xRateLimitLimit: Int?
+      get() = headers["X-RateLimit-Limit"]?.toIntOrNull()
+
+    /**
+     * Number of requests you can still make
+     */
+    public val xRateLimitRemaining: Int?
+      get() = headers["X-RateLimit-Remaining"]?.toIntOrNull()
+
+    /**
+     * Timestamp when your rate limit will reset
+     */
+    public val xRateLimitReset: String?
+      get() = headers["X-RateLimit-Reset"]
+  }
 
   @Serializable
   public data class GetAccountFeaturedTagsResponseFailure401(
     public val body: Error,
+    @Transient
+    override val headers: Headers = Headers.Empty,
   ) : GetAccountFeaturedTagsResponse()
 
   @Serializable
-  public object GetAccountFeaturedTagsResponseFailure410 : GetAccountFeaturedTagsResponse()
+  public data class GetAccountFeaturedTagsResponseFailure410(
+    @Transient
+    override val headers: Headers = Headers.Empty,
+  ) : GetAccountFeaturedTagsResponse()
 
   @Serializable
   public data class GetAccountFeaturedTagsResponseFailure(
     public val body: ValidationError,
+    @Transient
+    override val headers: Headers = Headers.Empty,
   ) : GetAccountFeaturedTagsResponse()
 
   @Serializable
   public data class GetAccountFeaturedTagsResponseUnknownFailure(
     public val statusCode: Int,
+    @Transient
+    override val headers: Headers = Headers.Empty,
   ) : GetAccountFeaturedTagsResponse()
 
   @Serializable
@@ -1037,118 +1258,279 @@ public class AccountsClient(
   )
 
   @Serializable
-  public sealed class PostAccountFollowResponse
+  public sealed class PostAccountFollowResponse {
+    public abstract val headers: Headers
+  }
 
   @Serializable
   public data class PostAccountFollowResponseSuccess(
     public val body: Relationship,
-  ) : PostAccountFollowResponse()
+    @Transient
+    override val headers: Headers = Headers.Empty,
+  ) : PostAccountFollowResponse() {
+    /**
+     * Number of requests permitted per time period
+     */
+    public val xRateLimitLimit: Int?
+      get() = headers["X-RateLimit-Limit"]?.toIntOrNull()
+
+    /**
+     * Number of requests you can still make
+     */
+    public val xRateLimitRemaining: Int?
+      get() = headers["X-RateLimit-Remaining"]?.toIntOrNull()
+
+    /**
+     * Timestamp when your rate limit will reset
+     */
+    public val xRateLimitReset: String?
+      get() = headers["X-RateLimit-Reset"]
+  }
 
   @Serializable
   public data class PostAccountFollowResponseFailure401(
     public val body: Error,
+    @Transient
+    override val headers: Headers = Headers.Empty,
   ) : PostAccountFollowResponse()
 
   @Serializable
-  public object PostAccountFollowResponseFailure : PostAccountFollowResponse()
+  public data class PostAccountFollowResponseFailure(
+    @Transient
+    override val headers: Headers = Headers.Empty,
+  ) : PostAccountFollowResponse()
 
   @Serializable
   public data class PostAccountFollowResponseUnknownFailure(
     public val statusCode: Int,
+    @Transient
+    override val headers: Headers = Headers.Empty,
   ) : PostAccountFollowResponse()
 
   @Serializable
-  public sealed class GetAccountFollowersResponse
+  public sealed class GetAccountFollowersResponse {
+    public abstract val headers: Headers
+  }
 
   @Serializable
   public data class GetAccountFollowersResponseSuccess(
     public val body: CollectionsList<Account>,
-  ) : GetAccountFollowersResponse()
+    @Transient
+    override val headers: Headers = Headers.Empty,
+  ) : GetAccountFollowersResponse() {
+    /**
+     * Pagination links for browsing older or newer results. Format: Link: <https://mastodon.example/api/v1/endpoint?max_id=7163058>; rel="next", <https://mastodon.example/api/v1/endpoint?min_id=7275607>; rel="prev". See [RFC 8288](https://www.rfc-editor.org/rfc/rfc8288) for more information.
+     */
+    public val link: String?
+      get() = headers["Link"]
+
+    /**
+     * Number of requests permitted per time period
+     */
+    public val xRateLimitLimit: Int?
+      get() = headers["X-RateLimit-Limit"]?.toIntOrNull()
+
+    /**
+     * Number of requests you can still make
+     */
+    public val xRateLimitRemaining: Int?
+      get() = headers["X-RateLimit-Remaining"]?.toIntOrNull()
+
+    /**
+     * Timestamp when your rate limit will reset
+     */
+    public val xRateLimitReset: String?
+      get() = headers["X-RateLimit-Reset"]
+  }
 
   @Serializable
   public data class GetAccountFollowersResponseFailure401(
     public val body: Error,
+    @Transient
+    override val headers: Headers = Headers.Empty,
   ) : GetAccountFollowersResponse()
 
   @Serializable
-  public object GetAccountFollowersResponseFailure410 : GetAccountFollowersResponse()
+  public data class GetAccountFollowersResponseFailure410(
+    @Transient
+    override val headers: Headers = Headers.Empty,
+  ) : GetAccountFollowersResponse()
 
   @Serializable
   public data class GetAccountFollowersResponseFailure(
     public val body: ValidationError,
+    @Transient
+    override val headers: Headers = Headers.Empty,
   ) : GetAccountFollowersResponse()
 
   @Serializable
   public data class GetAccountFollowersResponseUnknownFailure(
     public val statusCode: Int,
+    @Transient
+    override val headers: Headers = Headers.Empty,
   ) : GetAccountFollowersResponse()
 
   @Serializable
-  public sealed class GetAccountFollowingResponse
+  public sealed class GetAccountFollowingResponse {
+    public abstract val headers: Headers
+  }
 
   @Serializable
   public data class GetAccountFollowingResponseSuccess(
     public val body: CollectionsList<Account>,
-  ) : GetAccountFollowingResponse()
+    @Transient
+    override val headers: Headers = Headers.Empty,
+  ) : GetAccountFollowingResponse() {
+    /**
+     * Pagination links for browsing older or newer results. Format: Link: <https://mastodon.example/api/v1/endpoint?max_id=7163058>; rel="next", <https://mastodon.example/api/v1/endpoint?min_id=7275607>; rel="prev". See [RFC 8288](https://www.rfc-editor.org/rfc/rfc8288) for more information.
+     */
+    public val link: String?
+      get() = headers["Link"]
+
+    /**
+     * Number of requests permitted per time period
+     */
+    public val xRateLimitLimit: Int?
+      get() = headers["X-RateLimit-Limit"]?.toIntOrNull()
+
+    /**
+     * Number of requests you can still make
+     */
+    public val xRateLimitRemaining: Int?
+      get() = headers["X-RateLimit-Remaining"]?.toIntOrNull()
+
+    /**
+     * Timestamp when your rate limit will reset
+     */
+    public val xRateLimitReset: String?
+      get() = headers["X-RateLimit-Reset"]
+  }
 
   @Serializable
   public data class GetAccountFollowingResponseFailure401(
     public val body: Error,
+    @Transient
+    override val headers: Headers = Headers.Empty,
   ) : GetAccountFollowingResponse()
 
   @Serializable
-  public object GetAccountFollowingResponseFailure410 : GetAccountFollowingResponse()
+  public data class GetAccountFollowingResponseFailure410(
+    @Transient
+    override val headers: Headers = Headers.Empty,
+  ) : GetAccountFollowingResponse()
 
   @Serializable
   public data class GetAccountFollowingResponseFailure(
     public val body: ValidationError,
+    @Transient
+    override val headers: Headers = Headers.Empty,
   ) : GetAccountFollowingResponse()
 
   @Serializable
   public data class GetAccountFollowingResponseUnknownFailure(
     public val statusCode: Int,
+    @Transient
+    override val headers: Headers = Headers.Empty,
   ) : GetAccountFollowingResponse()
 
   @Serializable
-  public sealed class GetAccountIdentityProofsResponse
+  public sealed class GetAccountIdentityProofsResponse {
+    public abstract val headers: Headers
+  }
 
   @Serializable
   public data class GetAccountIdentityProofsResponseSuccess(
     public val body: CollectionsList<IdentityProof>,
-  ) : GetAccountIdentityProofsResponse()
+    @Transient
+    override val headers: Headers = Headers.Empty,
+  ) : GetAccountIdentityProofsResponse() {
+    /**
+     * Number of requests permitted per time period
+     */
+    public val xRateLimitLimit: Int?
+      get() = headers["X-RateLimit-Limit"]?.toIntOrNull()
+
+    /**
+     * Number of requests you can still make
+     */
+    public val xRateLimitRemaining: Int?
+      get() = headers["X-RateLimit-Remaining"]?.toIntOrNull()
+
+    /**
+     * Timestamp when your rate limit will reset
+     */
+    public val xRateLimitReset: String?
+      get() = headers["X-RateLimit-Reset"]
+  }
 
   @Serializable
   public data class GetAccountIdentityProofsResponseFailure401(
     public val body: Error,
+    @Transient
+    override val headers: Headers = Headers.Empty,
   ) : GetAccountIdentityProofsResponse()
 
   @Serializable
-  public object GetAccountIdentityProofsResponseFailure : GetAccountIdentityProofsResponse()
+  public data class GetAccountIdentityProofsResponseFailure(
+    @Transient
+    override val headers: Headers = Headers.Empty,
+  ) : GetAccountIdentityProofsResponse()
 
   @Serializable
   public data class GetAccountIdentityProofsResponseUnknownFailure(
     public val statusCode: Int,
+    @Transient
+    override val headers: Headers = Headers.Empty,
   ) : GetAccountIdentityProofsResponse()
 
   @Serializable
-  public sealed class GetAccountListsResponse
+  public sealed class GetAccountListsResponse {
+    public abstract val headers: Headers
+  }
 
   @Serializable
   public data class GetAccountListsResponseSuccess(
     public val body: CollectionsList<ModelList>,
-  ) : GetAccountListsResponse()
+    @Transient
+    override val headers: Headers = Headers.Empty,
+  ) : GetAccountListsResponse() {
+    /**
+     * Number of requests permitted per time period
+     */
+    public val xRateLimitLimit: Int?
+      get() = headers["X-RateLimit-Limit"]?.toIntOrNull()
+
+    /**
+     * Number of requests you can still make
+     */
+    public val xRateLimitRemaining: Int?
+      get() = headers["X-RateLimit-Remaining"]?.toIntOrNull()
+
+    /**
+     * Timestamp when your rate limit will reset
+     */
+    public val xRateLimitReset: String?
+      get() = headers["X-RateLimit-Reset"]
+  }
 
   @Serializable
   public data class GetAccountListsResponseFailure401(
     public val body: Error,
+    @Transient
+    override val headers: Headers = Headers.Empty,
   ) : GetAccountListsResponse()
 
   @Serializable
-  public object GetAccountListsResponseFailure : GetAccountListsResponse()
+  public data class GetAccountListsResponseFailure(
+    @Transient
+    override val headers: Headers = Headers.Empty,
+  ) : GetAccountListsResponse()
 
   @Serializable
   public data class GetAccountListsResponseUnknownFailure(
     public val statusCode: Int,
+    @Transient
+    override val headers: Headers = Headers.Empty,
   ) : GetAccountListsResponse()
 
   @Serializable
@@ -1158,24 +1540,53 @@ public class AccountsClient(
   )
 
   @Serializable
-  public sealed class PostAccountMuteResponse
+  public sealed class PostAccountMuteResponse {
+    public abstract val headers: Headers
+  }
 
   @Serializable
   public data class PostAccountMuteResponseSuccess(
     public val body: Relationship,
-  ) : PostAccountMuteResponse()
+    @Transient
+    override val headers: Headers = Headers.Empty,
+  ) : PostAccountMuteResponse() {
+    /**
+     * Number of requests permitted per time period
+     */
+    public val xRateLimitLimit: Int?
+      get() = headers["X-RateLimit-Limit"]?.toIntOrNull()
+
+    /**
+     * Number of requests you can still make
+     */
+    public val xRateLimitRemaining: Int?
+      get() = headers["X-RateLimit-Remaining"]?.toIntOrNull()
+
+    /**
+     * Timestamp when your rate limit will reset
+     */
+    public val xRateLimitReset: String?
+      get() = headers["X-RateLimit-Reset"]
+  }
 
   @Serializable
   public data class PostAccountMuteResponseFailure401(
     public val body: Error,
+    @Transient
+    override val headers: Headers = Headers.Empty,
   ) : PostAccountMuteResponse()
 
   @Serializable
-  public object PostAccountMuteResponseFailure : PostAccountMuteResponse()
+  public data class PostAccountMuteResponseFailure(
+    @Transient
+    override val headers: Headers = Headers.Empty,
+  ) : PostAccountMuteResponse()
 
   @Serializable
   public data class PostAccountMuteResponseUnknownFailure(
     public val statusCode: Int,
+    @Transient
+    override val headers: Headers = Headers.Empty,
   ) : PostAccountMuteResponse()
 
   @Serializable
@@ -1184,291 +1595,680 @@ public class AccountsClient(
   )
 
   @Serializable
-  public sealed class PostAccountNoteResponse
+  public sealed class PostAccountNoteResponse {
+    public abstract val headers: Headers
+  }
 
   @Serializable
   public data class PostAccountNoteResponseSuccess(
     public val body: Relationship,
-  ) : PostAccountNoteResponse()
+    @Transient
+    override val headers: Headers = Headers.Empty,
+  ) : PostAccountNoteResponse() {
+    /**
+     * Number of requests permitted per time period
+     */
+    public val xRateLimitLimit: Int?
+      get() = headers["X-RateLimit-Limit"]?.toIntOrNull()
+
+    /**
+     * Number of requests you can still make
+     */
+    public val xRateLimitRemaining: Int?
+      get() = headers["X-RateLimit-Remaining"]?.toIntOrNull()
+
+    /**
+     * Timestamp when your rate limit will reset
+     */
+    public val xRateLimitReset: String?
+      get() = headers["X-RateLimit-Reset"]
+  }
 
   @Serializable
   public data class PostAccountNoteResponseFailure401(
     public val body: Error,
+    @Transient
+    override val headers: Headers = Headers.Empty,
   ) : PostAccountNoteResponse()
 
   @Serializable
-  public object PostAccountNoteResponseFailure : PostAccountNoteResponse()
+  public data class PostAccountNoteResponseFailure(
+    @Transient
+    override val headers: Headers = Headers.Empty,
+  ) : PostAccountNoteResponse()
 
   @Serializable
   public data class PostAccountNoteResponseUnknownFailure(
     public val statusCode: Int,
+    @Transient
+    override val headers: Headers = Headers.Empty,
   ) : PostAccountNoteResponse()
 
   @Serializable
-  public sealed class PostAccountPinResponse
+  public sealed class PostAccountPinResponse {
+    public abstract val headers: Headers
+  }
 
   @Serializable
   public data class PostAccountPinResponseSuccess(
     public val body: Relationship,
-  ) : PostAccountPinResponse()
+    @Transient
+    override val headers: Headers = Headers.Empty,
+  ) : PostAccountPinResponse() {
+    /**
+     * Number of requests permitted per time period
+     */
+    public val xRateLimitLimit: Int?
+      get() = headers["X-RateLimit-Limit"]?.toIntOrNull()
+
+    /**
+     * Number of requests you can still make
+     */
+    public val xRateLimitRemaining: Int?
+      get() = headers["X-RateLimit-Remaining"]?.toIntOrNull()
+
+    /**
+     * Timestamp when your rate limit will reset
+     */
+    public val xRateLimitReset: String?
+      get() = headers["X-RateLimit-Reset"]
+  }
 
   @Serializable
   public data class PostAccountPinResponseFailure401(
     public val body: Error,
+    @Transient
+    override val headers: Headers = Headers.Empty,
   ) : PostAccountPinResponse()
 
   @Serializable
-  public object PostAccountPinResponseFailure : PostAccountPinResponse()
+  public data class PostAccountPinResponseFailure(
+    @Transient
+    override val headers: Headers = Headers.Empty,
+  ) : PostAccountPinResponse()
 
   @Serializable
   public data class PostAccountPinResponseUnknownFailure(
     public val statusCode: Int,
+    @Transient
+    override val headers: Headers = Headers.Empty,
   ) : PostAccountPinResponse()
 
   @Serializable
-  public sealed class PostAccountRemoveFromFollowersResponse
+  public sealed class PostAccountRemoveFromFollowersResponse {
+    public abstract val headers: Headers
+  }
 
   @Serializable
   public data class PostAccountRemoveFromFollowersResponseSuccess(
     public val body: Relationship,
-  ) : PostAccountRemoveFromFollowersResponse()
+    @Transient
+    override val headers: Headers = Headers.Empty,
+  ) : PostAccountRemoveFromFollowersResponse() {
+    /**
+     * Number of requests permitted per time period
+     */
+    public val xRateLimitLimit: Int?
+      get() = headers["X-RateLimit-Limit"]?.toIntOrNull()
+
+    /**
+     * Number of requests you can still make
+     */
+    public val xRateLimitRemaining: Int?
+      get() = headers["X-RateLimit-Remaining"]?.toIntOrNull()
+
+    /**
+     * Timestamp when your rate limit will reset
+     */
+    public val xRateLimitReset: String?
+      get() = headers["X-RateLimit-Reset"]
+  }
 
   @Serializable
   public data class PostAccountRemoveFromFollowersResponseFailure401(
     public val body: Error,
+    @Transient
+    override val headers: Headers = Headers.Empty,
   ) : PostAccountRemoveFromFollowersResponse()
 
   @Serializable
-  public object PostAccountRemoveFromFollowersResponseFailure : PostAccountRemoveFromFollowersResponse()
+  public data class PostAccountRemoveFromFollowersResponseFailure(
+    @Transient
+    override val headers: Headers = Headers.Empty,
+  ) : PostAccountRemoveFromFollowersResponse()
 
   @Serializable
   public data class PostAccountRemoveFromFollowersResponseUnknownFailure(
     public val statusCode: Int,
+    @Transient
+    override val headers: Headers = Headers.Empty,
   ) : PostAccountRemoveFromFollowersResponse()
 
   @Serializable
-  public sealed class GetAccountStatusesResponse
+  public sealed class GetAccountStatusesResponse {
+    public abstract val headers: Headers
+  }
 
   @Serializable
   public data class GetAccountStatusesResponseSuccess(
     public val body: CollectionsList<Status>,
-  ) : GetAccountStatusesResponse()
+    @Transient
+    override val headers: Headers = Headers.Empty,
+  ) : GetAccountStatusesResponse() {
+    /**
+     * Pagination links for browsing older or newer results. Format: Link: <https://mastodon.example/api/v1/endpoint?max_id=7163058>; rel="next", <https://mastodon.example/api/v1/endpoint?min_id=7275607>; rel="prev". See [RFC 8288](https://www.rfc-editor.org/rfc/rfc8288) for more information.
+     */
+    public val link: String?
+      get() = headers["Link"]
+
+    /**
+     * Number of requests permitted per time period
+     */
+    public val xRateLimitLimit: Int?
+      get() = headers["X-RateLimit-Limit"]?.toIntOrNull()
+
+    /**
+     * Number of requests you can still make
+     */
+    public val xRateLimitRemaining: Int?
+      get() = headers["X-RateLimit-Remaining"]?.toIntOrNull()
+
+    /**
+     * Timestamp when your rate limit will reset
+     */
+    public val xRateLimitReset: String?
+      get() = headers["X-RateLimit-Reset"]
+  }
 
   @Serializable
   public data class GetAccountStatusesResponseFailure401(
     public val body: Error,
+    @Transient
+    override val headers: Headers = Headers.Empty,
   ) : GetAccountStatusesResponse()
 
   @Serializable
-  public object GetAccountStatusesResponseFailure410 : GetAccountStatusesResponse()
+  public data class GetAccountStatusesResponseFailure410(
+    @Transient
+    override val headers: Headers = Headers.Empty,
+  ) : GetAccountStatusesResponse()
 
   @Serializable
   public data class GetAccountStatusesResponseFailure(
     public val body: ValidationError,
+    @Transient
+    override val headers: Headers = Headers.Empty,
   ) : GetAccountStatusesResponse()
 
   @Serializable
   public data class GetAccountStatusesResponseUnknownFailure(
     public val statusCode: Int,
+    @Transient
+    override val headers: Headers = Headers.Empty,
   ) : GetAccountStatusesResponse()
 
   @Serializable
-  public sealed class PostAccountUnblockResponse
+  public sealed class PostAccountUnblockResponse {
+    public abstract val headers: Headers
+  }
 
   @Serializable
   public data class PostAccountUnblockResponseSuccess(
     public val body: Relationship,
-  ) : PostAccountUnblockResponse()
+    @Transient
+    override val headers: Headers = Headers.Empty,
+  ) : PostAccountUnblockResponse() {
+    /**
+     * Number of requests permitted per time period
+     */
+    public val xRateLimitLimit: Int?
+      get() = headers["X-RateLimit-Limit"]?.toIntOrNull()
+
+    /**
+     * Number of requests you can still make
+     */
+    public val xRateLimitRemaining: Int?
+      get() = headers["X-RateLimit-Remaining"]?.toIntOrNull()
+
+    /**
+     * Timestamp when your rate limit will reset
+     */
+    public val xRateLimitReset: String?
+      get() = headers["X-RateLimit-Reset"]
+  }
 
   @Serializable
   public data class PostAccountUnblockResponseFailure401(
     public val body: Error,
+    @Transient
+    override val headers: Headers = Headers.Empty,
   ) : PostAccountUnblockResponse()
 
   @Serializable
-  public object PostAccountUnblockResponseFailure : PostAccountUnblockResponse()
+  public data class PostAccountUnblockResponseFailure(
+    @Transient
+    override val headers: Headers = Headers.Empty,
+  ) : PostAccountUnblockResponse()
 
   @Serializable
   public data class PostAccountUnblockResponseUnknownFailure(
     public val statusCode: Int,
+    @Transient
+    override val headers: Headers = Headers.Empty,
   ) : PostAccountUnblockResponse()
 
   @Serializable
-  public sealed class PostAccountUnendorseResponse
+  public sealed class PostAccountUnendorseResponse {
+    public abstract val headers: Headers
+  }
 
   @Serializable
   public data class PostAccountUnendorseResponseSuccess(
     public val body: Relationship,
-  ) : PostAccountUnendorseResponse()
+    @Transient
+    override val headers: Headers = Headers.Empty,
+  ) : PostAccountUnendorseResponse() {
+    /**
+     * Number of requests permitted per time period
+     */
+    public val xRateLimitLimit: Int?
+      get() = headers["X-RateLimit-Limit"]?.toIntOrNull()
+
+    /**
+     * Number of requests you can still make
+     */
+    public val xRateLimitRemaining: Int?
+      get() = headers["X-RateLimit-Remaining"]?.toIntOrNull()
+
+    /**
+     * Timestamp when your rate limit will reset
+     */
+    public val xRateLimitReset: String?
+      get() = headers["X-RateLimit-Reset"]
+  }
 
   @Serializable
   public data class PostAccountUnendorseResponseFailure401(
     public val body: Error,
+    @Transient
+    override val headers: Headers = Headers.Empty,
   ) : PostAccountUnendorseResponse()
 
   @Serializable
-  public object PostAccountUnendorseResponseFailure : PostAccountUnendorseResponse()
+  public data class PostAccountUnendorseResponseFailure(
+    @Transient
+    override val headers: Headers = Headers.Empty,
+  ) : PostAccountUnendorseResponse()
 
   @Serializable
   public data class PostAccountUnendorseResponseUnknownFailure(
     public val statusCode: Int,
+    @Transient
+    override val headers: Headers = Headers.Empty,
   ) : PostAccountUnendorseResponse()
 
   @Serializable
-  public sealed class PostAccountUnfollowResponse
+  public sealed class PostAccountUnfollowResponse {
+    public abstract val headers: Headers
+  }
 
   @Serializable
   public data class PostAccountUnfollowResponseSuccess(
     public val body: Relationship,
-  ) : PostAccountUnfollowResponse()
+    @Transient
+    override val headers: Headers = Headers.Empty,
+  ) : PostAccountUnfollowResponse() {
+    /**
+     * Number of requests permitted per time period
+     */
+    public val xRateLimitLimit: Int?
+      get() = headers["X-RateLimit-Limit"]?.toIntOrNull()
+
+    /**
+     * Number of requests you can still make
+     */
+    public val xRateLimitRemaining: Int?
+      get() = headers["X-RateLimit-Remaining"]?.toIntOrNull()
+
+    /**
+     * Timestamp when your rate limit will reset
+     */
+    public val xRateLimitReset: String?
+      get() = headers["X-RateLimit-Reset"]
+  }
 
   @Serializable
   public data class PostAccountUnfollowResponseFailure401(
     public val body: Error,
+    @Transient
+    override val headers: Headers = Headers.Empty,
   ) : PostAccountUnfollowResponse()
 
   @Serializable
-  public object PostAccountUnfollowResponseFailure : PostAccountUnfollowResponse()
+  public data class PostAccountUnfollowResponseFailure(
+    @Transient
+    override val headers: Headers = Headers.Empty,
+  ) : PostAccountUnfollowResponse()
 
   @Serializable
   public data class PostAccountUnfollowResponseUnknownFailure(
     public val statusCode: Int,
+    @Transient
+    override val headers: Headers = Headers.Empty,
   ) : PostAccountUnfollowResponse()
 
   @Serializable
-  public sealed class PostAccountUnmuteResponse
+  public sealed class PostAccountUnmuteResponse {
+    public abstract val headers: Headers
+  }
 
   @Serializable
   public data class PostAccountUnmuteResponseSuccess(
     public val body: Relationship,
-  ) : PostAccountUnmuteResponse()
+    @Transient
+    override val headers: Headers = Headers.Empty,
+  ) : PostAccountUnmuteResponse() {
+    /**
+     * Number of requests permitted per time period
+     */
+    public val xRateLimitLimit: Int?
+      get() = headers["X-RateLimit-Limit"]?.toIntOrNull()
+
+    /**
+     * Number of requests you can still make
+     */
+    public val xRateLimitRemaining: Int?
+      get() = headers["X-RateLimit-Remaining"]?.toIntOrNull()
+
+    /**
+     * Timestamp when your rate limit will reset
+     */
+    public val xRateLimitReset: String?
+      get() = headers["X-RateLimit-Reset"]
+  }
 
   @Serializable
   public data class PostAccountUnmuteResponseFailure401(
     public val body: Error,
+    @Transient
+    override val headers: Headers = Headers.Empty,
   ) : PostAccountUnmuteResponse()
 
   @Serializable
-  public object PostAccountUnmuteResponseFailure : PostAccountUnmuteResponse()
+  public data class PostAccountUnmuteResponseFailure(
+    @Transient
+    override val headers: Headers = Headers.Empty,
+  ) : PostAccountUnmuteResponse()
 
   @Serializable
   public data class PostAccountUnmuteResponseUnknownFailure(
     public val statusCode: Int,
+    @Transient
+    override val headers: Headers = Headers.Empty,
   ) : PostAccountUnmuteResponse()
 
   @Serializable
-  public sealed class PostAccountUnpinResponse
+  public sealed class PostAccountUnpinResponse {
+    public abstract val headers: Headers
+  }
 
   @Serializable
   public data class PostAccountUnpinResponseSuccess(
     public val body: Relationship,
-  ) : PostAccountUnpinResponse()
+    @Transient
+    override val headers: Headers = Headers.Empty,
+  ) : PostAccountUnpinResponse() {
+    /**
+     * Number of requests permitted per time period
+     */
+    public val xRateLimitLimit: Int?
+      get() = headers["X-RateLimit-Limit"]?.toIntOrNull()
+
+    /**
+     * Number of requests you can still make
+     */
+    public val xRateLimitRemaining: Int?
+      get() = headers["X-RateLimit-Remaining"]?.toIntOrNull()
+
+    /**
+     * Timestamp when your rate limit will reset
+     */
+    public val xRateLimitReset: String?
+      get() = headers["X-RateLimit-Reset"]
+  }
 
   @Serializable
   public data class PostAccountUnpinResponseFailure401(
     public val body: Error,
+    @Transient
+    override val headers: Headers = Headers.Empty,
   ) : PostAccountUnpinResponse()
 
   @Serializable
-  public object PostAccountUnpinResponseFailure : PostAccountUnpinResponse()
+  public data class PostAccountUnpinResponseFailure(
+    @Transient
+    override val headers: Headers = Headers.Empty,
+  ) : PostAccountUnpinResponse()
 
   @Serializable
   public data class PostAccountUnpinResponseUnknownFailure(
     public val statusCode: Int,
+    @Transient
+    override val headers: Headers = Headers.Empty,
   ) : PostAccountUnpinResponse()
 
   @Serializable
-  public sealed class GetAccountsFamiliarFollowersResponse
+  public sealed class GetAccountsFamiliarFollowersResponse {
+    public abstract val headers: Headers
+  }
 
   @Serializable
   public data class GetAccountsFamiliarFollowersResponseSuccess(
     public val body: CollectionsList<FamiliarFollowers>,
-  ) : GetAccountsFamiliarFollowersResponse()
+    @Transient
+    override val headers: Headers = Headers.Empty,
+  ) : GetAccountsFamiliarFollowersResponse() {
+    /**
+     * Number of requests permitted per time period
+     */
+    public val xRateLimitLimit: Int?
+      get() = headers["X-RateLimit-Limit"]?.toIntOrNull()
+
+    /**
+     * Number of requests you can still make
+     */
+    public val xRateLimitRemaining: Int?
+      get() = headers["X-RateLimit-Remaining"]?.toIntOrNull()
+
+    /**
+     * Timestamp when your rate limit will reset
+     */
+    public val xRateLimitReset: String?
+      get() = headers["X-RateLimit-Reset"]
+  }
 
   @Serializable
   public data class GetAccountsFamiliarFollowersResponseFailure401(
     public val body: Error,
+    @Transient
+    override val headers: Headers = Headers.Empty,
   ) : GetAccountsFamiliarFollowersResponse()
 
   @Serializable
-  public object GetAccountsFamiliarFollowersResponseFailure : GetAccountsFamiliarFollowersResponse()
+  public data class GetAccountsFamiliarFollowersResponseFailure(
+    @Transient
+    override val headers: Headers = Headers.Empty,
+  ) : GetAccountsFamiliarFollowersResponse()
 
   @Serializable
   public data class GetAccountsFamiliarFollowersResponseUnknownFailure(
     public val statusCode: Int,
+    @Transient
+    override val headers: Headers = Headers.Empty,
   ) : GetAccountsFamiliarFollowersResponse()
 
   @Serializable
-  public sealed class GetAccountLookupResponse
+  public sealed class GetAccountLookupResponse {
+    public abstract val headers: Headers
+  }
 
   @Serializable
   public data class GetAccountLookupResponseSuccess(
     public val body: Account,
-  ) : GetAccountLookupResponse()
+    @Transient
+    override val headers: Headers = Headers.Empty,
+  ) : GetAccountLookupResponse() {
+    /**
+     * Number of requests permitted per time period
+     */
+    public val xRateLimitLimit: Int?
+      get() = headers["X-RateLimit-Limit"]?.toIntOrNull()
+
+    /**
+     * Number of requests you can still make
+     */
+    public val xRateLimitRemaining: Int?
+      get() = headers["X-RateLimit-Remaining"]?.toIntOrNull()
+
+    /**
+     * Timestamp when your rate limit will reset
+     */
+    public val xRateLimitReset: String?
+      get() = headers["X-RateLimit-Reset"]
+  }
 
   @Serializable
   public data class GetAccountLookupResponseFailure401(
     public val body: Error,
+    @Transient
+    override val headers: Headers = Headers.Empty,
   ) : GetAccountLookupResponse()
 
   @Serializable
-  public object GetAccountLookupResponseFailure410 : GetAccountLookupResponse()
+  public data class GetAccountLookupResponseFailure410(
+    @Transient
+    override val headers: Headers = Headers.Empty,
+  ) : GetAccountLookupResponse()
 
   @Serializable
   public data class GetAccountLookupResponseFailure(
     public val body: ValidationError,
+    @Transient
+    override val headers: Headers = Headers.Empty,
   ) : GetAccountLookupResponse()
 
   @Serializable
   public data class GetAccountLookupResponseUnknownFailure(
     public val statusCode: Int,
+    @Transient
+    override val headers: Headers = Headers.Empty,
   ) : GetAccountLookupResponse()
 
   @Serializable
-  public sealed class GetAccountRelationshipsResponse
+  public sealed class GetAccountRelationshipsResponse {
+    public abstract val headers: Headers
+  }
 
   @Serializable
   public data class GetAccountRelationshipsResponseSuccess(
     public val body: CollectionsList<Relationship>,
-  ) : GetAccountRelationshipsResponse()
+    @Transient
+    override val headers: Headers = Headers.Empty,
+  ) : GetAccountRelationshipsResponse() {
+    /**
+     * Number of requests permitted per time period
+     */
+    public val xRateLimitLimit: Int?
+      get() = headers["X-RateLimit-Limit"]?.toIntOrNull()
+
+    /**
+     * Number of requests you can still make
+     */
+    public val xRateLimitRemaining: Int?
+      get() = headers["X-RateLimit-Remaining"]?.toIntOrNull()
+
+    /**
+     * Timestamp when your rate limit will reset
+     */
+    public val xRateLimitReset: String?
+      get() = headers["X-RateLimit-Reset"]
+  }
 
   @Serializable
   public data class GetAccountRelationshipsResponseFailure401(
     public val body: Error,
+    @Transient
+    override val headers: Headers = Headers.Empty,
   ) : GetAccountRelationshipsResponse()
 
   @Serializable
-  public object GetAccountRelationshipsResponseFailure : GetAccountRelationshipsResponse()
+  public data class GetAccountRelationshipsResponseFailure(
+    @Transient
+    override val headers: Headers = Headers.Empty,
+  ) : GetAccountRelationshipsResponse()
 
   @Serializable
   public data class GetAccountRelationshipsResponseUnknownFailure(
     public val statusCode: Int,
+    @Transient
+    override val headers: Headers = Headers.Empty,
   ) : GetAccountRelationshipsResponse()
 
   @Serializable
-  public sealed class GetAccountSearchResponse
+  public sealed class GetAccountSearchResponse {
+    public abstract val headers: Headers
+  }
 
   @Serializable
   public data class GetAccountSearchResponseSuccess(
     public val body: CollectionsList<Account>,
-  ) : GetAccountSearchResponse()
+    @Transient
+    override val headers: Headers = Headers.Empty,
+  ) : GetAccountSearchResponse() {
+    /**
+     * Number of requests permitted per time period
+     */
+    public val xRateLimitLimit: Int?
+      get() = headers["X-RateLimit-Limit"]?.toIntOrNull()
+
+    /**
+     * Number of requests you can still make
+     */
+    public val xRateLimitRemaining: Int?
+      get() = headers["X-RateLimit-Remaining"]?.toIntOrNull()
+
+    /**
+     * Timestamp when your rate limit will reset
+     */
+    public val xRateLimitReset: String?
+      get() = headers["X-RateLimit-Reset"]
+  }
 
   @Serializable
   public data class GetAccountSearchResponseFailure401(
     public val body: Error,
+    @Transient
+    override val headers: Headers = Headers.Empty,
   ) : GetAccountSearchResponse()
 
   @Serializable
-  public object GetAccountSearchResponseFailure410 : GetAccountSearchResponse()
+  public data class GetAccountSearchResponseFailure410(
+    @Transient
+    override val headers: Headers = Headers.Empty,
+  ) : GetAccountSearchResponse()
 
   @Serializable
   public data class GetAccountSearchResponseFailure(
     public val body: ValidationError,
+    @Transient
+    override val headers: Headers = Headers.Empty,
   ) : GetAccountSearchResponse()
 
   @Serializable
   public data class GetAccountSearchResponseUnknownFailure(
     public val statusCode: Int,
+    @Transient
+    override val headers: Headers = Headers.Empty,
   ) : GetAccountSearchResponse()
 
   @Serializable
@@ -1501,44 +2301,102 @@ public class AccountsClient(
   }
 
   @Serializable
-  public sealed class PatchAccountsUpdateCredentialsResponse
+  public sealed class PatchAccountsUpdateCredentialsResponse {
+    public abstract val headers: Headers
+  }
 
   @Serializable
   public data class PatchAccountsUpdateCredentialsResponseSuccess(
     public val body: CredentialAccount,
-  ) : PatchAccountsUpdateCredentialsResponse()
+    @Transient
+    override val headers: Headers = Headers.Empty,
+  ) : PatchAccountsUpdateCredentialsResponse() {
+    /**
+     * Number of requests permitted per time period
+     */
+    public val xRateLimitLimit: Int?
+      get() = headers["X-RateLimit-Limit"]?.toIntOrNull()
+
+    /**
+     * Number of requests you can still make
+     */
+    public val xRateLimitRemaining: Int?
+      get() = headers["X-RateLimit-Remaining"]?.toIntOrNull()
+
+    /**
+     * Timestamp when your rate limit will reset
+     */
+    public val xRateLimitReset: String?
+      get() = headers["X-RateLimit-Reset"]
+  }
 
   @Serializable
   public data class PatchAccountsUpdateCredentialsResponseFailure401(
     public val body: Error,
+    @Transient
+    override val headers: Headers = Headers.Empty,
   ) : PatchAccountsUpdateCredentialsResponse()
 
   @Serializable
-  public object PatchAccountsUpdateCredentialsResponseFailure : PatchAccountsUpdateCredentialsResponse()
+  public data class PatchAccountsUpdateCredentialsResponseFailure(
+    @Transient
+    override val headers: Headers = Headers.Empty,
+  ) : PatchAccountsUpdateCredentialsResponse()
 
   @Serializable
   public data class PatchAccountsUpdateCredentialsResponseUnknownFailure(
     public val statusCode: Int,
+    @Transient
+    override val headers: Headers = Headers.Empty,
   ) : PatchAccountsUpdateCredentialsResponse()
 
   @Serializable
-  public sealed class GetAccountsVerifyCredentialsResponse
+  public sealed class GetAccountsVerifyCredentialsResponse {
+    public abstract val headers: Headers
+  }
 
   @Serializable
   public data class GetAccountsVerifyCredentialsResponseSuccess(
     public val body: CredentialAccount,
-  ) : GetAccountsVerifyCredentialsResponse()
+    @Transient
+    override val headers: Headers = Headers.Empty,
+  ) : GetAccountsVerifyCredentialsResponse() {
+    /**
+     * Number of requests permitted per time period
+     */
+    public val xRateLimitLimit: Int?
+      get() = headers["X-RateLimit-Limit"]?.toIntOrNull()
+
+    /**
+     * Number of requests you can still make
+     */
+    public val xRateLimitRemaining: Int?
+      get() = headers["X-RateLimit-Remaining"]?.toIntOrNull()
+
+    /**
+     * Timestamp when your rate limit will reset
+     */
+    public val xRateLimitReset: String?
+      get() = headers["X-RateLimit-Reset"]
+  }
 
   @Serializable
   public data class GetAccountsVerifyCredentialsResponseFailure401(
     public val body: Error,
+    @Transient
+    override val headers: Headers = Headers.Empty,
   ) : GetAccountsVerifyCredentialsResponse()
 
   @Serializable
-  public object GetAccountsVerifyCredentialsResponseFailure : GetAccountsVerifyCredentialsResponse()
+  public data class GetAccountsVerifyCredentialsResponseFailure(
+    @Transient
+    override val headers: Headers = Headers.Empty,
+  ) : GetAccountsVerifyCredentialsResponse()
 
   @Serializable
   public data class GetAccountsVerifyCredentialsResponseUnknownFailure(
     public val statusCode: Int,
+    @Transient
+    override val headers: Headers = Headers.Empty,
   ) : GetAccountsVerifyCredentialsResponse()
 }

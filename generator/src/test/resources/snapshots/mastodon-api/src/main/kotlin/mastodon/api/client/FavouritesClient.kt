@@ -2,12 +2,14 @@ package mastodon.api.client
 
 import io.ktor.client.call.body
 import io.ktor.client.request.`get`
+import io.ktor.http.Headers
 import kotlin.Int
 import kotlin.Long
 import kotlin.String
 import kotlin.collections.List
 import kotlin.coroutines.cancellation.CancellationException
 import kotlinx.serialization.Serializable
+import kotlinx.serialization.Transient
 import mastodon.api.client.ClientConfiguration.Companion.defaultClientConfiguration
 import mastodon.api.model.Error
 import mastodon.api.model.Status
@@ -43,11 +45,11 @@ public class FavouritesClient(
         }
       }
       return when (response.status.value) {
-        200 -> GetFavouritesResponseSuccess(response.body<List<Status>>())
-        401, 404, 429, 503 -> GetFavouritesResponseFailure401(response.body<Error>())
-        410 -> GetFavouritesResponseFailure410
-        422 -> GetFavouritesResponseFailure(response.body<ValidationError>())
-        else -> GetFavouritesResponseUnknownFailure(response.status.value)
+        200 -> GetFavouritesResponseSuccess(response.body<List<Status>>(), response.headers)
+        401, 404, 429, 503 -> GetFavouritesResponseFailure401(response.body<Error>(), response.headers)
+        410 -> GetFavouritesResponseFailure410(response.headers)
+        422 -> GetFavouritesResponseFailure(response.body<ValidationError>(), response.headers)
+        else -> GetFavouritesResponseUnknownFailure(response.status.value, response.headers)
       }
     }
     catch(e: CancellationException) {
@@ -60,28 +62,65 @@ public class FavouritesClient(
   }
 
   @Serializable
-  public sealed class GetFavouritesResponse
+  public sealed class GetFavouritesResponse {
+    public abstract val headers: Headers
+  }
 
   @Serializable
   public data class GetFavouritesResponseSuccess(
     public val body: List<Status>,
-  ) : GetFavouritesResponse()
+    @Transient
+    override val headers: Headers = Headers.Empty,
+  ) : GetFavouritesResponse() {
+    /**
+     * Pagination links for browsing older or newer results. Format: Link: <https://mastodon.example/api/v1/endpoint?max_id=7163058>; rel="next", <https://mastodon.example/api/v1/endpoint?min_id=7275607>; rel="prev". See [RFC 8288](https://www.rfc-editor.org/rfc/rfc8288) for more information.
+     */
+    public val link: String?
+      get() = headers["Link"]
+
+    /**
+     * Number of requests permitted per time period
+     */
+    public val xRateLimitLimit: Int?
+      get() = headers["X-RateLimit-Limit"]?.toIntOrNull()
+
+    /**
+     * Number of requests you can still make
+     */
+    public val xRateLimitRemaining: Int?
+      get() = headers["X-RateLimit-Remaining"]?.toIntOrNull()
+
+    /**
+     * Timestamp when your rate limit will reset
+     */
+    public val xRateLimitReset: String?
+      get() = headers["X-RateLimit-Reset"]
+  }
 
   @Serializable
   public data class GetFavouritesResponseFailure401(
     public val body: Error,
+    @Transient
+    override val headers: Headers = Headers.Empty,
   ) : GetFavouritesResponse()
 
   @Serializable
-  public object GetFavouritesResponseFailure410 : GetFavouritesResponse()
+  public data class GetFavouritesResponseFailure410(
+    @Transient
+    override val headers: Headers = Headers.Empty,
+  ) : GetFavouritesResponse()
 
   @Serializable
   public data class GetFavouritesResponseFailure(
     public val body: ValidationError,
+    @Transient
+    override val headers: Headers = Headers.Empty,
   ) : GetFavouritesResponse()
 
   @Serializable
   public data class GetFavouritesResponseUnknownFailure(
     public val statusCode: Int,
+    @Transient
+    override val headers: Headers = Headers.Empty,
   ) : GetFavouritesResponse()
 }

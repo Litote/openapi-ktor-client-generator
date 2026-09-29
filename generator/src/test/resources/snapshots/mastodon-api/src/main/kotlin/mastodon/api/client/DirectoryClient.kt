@@ -2,6 +2,7 @@ package mastodon.api.client
 
 import io.ktor.client.call.body
 import io.ktor.client.request.`get`
+import io.ktor.http.Headers
 import kotlin.Boolean
 import kotlin.Int
 import kotlin.Long
@@ -9,6 +10,7 @@ import kotlin.String
 import kotlin.collections.List
 import kotlin.coroutines.cancellation.CancellationException
 import kotlinx.serialization.Serializable
+import kotlinx.serialization.Transient
 import mastodon.api.client.ClientConfiguration.Companion.defaultClientConfiguration
 import mastodon.api.model.Account
 import mastodon.api.model.Error
@@ -44,11 +46,11 @@ public class DirectoryClient(
         }
       }
       return when (response.status.value) {
-        200 -> GetDirectoryResponseSuccess(response.body<List<Account>>())
-        401, 404, 429, 503 -> GetDirectoryResponseFailure401(response.body<Error>())
-        410 -> GetDirectoryResponseFailure410
-        422 -> GetDirectoryResponseFailure(response.body<ValidationError>())
-        else -> GetDirectoryResponseUnknownFailure(response.status.value)
+        200 -> GetDirectoryResponseSuccess(response.body<List<Account>>(), response.headers)
+        401, 404, 429, 503 -> GetDirectoryResponseFailure401(response.body<Error>(), response.headers)
+        410 -> GetDirectoryResponseFailure410(response.headers)
+        422 -> GetDirectoryResponseFailure(response.body<ValidationError>(), response.headers)
+        else -> GetDirectoryResponseUnknownFailure(response.status.value, response.headers)
       }
     }
     catch(e: CancellationException) {
@@ -61,28 +63,59 @@ public class DirectoryClient(
   }
 
   @Serializable
-  public sealed class GetDirectoryResponse
+  public sealed class GetDirectoryResponse {
+    public abstract val headers: Headers
+  }
 
   @Serializable
   public data class GetDirectoryResponseSuccess(
     public val body: List<Account>,
-  ) : GetDirectoryResponse()
+    @Transient
+    override val headers: Headers = Headers.Empty,
+  ) : GetDirectoryResponse() {
+    /**
+     * Number of requests permitted per time period
+     */
+    public val xRateLimitLimit: Int?
+      get() = headers["X-RateLimit-Limit"]?.toIntOrNull()
+
+    /**
+     * Number of requests you can still make
+     */
+    public val xRateLimitRemaining: Int?
+      get() = headers["X-RateLimit-Remaining"]?.toIntOrNull()
+
+    /**
+     * Timestamp when your rate limit will reset
+     */
+    public val xRateLimitReset: String?
+      get() = headers["X-RateLimit-Reset"]
+  }
 
   @Serializable
   public data class GetDirectoryResponseFailure401(
     public val body: Error,
+    @Transient
+    override val headers: Headers = Headers.Empty,
   ) : GetDirectoryResponse()
 
   @Serializable
-  public object GetDirectoryResponseFailure410 : GetDirectoryResponse()
+  public data class GetDirectoryResponseFailure410(
+    @Transient
+    override val headers: Headers = Headers.Empty,
+  ) : GetDirectoryResponse()
 
   @Serializable
   public data class GetDirectoryResponseFailure(
     public val body: ValidationError,
+    @Transient
+    override val headers: Headers = Headers.Empty,
   ) : GetDirectoryResponse()
 
   @Serializable
   public data class GetDirectoryResponseUnknownFailure(
     public val statusCode: Int,
+    @Transient
+    override val headers: Headers = Headers.Empty,
   ) : GetDirectoryResponse()
 }

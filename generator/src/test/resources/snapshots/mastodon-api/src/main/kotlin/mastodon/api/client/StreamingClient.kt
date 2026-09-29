@@ -4,12 +4,14 @@ import io.ktor.client.call.body
 import io.ktor.client.plugins.sse.ClientSSESession
 import io.ktor.client.plugins.sse.sse
 import io.ktor.client.request.`get`
+import io.ktor.http.Headers
 import kotlin.Boolean
 import kotlin.Int
 import kotlin.String
 import kotlin.Unit
 import kotlin.coroutines.cancellation.CancellationException
 import kotlinx.serialization.Serializable
+import kotlinx.serialization.Transient
 import mastodon.api.client.ClientConfiguration.Companion.defaultClientConfiguration
 import mastodon.api.model.Error
 import mastodon.api.model.ValidationError
@@ -86,11 +88,11 @@ public class StreamingClient(
       val response = configuration.client.`get`("api/v1/streaming/health") {
       }
       return when (response.status.value) {
-        200 -> GetStreamingHealthResponseSuccess
-        401, 404, 429, 503 -> GetStreamingHealthResponseFailure401(response.body<Error>())
-        410 -> GetStreamingHealthResponseFailure410
-        422 -> GetStreamingHealthResponseFailure(response.body<ValidationError>())
-        else -> GetStreamingHealthResponseUnknownFailure(response.status.value)
+        200 -> GetStreamingHealthResponseSuccess(response.headers)
+        401, 404, 429, 503 -> GetStreamingHealthResponseFailure401(response.body<Error>(), response.headers)
+        410 -> GetStreamingHealthResponseFailure410(response.headers)
+        422 -> GetStreamingHealthResponseFailure(response.body<ValidationError>(), response.headers)
+        else -> GetStreamingHealthResponseUnknownFailure(response.status.value, response.headers)
       }
     }
     catch(e: CancellationException) {
@@ -231,26 +233,58 @@ public class StreamingClient(
   }
 
   @Serializable
-  public sealed class GetStreamingHealthResponse
+  public sealed class GetStreamingHealthResponse {
+    public abstract val headers: Headers
+  }
 
   @Serializable
-  public object GetStreamingHealthResponseSuccess : GetStreamingHealthResponse()
+  public data class GetStreamingHealthResponseSuccess(
+    @Transient
+    override val headers: Headers = Headers.Empty,
+  ) : GetStreamingHealthResponse() {
+    /**
+     * Number of requests permitted per time period
+     */
+    public val xRateLimitLimit: Int?
+      get() = headers["X-RateLimit-Limit"]?.toIntOrNull()
+
+    /**
+     * Number of requests you can still make
+     */
+    public val xRateLimitRemaining: Int?
+      get() = headers["X-RateLimit-Remaining"]?.toIntOrNull()
+
+    /**
+     * Timestamp when your rate limit will reset
+     */
+    public val xRateLimitReset: String?
+      get() = headers["X-RateLimit-Reset"]
+  }
 
   @Serializable
   public data class GetStreamingHealthResponseFailure401(
     public val body: Error,
+    @Transient
+    override val headers: Headers = Headers.Empty,
   ) : GetStreamingHealthResponse()
 
   @Serializable
-  public object GetStreamingHealthResponseFailure410 : GetStreamingHealthResponse()
+  public data class GetStreamingHealthResponseFailure410(
+    @Transient
+    override val headers: Headers = Headers.Empty,
+  ) : GetStreamingHealthResponse()
 
   @Serializable
   public data class GetStreamingHealthResponseFailure(
     public val body: ValidationError,
+    @Transient
+    override val headers: Headers = Headers.Empty,
   ) : GetStreamingHealthResponse()
 
   @Serializable
   public data class GetStreamingHealthResponseUnknownFailure(
     public val statusCode: Int,
+    @Transient
+    override val headers: Headers = Headers.Empty,
   ) : GetStreamingHealthResponse()
 }

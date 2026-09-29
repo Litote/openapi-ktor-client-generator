@@ -17,6 +17,7 @@ import kotlin.Int
 import kotlin.String
 import kotlin.coroutines.cancellation.CancellationException
 import kotlinx.serialization.Serializable
+import kotlinx.serialization.Transient
 import mastodon.api.client.ClientConfiguration.Companion.defaultClientConfiguration
 import mastodon.api.model.Error
 import mastodon.api.model.MediaAttachment
@@ -51,10 +52,10 @@ public class MediaClient(
         }))
       }
       return when (response.status.value) {
-        200 -> CreateMediaResponseSuccess(response.body<MediaAttachment>())
-        401, 404, 422, 429, 503 -> CreateMediaResponseFailure401(response.body<Error>())
-        410 -> CreateMediaResponseFailure
-        else -> CreateMediaResponseUnknownFailure(response.status.value)
+        200 -> CreateMediaResponseSuccess(response.body<MediaAttachment>(), response.headers)
+        401, 404, 422, 429, 503 -> CreateMediaResponseFailure401(response.body<Error>(), response.headers)
+        410 -> CreateMediaResponseFailure(response.headers)
+        else -> CreateMediaResponseUnknownFailure(response.status.value, response.headers)
       }
     }
     catch(e: CancellationException) {
@@ -74,11 +75,11 @@ public class MediaClient(
       val response = configuration.client.`get`("api/v1/media/{id}".replace("/{id}", "/${id.encodeURLPathPart()}")) {
       }
       return when (response.status.value) {
-        200 -> GetMediaResponseSuccess200(response.body<MediaAttachment>())
-        206 -> GetMediaResponseSuccess
-        401, 404, 422, 429, 503 -> GetMediaResponseFailure401(response.body<Error>())
-        410 -> GetMediaResponseFailure
-        else -> GetMediaResponseUnknownFailure(response.status.value)
+        200 -> GetMediaResponseSuccess200(response.body<MediaAttachment>(), response.headers)
+        206 -> GetMediaResponseSuccess(response.headers)
+        401, 404, 422, 429, 503 -> GetMediaResponseFailure401(response.body<Error>(), response.headers)
+        410 -> GetMediaResponseFailure(response.headers)
+        else -> GetMediaResponseUnknownFailure(response.status.value, response.headers)
       }
     }
     catch(e: CancellationException) {
@@ -112,10 +113,10 @@ public class MediaClient(
         }))
       }
       return when (response.status.value) {
-        200 -> UpdateMediaResponseSuccess(response.body<MediaAttachment>())
-        401, 404, 422, 429, 503 -> UpdateMediaResponseFailure401(response.body<Error>())
-        410 -> UpdateMediaResponseFailure
-        else -> UpdateMediaResponseUnknownFailure(response.status.value)
+        200 -> UpdateMediaResponseSuccess(response.body<MediaAttachment>(), response.headers)
+        401, 404, 422, 429, 503 -> UpdateMediaResponseFailure401(response.body<Error>(), response.headers)
+        410 -> UpdateMediaResponseFailure(response.headers)
+        else -> UpdateMediaResponseUnknownFailure(response.status.value, response.headers)
       }
     }
     catch(e: CancellationException) {
@@ -135,11 +136,11 @@ public class MediaClient(
       val response = configuration.client.delete("api/v1/media/{id}".replace("/{id}", "/${id.encodeURLPathPart()}")) {
       }
       return when (response.status.value) {
-        200 -> DeleteMediaResponseSuccess
-        401, 404, 429, 503 -> DeleteMediaResponseFailure401(response.body<Error>())
-        410 -> DeleteMediaResponseFailure410
-        422 -> DeleteMediaResponseFailure(response.body<ValidationError>())
-        else -> DeleteMediaResponseUnknownFailure(response.status.value)
+        200 -> DeleteMediaResponseSuccess(response.headers)
+        401, 404, 429, 503 -> DeleteMediaResponseFailure401(response.body<Error>(), response.headers)
+        410 -> DeleteMediaResponseFailure410(response.headers)
+        422 -> DeleteMediaResponseFailure(response.body<ValidationError>(), response.headers)
+        else -> DeleteMediaResponseUnknownFailure(response.status.value, response.headers)
       }
     }
     catch(e: CancellationException) {
@@ -177,10 +178,10 @@ public class MediaClient(
         }))
       }
       return when (response.status.value) {
-        200, 202 -> CreateMediaV2ResponseSuccess(response.body<MediaAttachment>())
-        401, 404, 422, 429, 500, 503 -> CreateMediaV2ResponseFailure401(response.body<Error>())
-        410 -> CreateMediaV2ResponseFailure
-        else -> CreateMediaV2ResponseUnknownFailure(response.status.value)
+        200, 202 -> CreateMediaV2ResponseSuccess(response.body<MediaAttachment>(), response.headers)
+        401, 404, 422, 429, 500, 503 -> CreateMediaV2ResponseFailure401(response.body<Error>(), response.headers)
+        410 -> CreateMediaV2ResponseFailure(response.headers)
+        else -> CreateMediaV2ResponseUnknownFailure(response.status.value, response.headers)
       }
     }
     catch(e: CancellationException) {
@@ -206,48 +207,127 @@ public class MediaClient(
   )
 
   @Serializable
-  public sealed class CreateMediaResponse
+  public sealed class CreateMediaResponse {
+    public abstract val headers: Headers
+  }
 
   @Serializable
   public data class CreateMediaResponseSuccess(
     public val body: MediaAttachment,
-  ) : CreateMediaResponse()
+    @Transient
+    override val headers: Headers = Headers.Empty,
+  ) : CreateMediaResponse() {
+    /**
+     * Number of requests permitted per time period
+     */
+    public val xRateLimitLimit: Int?
+      get() = headers["X-RateLimit-Limit"]?.toIntOrNull()
+
+    /**
+     * Number of requests you can still make
+     */
+    public val xRateLimitRemaining: Int?
+      get() = headers["X-RateLimit-Remaining"]?.toIntOrNull()
+
+    /**
+     * Timestamp when your rate limit will reset
+     */
+    public val xRateLimitReset: String?
+      get() = headers["X-RateLimit-Reset"]
+  }
 
   @Serializable
   public data class CreateMediaResponseFailure401(
     public val body: Error,
+    @Transient
+    override val headers: Headers = Headers.Empty,
   ) : CreateMediaResponse()
 
   @Serializable
-  public object CreateMediaResponseFailure : CreateMediaResponse()
+  public data class CreateMediaResponseFailure(
+    @Transient
+    override val headers: Headers = Headers.Empty,
+  ) : CreateMediaResponse()
 
   @Serializable
   public data class CreateMediaResponseUnknownFailure(
     public val statusCode: Int,
+    @Transient
+    override val headers: Headers = Headers.Empty,
   ) : CreateMediaResponse()
 
   @Serializable
-  public sealed class GetMediaResponse
+  public sealed class GetMediaResponse {
+    public abstract val headers: Headers
+  }
 
   @Serializable
   public data class GetMediaResponseSuccess200(
     public val body: MediaAttachment,
-  ) : GetMediaResponse()
+    @Transient
+    override val headers: Headers = Headers.Empty,
+  ) : GetMediaResponse() {
+    /**
+     * Number of requests permitted per time period
+     */
+    public val xRateLimitLimit: Int?
+      get() = headers["X-RateLimit-Limit"]?.toIntOrNull()
+
+    /**
+     * Number of requests you can still make
+     */
+    public val xRateLimitRemaining: Int?
+      get() = headers["X-RateLimit-Remaining"]?.toIntOrNull()
+
+    /**
+     * Timestamp when your rate limit will reset
+     */
+    public val xRateLimitReset: String?
+      get() = headers["X-RateLimit-Reset"]
+  }
 
   @Serializable
-  public object GetMediaResponseSuccess : GetMediaResponse()
+  public data class GetMediaResponseSuccess(
+    @Transient
+    override val headers: Headers = Headers.Empty,
+  ) : GetMediaResponse() {
+    /**
+     * Number of requests permitted per time period
+     */
+    public val xRateLimitLimit: Int?
+      get() = headers["X-RateLimit-Limit"]?.toIntOrNull()
+
+    /**
+     * Number of requests you can still make
+     */
+    public val xRateLimitRemaining: Int?
+      get() = headers["X-RateLimit-Remaining"]?.toIntOrNull()
+
+    /**
+     * Timestamp when your rate limit will reset
+     */
+    public val xRateLimitReset: String?
+      get() = headers["X-RateLimit-Reset"]
+  }
 
   @Serializable
   public data class GetMediaResponseFailure401(
     public val body: Error,
+    @Transient
+    override val headers: Headers = Headers.Empty,
   ) : GetMediaResponse()
 
   @Serializable
-  public object GetMediaResponseFailure : GetMediaResponse()
+  public data class GetMediaResponseFailure(
+    @Transient
+    override val headers: Headers = Headers.Empty,
+  ) : GetMediaResponse()
 
   @Serializable
   public data class GetMediaResponseUnknownFailure(
     public val statusCode: Int,
+    @Transient
+    override val headers: Headers = Headers.Empty,
   ) : GetMediaResponse()
 
   public data class UpdateMediaForm(
@@ -263,48 +343,109 @@ public class MediaClient(
   )
 
   @Serializable
-  public sealed class UpdateMediaResponse
+  public sealed class UpdateMediaResponse {
+    public abstract val headers: Headers
+  }
 
   @Serializable
   public data class UpdateMediaResponseSuccess(
     public val body: MediaAttachment,
-  ) : UpdateMediaResponse()
+    @Transient
+    override val headers: Headers = Headers.Empty,
+  ) : UpdateMediaResponse() {
+    /**
+     * Number of requests permitted per time period
+     */
+    public val xRateLimitLimit: Int?
+      get() = headers["X-RateLimit-Limit"]?.toIntOrNull()
+
+    /**
+     * Number of requests you can still make
+     */
+    public val xRateLimitRemaining: Int?
+      get() = headers["X-RateLimit-Remaining"]?.toIntOrNull()
+
+    /**
+     * Timestamp when your rate limit will reset
+     */
+    public val xRateLimitReset: String?
+      get() = headers["X-RateLimit-Reset"]
+  }
 
   @Serializable
   public data class UpdateMediaResponseFailure401(
     public val body: Error,
+    @Transient
+    override val headers: Headers = Headers.Empty,
   ) : UpdateMediaResponse()
 
   @Serializable
-  public object UpdateMediaResponseFailure : UpdateMediaResponse()
+  public data class UpdateMediaResponseFailure(
+    @Transient
+    override val headers: Headers = Headers.Empty,
+  ) : UpdateMediaResponse()
 
   @Serializable
   public data class UpdateMediaResponseUnknownFailure(
     public val statusCode: Int,
+    @Transient
+    override val headers: Headers = Headers.Empty,
   ) : UpdateMediaResponse()
 
   @Serializable
-  public sealed class DeleteMediaResponse
+  public sealed class DeleteMediaResponse {
+    public abstract val headers: Headers
+  }
 
   @Serializable
-  public object DeleteMediaResponseSuccess : DeleteMediaResponse()
+  public data class DeleteMediaResponseSuccess(
+    @Transient
+    override val headers: Headers = Headers.Empty,
+  ) : DeleteMediaResponse() {
+    /**
+     * Number of requests permitted per time period
+     */
+    public val xRateLimitLimit: Int?
+      get() = headers["X-RateLimit-Limit"]?.toIntOrNull()
+
+    /**
+     * Number of requests you can still make
+     */
+    public val xRateLimitRemaining: Int?
+      get() = headers["X-RateLimit-Remaining"]?.toIntOrNull()
+
+    /**
+     * Timestamp when your rate limit will reset
+     */
+    public val xRateLimitReset: String?
+      get() = headers["X-RateLimit-Reset"]
+  }
 
   @Serializable
   public data class DeleteMediaResponseFailure401(
     public val body: Error,
+    @Transient
+    override val headers: Headers = Headers.Empty,
   ) : DeleteMediaResponse()
 
   @Serializable
-  public object DeleteMediaResponseFailure410 : DeleteMediaResponse()
+  public data class DeleteMediaResponseFailure410(
+    @Transient
+    override val headers: Headers = Headers.Empty,
+  ) : DeleteMediaResponse()
 
   @Serializable
   public data class DeleteMediaResponseFailure(
     public val body: ValidationError,
+    @Transient
+    override val headers: Headers = Headers.Empty,
   ) : DeleteMediaResponse()
 
   @Serializable
   public data class DeleteMediaResponseUnknownFailure(
     public val statusCode: Int,
+    @Transient
+    override val headers: Headers = Headers.Empty,
   ) : DeleteMediaResponse()
 
   public data class CreateMediaV2Form(
@@ -321,23 +462,52 @@ public class MediaClient(
   )
 
   @Serializable
-  public sealed class CreateMediaV2Response
+  public sealed class CreateMediaV2Response {
+    public abstract val headers: Headers
+  }
 
   @Serializable
   public data class CreateMediaV2ResponseSuccess(
     public val body: MediaAttachment,
-  ) : CreateMediaV2Response()
+    @Transient
+    override val headers: Headers = Headers.Empty,
+  ) : CreateMediaV2Response() {
+    /**
+     * Number of requests permitted per time period
+     */
+    public val xRateLimitLimit: Int?
+      get() = headers["X-RateLimit-Limit"]?.toIntOrNull()
+
+    /**
+     * Number of requests you can still make
+     */
+    public val xRateLimitRemaining: Int?
+      get() = headers["X-RateLimit-Remaining"]?.toIntOrNull()
+
+    /**
+     * Timestamp when your rate limit will reset
+     */
+    public val xRateLimitReset: String?
+      get() = headers["X-RateLimit-Reset"]
+  }
 
   @Serializable
   public data class CreateMediaV2ResponseFailure401(
     public val body: Error,
+    @Transient
+    override val headers: Headers = Headers.Empty,
   ) : CreateMediaV2Response()
 
   @Serializable
-  public object CreateMediaV2ResponseFailure : CreateMediaV2Response()
+  public data class CreateMediaV2ResponseFailure(
+    @Transient
+    override val headers: Headers = Headers.Empty,
+  ) : CreateMediaV2Response()
 
   @Serializable
   public data class CreateMediaV2ResponseUnknownFailure(
     public val statusCode: Int,
+    @Transient
+    override val headers: Headers = Headers.Empty,
   ) : CreateMediaV2Response()
 }

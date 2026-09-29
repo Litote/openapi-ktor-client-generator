@@ -2,12 +2,14 @@ package mastodon.api.client
 
 import io.ktor.client.call.body
 import io.ktor.client.request.`get`
+import io.ktor.http.Headers
 import kotlin.Int
 import kotlin.Long
 import kotlin.String
 import kotlin.collections.List
 import kotlin.coroutines.cancellation.CancellationException
 import kotlinx.serialization.Serializable
+import kotlinx.serialization.Transient
 import mastodon.api.client.ClientConfiguration.Companion.defaultClientConfiguration
 import mastodon.api.model.Account
 import mastodon.api.model.Error
@@ -39,11 +41,11 @@ public class EndorsementsClient(
         }
       }
       return when (response.status.value) {
-        200 -> GetEndorsementsResponseSuccess(response.body<List<Account>>())
-        401, 404, 429, 503 -> GetEndorsementsResponseFailure401(response.body<Error>())
-        410 -> GetEndorsementsResponseFailure410
-        422 -> GetEndorsementsResponseFailure(response.body<ValidationError>())
-        else -> GetEndorsementsResponseUnknownFailure(response.status.value)
+        200 -> GetEndorsementsResponseSuccess(response.body<List<Account>>(), response.headers)
+        401, 404, 429, 503 -> GetEndorsementsResponseFailure401(response.body<Error>(), response.headers)
+        410 -> GetEndorsementsResponseFailure410(response.headers)
+        422 -> GetEndorsementsResponseFailure(response.body<ValidationError>(), response.headers)
+        else -> GetEndorsementsResponseUnknownFailure(response.status.value, response.headers)
       }
     }
     catch(e: CancellationException) {
@@ -56,28 +58,65 @@ public class EndorsementsClient(
   }
 
   @Serializable
-  public sealed class GetEndorsementsResponse
+  public sealed class GetEndorsementsResponse {
+    public abstract val headers: Headers
+  }
 
   @Serializable
   public data class GetEndorsementsResponseSuccess(
     public val body: List<Account>,
-  ) : GetEndorsementsResponse()
+    @Transient
+    override val headers: Headers = Headers.Empty,
+  ) : GetEndorsementsResponse() {
+    /**
+     * Pagination links for browsing older or newer results. Format: Link: <https://mastodon.example/api/v1/endpoint?max_id=7163058>; rel="next", <https://mastodon.example/api/v1/endpoint?min_id=7275607>; rel="prev". See [RFC 8288](https://www.rfc-editor.org/rfc/rfc8288) for more information.
+     */
+    public val link: String?
+      get() = headers["Link"]
+
+    /**
+     * Number of requests permitted per time period
+     */
+    public val xRateLimitLimit: Int?
+      get() = headers["X-RateLimit-Limit"]?.toIntOrNull()
+
+    /**
+     * Number of requests you can still make
+     */
+    public val xRateLimitRemaining: Int?
+      get() = headers["X-RateLimit-Remaining"]?.toIntOrNull()
+
+    /**
+     * Timestamp when your rate limit will reset
+     */
+    public val xRateLimitReset: String?
+      get() = headers["X-RateLimit-Reset"]
+  }
 
   @Serializable
   public data class GetEndorsementsResponseFailure401(
     public val body: Error,
+    @Transient
+    override val headers: Headers = Headers.Empty,
   ) : GetEndorsementsResponse()
 
   @Serializable
-  public object GetEndorsementsResponseFailure410 : GetEndorsementsResponse()
+  public data class GetEndorsementsResponseFailure410(
+    @Transient
+    override val headers: Headers = Headers.Empty,
+  ) : GetEndorsementsResponse()
 
   @Serializable
   public data class GetEndorsementsResponseFailure(
     public val body: ValidationError,
+    @Transient
+    override val headers: Headers = Headers.Empty,
   ) : GetEndorsementsResponse()
 
   @Serializable
   public data class GetEndorsementsResponseUnknownFailure(
     public val statusCode: Int,
+    @Transient
+    override val headers: Headers = Headers.Empty,
   ) : GetEndorsementsResponse()
 }

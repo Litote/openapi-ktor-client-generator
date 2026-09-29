@@ -7,6 +7,7 @@ import io.ktor.client.request.post
 import io.ktor.client.request.put
 import io.ktor.client.request.setBody
 import io.ktor.http.ContentType
+import io.ktor.http.Headers
 import io.ktor.http.contentType
 import kotlin.Boolean
 import kotlin.Int
@@ -14,6 +15,7 @@ import kotlin.String
 import kotlin.coroutines.cancellation.CancellationException
 import kotlinx.serialization.SerialName
 import kotlinx.serialization.Serializable
+import kotlinx.serialization.Transient
 import mastodon.api.client.ClientConfiguration.Companion.defaultClientConfiguration
 import mastodon.api.model.Error
 import mastodon.api.model.ValidationError
@@ -30,11 +32,11 @@ public class PushClient(
       val response = configuration.client.`get`("api/v1/push/subscription") {
       }
       return when (response.status.value) {
-        200 -> GetPushSubscriptionResponseSuccess(response.body<WebPushSubscription>())
-        401, 404, 429, 503 -> GetPushSubscriptionResponseFailure401(response.body<Error>())
-        410 -> GetPushSubscriptionResponseFailure410
-        422 -> GetPushSubscriptionResponseFailure(response.body<ValidationError>())
-        else -> GetPushSubscriptionResponseUnknownFailure(response.status.value)
+        200 -> GetPushSubscriptionResponseSuccess(response.body<WebPushSubscription>(), response.headers)
+        401, 404, 429, 503 -> GetPushSubscriptionResponseFailure401(response.body<Error>(), response.headers)
+        410 -> GetPushSubscriptionResponseFailure410(response.headers)
+        422 -> GetPushSubscriptionResponseFailure(response.body<ValidationError>(), response.headers)
+        else -> GetPushSubscriptionResponseUnknownFailure(response.status.value, response.headers)
       }
     }
     catch(e: CancellationException) {
@@ -56,11 +58,11 @@ public class PushClient(
         contentType(ContentType.Application.Json)
       }
       return when (response.status.value) {
-        200 -> PutPushSubscriptionResponseSuccess(response.body<WebPushSubscription>())
-        401, 404, 429, 503 -> PutPushSubscriptionResponseFailure401(response.body<Error>())
-        410 -> PutPushSubscriptionResponseFailure410
-        422 -> PutPushSubscriptionResponseFailure(response.body<ValidationError>())
-        else -> PutPushSubscriptionResponseUnknownFailure(response.status.value)
+        200 -> PutPushSubscriptionResponseSuccess(response.body<WebPushSubscription>(), response.headers)
+        401, 404, 429, 503 -> PutPushSubscriptionResponseFailure401(response.body<Error>(), response.headers)
+        410 -> PutPushSubscriptionResponseFailure410(response.headers)
+        422 -> PutPushSubscriptionResponseFailure(response.body<ValidationError>(), response.headers)
+        else -> PutPushSubscriptionResponseUnknownFailure(response.status.value, response.headers)
       }
     }
     catch(e: CancellationException) {
@@ -82,11 +84,11 @@ public class PushClient(
         contentType(ContentType.Application.Json)
       }
       return when (response.status.value) {
-        200 -> CreatePushSubscriptionResponseSuccess(response.body<WebPushSubscription>())
-        401, 404, 429, 503 -> CreatePushSubscriptionResponseFailure401(response.body<Error>())
-        410 -> CreatePushSubscriptionResponseFailure410
-        422 -> CreatePushSubscriptionResponseFailure(response.body<ValidationError>())
-        else -> CreatePushSubscriptionResponseUnknownFailure(response.status.value)
+        200 -> CreatePushSubscriptionResponseSuccess(response.body<WebPushSubscription>(), response.headers)
+        401, 404, 429, 503 -> CreatePushSubscriptionResponseFailure401(response.body<Error>(), response.headers)
+        410 -> CreatePushSubscriptionResponseFailure410(response.headers)
+        422 -> CreatePushSubscriptionResponseFailure(response.body<ValidationError>(), response.headers)
+        else -> CreatePushSubscriptionResponseUnknownFailure(response.status.value, response.headers)
       }
     }
     catch(e: CancellationException) {
@@ -106,11 +108,11 @@ public class PushClient(
       val response = configuration.client.delete("api/v1/push/subscription") {
       }
       return when (response.status.value) {
-        200 -> DeletePushSubscriptionResponseSuccess
-        401, 404, 429, 503 -> DeletePushSubscriptionResponseFailure401(response.body<Error>())
-        410 -> DeletePushSubscriptionResponseFailure410
-        422 -> DeletePushSubscriptionResponseFailure(response.body<ValidationError>())
-        else -> DeletePushSubscriptionResponseUnknownFailure(response.status.value)
+        200 -> DeletePushSubscriptionResponseSuccess(response.headers)
+        401, 404, 429, 503 -> DeletePushSubscriptionResponseFailure401(response.body<Error>(), response.headers)
+        410 -> DeletePushSubscriptionResponseFailure410(response.headers)
+        422 -> DeletePushSubscriptionResponseFailure(response.body<ValidationError>(), response.headers)
+        else -> DeletePushSubscriptionResponseUnknownFailure(response.status.value, response.headers)
       }
     }
     catch(e: CancellationException) {
@@ -123,29 +125,60 @@ public class PushClient(
   }
 
   @Serializable
-  public sealed class GetPushSubscriptionResponse
+  public sealed class GetPushSubscriptionResponse {
+    public abstract val headers: Headers
+  }
 
   @Serializable
   public data class GetPushSubscriptionResponseSuccess(
     public val body: WebPushSubscription,
-  ) : GetPushSubscriptionResponse()
+    @Transient
+    override val headers: Headers = Headers.Empty,
+  ) : GetPushSubscriptionResponse() {
+    /**
+     * Number of requests permitted per time period
+     */
+    public val xRateLimitLimit: Int?
+      get() = headers["X-RateLimit-Limit"]?.toIntOrNull()
+
+    /**
+     * Number of requests you can still make
+     */
+    public val xRateLimitRemaining: Int?
+      get() = headers["X-RateLimit-Remaining"]?.toIntOrNull()
+
+    /**
+     * Timestamp when your rate limit will reset
+     */
+    public val xRateLimitReset: String?
+      get() = headers["X-RateLimit-Reset"]
+  }
 
   @Serializable
   public data class GetPushSubscriptionResponseFailure401(
     public val body: Error,
+    @Transient
+    override val headers: Headers = Headers.Empty,
   ) : GetPushSubscriptionResponse()
 
   @Serializable
-  public object GetPushSubscriptionResponseFailure410 : GetPushSubscriptionResponse()
+  public data class GetPushSubscriptionResponseFailure410(
+    @Transient
+    override val headers: Headers = Headers.Empty,
+  ) : GetPushSubscriptionResponse()
 
   @Serializable
   public data class GetPushSubscriptionResponseFailure(
     public val body: ValidationError,
+    @Transient
+    override val headers: Headers = Headers.Empty,
   ) : GetPushSubscriptionResponse()
 
   @Serializable
   public data class GetPushSubscriptionResponseUnknownFailure(
     public val statusCode: Int,
+    @Transient
+    override val headers: Headers = Headers.Empty,
   ) : GetPushSubscriptionResponse()
 
   @Serializable
@@ -177,29 +210,60 @@ public class PushClient(
   }
 
   @Serializable
-  public sealed class PutPushSubscriptionResponse
+  public sealed class PutPushSubscriptionResponse {
+    public abstract val headers: Headers
+  }
 
   @Serializable
   public data class PutPushSubscriptionResponseSuccess(
     public val body: WebPushSubscription,
-  ) : PutPushSubscriptionResponse()
+    @Transient
+    override val headers: Headers = Headers.Empty,
+  ) : PutPushSubscriptionResponse() {
+    /**
+     * Number of requests permitted per time period
+     */
+    public val xRateLimitLimit: Int?
+      get() = headers["X-RateLimit-Limit"]?.toIntOrNull()
+
+    /**
+     * Number of requests you can still make
+     */
+    public val xRateLimitRemaining: Int?
+      get() = headers["X-RateLimit-Remaining"]?.toIntOrNull()
+
+    /**
+     * Timestamp when your rate limit will reset
+     */
+    public val xRateLimitReset: String?
+      get() = headers["X-RateLimit-Reset"]
+  }
 
   @Serializable
   public data class PutPushSubscriptionResponseFailure401(
     public val body: Error,
+    @Transient
+    override val headers: Headers = Headers.Empty,
   ) : PutPushSubscriptionResponse()
 
   @Serializable
-  public object PutPushSubscriptionResponseFailure410 : PutPushSubscriptionResponse()
+  public data class PutPushSubscriptionResponseFailure410(
+    @Transient
+    override val headers: Headers = Headers.Empty,
+  ) : PutPushSubscriptionResponse()
 
   @Serializable
   public data class PutPushSubscriptionResponseFailure(
     public val body: ValidationError,
+    @Transient
+    override val headers: Headers = Headers.Empty,
   ) : PutPushSubscriptionResponse()
 
   @Serializable
   public data class PutPushSubscriptionResponseUnknownFailure(
     public val statusCode: Int,
+    @Transient
+    override val headers: Headers = Headers.Empty,
   ) : PutPushSubscriptionResponse()
 
   @Serializable
@@ -248,52 +312,115 @@ public class PushClient(
   }
 
   @Serializable
-  public sealed class CreatePushSubscriptionResponse
+  public sealed class CreatePushSubscriptionResponse {
+    public abstract val headers: Headers
+  }
 
   @Serializable
   public data class CreatePushSubscriptionResponseSuccess(
     public val body: WebPushSubscription,
-  ) : CreatePushSubscriptionResponse()
+    @Transient
+    override val headers: Headers = Headers.Empty,
+  ) : CreatePushSubscriptionResponse() {
+    /**
+     * Number of requests permitted per time period
+     */
+    public val xRateLimitLimit: Int?
+      get() = headers["X-RateLimit-Limit"]?.toIntOrNull()
+
+    /**
+     * Number of requests you can still make
+     */
+    public val xRateLimitRemaining: Int?
+      get() = headers["X-RateLimit-Remaining"]?.toIntOrNull()
+
+    /**
+     * Timestamp when your rate limit will reset
+     */
+    public val xRateLimitReset: String?
+      get() = headers["X-RateLimit-Reset"]
+  }
 
   @Serializable
   public data class CreatePushSubscriptionResponseFailure401(
     public val body: Error,
+    @Transient
+    override val headers: Headers = Headers.Empty,
   ) : CreatePushSubscriptionResponse()
 
   @Serializable
-  public object CreatePushSubscriptionResponseFailure410 : CreatePushSubscriptionResponse()
+  public data class CreatePushSubscriptionResponseFailure410(
+    @Transient
+    override val headers: Headers = Headers.Empty,
+  ) : CreatePushSubscriptionResponse()
 
   @Serializable
   public data class CreatePushSubscriptionResponseFailure(
     public val body: ValidationError,
+    @Transient
+    override val headers: Headers = Headers.Empty,
   ) : CreatePushSubscriptionResponse()
 
   @Serializable
   public data class CreatePushSubscriptionResponseUnknownFailure(
     public val statusCode: Int,
+    @Transient
+    override val headers: Headers = Headers.Empty,
   ) : CreatePushSubscriptionResponse()
 
   @Serializable
-  public sealed class DeletePushSubscriptionResponse
+  public sealed class DeletePushSubscriptionResponse {
+    public abstract val headers: Headers
+  }
 
   @Serializable
-  public object DeletePushSubscriptionResponseSuccess : DeletePushSubscriptionResponse()
+  public data class DeletePushSubscriptionResponseSuccess(
+    @Transient
+    override val headers: Headers = Headers.Empty,
+  ) : DeletePushSubscriptionResponse() {
+    /**
+     * Number of requests permitted per time period
+     */
+    public val xRateLimitLimit: Int?
+      get() = headers["X-RateLimit-Limit"]?.toIntOrNull()
+
+    /**
+     * Number of requests you can still make
+     */
+    public val xRateLimitRemaining: Int?
+      get() = headers["X-RateLimit-Remaining"]?.toIntOrNull()
+
+    /**
+     * Timestamp when your rate limit will reset
+     */
+    public val xRateLimitReset: String?
+      get() = headers["X-RateLimit-Reset"]
+  }
 
   @Serializable
   public data class DeletePushSubscriptionResponseFailure401(
     public val body: Error,
+    @Transient
+    override val headers: Headers = Headers.Empty,
   ) : DeletePushSubscriptionResponse()
 
   @Serializable
-  public object DeletePushSubscriptionResponseFailure410 : DeletePushSubscriptionResponse()
+  public data class DeletePushSubscriptionResponseFailure410(
+    @Transient
+    override val headers: Headers = Headers.Empty,
+  ) : DeletePushSubscriptionResponse()
 
   @Serializable
   public data class DeletePushSubscriptionResponseFailure(
     public val body: ValidationError,
+    @Transient
+    override val headers: Headers = Headers.Empty,
   ) : DeletePushSubscriptionResponse()
 
   @Serializable
   public data class DeletePushSubscriptionResponseUnknownFailure(
     public val statusCode: Int,
+    @Transient
+    override val headers: Headers = Headers.Empty,
   ) : DeletePushSubscriptionResponse()
 }

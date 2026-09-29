@@ -5,11 +5,13 @@ import io.ktor.client.request.`get`
 import io.ktor.client.request.post
 import io.ktor.client.request.setBody
 import io.ktor.http.ContentType
+import io.ktor.http.Headers
 import io.ktor.http.contentType
 import kotlin.Int
 import kotlin.collections.List
 import kotlin.coroutines.cancellation.CancellationException
 import kotlinx.serialization.Serializable
+import kotlinx.serialization.Transient
 import yaml.api.client.ClientConfiguration.Companion.defaultClientConfiguration
 import yaml.api.model.Document
 
@@ -24,8 +26,8 @@ public class DocumentsClient(
       val response = configuration.client.`get`("documents") {
       }
       return when (response.status.value) {
-        200 -> ListDocumentsResponseSuccess(response.body<List<Document>>())
-        else -> ListDocumentsResponseUnknownFailure(response.status.value)
+        200 -> ListDocumentsResponseSuccess(response.body<List<Document>>(), response.headers)
+        else -> ListDocumentsResponseUnknownFailure(response.status.value, response.headers)
       }
     }
     catch(e: CancellationException) {
@@ -47,8 +49,8 @@ public class DocumentsClient(
         contentType(ContentType("application", "yaml"))
       }
       return when (response.status.value) {
-        200 -> CreateDocumentResponseSuccess(response.body<Document>())
-        else -> CreateDocumentResponseUnknownFailure(response.status.value)
+        200 -> CreateDocumentResponseSuccess(response.body<Document>(), response.headers)
+        else -> CreateDocumentResponseUnknownFailure(response.status.value, response.headers)
       }
     }
     catch(e: CancellationException) {
@@ -61,28 +63,40 @@ public class DocumentsClient(
   }
 
   @Serializable
-  public sealed class ListDocumentsResponse
+  public sealed class ListDocumentsResponse {
+    public abstract val headers: Headers
+  }
 
   @Serializable
   public data class ListDocumentsResponseSuccess(
     public val body: List<Document>,
+    @Transient
+    override val headers: Headers = Headers.Empty,
   ) : ListDocumentsResponse()
 
   @Serializable
   public data class ListDocumentsResponseUnknownFailure(
     public val statusCode: Int,
+    @Transient
+    override val headers: Headers = Headers.Empty,
   ) : ListDocumentsResponse()
 
   @Serializable
-  public sealed class CreateDocumentResponse
+  public sealed class CreateDocumentResponse {
+    public abstract val headers: Headers
+  }
 
   @Serializable
   public data class CreateDocumentResponseSuccess(
     public val body: Document,
+    @Transient
+    override val headers: Headers = Headers.Empty,
   ) : CreateDocumentResponse()
 
   @Serializable
   public data class CreateDocumentResponseUnknownFailure(
     public val statusCode: Int,
+    @Transient
+    override val headers: Headers = Headers.Empty,
   ) : CreateDocumentResponse()
 }

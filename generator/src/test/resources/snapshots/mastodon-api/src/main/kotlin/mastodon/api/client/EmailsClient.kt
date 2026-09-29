@@ -4,11 +4,13 @@ import io.ktor.client.call.body
 import io.ktor.client.request.post
 import io.ktor.client.request.setBody
 import io.ktor.http.ContentType
+import io.ktor.http.Headers
 import io.ktor.http.contentType
 import kotlin.Int
 import kotlin.String
 import kotlin.coroutines.cancellation.CancellationException
 import kotlinx.serialization.Serializable
+import kotlinx.serialization.Transient
 import mastodon.api.client.ClientConfiguration.Companion.defaultClientConfiguration
 import mastodon.api.model.Error
 import mastodon.api.model.ValidationError
@@ -26,11 +28,11 @@ public class EmailsClient(
         contentType(ContentType.Application.Json)
       }
       return when (response.status.value) {
-        200 -> CreateEmailConfirmationsResponseSuccess
-        401, 403, 404, 429, 503 -> CreateEmailConfirmationsResponseFailure401(response.body<Error>())
-        410 -> CreateEmailConfirmationsResponseFailure410
-        422 -> CreateEmailConfirmationsResponseFailure(response.body<ValidationError>())
-        else -> CreateEmailConfirmationsResponseUnknownFailure(response.status.value)
+        200 -> CreateEmailConfirmationsResponseSuccess(response.headers)
+        401, 403, 404, 429, 503 -> CreateEmailConfirmationsResponseFailure401(response.body<Error>(), response.headers)
+        410 -> CreateEmailConfirmationsResponseFailure410(response.headers)
+        422 -> CreateEmailConfirmationsResponseFailure(response.body<ValidationError>(), response.headers)
+        else -> CreateEmailConfirmationsResponseUnknownFailure(response.status.value, response.headers)
       }
     }
     catch(e: CancellationException) {
@@ -48,26 +50,58 @@ public class EmailsClient(
   )
 
   @Serializable
-  public sealed class CreateEmailConfirmationsResponse
+  public sealed class CreateEmailConfirmationsResponse {
+    public abstract val headers: Headers
+  }
 
   @Serializable
-  public object CreateEmailConfirmationsResponseSuccess : CreateEmailConfirmationsResponse()
+  public data class CreateEmailConfirmationsResponseSuccess(
+    @Transient
+    override val headers: Headers = Headers.Empty,
+  ) : CreateEmailConfirmationsResponse() {
+    /**
+     * Number of requests permitted per time period
+     */
+    public val xRateLimitLimit: Int?
+      get() = headers["X-RateLimit-Limit"]?.toIntOrNull()
+
+    /**
+     * Number of requests you can still make
+     */
+    public val xRateLimitRemaining: Int?
+      get() = headers["X-RateLimit-Remaining"]?.toIntOrNull()
+
+    /**
+     * Timestamp when your rate limit will reset
+     */
+    public val xRateLimitReset: String?
+      get() = headers["X-RateLimit-Reset"]
+  }
 
   @Serializable
   public data class CreateEmailConfirmationsResponseFailure401(
     public val body: Error,
+    @Transient
+    override val headers: Headers = Headers.Empty,
   ) : CreateEmailConfirmationsResponse()
 
   @Serializable
-  public object CreateEmailConfirmationsResponseFailure410 : CreateEmailConfirmationsResponse()
+  public data class CreateEmailConfirmationsResponseFailure410(
+    @Transient
+    override val headers: Headers = Headers.Empty,
+  ) : CreateEmailConfirmationsResponse()
 
   @Serializable
   public data class CreateEmailConfirmationsResponseFailure(
     public val body: ValidationError,
+    @Transient
+    override val headers: Headers = Headers.Empty,
   ) : CreateEmailConfirmationsResponse()
 
   @Serializable
   public data class CreateEmailConfirmationsResponseUnknownFailure(
     public val statusCode: Int,
+    @Transient
+    override val headers: Headers = Headers.Empty,
   ) : CreateEmailConfirmationsResponse()
 }

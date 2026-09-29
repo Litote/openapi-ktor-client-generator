@@ -3,6 +3,7 @@ package mastodon.api.client
 import io.ktor.client.call.body
 import io.ktor.client.request.`get`
 import io.ktor.client.request.post
+import io.ktor.http.Headers
 import io.ktor.http.encodeURLPathPart
 import kotlin.Boolean
 import kotlin.Int
@@ -11,6 +12,7 @@ import kotlin.String
 import kotlin.collections.List
 import kotlin.coroutines.cancellation.CancellationException
 import kotlinx.serialization.Serializable
+import kotlinx.serialization.Transient
 import mastodon.api.client.ClientConfiguration.Companion.defaultClientConfiguration
 import mastodon.api.model.Account
 import mastodon.api.model.CountResponse
@@ -69,11 +71,11 @@ public class NotificationsClient(
         }
       }
       return when (response.status.value) {
-        200 -> GetNotificationsResponseSuccess(response.body<List<Notification>>())
-        401, 404, 429, 503 -> GetNotificationsResponseFailure401(response.body<Error>())
-        410 -> GetNotificationsResponseFailure410
-        422 -> GetNotificationsResponseFailure(response.body<ValidationError>())
-        else -> GetNotificationsResponseUnknownFailure(response.status.value)
+        200 -> GetNotificationsResponseSuccess(response.body<List<Notification>>(), response.headers)
+        401, 404, 429, 503 -> GetNotificationsResponseFailure401(response.body<Error>(), response.headers)
+        410 -> GetNotificationsResponseFailure410(response.headers)
+        422 -> GetNotificationsResponseFailure(response.body<ValidationError>(), response.headers)
+        else -> GetNotificationsResponseUnknownFailure(response.status.value, response.headers)
       }
     }
     catch(e: CancellationException) {
@@ -93,11 +95,11 @@ public class NotificationsClient(
       val response = configuration.client.`get`("api/v1/notifications/{id}".replace("/{id}", "/${id.encodeURLPathPart()}")) {
       }
       return when (response.status.value) {
-        200 -> GetNotificationResponseSuccess(response.body<Notification>())
-        401, 404, 429, 503 -> GetNotificationResponseFailure401(response.body<Error>())
-        410 -> GetNotificationResponseFailure410
-        422 -> GetNotificationResponseFailure(response.body<ValidationError>())
-        else -> GetNotificationResponseUnknownFailure(response.status.value)
+        200 -> GetNotificationResponseSuccess(response.body<Notification>(), response.headers)
+        401, 404, 429, 503 -> GetNotificationResponseFailure401(response.body<Error>(), response.headers)
+        410 -> GetNotificationResponseFailure410(response.headers)
+        422 -> GetNotificationResponseFailure(response.body<ValidationError>(), response.headers)
+        else -> GetNotificationResponseUnknownFailure(response.status.value, response.headers)
       }
     }
     catch(e: CancellationException) {
@@ -117,11 +119,11 @@ public class NotificationsClient(
       val response = configuration.client.post("api/v1/notifications/{id}/dismiss".replace("/{id}", "/${id.encodeURLPathPart()}")) {
       }
       return when (response.status.value) {
-        200 -> PostNotificationDismissResponseSuccess
-        401, 404, 429, 503 -> PostNotificationDismissResponseFailure401(response.body<Error>())
-        410 -> PostNotificationDismissResponseFailure410
-        422 -> PostNotificationDismissResponseFailure(response.body<ValidationError>())
-        else -> PostNotificationDismissResponseUnknownFailure(response.status.value)
+        200 -> PostNotificationDismissResponseSuccess(response.headers)
+        401, 404, 429, 503 -> PostNotificationDismissResponseFailure401(response.body<Error>(), response.headers)
+        410 -> PostNotificationDismissResponseFailure410(response.headers)
+        422 -> PostNotificationDismissResponseFailure(response.body<ValidationError>(), response.headers)
+        else -> PostNotificationDismissResponseUnknownFailure(response.status.value, response.headers)
       }
     }
     catch(e: CancellationException) {
@@ -141,11 +143,11 @@ public class NotificationsClient(
       val response = configuration.client.post("api/v1/notifications/clear") {
       }
       return when (response.status.value) {
-        200 -> CreateNotificationClearResponseSuccess
-        401, 404, 429, 503 -> CreateNotificationClearResponseFailure401(response.body<Error>())
-        410 -> CreateNotificationClearResponseFailure410
-        422 -> CreateNotificationClearResponseFailure(response.body<ValidationError>())
-        else -> CreateNotificationClearResponseUnknownFailure(response.status.value)
+        200 -> CreateNotificationClearResponseSuccess(response.headers)
+        401, 404, 429, 503 -> CreateNotificationClearResponseFailure401(response.body<Error>(), response.headers)
+        410 -> CreateNotificationClearResponseFailure410(response.headers)
+        422 -> CreateNotificationClearResponseFailure(response.body<ValidationError>(), response.headers)
+        else -> CreateNotificationClearResponseUnknownFailure(response.status.value, response.headers)
       }
     }
     catch(e: CancellationException) {
@@ -184,11 +186,11 @@ public class NotificationsClient(
         }
       }
       return when (response.status.value) {
-        200 -> GetNotificationRequestsResponseSuccess(response.body<List<NotificationRequest>>())
-        401, 404, 429, 503 -> GetNotificationRequestsResponseFailure401(response.body<Error>())
-        410 -> GetNotificationRequestsResponseFailure410
-        422 -> GetNotificationRequestsResponseFailure(response.body<ValidationError>())
-        else -> GetNotificationRequestsResponseUnknownFailure(response.status.value)
+        200 -> GetNotificationRequestsResponseSuccess(response.body<List<NotificationRequest>>(), response.headers)
+        401, 404, 429, 503 -> GetNotificationRequestsResponseFailure401(response.body<Error>(), response.headers)
+        410 -> GetNotificationRequestsResponseFailure410(response.headers)
+        422 -> GetNotificationRequestsResponseFailure(response.body<ValidationError>(), response.headers)
+        else -> GetNotificationRequestsResponseUnknownFailure(response.status.value, response.headers)
       }
     }
     catch(e: CancellationException) {
@@ -208,11 +210,11 @@ public class NotificationsClient(
       val response = configuration.client.`get`("api/v1/notifications/requests/{id}".replace("/{id}", "/${id.encodeURLPathPart()}")) {
       }
       return when (response.status.value) {
-        200 -> GetNotificationsRequestsByIdResponseSuccess(response.body<NotificationRequest>())
-        401, 404, 429, 503 -> GetNotificationsRequestsByIdResponseFailure401(response.body<Error>())
-        410 -> GetNotificationsRequestsByIdResponseFailure410
-        422 -> GetNotificationsRequestsByIdResponseFailure(response.body<ValidationError>())
-        else -> GetNotificationsRequestsByIdResponseUnknownFailure(response.status.value)
+        200 -> GetNotificationsRequestsByIdResponseSuccess(response.body<NotificationRequest>(), response.headers)
+        401, 404, 429, 503 -> GetNotificationsRequestsByIdResponseFailure401(response.body<Error>(), response.headers)
+        410 -> GetNotificationsRequestsByIdResponseFailure410(response.headers)
+        422 -> GetNotificationsRequestsByIdResponseFailure(response.body<ValidationError>(), response.headers)
+        else -> GetNotificationsRequestsByIdResponseUnknownFailure(response.status.value, response.headers)
       }
     }
     catch(e: CancellationException) {
@@ -232,11 +234,11 @@ public class NotificationsClient(
       val response = configuration.client.post("api/v1/notifications/requests/{id}/accept".replace("/{id}", "/${id.encodeURLPathPart()}")) {
       }
       return when (response.status.value) {
-        200 -> PostNotificationsRequestsByIdAcceptResponseSuccess
-        401, 404, 429, 503 -> PostNotificationsRequestsByIdAcceptResponseFailure401(response.body<Error>())
-        410 -> PostNotificationsRequestsByIdAcceptResponseFailure410
-        422 -> PostNotificationsRequestsByIdAcceptResponseFailure(response.body<ValidationError>())
-        else -> PostNotificationsRequestsByIdAcceptResponseUnknownFailure(response.status.value)
+        200 -> PostNotificationsRequestsByIdAcceptResponseSuccess(response.headers)
+        401, 404, 429, 503 -> PostNotificationsRequestsByIdAcceptResponseFailure401(response.body<Error>(), response.headers)
+        410 -> PostNotificationsRequestsByIdAcceptResponseFailure410(response.headers)
+        422 -> PostNotificationsRequestsByIdAcceptResponseFailure(response.body<ValidationError>(), response.headers)
+        else -> PostNotificationsRequestsByIdAcceptResponseUnknownFailure(response.status.value, response.headers)
       }
     }
     catch(e: CancellationException) {
@@ -256,11 +258,11 @@ public class NotificationsClient(
       val response = configuration.client.post("api/v1/notifications/requests/{id}/dismiss".replace("/{id}", "/${id.encodeURLPathPart()}")) {
       }
       return when (response.status.value) {
-        200 -> PostNotificationsRequestsByIdDismissResponseSuccess
-        401, 404, 429, 503 -> PostNotificationsRequestsByIdDismissResponseFailure401(response.body<Error>())
-        410 -> PostNotificationsRequestsByIdDismissResponseFailure410
-        422 -> PostNotificationsRequestsByIdDismissResponseFailure(response.body<ValidationError>())
-        else -> PostNotificationsRequestsByIdDismissResponseUnknownFailure(response.status.value)
+        200 -> PostNotificationsRequestsByIdDismissResponseSuccess(response.headers)
+        401, 404, 429, 503 -> PostNotificationsRequestsByIdDismissResponseFailure401(response.body<Error>(), response.headers)
+        410 -> PostNotificationsRequestsByIdDismissResponseFailure410(response.headers)
+        422 -> PostNotificationsRequestsByIdDismissResponseFailure(response.body<ValidationError>(), response.headers)
+        else -> PostNotificationsRequestsByIdDismissResponseUnknownFailure(response.status.value, response.headers)
       }
     }
     catch(e: CancellationException) {
@@ -280,11 +282,11 @@ public class NotificationsClient(
       val response = configuration.client.post("api/v1/notifications/requests/accept") {
       }
       return when (response.status.value) {
-        200 -> CreateNotificationsRequestsAcceptResponseSuccess
-        401, 404, 429, 503 -> CreateNotificationsRequestsAcceptResponseFailure401(response.body<Error>())
-        410 -> CreateNotificationsRequestsAcceptResponseFailure410
-        422 -> CreateNotificationsRequestsAcceptResponseFailure(response.body<ValidationError>())
-        else -> CreateNotificationsRequestsAcceptResponseUnknownFailure(response.status.value)
+        200 -> CreateNotificationsRequestsAcceptResponseSuccess(response.headers)
+        401, 404, 429, 503 -> CreateNotificationsRequestsAcceptResponseFailure401(response.body<Error>(), response.headers)
+        410 -> CreateNotificationsRequestsAcceptResponseFailure410(response.headers)
+        422 -> CreateNotificationsRequestsAcceptResponseFailure(response.body<ValidationError>(), response.headers)
+        else -> CreateNotificationsRequestsAcceptResponseUnknownFailure(response.status.value, response.headers)
       }
     }
     catch(e: CancellationException) {
@@ -304,11 +306,11 @@ public class NotificationsClient(
       val response = configuration.client.post("api/v1/notifications/requests/dismiss") {
       }
       return when (response.status.value) {
-        200 -> CreateNotificationsRequestsDismissResponseSuccess
-        401, 404, 429, 503 -> CreateNotificationsRequestsDismissResponseFailure401(response.body<Error>())
-        410 -> CreateNotificationsRequestsDismissResponseFailure410
-        422 -> CreateNotificationsRequestsDismissResponseFailure(response.body<ValidationError>())
-        else -> CreateNotificationsRequestsDismissResponseUnknownFailure(response.status.value)
+        200 -> CreateNotificationsRequestsDismissResponseSuccess(response.headers)
+        401, 404, 429, 503 -> CreateNotificationsRequestsDismissResponseFailure401(response.body<Error>(), response.headers)
+        410 -> CreateNotificationsRequestsDismissResponseFailure410(response.headers)
+        422 -> CreateNotificationsRequestsDismissResponseFailure(response.body<ValidationError>(), response.headers)
+        else -> CreateNotificationsRequestsDismissResponseUnknownFailure(response.status.value, response.headers)
       }
     }
     catch(e: CancellationException) {
@@ -328,11 +330,11 @@ public class NotificationsClient(
       val response = configuration.client.`get`("api/v1/notifications/requests/merged") {
       }
       return when (response.status.value) {
-        200 -> GetNotificationsRequestsMergedResponseSuccess(response.body<MergedResponse>())
-        401, 404, 429, 503 -> GetNotificationsRequestsMergedResponseFailure401(response.body<Error>())
-        410 -> GetNotificationsRequestsMergedResponseFailure410
-        422 -> GetNotificationsRequestsMergedResponseFailure(response.body<ValidationError>())
-        else -> GetNotificationsRequestsMergedResponseUnknownFailure(response.status.value)
+        200 -> GetNotificationsRequestsMergedResponseSuccess(response.body<MergedResponse>(), response.headers)
+        401, 404, 429, 503 -> GetNotificationsRequestsMergedResponseFailure401(response.body<Error>(), response.headers)
+        410 -> GetNotificationsRequestsMergedResponseFailure410(response.headers)
+        422 -> GetNotificationsRequestsMergedResponseFailure(response.body<ValidationError>(), response.headers)
+        else -> GetNotificationsRequestsMergedResponseUnknownFailure(response.status.value, response.headers)
       }
     }
     catch(e: CancellationException) {
@@ -371,11 +373,11 @@ public class NotificationsClient(
         }
       }
       return when (response.status.value) {
-        200 -> GetNotificationsUnreadCountResponseSuccess(response.body<CountResponse>())
-        401, 404, 429, 503 -> GetNotificationsUnreadCountResponseFailure401(response.body<Error>())
-        410 -> GetNotificationsUnreadCountResponseFailure410
-        422 -> GetNotificationsUnreadCountResponseFailure(response.body<ValidationError>())
-        else -> GetNotificationsUnreadCountResponseUnknownFailure(response.status.value)
+        200 -> GetNotificationsUnreadCountResponseSuccess(response.body<CountResponse>(), response.headers)
+        401, 404, 429, 503 -> GetNotificationsUnreadCountResponseFailure401(response.body<Error>(), response.headers)
+        410 -> GetNotificationsUnreadCountResponseFailure410(response.headers)
+        422 -> GetNotificationsUnreadCountResponseFailure(response.body<ValidationError>(), response.headers)
+        else -> GetNotificationsUnreadCountResponseUnknownFailure(response.status.value, response.headers)
       }
     }
     catch(e: CancellationException) {
@@ -438,11 +440,11 @@ public class NotificationsClient(
         }
       }
       return when (response.status.value) {
-        200 -> GetNotificationsV2ResponseSuccess(response.body<GroupedNotificationsResults>())
-        401, 404, 429, 503 -> GetNotificationsV2ResponseFailure401(response.body<Error>())
-        410 -> GetNotificationsV2ResponseFailure410
-        422 -> GetNotificationsV2ResponseFailure(response.body<ValidationError>())
-        else -> GetNotificationsV2ResponseUnknownFailure(response.status.value)
+        200 -> GetNotificationsV2ResponseSuccess(response.body<GroupedNotificationsResults>(), response.headers)
+        401, 404, 429, 503 -> GetNotificationsV2ResponseFailure401(response.body<Error>(), response.headers)
+        410 -> GetNotificationsV2ResponseFailure410(response.headers)
+        422 -> GetNotificationsV2ResponseFailure(response.body<ValidationError>(), response.headers)
+        else -> GetNotificationsV2ResponseUnknownFailure(response.status.value, response.headers)
       }
     }
     catch(e: CancellationException) {
@@ -462,11 +464,11 @@ public class NotificationsClient(
       val response = configuration.client.`get`("api/v2/notifications/{group_key}".replace("/{group_key}", "/${groupKey.encodeURLPathPart()}")) {
       }
       return when (response.status.value) {
-        200 -> GetNotificationsByGroupKeyV2ResponseSuccess(response.body<GroupedNotificationsResults>())
-        401, 404, 429, 503 -> GetNotificationsByGroupKeyV2ResponseFailure401(response.body<Error>())
-        410 -> GetNotificationsByGroupKeyV2ResponseFailure410
-        422 -> GetNotificationsByGroupKeyV2ResponseFailure(response.body<ValidationError>())
-        else -> GetNotificationsByGroupKeyV2ResponseUnknownFailure(response.status.value)
+        200 -> GetNotificationsByGroupKeyV2ResponseSuccess(response.body<GroupedNotificationsResults>(), response.headers)
+        401, 404, 429, 503 -> GetNotificationsByGroupKeyV2ResponseFailure401(response.body<Error>(), response.headers)
+        410 -> GetNotificationsByGroupKeyV2ResponseFailure410(response.headers)
+        422 -> GetNotificationsByGroupKeyV2ResponseFailure(response.body<ValidationError>(), response.headers)
+        else -> GetNotificationsByGroupKeyV2ResponseUnknownFailure(response.status.value, response.headers)
       }
     }
     catch(e: CancellationException) {
@@ -486,11 +488,11 @@ public class NotificationsClient(
       val response = configuration.client.`get`("api/v2/notifications/{group_key}/accounts".replace("/{group_key}", "/${groupKey.encodeURLPathPart()}")) {
       }
       return when (response.status.value) {
-        200 -> GetNotificationAccountsV2ResponseSuccess(response.body<List<Account>>())
-        401, 404, 429, 503 -> GetNotificationAccountsV2ResponseFailure401(response.body<Error>())
-        410 -> GetNotificationAccountsV2ResponseFailure410
-        422 -> GetNotificationAccountsV2ResponseFailure(response.body<ValidationError>())
-        else -> GetNotificationAccountsV2ResponseUnknownFailure(response.status.value)
+        200 -> GetNotificationAccountsV2ResponseSuccess(response.body<List<Account>>(), response.headers)
+        401, 404, 429, 503 -> GetNotificationAccountsV2ResponseFailure401(response.body<Error>(), response.headers)
+        410 -> GetNotificationAccountsV2ResponseFailure410(response.headers)
+        422 -> GetNotificationAccountsV2ResponseFailure(response.body<ValidationError>(), response.headers)
+        else -> GetNotificationAccountsV2ResponseUnknownFailure(response.status.value, response.headers)
       }
     }
     catch(e: CancellationException) {
@@ -510,11 +512,11 @@ public class NotificationsClient(
       val response = configuration.client.post("api/v2/notifications/{group_key}/dismiss".replace("/{group_key}", "/${groupKey.encodeURLPathPart()}")) {
       }
       return when (response.status.value) {
-        200 -> PostNotificationDismissV2ResponseSuccess
-        401, 404, 429, 503 -> PostNotificationDismissV2ResponseFailure401(response.body<Error>())
-        410 -> PostNotificationDismissV2ResponseFailure410
-        422 -> PostNotificationDismissV2ResponseFailure(response.body<ValidationError>())
-        else -> PostNotificationDismissV2ResponseUnknownFailure(response.status.value)
+        200 -> PostNotificationDismissV2ResponseSuccess(response.headers)
+        401, 404, 429, 503 -> PostNotificationDismissV2ResponseFailure401(response.body<Error>(), response.headers)
+        410 -> PostNotificationDismissV2ResponseFailure410(response.headers)
+        422 -> PostNotificationDismissV2ResponseFailure(response.body<ValidationError>(), response.headers)
+        else -> PostNotificationDismissV2ResponseUnknownFailure(response.status.value, response.headers)
       }
     }
     catch(e: CancellationException) {
@@ -534,11 +536,11 @@ public class NotificationsClient(
       val response = configuration.client.`get`("api/v2/notifications/policy") {
       }
       return when (response.status.value) {
-        200 -> GetNotificationPolicyV2ResponseSuccess(response.body<NotificationPolicy>())
-        401, 404, 429, 503 -> GetNotificationPolicyV2ResponseFailure401(response.body<Error>())
-        410 -> GetNotificationPolicyV2ResponseFailure410
-        422 -> GetNotificationPolicyV2ResponseFailure(response.body<ValidationError>())
-        else -> GetNotificationPolicyV2ResponseUnknownFailure(response.status.value)
+        200 -> GetNotificationPolicyV2ResponseSuccess(response.body<NotificationPolicy>(), response.headers)
+        401, 404, 429, 503 -> GetNotificationPolicyV2ResponseFailure401(response.body<Error>(), response.headers)
+        410 -> GetNotificationPolicyV2ResponseFailure410(response.headers)
+        422 -> GetNotificationPolicyV2ResponseFailure(response.body<ValidationError>(), response.headers)
+        else -> GetNotificationPolicyV2ResponseUnknownFailure(response.status.value, response.headers)
       }
     }
     catch(e: CancellationException) {
@@ -581,11 +583,11 @@ public class NotificationsClient(
         }
       }
       return when (response.status.value) {
-        200 -> GetNotificationsUnreadCountV2ResponseSuccess(response.body<CountResponse>())
-        401, 404, 429, 503 -> GetNotificationsUnreadCountV2ResponseFailure401(response.body<Error>())
-        410 -> GetNotificationsUnreadCountV2ResponseFailure410
-        422 -> GetNotificationsUnreadCountV2ResponseFailure(response.body<ValidationError>())
-        else -> GetNotificationsUnreadCountV2ResponseUnknownFailure(response.status.value)
+        200 -> GetNotificationsUnreadCountV2ResponseSuccess(response.body<CountResponse>(), response.headers)
+        401, 404, 429, 503 -> GetNotificationsUnreadCountV2ResponseFailure401(response.body<Error>(), response.headers)
+        410 -> GetNotificationsUnreadCountV2ResponseFailure410(response.headers)
+        422 -> GetNotificationsUnreadCountV2ResponseFailure(response.body<ValidationError>(), response.headers)
+        else -> GetNotificationsUnreadCountV2ResponseUnknownFailure(response.status.value, response.headers)
       }
     }
     catch(e: CancellationException) {
@@ -613,456 +615,1039 @@ public class NotificationsClient(
   public object GroupedTypes
 
   @Serializable
-  public sealed class GetNotificationsResponse
+  public sealed class GetNotificationsResponse {
+    public abstract val headers: Headers
+  }
 
   @Serializable
   public data class GetNotificationsResponseSuccess(
     public val body: List<Notification>,
-  ) : GetNotificationsResponse()
+    @Transient
+    override val headers: Headers = Headers.Empty,
+  ) : GetNotificationsResponse() {
+    /**
+     * Pagination links for browsing older or newer results. Format: Link: <https://mastodon.example/api/v1/endpoint?max_id=7163058>; rel="next", <https://mastodon.example/api/v1/endpoint?min_id=7275607>; rel="prev". See [RFC 8288](https://www.rfc-editor.org/rfc/rfc8288) for more information.
+     */
+    public val link: String?
+      get() = headers["Link"]
+
+    /**
+     * Number of requests permitted per time period
+     */
+    public val xRateLimitLimit: Int?
+      get() = headers["X-RateLimit-Limit"]?.toIntOrNull()
+
+    /**
+     * Number of requests you can still make
+     */
+    public val xRateLimitRemaining: Int?
+      get() = headers["X-RateLimit-Remaining"]?.toIntOrNull()
+
+    /**
+     * Timestamp when your rate limit will reset
+     */
+    public val xRateLimitReset: String?
+      get() = headers["X-RateLimit-Reset"]
+  }
 
   @Serializable
   public data class GetNotificationsResponseFailure401(
     public val body: Error,
+    @Transient
+    override val headers: Headers = Headers.Empty,
   ) : GetNotificationsResponse()
 
   @Serializable
-  public object GetNotificationsResponseFailure410 : GetNotificationsResponse()
+  public data class GetNotificationsResponseFailure410(
+    @Transient
+    override val headers: Headers = Headers.Empty,
+  ) : GetNotificationsResponse()
 
   @Serializable
   public data class GetNotificationsResponseFailure(
     public val body: ValidationError,
+    @Transient
+    override val headers: Headers = Headers.Empty,
   ) : GetNotificationsResponse()
 
   @Serializable
   public data class GetNotificationsResponseUnknownFailure(
     public val statusCode: Int,
+    @Transient
+    override val headers: Headers = Headers.Empty,
   ) : GetNotificationsResponse()
 
   @Serializable
-  public sealed class GetNotificationResponse
+  public sealed class GetNotificationResponse {
+    public abstract val headers: Headers
+  }
 
   @Serializable
   public data class GetNotificationResponseSuccess(
     public val body: Notification,
-  ) : GetNotificationResponse()
+    @Transient
+    override val headers: Headers = Headers.Empty,
+  ) : GetNotificationResponse() {
+    /**
+     * Number of requests permitted per time period
+     */
+    public val xRateLimitLimit: Int?
+      get() = headers["X-RateLimit-Limit"]?.toIntOrNull()
+
+    /**
+     * Number of requests you can still make
+     */
+    public val xRateLimitRemaining: Int?
+      get() = headers["X-RateLimit-Remaining"]?.toIntOrNull()
+
+    /**
+     * Timestamp when your rate limit will reset
+     */
+    public val xRateLimitReset: String?
+      get() = headers["X-RateLimit-Reset"]
+  }
 
   @Serializable
   public data class GetNotificationResponseFailure401(
     public val body: Error,
+    @Transient
+    override val headers: Headers = Headers.Empty,
   ) : GetNotificationResponse()
 
   @Serializable
-  public object GetNotificationResponseFailure410 : GetNotificationResponse()
+  public data class GetNotificationResponseFailure410(
+    @Transient
+    override val headers: Headers = Headers.Empty,
+  ) : GetNotificationResponse()
 
   @Serializable
   public data class GetNotificationResponseFailure(
     public val body: ValidationError,
+    @Transient
+    override val headers: Headers = Headers.Empty,
   ) : GetNotificationResponse()
 
   @Serializable
   public data class GetNotificationResponseUnknownFailure(
     public val statusCode: Int,
+    @Transient
+    override val headers: Headers = Headers.Empty,
   ) : GetNotificationResponse()
 
   @Serializable
-  public sealed class PostNotificationDismissResponse
+  public sealed class PostNotificationDismissResponse {
+    public abstract val headers: Headers
+  }
 
   @Serializable
-  public object PostNotificationDismissResponseSuccess : PostNotificationDismissResponse()
+  public data class PostNotificationDismissResponseSuccess(
+    @Transient
+    override val headers: Headers = Headers.Empty,
+  ) : PostNotificationDismissResponse() {
+    /**
+     * Number of requests permitted per time period
+     */
+    public val xRateLimitLimit: Int?
+      get() = headers["X-RateLimit-Limit"]?.toIntOrNull()
+
+    /**
+     * Number of requests you can still make
+     */
+    public val xRateLimitRemaining: Int?
+      get() = headers["X-RateLimit-Remaining"]?.toIntOrNull()
+
+    /**
+     * Timestamp when your rate limit will reset
+     */
+    public val xRateLimitReset: String?
+      get() = headers["X-RateLimit-Reset"]
+  }
 
   @Serializable
   public data class PostNotificationDismissResponseFailure401(
     public val body: Error,
+    @Transient
+    override val headers: Headers = Headers.Empty,
   ) : PostNotificationDismissResponse()
 
   @Serializable
-  public object PostNotificationDismissResponseFailure410 : PostNotificationDismissResponse()
+  public data class PostNotificationDismissResponseFailure410(
+    @Transient
+    override val headers: Headers = Headers.Empty,
+  ) : PostNotificationDismissResponse()
 
   @Serializable
   public data class PostNotificationDismissResponseFailure(
     public val body: ValidationError,
+    @Transient
+    override val headers: Headers = Headers.Empty,
   ) : PostNotificationDismissResponse()
 
   @Serializable
   public data class PostNotificationDismissResponseUnknownFailure(
     public val statusCode: Int,
+    @Transient
+    override val headers: Headers = Headers.Empty,
   ) : PostNotificationDismissResponse()
 
   @Serializable
-  public sealed class CreateNotificationClearResponse
+  public sealed class CreateNotificationClearResponse {
+    public abstract val headers: Headers
+  }
 
   @Serializable
-  public object CreateNotificationClearResponseSuccess : CreateNotificationClearResponse()
+  public data class CreateNotificationClearResponseSuccess(
+    @Transient
+    override val headers: Headers = Headers.Empty,
+  ) : CreateNotificationClearResponse() {
+    /**
+     * Number of requests permitted per time period
+     */
+    public val xRateLimitLimit: Int?
+      get() = headers["X-RateLimit-Limit"]?.toIntOrNull()
+
+    /**
+     * Number of requests you can still make
+     */
+    public val xRateLimitRemaining: Int?
+      get() = headers["X-RateLimit-Remaining"]?.toIntOrNull()
+
+    /**
+     * Timestamp when your rate limit will reset
+     */
+    public val xRateLimitReset: String?
+      get() = headers["X-RateLimit-Reset"]
+  }
 
   @Serializable
   public data class CreateNotificationClearResponseFailure401(
     public val body: Error,
+    @Transient
+    override val headers: Headers = Headers.Empty,
   ) : CreateNotificationClearResponse()
 
   @Serializable
-  public object CreateNotificationClearResponseFailure410 : CreateNotificationClearResponse()
+  public data class CreateNotificationClearResponseFailure410(
+    @Transient
+    override val headers: Headers = Headers.Empty,
+  ) : CreateNotificationClearResponse()
 
   @Serializable
   public data class CreateNotificationClearResponseFailure(
     public val body: ValidationError,
+    @Transient
+    override val headers: Headers = Headers.Empty,
   ) : CreateNotificationClearResponse()
 
   @Serializable
   public data class CreateNotificationClearResponseUnknownFailure(
     public val statusCode: Int,
+    @Transient
+    override val headers: Headers = Headers.Empty,
   ) : CreateNotificationClearResponse()
 
   @Serializable
-  public sealed class GetNotificationRequestsResponse
+  public sealed class GetNotificationRequestsResponse {
+    public abstract val headers: Headers
+  }
 
   @Serializable
   public data class GetNotificationRequestsResponseSuccess(
     public val body: List<NotificationRequest>,
-  ) : GetNotificationRequestsResponse()
+    @Transient
+    override val headers: Headers = Headers.Empty,
+  ) : GetNotificationRequestsResponse() {
+    /**
+     * Pagination links for browsing older or newer results. Format: Link: <https://mastodon.example/api/v1/endpoint?max_id=7163058>; rel="next", <https://mastodon.example/api/v1/endpoint?min_id=7275607>; rel="prev". See [RFC 8288](https://www.rfc-editor.org/rfc/rfc8288) for more information.
+     */
+    public val link: String?
+      get() = headers["Link"]
+
+    /**
+     * Number of requests permitted per time period
+     */
+    public val xRateLimitLimit: Int?
+      get() = headers["X-RateLimit-Limit"]?.toIntOrNull()
+
+    /**
+     * Number of requests you can still make
+     */
+    public val xRateLimitRemaining: Int?
+      get() = headers["X-RateLimit-Remaining"]?.toIntOrNull()
+
+    /**
+     * Timestamp when your rate limit will reset
+     */
+    public val xRateLimitReset: String?
+      get() = headers["X-RateLimit-Reset"]
+  }
 
   @Serializable
   public data class GetNotificationRequestsResponseFailure401(
     public val body: Error,
+    @Transient
+    override val headers: Headers = Headers.Empty,
   ) : GetNotificationRequestsResponse()
 
   @Serializable
-  public object GetNotificationRequestsResponseFailure410 : GetNotificationRequestsResponse()
+  public data class GetNotificationRequestsResponseFailure410(
+    @Transient
+    override val headers: Headers = Headers.Empty,
+  ) : GetNotificationRequestsResponse()
 
   @Serializable
   public data class GetNotificationRequestsResponseFailure(
     public val body: ValidationError,
+    @Transient
+    override val headers: Headers = Headers.Empty,
   ) : GetNotificationRequestsResponse()
 
   @Serializable
   public data class GetNotificationRequestsResponseUnknownFailure(
     public val statusCode: Int,
+    @Transient
+    override val headers: Headers = Headers.Empty,
   ) : GetNotificationRequestsResponse()
 
   @Serializable
-  public sealed class GetNotificationsRequestsByIdResponse
+  public sealed class GetNotificationsRequestsByIdResponse {
+    public abstract val headers: Headers
+  }
 
   @Serializable
   public data class GetNotificationsRequestsByIdResponseSuccess(
     public val body: NotificationRequest,
-  ) : GetNotificationsRequestsByIdResponse()
+    @Transient
+    override val headers: Headers = Headers.Empty,
+  ) : GetNotificationsRequestsByIdResponse() {
+    /**
+     * Number of requests permitted per time period
+     */
+    public val xRateLimitLimit: Int?
+      get() = headers["X-RateLimit-Limit"]?.toIntOrNull()
+
+    /**
+     * Number of requests you can still make
+     */
+    public val xRateLimitRemaining: Int?
+      get() = headers["X-RateLimit-Remaining"]?.toIntOrNull()
+
+    /**
+     * Timestamp when your rate limit will reset
+     */
+    public val xRateLimitReset: String?
+      get() = headers["X-RateLimit-Reset"]
+  }
 
   @Serializable
   public data class GetNotificationsRequestsByIdResponseFailure401(
     public val body: Error,
+    @Transient
+    override val headers: Headers = Headers.Empty,
   ) : GetNotificationsRequestsByIdResponse()
 
   @Serializable
-  public object GetNotificationsRequestsByIdResponseFailure410 : GetNotificationsRequestsByIdResponse()
+  public data class GetNotificationsRequestsByIdResponseFailure410(
+    @Transient
+    override val headers: Headers = Headers.Empty,
+  ) : GetNotificationsRequestsByIdResponse()
 
   @Serializable
   public data class GetNotificationsRequestsByIdResponseFailure(
     public val body: ValidationError,
+    @Transient
+    override val headers: Headers = Headers.Empty,
   ) : GetNotificationsRequestsByIdResponse()
 
   @Serializable
   public data class GetNotificationsRequestsByIdResponseUnknownFailure(
     public val statusCode: Int,
+    @Transient
+    override val headers: Headers = Headers.Empty,
   ) : GetNotificationsRequestsByIdResponse()
 
   @Serializable
-  public sealed class PostNotificationsRequestsByIdAcceptResponse
+  public sealed class PostNotificationsRequestsByIdAcceptResponse {
+    public abstract val headers: Headers
+  }
 
   @Serializable
-  public object PostNotificationsRequestsByIdAcceptResponseSuccess : PostNotificationsRequestsByIdAcceptResponse()
+  public data class PostNotificationsRequestsByIdAcceptResponseSuccess(
+    @Transient
+    override val headers: Headers = Headers.Empty,
+  ) : PostNotificationsRequestsByIdAcceptResponse() {
+    /**
+     * Number of requests permitted per time period
+     */
+    public val xRateLimitLimit: Int?
+      get() = headers["X-RateLimit-Limit"]?.toIntOrNull()
+
+    /**
+     * Number of requests you can still make
+     */
+    public val xRateLimitRemaining: Int?
+      get() = headers["X-RateLimit-Remaining"]?.toIntOrNull()
+
+    /**
+     * Timestamp when your rate limit will reset
+     */
+    public val xRateLimitReset: String?
+      get() = headers["X-RateLimit-Reset"]
+  }
 
   @Serializable
   public data class PostNotificationsRequestsByIdAcceptResponseFailure401(
     public val body: Error,
+    @Transient
+    override val headers: Headers = Headers.Empty,
   ) : PostNotificationsRequestsByIdAcceptResponse()
 
   @Serializable
-  public object PostNotificationsRequestsByIdAcceptResponseFailure410 : PostNotificationsRequestsByIdAcceptResponse()
+  public data class PostNotificationsRequestsByIdAcceptResponseFailure410(
+    @Transient
+    override val headers: Headers = Headers.Empty,
+  ) : PostNotificationsRequestsByIdAcceptResponse()
 
   @Serializable
   public data class PostNotificationsRequestsByIdAcceptResponseFailure(
     public val body: ValidationError,
+    @Transient
+    override val headers: Headers = Headers.Empty,
   ) : PostNotificationsRequestsByIdAcceptResponse()
 
   @Serializable
   public data class PostNotificationsRequestsByIdAcceptResponseUnknownFailure(
     public val statusCode: Int,
+    @Transient
+    override val headers: Headers = Headers.Empty,
   ) : PostNotificationsRequestsByIdAcceptResponse()
 
   @Serializable
-  public sealed class PostNotificationsRequestsByIdDismissResponse
+  public sealed class PostNotificationsRequestsByIdDismissResponse {
+    public abstract val headers: Headers
+  }
 
   @Serializable
-  public object PostNotificationsRequestsByIdDismissResponseSuccess : PostNotificationsRequestsByIdDismissResponse()
+  public data class PostNotificationsRequestsByIdDismissResponseSuccess(
+    @Transient
+    override val headers: Headers = Headers.Empty,
+  ) : PostNotificationsRequestsByIdDismissResponse() {
+    /**
+     * Number of requests permitted per time period
+     */
+    public val xRateLimitLimit: Int?
+      get() = headers["X-RateLimit-Limit"]?.toIntOrNull()
+
+    /**
+     * Number of requests you can still make
+     */
+    public val xRateLimitRemaining: Int?
+      get() = headers["X-RateLimit-Remaining"]?.toIntOrNull()
+
+    /**
+     * Timestamp when your rate limit will reset
+     */
+    public val xRateLimitReset: String?
+      get() = headers["X-RateLimit-Reset"]
+  }
 
   @Serializable
   public data class PostNotificationsRequestsByIdDismissResponseFailure401(
     public val body: Error,
+    @Transient
+    override val headers: Headers = Headers.Empty,
   ) : PostNotificationsRequestsByIdDismissResponse()
 
   @Serializable
-  public object PostNotificationsRequestsByIdDismissResponseFailure410 : PostNotificationsRequestsByIdDismissResponse()
+  public data class PostNotificationsRequestsByIdDismissResponseFailure410(
+    @Transient
+    override val headers: Headers = Headers.Empty,
+  ) : PostNotificationsRequestsByIdDismissResponse()
 
   @Serializable
   public data class PostNotificationsRequestsByIdDismissResponseFailure(
     public val body: ValidationError,
+    @Transient
+    override val headers: Headers = Headers.Empty,
   ) : PostNotificationsRequestsByIdDismissResponse()
 
   @Serializable
   public data class PostNotificationsRequestsByIdDismissResponseUnknownFailure(
     public val statusCode: Int,
+    @Transient
+    override val headers: Headers = Headers.Empty,
   ) : PostNotificationsRequestsByIdDismissResponse()
 
   @Serializable
-  public sealed class CreateNotificationsRequestsAcceptResponse
+  public sealed class CreateNotificationsRequestsAcceptResponse {
+    public abstract val headers: Headers
+  }
 
   @Serializable
-  public object CreateNotificationsRequestsAcceptResponseSuccess : CreateNotificationsRequestsAcceptResponse()
+  public data class CreateNotificationsRequestsAcceptResponseSuccess(
+    @Transient
+    override val headers: Headers = Headers.Empty,
+  ) : CreateNotificationsRequestsAcceptResponse() {
+    /**
+     * Number of requests permitted per time period
+     */
+    public val xRateLimitLimit: Int?
+      get() = headers["X-RateLimit-Limit"]?.toIntOrNull()
+
+    /**
+     * Number of requests you can still make
+     */
+    public val xRateLimitRemaining: Int?
+      get() = headers["X-RateLimit-Remaining"]?.toIntOrNull()
+
+    /**
+     * Timestamp when your rate limit will reset
+     */
+    public val xRateLimitReset: String?
+      get() = headers["X-RateLimit-Reset"]
+  }
 
   @Serializable
   public data class CreateNotificationsRequestsAcceptResponseFailure401(
     public val body: Error,
+    @Transient
+    override val headers: Headers = Headers.Empty,
   ) : CreateNotificationsRequestsAcceptResponse()
 
   @Serializable
-  public object CreateNotificationsRequestsAcceptResponseFailure410 : CreateNotificationsRequestsAcceptResponse()
+  public data class CreateNotificationsRequestsAcceptResponseFailure410(
+    @Transient
+    override val headers: Headers = Headers.Empty,
+  ) : CreateNotificationsRequestsAcceptResponse()
 
   @Serializable
   public data class CreateNotificationsRequestsAcceptResponseFailure(
     public val body: ValidationError,
+    @Transient
+    override val headers: Headers = Headers.Empty,
   ) : CreateNotificationsRequestsAcceptResponse()
 
   @Serializable
   public data class CreateNotificationsRequestsAcceptResponseUnknownFailure(
     public val statusCode: Int,
+    @Transient
+    override val headers: Headers = Headers.Empty,
   ) : CreateNotificationsRequestsAcceptResponse()
 
   @Serializable
-  public sealed class CreateNotificationsRequestsDismissResponse
+  public sealed class CreateNotificationsRequestsDismissResponse {
+    public abstract val headers: Headers
+  }
 
   @Serializable
-  public object CreateNotificationsRequestsDismissResponseSuccess : CreateNotificationsRequestsDismissResponse()
+  public data class CreateNotificationsRequestsDismissResponseSuccess(
+    @Transient
+    override val headers: Headers = Headers.Empty,
+  ) : CreateNotificationsRequestsDismissResponse() {
+    /**
+     * Number of requests permitted per time period
+     */
+    public val xRateLimitLimit: Int?
+      get() = headers["X-RateLimit-Limit"]?.toIntOrNull()
+
+    /**
+     * Number of requests you can still make
+     */
+    public val xRateLimitRemaining: Int?
+      get() = headers["X-RateLimit-Remaining"]?.toIntOrNull()
+
+    /**
+     * Timestamp when your rate limit will reset
+     */
+    public val xRateLimitReset: String?
+      get() = headers["X-RateLimit-Reset"]
+  }
 
   @Serializable
   public data class CreateNotificationsRequestsDismissResponseFailure401(
     public val body: Error,
+    @Transient
+    override val headers: Headers = Headers.Empty,
   ) : CreateNotificationsRequestsDismissResponse()
 
   @Serializable
-  public object CreateNotificationsRequestsDismissResponseFailure410 : CreateNotificationsRequestsDismissResponse()
+  public data class CreateNotificationsRequestsDismissResponseFailure410(
+    @Transient
+    override val headers: Headers = Headers.Empty,
+  ) : CreateNotificationsRequestsDismissResponse()
 
   @Serializable
   public data class CreateNotificationsRequestsDismissResponseFailure(
     public val body: ValidationError,
+    @Transient
+    override val headers: Headers = Headers.Empty,
   ) : CreateNotificationsRequestsDismissResponse()
 
   @Serializable
   public data class CreateNotificationsRequestsDismissResponseUnknownFailure(
     public val statusCode: Int,
+    @Transient
+    override val headers: Headers = Headers.Empty,
   ) : CreateNotificationsRequestsDismissResponse()
 
   @Serializable
-  public sealed class GetNotificationsRequestsMergedResponse
+  public sealed class GetNotificationsRequestsMergedResponse {
+    public abstract val headers: Headers
+  }
 
   @Serializable
   public data class GetNotificationsRequestsMergedResponseSuccess(
     public val body: MergedResponse,
-  ) : GetNotificationsRequestsMergedResponse()
+    @Transient
+    override val headers: Headers = Headers.Empty,
+  ) : GetNotificationsRequestsMergedResponse() {
+    /**
+     * Number of requests permitted per time period
+     */
+    public val xRateLimitLimit: Int?
+      get() = headers["X-RateLimit-Limit"]?.toIntOrNull()
+
+    /**
+     * Number of requests you can still make
+     */
+    public val xRateLimitRemaining: Int?
+      get() = headers["X-RateLimit-Remaining"]?.toIntOrNull()
+
+    /**
+     * Timestamp when your rate limit will reset
+     */
+    public val xRateLimitReset: String?
+      get() = headers["X-RateLimit-Reset"]
+  }
 
   @Serializable
   public data class GetNotificationsRequestsMergedResponseFailure401(
     public val body: Error,
+    @Transient
+    override val headers: Headers = Headers.Empty,
   ) : GetNotificationsRequestsMergedResponse()
 
   @Serializable
-  public object GetNotificationsRequestsMergedResponseFailure410 : GetNotificationsRequestsMergedResponse()
+  public data class GetNotificationsRequestsMergedResponseFailure410(
+    @Transient
+    override val headers: Headers = Headers.Empty,
+  ) : GetNotificationsRequestsMergedResponse()
 
   @Serializable
   public data class GetNotificationsRequestsMergedResponseFailure(
     public val body: ValidationError,
+    @Transient
+    override val headers: Headers = Headers.Empty,
   ) : GetNotificationsRequestsMergedResponse()
 
   @Serializable
   public data class GetNotificationsRequestsMergedResponseUnknownFailure(
     public val statusCode: Int,
+    @Transient
+    override val headers: Headers = Headers.Empty,
   ) : GetNotificationsRequestsMergedResponse()
 
   @Serializable
-  public sealed class GetNotificationsUnreadCountResponse
+  public sealed class GetNotificationsUnreadCountResponse {
+    public abstract val headers: Headers
+  }
 
   @Serializable
   public data class GetNotificationsUnreadCountResponseSuccess(
     public val body: CountResponse,
-  ) : GetNotificationsUnreadCountResponse()
+    @Transient
+    override val headers: Headers = Headers.Empty,
+  ) : GetNotificationsUnreadCountResponse() {
+    /**
+     * Number of requests permitted per time period
+     */
+    public val xRateLimitLimit: Int?
+      get() = headers["X-RateLimit-Limit"]?.toIntOrNull()
+
+    /**
+     * Number of requests you can still make
+     */
+    public val xRateLimitRemaining: Int?
+      get() = headers["X-RateLimit-Remaining"]?.toIntOrNull()
+
+    /**
+     * Timestamp when your rate limit will reset
+     */
+    public val xRateLimitReset: String?
+      get() = headers["X-RateLimit-Reset"]
+  }
 
   @Serializable
   public data class GetNotificationsUnreadCountResponseFailure401(
     public val body: Error,
+    @Transient
+    override val headers: Headers = Headers.Empty,
   ) : GetNotificationsUnreadCountResponse()
 
   @Serializable
-  public object GetNotificationsUnreadCountResponseFailure410 : GetNotificationsUnreadCountResponse()
+  public data class GetNotificationsUnreadCountResponseFailure410(
+    @Transient
+    override val headers: Headers = Headers.Empty,
+  ) : GetNotificationsUnreadCountResponse()
 
   @Serializable
   public data class GetNotificationsUnreadCountResponseFailure(
     public val body: ValidationError,
+    @Transient
+    override val headers: Headers = Headers.Empty,
   ) : GetNotificationsUnreadCountResponse()
 
   @Serializable
   public data class GetNotificationsUnreadCountResponseUnknownFailure(
     public val statusCode: Int,
+    @Transient
+    override val headers: Headers = Headers.Empty,
   ) : GetNotificationsUnreadCountResponse()
 
   @Serializable
-  public sealed class GetNotificationsV2Response
+  public sealed class GetNotificationsV2Response {
+    public abstract val headers: Headers
+  }
 
   @Serializable
   public data class GetNotificationsV2ResponseSuccess(
     public val body: GroupedNotificationsResults,
-  ) : GetNotificationsV2Response()
+    @Transient
+    override val headers: Headers = Headers.Empty,
+  ) : GetNotificationsV2Response() {
+    /**
+     * Pagination links for browsing older or newer results. Format: Link: <https://mastodon.example/api/v1/endpoint?max_id=7163058>; rel="next", <https://mastodon.example/api/v1/endpoint?min_id=7275607>; rel="prev". See [RFC 8288](https://www.rfc-editor.org/rfc/rfc8288) for more information.
+     */
+    public val link: String?
+      get() = headers["Link"]
+
+    /**
+     * Number of requests permitted per time period
+     */
+    public val xRateLimitLimit: Int?
+      get() = headers["X-RateLimit-Limit"]?.toIntOrNull()
+
+    /**
+     * Number of requests you can still make
+     */
+    public val xRateLimitRemaining: Int?
+      get() = headers["X-RateLimit-Remaining"]?.toIntOrNull()
+
+    /**
+     * Timestamp when your rate limit will reset
+     */
+    public val xRateLimitReset: String?
+      get() = headers["X-RateLimit-Reset"]
+  }
 
   @Serializable
   public data class GetNotificationsV2ResponseFailure401(
     public val body: Error,
+    @Transient
+    override val headers: Headers = Headers.Empty,
   ) : GetNotificationsV2Response()
 
   @Serializable
-  public object GetNotificationsV2ResponseFailure410 : GetNotificationsV2Response()
+  public data class GetNotificationsV2ResponseFailure410(
+    @Transient
+    override val headers: Headers = Headers.Empty,
+  ) : GetNotificationsV2Response()
 
   @Serializable
   public data class GetNotificationsV2ResponseFailure(
     public val body: ValidationError,
+    @Transient
+    override val headers: Headers = Headers.Empty,
   ) : GetNotificationsV2Response()
 
   @Serializable
   public data class GetNotificationsV2ResponseUnknownFailure(
     public val statusCode: Int,
+    @Transient
+    override val headers: Headers = Headers.Empty,
   ) : GetNotificationsV2Response()
 
   @Serializable
-  public sealed class GetNotificationsByGroupKeyV2Response
+  public sealed class GetNotificationsByGroupKeyV2Response {
+    public abstract val headers: Headers
+  }
 
   @Serializable
   public data class GetNotificationsByGroupKeyV2ResponseSuccess(
     public val body: GroupedNotificationsResults,
-  ) : GetNotificationsByGroupKeyV2Response()
+    @Transient
+    override val headers: Headers = Headers.Empty,
+  ) : GetNotificationsByGroupKeyV2Response() {
+    /**
+     * Number of requests permitted per time period
+     */
+    public val xRateLimitLimit: Int?
+      get() = headers["X-RateLimit-Limit"]?.toIntOrNull()
+
+    /**
+     * Number of requests you can still make
+     */
+    public val xRateLimitRemaining: Int?
+      get() = headers["X-RateLimit-Remaining"]?.toIntOrNull()
+
+    /**
+     * Timestamp when your rate limit will reset
+     */
+    public val xRateLimitReset: String?
+      get() = headers["X-RateLimit-Reset"]
+  }
 
   @Serializable
   public data class GetNotificationsByGroupKeyV2ResponseFailure401(
     public val body: Error,
+    @Transient
+    override val headers: Headers = Headers.Empty,
   ) : GetNotificationsByGroupKeyV2Response()
 
   @Serializable
-  public object GetNotificationsByGroupKeyV2ResponseFailure410 : GetNotificationsByGroupKeyV2Response()
+  public data class GetNotificationsByGroupKeyV2ResponseFailure410(
+    @Transient
+    override val headers: Headers = Headers.Empty,
+  ) : GetNotificationsByGroupKeyV2Response()
 
   @Serializable
   public data class GetNotificationsByGroupKeyV2ResponseFailure(
     public val body: ValidationError,
+    @Transient
+    override val headers: Headers = Headers.Empty,
   ) : GetNotificationsByGroupKeyV2Response()
 
   @Serializable
   public data class GetNotificationsByGroupKeyV2ResponseUnknownFailure(
     public val statusCode: Int,
+    @Transient
+    override val headers: Headers = Headers.Empty,
   ) : GetNotificationsByGroupKeyV2Response()
 
   @Serializable
-  public sealed class GetNotificationAccountsV2Response
+  public sealed class GetNotificationAccountsV2Response {
+    public abstract val headers: Headers
+  }
 
   @Serializable
   public data class GetNotificationAccountsV2ResponseSuccess(
     public val body: List<Account>,
-  ) : GetNotificationAccountsV2Response()
+    @Transient
+    override val headers: Headers = Headers.Empty,
+  ) : GetNotificationAccountsV2Response() {
+    /**
+     * Number of requests permitted per time period
+     */
+    public val xRateLimitLimit: Int?
+      get() = headers["X-RateLimit-Limit"]?.toIntOrNull()
+
+    /**
+     * Number of requests you can still make
+     */
+    public val xRateLimitRemaining: Int?
+      get() = headers["X-RateLimit-Remaining"]?.toIntOrNull()
+
+    /**
+     * Timestamp when your rate limit will reset
+     */
+    public val xRateLimitReset: String?
+      get() = headers["X-RateLimit-Reset"]
+  }
 
   @Serializable
   public data class GetNotificationAccountsV2ResponseFailure401(
     public val body: Error,
+    @Transient
+    override val headers: Headers = Headers.Empty,
   ) : GetNotificationAccountsV2Response()
 
   @Serializable
-  public object GetNotificationAccountsV2ResponseFailure410 : GetNotificationAccountsV2Response()
+  public data class GetNotificationAccountsV2ResponseFailure410(
+    @Transient
+    override val headers: Headers = Headers.Empty,
+  ) : GetNotificationAccountsV2Response()
 
   @Serializable
   public data class GetNotificationAccountsV2ResponseFailure(
     public val body: ValidationError,
+    @Transient
+    override val headers: Headers = Headers.Empty,
   ) : GetNotificationAccountsV2Response()
 
   @Serializable
   public data class GetNotificationAccountsV2ResponseUnknownFailure(
     public val statusCode: Int,
+    @Transient
+    override val headers: Headers = Headers.Empty,
   ) : GetNotificationAccountsV2Response()
 
   @Serializable
-  public sealed class PostNotificationDismissV2Response
+  public sealed class PostNotificationDismissV2Response {
+    public abstract val headers: Headers
+  }
 
   @Serializable
-  public object PostNotificationDismissV2ResponseSuccess : PostNotificationDismissV2Response()
+  public data class PostNotificationDismissV2ResponseSuccess(
+    @Transient
+    override val headers: Headers = Headers.Empty,
+  ) : PostNotificationDismissV2Response() {
+    /**
+     * Number of requests permitted per time period
+     */
+    public val xRateLimitLimit: Int?
+      get() = headers["X-RateLimit-Limit"]?.toIntOrNull()
+
+    /**
+     * Number of requests you can still make
+     */
+    public val xRateLimitRemaining: Int?
+      get() = headers["X-RateLimit-Remaining"]?.toIntOrNull()
+
+    /**
+     * Timestamp when your rate limit will reset
+     */
+    public val xRateLimitReset: String?
+      get() = headers["X-RateLimit-Reset"]
+  }
 
   @Serializable
   public data class PostNotificationDismissV2ResponseFailure401(
     public val body: Error,
+    @Transient
+    override val headers: Headers = Headers.Empty,
   ) : PostNotificationDismissV2Response()
 
   @Serializable
-  public object PostNotificationDismissV2ResponseFailure410 : PostNotificationDismissV2Response()
+  public data class PostNotificationDismissV2ResponseFailure410(
+    @Transient
+    override val headers: Headers = Headers.Empty,
+  ) : PostNotificationDismissV2Response()
 
   @Serializable
   public data class PostNotificationDismissV2ResponseFailure(
     public val body: ValidationError,
+    @Transient
+    override val headers: Headers = Headers.Empty,
   ) : PostNotificationDismissV2Response()
 
   @Serializable
   public data class PostNotificationDismissV2ResponseUnknownFailure(
     public val statusCode: Int,
+    @Transient
+    override val headers: Headers = Headers.Empty,
   ) : PostNotificationDismissV2Response()
 
   @Serializable
-  public sealed class GetNotificationPolicyV2Response
+  public sealed class GetNotificationPolicyV2Response {
+    public abstract val headers: Headers
+  }
 
   @Serializable
   public data class GetNotificationPolicyV2ResponseSuccess(
     public val body: NotificationPolicy,
-  ) : GetNotificationPolicyV2Response()
+    @Transient
+    override val headers: Headers = Headers.Empty,
+  ) : GetNotificationPolicyV2Response() {
+    /**
+     * Number of requests permitted per time period
+     */
+    public val xRateLimitLimit: Int?
+      get() = headers["X-RateLimit-Limit"]?.toIntOrNull()
+
+    /**
+     * Number of requests you can still make
+     */
+    public val xRateLimitRemaining: Int?
+      get() = headers["X-RateLimit-Remaining"]?.toIntOrNull()
+
+    /**
+     * Timestamp when your rate limit will reset
+     */
+    public val xRateLimitReset: String?
+      get() = headers["X-RateLimit-Reset"]
+  }
 
   @Serializable
   public data class GetNotificationPolicyV2ResponseFailure401(
     public val body: Error,
+    @Transient
+    override val headers: Headers = Headers.Empty,
   ) : GetNotificationPolicyV2Response()
 
   @Serializable
-  public object GetNotificationPolicyV2ResponseFailure410 : GetNotificationPolicyV2Response()
+  public data class GetNotificationPolicyV2ResponseFailure410(
+    @Transient
+    override val headers: Headers = Headers.Empty,
+  ) : GetNotificationPolicyV2Response()
 
   @Serializable
   public data class GetNotificationPolicyV2ResponseFailure(
     public val body: ValidationError,
+    @Transient
+    override val headers: Headers = Headers.Empty,
   ) : GetNotificationPolicyV2Response()
 
   @Serializable
   public data class GetNotificationPolicyV2ResponseUnknownFailure(
     public val statusCode: Int,
+    @Transient
+    override val headers: Headers = Headers.Empty,
   ) : GetNotificationPolicyV2Response()
 
   @Serializable
-  public sealed class GetNotificationsUnreadCountV2Response
+  public sealed class GetNotificationsUnreadCountV2Response {
+    public abstract val headers: Headers
+  }
 
   @Serializable
   public data class GetNotificationsUnreadCountV2ResponseSuccess(
     public val body: CountResponse,
-  ) : GetNotificationsUnreadCountV2Response()
+    @Transient
+    override val headers: Headers = Headers.Empty,
+  ) : GetNotificationsUnreadCountV2Response() {
+    /**
+     * Number of requests permitted per time period
+     */
+    public val xRateLimitLimit: Int?
+      get() = headers["X-RateLimit-Limit"]?.toIntOrNull()
+
+    /**
+     * Number of requests you can still make
+     */
+    public val xRateLimitRemaining: Int?
+      get() = headers["X-RateLimit-Remaining"]?.toIntOrNull()
+
+    /**
+     * Timestamp when your rate limit will reset
+     */
+    public val xRateLimitReset: String?
+      get() = headers["X-RateLimit-Reset"]
+  }
 
   @Serializable
   public data class GetNotificationsUnreadCountV2ResponseFailure401(
     public val body: Error,
+    @Transient
+    override val headers: Headers = Headers.Empty,
   ) : GetNotificationsUnreadCountV2Response()
 
   @Serializable
-  public object GetNotificationsUnreadCountV2ResponseFailure410 : GetNotificationsUnreadCountV2Response()
+  public data class GetNotificationsUnreadCountV2ResponseFailure410(
+    @Transient
+    override val headers: Headers = Headers.Empty,
+  ) : GetNotificationsUnreadCountV2Response()
 
   @Serializable
   public data class GetNotificationsUnreadCountV2ResponseFailure(
     public val body: ValidationError,
+    @Transient
+    override val headers: Headers = Headers.Empty,
   ) : GetNotificationsUnreadCountV2Response()
 
   @Serializable
   public data class GetNotificationsUnreadCountV2ResponseUnknownFailure(
     public val statusCode: Int,
+    @Transient
+    override val headers: Headers = Headers.Empty,
   ) : GetNotificationsUnreadCountV2Response()
 }

@@ -4,12 +4,14 @@ import io.ktor.client.call.body
 import io.ktor.client.request.post
 import io.ktor.client.request.setBody
 import io.ktor.http.ContentType
+import io.ktor.http.Headers
 import io.ktor.http.contentType
 import io.ktor.http.encodeURLPathPart
 import kotlin.Int
 import kotlin.String
 import kotlin.coroutines.cancellation.CancellationException
 import kotlinx.serialization.Serializable
+import kotlinx.serialization.Transient
 import simple.api.client.ClientConfiguration.Companion.defaultClientConfiguration
 import simple.api.model.TestRequest
 import simple.api.model.TestResponse
@@ -36,8 +38,8 @@ public class Client(
         contentType(ContentType.Application.Json)
       }
       return when (response.status.value) {
-        201 -> PostTestWithTestIdResponseSuccess(response.body<TestResponse>())
-        else -> PostTestWithTestIdResponseUnknownFailure(response.status.value)
+        201 -> PostTestWithTestIdResponseSuccess(response.body<TestResponse>(), response.headers)
+        else -> PostTestWithTestIdResponseUnknownFailure(response.status.value, response.headers)
       }
     }
     catch(e: CancellationException) {
@@ -50,15 +52,21 @@ public class Client(
   }
 
   @Serializable
-  public sealed class PostTestWithTestIdResponse
+  public sealed class PostTestWithTestIdResponse {
+    public abstract val headers: Headers
+  }
 
   @Serializable
   public data class PostTestWithTestIdResponseSuccess(
     public val body: TestResponse,
+    @Transient
+    override val headers: Headers = Headers.Empty,
   ) : PostTestWithTestIdResponse()
 
   @Serializable
   public data class PostTestWithTestIdResponseUnknownFailure(
     public val statusCode: Int,
+    @Transient
+    override val headers: Headers = Headers.Empty,
   ) : PostTestWithTestIdResponse()
 }

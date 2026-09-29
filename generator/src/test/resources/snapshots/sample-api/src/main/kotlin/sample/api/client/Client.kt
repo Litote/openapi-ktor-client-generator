@@ -2,10 +2,12 @@ package sample.api.client
 
 import io.ktor.client.call.body
 import io.ktor.client.request.`get`
+import io.ktor.http.Headers
 import kotlin.Int
 import kotlin.collections.List
 import kotlin.coroutines.cancellation.CancellationException
 import kotlinx.serialization.Serializable
+import kotlinx.serialization.Transient
 import sample.api.client.ClientConfiguration.Companion.defaultClientConfiguration
 import sample.api.model.Vehicle
 
@@ -20,8 +22,8 @@ public class Client(
       val response = configuration.client.`get`("vehicles") {
       }
       return when (response.status.value) {
-        200 -> GetVehiclesResponseSuccess(response.body<List<Vehicle>>())
-        else -> GetVehiclesResponseUnknownFailure(response.status.value)
+        200 -> GetVehiclesResponseSuccess(response.body<List<Vehicle>>(), response.headers)
+        else -> GetVehiclesResponseUnknownFailure(response.status.value, response.headers)
       }
     }
     catch(e: CancellationException) {
@@ -34,15 +36,21 @@ public class Client(
   }
 
   @Serializable
-  public sealed class GetVehiclesResponse
+  public sealed class GetVehiclesResponse {
+    public abstract val headers: Headers
+  }
 
   @Serializable
   public data class GetVehiclesResponseSuccess(
     public val body: List<Vehicle>,
+    @Transient
+    override val headers: Headers = Headers.Empty,
   ) : GetVehiclesResponse()
 
   @Serializable
   public data class GetVehiclesResponseUnknownFailure(
     public val statusCode: Int,
+    @Transient
+    override val headers: Headers = Headers.Empty,
   ) : GetVehiclesResponse()
 }

@@ -559,10 +559,10 @@ internal class OperationBuilder(
         responseCtx.entries.forEach { entry ->
             val codesLiteral = entry.statusCodes.joinToString()
             if (entry.bodyTypeName == null) {
-                builder.addStatement("%L -> %N", codesLiteral, entry.type)
+                builder.addStatement("%L -> %N(response.headers)", codesLiteral, entry.type)
             } else {
                 builder.addStatement(
-                    "%L -> %N(response.%M<%T>())",
+                    "%L -> %N(response.%M<%T>(), response.headers)",
                     codesLiteral,
                     entry.type,
                     bodyMember,
@@ -570,7 +570,7 @@ internal class OperationBuilder(
                 )
             }
         }
-        builder.addStatement("else -> %L(%L)", "${responseBaseName}ResponseUnknownFailure", "response.status.value")
+        builder.addStatement("else -> %L(response.status.value, response.headers)", "${responseBaseName}ResponseUnknownFailure")
     }
 
     private fun buildMultipartFormData(requestBody: RequestBodySpec): CodeBlock {

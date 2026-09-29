@@ -2,6 +2,7 @@ package mastodon.api.client
 
 import io.ktor.client.call.body
 import io.ktor.client.request.`get`
+import io.ktor.http.Headers
 import io.ktor.http.encodeURLPathPart
 import kotlin.Boolean
 import kotlin.Int
@@ -10,6 +11,7 @@ import kotlin.String
 import kotlin.collections.List
 import kotlin.coroutines.cancellation.CancellationException
 import kotlinx.serialization.Serializable
+import kotlinx.serialization.Transient
 import mastodon.api.client.ClientConfiguration.Companion.defaultClientConfiguration
 import mastodon.api.model.Error
 import mastodon.api.model.Status
@@ -45,11 +47,11 @@ public class TimelinesClient(
         }
       }
       return when (response.status.value) {
-        200 -> GetTimelineDirectResponseSuccess(response.body<List<Status>>())
-        401, 404, 429, 503 -> GetTimelineDirectResponseFailure401(response.body<Error>())
-        410 -> GetTimelineDirectResponseFailure410
-        422 -> GetTimelineDirectResponseFailure(response.body<ValidationError>())
-        else -> GetTimelineDirectResponseUnknownFailure(response.status.value)
+        200 -> GetTimelineDirectResponseSuccess(response.body<List<Status>>(), response.headers)
+        401, 404, 429, 503 -> GetTimelineDirectResponseFailure401(response.body<Error>(), response.headers)
+        410 -> GetTimelineDirectResponseFailure410(response.headers)
+        422 -> GetTimelineDirectResponseFailure(response.body<ValidationError>(), response.headers)
+        else -> GetTimelineDirectResponseUnknownFailure(response.status.value, response.headers)
       }
     }
     catch(e: CancellationException) {
@@ -88,12 +90,12 @@ public class TimelinesClient(
         }
       }
       return when (response.status.value) {
-        200 -> GetTimelineHomeResponseSuccess200(response.body<List<Status>>())
-        206 -> GetTimelineHomeResponseSuccess
-        401, 404, 429, 503 -> GetTimelineHomeResponseFailure401(response.body<Error>())
-        410 -> GetTimelineHomeResponseFailure410
-        422 -> GetTimelineHomeResponseFailure(response.body<ValidationError>())
-        else -> GetTimelineHomeResponseUnknownFailure(response.status.value)
+        200 -> GetTimelineHomeResponseSuccess200(response.body<List<Status>>(), response.headers)
+        206 -> GetTimelineHomeResponseSuccess(response.headers)
+        401, 404, 429, 503 -> GetTimelineHomeResponseFailure401(response.body<Error>(), response.headers)
+        410 -> GetTimelineHomeResponseFailure410(response.headers)
+        422 -> GetTimelineHomeResponseFailure(response.body<ValidationError>(), response.headers)
+        else -> GetTimelineHomeResponseUnknownFailure(response.status.value, response.headers)
       }
     }
     catch(e: CancellationException) {
@@ -134,11 +136,11 @@ public class TimelinesClient(
         }
       }
       return when (response.status.value) {
-        200 -> GetTimelineLinkResponseSuccess(response.body<List<Status>>())
-        401, 404, 429, 503 -> GetTimelineLinkResponseFailure401(response.body<Error>())
-        410 -> GetTimelineLinkResponseFailure410
-        422 -> GetTimelineLinkResponseFailure(response.body<ValidationError>())
-        else -> GetTimelineLinkResponseUnknownFailure(response.status.value)
+        200 -> GetTimelineLinkResponseSuccess(response.body<List<Status>>(), response.headers)
+        401, 404, 429, 503 -> GetTimelineLinkResponseFailure401(response.body<Error>(), response.headers)
+        410 -> GetTimelineLinkResponseFailure410(response.headers)
+        422 -> GetTimelineLinkResponseFailure(response.body<ValidationError>(), response.headers)
+        else -> GetTimelineLinkResponseUnknownFailure(response.status.value, response.headers)
       }
     }
     catch(e: CancellationException) {
@@ -178,11 +180,11 @@ public class TimelinesClient(
         }
       }
       return when (response.status.value) {
-        200 -> GetTimelinesListByListIdResponseSuccess(response.body<List<Status>>())
-        401, 404, 429, 503 -> GetTimelinesListByListIdResponseFailure401(response.body<Error>())
-        410 -> GetTimelinesListByListIdResponseFailure410
-        422 -> GetTimelinesListByListIdResponseFailure(response.body<ValidationError>())
-        else -> GetTimelinesListByListIdResponseUnknownFailure(response.status.value)
+        200 -> GetTimelinesListByListIdResponseSuccess(response.body<List<Status>>(), response.headers)
+        401, 404, 429, 503 -> GetTimelinesListByListIdResponseFailure401(response.body<Error>(), response.headers)
+        410 -> GetTimelinesListByListIdResponseFailure410(response.headers)
+        422 -> GetTimelinesListByListIdResponseFailure(response.body<ValidationError>(), response.headers)
+        else -> GetTimelinesListByListIdResponseUnknownFailure(response.status.value, response.headers)
       }
     }
     catch(e: CancellationException) {
@@ -233,11 +235,11 @@ public class TimelinesClient(
         }
       }
       return when (response.status.value) {
-        200 -> GetTimelinePublicResponseSuccess(response.body<List<Status>>())
-        401, 404, 429, 503 -> GetTimelinePublicResponseFailure401(response.body<Error>())
-        410 -> GetTimelinePublicResponseFailure410
-        422 -> GetTimelinePublicResponseFailure(response.body<ValidationError>())
-        else -> GetTimelinePublicResponseUnknownFailure(response.status.value)
+        200 -> GetTimelinePublicResponseSuccess(response.body<List<Status>>(), response.headers)
+        401, 404, 429, 503 -> GetTimelinePublicResponseFailure401(response.body<Error>(), response.headers)
+        410 -> GetTimelinePublicResponseFailure410(response.headers)
+        422 -> GetTimelinePublicResponseFailure(response.body<ValidationError>(), response.headers)
+        else -> GetTimelinePublicResponseUnknownFailure(response.status.value, response.headers)
       }
     }
     catch(e: CancellationException) {
@@ -301,11 +303,11 @@ public class TimelinesClient(
         }
       }
       return when (response.status.value) {
-        200 -> GetTimelinesTagByHashtagResponseSuccess(response.body<List<Status>>())
-        401, 404, 429, 503 -> GetTimelinesTagByHashtagResponseFailure401(response.body<Error>())
-        410 -> GetTimelinesTagByHashtagResponseFailure410
-        422 -> GetTimelinesTagByHashtagResponseFailure(response.body<ValidationError>())
-        else -> GetTimelinesTagByHashtagResponseUnknownFailure(response.status.value)
+        200 -> GetTimelinesTagByHashtagResponseSuccess(response.body<List<Status>>(), response.headers)
+        401, 404, 429, 503 -> GetTimelinesTagByHashtagResponseFailure401(response.body<Error>(), response.headers)
+        410 -> GetTimelinesTagByHashtagResponseFailure410(response.headers)
+        422 -> GetTimelinesTagByHashtagResponseFailure(response.body<ValidationError>(), response.headers)
+        else -> GetTimelinesTagByHashtagResponseUnknownFailure(response.status.value, response.headers)
       }
     }
     catch(e: CancellationException) {
@@ -327,161 +329,410 @@ public class TimelinesClient(
   public object None
 
   @Serializable
-  public sealed class GetTimelineDirectResponse
+  public sealed class GetTimelineDirectResponse {
+    public abstract val headers: Headers
+  }
 
   @Serializable
   public data class GetTimelineDirectResponseSuccess(
     public val body: List<Status>,
-  ) : GetTimelineDirectResponse()
+    @Transient
+    override val headers: Headers = Headers.Empty,
+  ) : GetTimelineDirectResponse() {
+    /**
+     * Pagination links for browsing older or newer results. Format: Link: <https://mastodon.example/api/v1/endpoint?max_id=7163058>; rel="next", <https://mastodon.example/api/v1/endpoint?min_id=7275607>; rel="prev". See [RFC 8288](https://www.rfc-editor.org/rfc/rfc8288) for more information.
+     */
+    public val link: String?
+      get() = headers["Link"]
+
+    /**
+     * Number of requests permitted per time period
+     */
+    public val xRateLimitLimit: Int?
+      get() = headers["X-RateLimit-Limit"]?.toIntOrNull()
+
+    /**
+     * Number of requests you can still make
+     */
+    public val xRateLimitRemaining: Int?
+      get() = headers["X-RateLimit-Remaining"]?.toIntOrNull()
+
+    /**
+     * Timestamp when your rate limit will reset
+     */
+    public val xRateLimitReset: String?
+      get() = headers["X-RateLimit-Reset"]
+  }
 
   @Serializable
   public data class GetTimelineDirectResponseFailure401(
     public val body: Error,
+    @Transient
+    override val headers: Headers = Headers.Empty,
   ) : GetTimelineDirectResponse()
 
   @Serializable
-  public object GetTimelineDirectResponseFailure410 : GetTimelineDirectResponse()
+  public data class GetTimelineDirectResponseFailure410(
+    @Transient
+    override val headers: Headers = Headers.Empty,
+  ) : GetTimelineDirectResponse()
 
   @Serializable
   public data class GetTimelineDirectResponseFailure(
     public val body: ValidationError,
+    @Transient
+    override val headers: Headers = Headers.Empty,
   ) : GetTimelineDirectResponse()
 
   @Serializable
   public data class GetTimelineDirectResponseUnknownFailure(
     public val statusCode: Int,
+    @Transient
+    override val headers: Headers = Headers.Empty,
   ) : GetTimelineDirectResponse()
 
   @Serializable
-  public sealed class GetTimelineHomeResponse
+  public sealed class GetTimelineHomeResponse {
+    public abstract val headers: Headers
+  }
 
   @Serializable
   public data class GetTimelineHomeResponseSuccess200(
     public val body: List<Status>,
-  ) : GetTimelineHomeResponse()
+    @Transient
+    override val headers: Headers = Headers.Empty,
+  ) : GetTimelineHomeResponse() {
+    /**
+     * Pagination links for browsing older or newer results. Format: Link: <https://mastodon.example/api/v1/endpoint?max_id=7163058>; rel="next", <https://mastodon.example/api/v1/endpoint?min_id=7275607>; rel="prev". See [RFC 8288](https://www.rfc-editor.org/rfc/rfc8288) for more information.
+     */
+    public val link: String?
+      get() = headers["Link"]
+
+    /**
+     * Number of requests permitted per time period
+     */
+    public val xRateLimitLimit: Int?
+      get() = headers["X-RateLimit-Limit"]?.toIntOrNull()
+
+    /**
+     * Number of requests you can still make
+     */
+    public val xRateLimitRemaining: Int?
+      get() = headers["X-RateLimit-Remaining"]?.toIntOrNull()
+
+    /**
+     * Timestamp when your rate limit will reset
+     */
+    public val xRateLimitReset: String?
+      get() = headers["X-RateLimit-Reset"]
+  }
 
   @Serializable
-  public object GetTimelineHomeResponseSuccess : GetTimelineHomeResponse()
+  public data class GetTimelineHomeResponseSuccess(
+    @Transient
+    override val headers: Headers = Headers.Empty,
+  ) : GetTimelineHomeResponse() {
+    /**
+     * Pagination links for browsing older or newer results. Format: Link: <https://mastodon.example/api/v1/endpoint?max_id=7163058>; rel="next", <https://mastodon.example/api/v1/endpoint?min_id=7275607>; rel="prev". See [RFC 8288](https://www.rfc-editor.org/rfc/rfc8288) for more information.
+     */
+    public val link: String?
+      get() = headers["Link"]
+
+    /**
+     * Number of requests permitted per time period
+     */
+    public val xRateLimitLimit: Int?
+      get() = headers["X-RateLimit-Limit"]?.toIntOrNull()
+
+    /**
+     * Number of requests you can still make
+     */
+    public val xRateLimitRemaining: Int?
+      get() = headers["X-RateLimit-Remaining"]?.toIntOrNull()
+
+    /**
+     * Timestamp when your rate limit will reset
+     */
+    public val xRateLimitReset: String?
+      get() = headers["X-RateLimit-Reset"]
+  }
 
   @Serializable
   public data class GetTimelineHomeResponseFailure401(
     public val body: Error,
+    @Transient
+    override val headers: Headers = Headers.Empty,
   ) : GetTimelineHomeResponse()
 
   @Serializable
-  public object GetTimelineHomeResponseFailure410 : GetTimelineHomeResponse()
+  public data class GetTimelineHomeResponseFailure410(
+    @Transient
+    override val headers: Headers = Headers.Empty,
+  ) : GetTimelineHomeResponse()
 
   @Serializable
   public data class GetTimelineHomeResponseFailure(
     public val body: ValidationError,
+    @Transient
+    override val headers: Headers = Headers.Empty,
   ) : GetTimelineHomeResponse()
 
   @Serializable
   public data class GetTimelineHomeResponseUnknownFailure(
     public val statusCode: Int,
+    @Transient
+    override val headers: Headers = Headers.Empty,
   ) : GetTimelineHomeResponse()
 
   @Serializable
-  public sealed class GetTimelineLinkResponse
+  public sealed class GetTimelineLinkResponse {
+    public abstract val headers: Headers
+  }
 
   @Serializable
   public data class GetTimelineLinkResponseSuccess(
     public val body: List<Status>,
-  ) : GetTimelineLinkResponse()
+    @Transient
+    override val headers: Headers = Headers.Empty,
+  ) : GetTimelineLinkResponse() {
+    /**
+     * Pagination links for browsing older or newer results. Format: Link: <https://mastodon.example/api/v1/endpoint?max_id=7163058>; rel="next", <https://mastodon.example/api/v1/endpoint?min_id=7275607>; rel="prev". See [RFC 8288](https://www.rfc-editor.org/rfc/rfc8288) for more information.
+     */
+    public val link: String?
+      get() = headers["Link"]
+
+    /**
+     * Number of requests permitted per time period
+     */
+    public val xRateLimitLimit: Int?
+      get() = headers["X-RateLimit-Limit"]?.toIntOrNull()
+
+    /**
+     * Number of requests you can still make
+     */
+    public val xRateLimitRemaining: Int?
+      get() = headers["X-RateLimit-Remaining"]?.toIntOrNull()
+
+    /**
+     * Timestamp when your rate limit will reset
+     */
+    public val xRateLimitReset: String?
+      get() = headers["X-RateLimit-Reset"]
+  }
 
   @Serializable
   public data class GetTimelineLinkResponseFailure401(
     public val body: Error,
+    @Transient
+    override val headers: Headers = Headers.Empty,
   ) : GetTimelineLinkResponse()
 
   @Serializable
-  public object GetTimelineLinkResponseFailure410 : GetTimelineLinkResponse()
+  public data class GetTimelineLinkResponseFailure410(
+    @Transient
+    override val headers: Headers = Headers.Empty,
+  ) : GetTimelineLinkResponse()
 
   @Serializable
   public data class GetTimelineLinkResponseFailure(
     public val body: ValidationError,
+    @Transient
+    override val headers: Headers = Headers.Empty,
   ) : GetTimelineLinkResponse()
 
   @Serializable
   public data class GetTimelineLinkResponseUnknownFailure(
     public val statusCode: Int,
+    @Transient
+    override val headers: Headers = Headers.Empty,
   ) : GetTimelineLinkResponse()
 
   @Serializable
-  public sealed class GetTimelinesListByListIdResponse
+  public sealed class GetTimelinesListByListIdResponse {
+    public abstract val headers: Headers
+  }
 
   @Serializable
   public data class GetTimelinesListByListIdResponseSuccess(
     public val body: List<Status>,
-  ) : GetTimelinesListByListIdResponse()
+    @Transient
+    override val headers: Headers = Headers.Empty,
+  ) : GetTimelinesListByListIdResponse() {
+    /**
+     * Pagination links for browsing older or newer results. Format: Link: <https://mastodon.example/api/v1/endpoint?max_id=7163058>; rel="next", <https://mastodon.example/api/v1/endpoint?min_id=7275607>; rel="prev". See [RFC 8288](https://www.rfc-editor.org/rfc/rfc8288) for more information.
+     */
+    public val link: String?
+      get() = headers["Link"]
+
+    /**
+     * Number of requests permitted per time period
+     */
+    public val xRateLimitLimit: Int?
+      get() = headers["X-RateLimit-Limit"]?.toIntOrNull()
+
+    /**
+     * Number of requests you can still make
+     */
+    public val xRateLimitRemaining: Int?
+      get() = headers["X-RateLimit-Remaining"]?.toIntOrNull()
+
+    /**
+     * Timestamp when your rate limit will reset
+     */
+    public val xRateLimitReset: String?
+      get() = headers["X-RateLimit-Reset"]
+  }
 
   @Serializable
   public data class GetTimelinesListByListIdResponseFailure401(
     public val body: Error,
+    @Transient
+    override val headers: Headers = Headers.Empty,
   ) : GetTimelinesListByListIdResponse()
 
   @Serializable
-  public object GetTimelinesListByListIdResponseFailure410 : GetTimelinesListByListIdResponse()
+  public data class GetTimelinesListByListIdResponseFailure410(
+    @Transient
+    override val headers: Headers = Headers.Empty,
+  ) : GetTimelinesListByListIdResponse()
 
   @Serializable
   public data class GetTimelinesListByListIdResponseFailure(
     public val body: ValidationError,
+    @Transient
+    override val headers: Headers = Headers.Empty,
   ) : GetTimelinesListByListIdResponse()
 
   @Serializable
   public data class GetTimelinesListByListIdResponseUnknownFailure(
     public val statusCode: Int,
+    @Transient
+    override val headers: Headers = Headers.Empty,
   ) : GetTimelinesListByListIdResponse()
 
   @Serializable
-  public sealed class GetTimelinePublicResponse
+  public sealed class GetTimelinePublicResponse {
+    public abstract val headers: Headers
+  }
 
   @Serializable
   public data class GetTimelinePublicResponseSuccess(
     public val body: List<Status>,
-  ) : GetTimelinePublicResponse()
+    @Transient
+    override val headers: Headers = Headers.Empty,
+  ) : GetTimelinePublicResponse() {
+    /**
+     * Pagination links for browsing older or newer results. Format: Link: <https://mastodon.example/api/v1/endpoint?max_id=7163058>; rel="next", <https://mastodon.example/api/v1/endpoint?min_id=7275607>; rel="prev". See [RFC 8288](https://www.rfc-editor.org/rfc/rfc8288) for more information.
+     */
+    public val link: String?
+      get() = headers["Link"]
+
+    /**
+     * Number of requests permitted per time period
+     */
+    public val xRateLimitLimit: Int?
+      get() = headers["X-RateLimit-Limit"]?.toIntOrNull()
+
+    /**
+     * Number of requests you can still make
+     */
+    public val xRateLimitRemaining: Int?
+      get() = headers["X-RateLimit-Remaining"]?.toIntOrNull()
+
+    /**
+     * Timestamp when your rate limit will reset
+     */
+    public val xRateLimitReset: String?
+      get() = headers["X-RateLimit-Reset"]
+  }
 
   @Serializable
   public data class GetTimelinePublicResponseFailure401(
     public val body: Error,
+    @Transient
+    override val headers: Headers = Headers.Empty,
   ) : GetTimelinePublicResponse()
 
   @Serializable
-  public object GetTimelinePublicResponseFailure410 : GetTimelinePublicResponse()
+  public data class GetTimelinePublicResponseFailure410(
+    @Transient
+    override val headers: Headers = Headers.Empty,
+  ) : GetTimelinePublicResponse()
 
   @Serializable
   public data class GetTimelinePublicResponseFailure(
     public val body: ValidationError,
+    @Transient
+    override val headers: Headers = Headers.Empty,
   ) : GetTimelinePublicResponse()
 
   @Serializable
   public data class GetTimelinePublicResponseUnknownFailure(
     public val statusCode: Int,
+    @Transient
+    override val headers: Headers = Headers.Empty,
   ) : GetTimelinePublicResponse()
 
   @Serializable
-  public sealed class GetTimelinesTagByHashtagResponse
+  public sealed class GetTimelinesTagByHashtagResponse {
+    public abstract val headers: Headers
+  }
 
   @Serializable
   public data class GetTimelinesTagByHashtagResponseSuccess(
     public val body: List<Status>,
-  ) : GetTimelinesTagByHashtagResponse()
+    @Transient
+    override val headers: Headers = Headers.Empty,
+  ) : GetTimelinesTagByHashtagResponse() {
+    /**
+     * Pagination links for browsing older or newer results. Format: Link: <https://mastodon.example/api/v1/endpoint?max_id=7163058>; rel="next", <https://mastodon.example/api/v1/endpoint?min_id=7275607>; rel="prev". See [RFC 8288](https://www.rfc-editor.org/rfc/rfc8288) for more information.
+     */
+    public val link: String?
+      get() = headers["Link"]
+
+    /**
+     * Number of requests permitted per time period
+     */
+    public val xRateLimitLimit: Int?
+      get() = headers["X-RateLimit-Limit"]?.toIntOrNull()
+
+    /**
+     * Number of requests you can still make
+     */
+    public val xRateLimitRemaining: Int?
+      get() = headers["X-RateLimit-Remaining"]?.toIntOrNull()
+
+    /**
+     * Timestamp when your rate limit will reset
+     */
+    public val xRateLimitReset: String?
+      get() = headers["X-RateLimit-Reset"]
+  }
 
   @Serializable
   public data class GetTimelinesTagByHashtagResponseFailure401(
     public val body: Error,
+    @Transient
+    override val headers: Headers = Headers.Empty,
   ) : GetTimelinesTagByHashtagResponse()
 
   @Serializable
-  public object GetTimelinesTagByHashtagResponseFailure410 : GetTimelinesTagByHashtagResponse()
+  public data class GetTimelinesTagByHashtagResponseFailure410(
+    @Transient
+    override val headers: Headers = Headers.Empty,
+  ) : GetTimelinesTagByHashtagResponse()
 
   @Serializable
   public data class GetTimelinesTagByHashtagResponseFailure(
     public val body: ValidationError,
+    @Transient
+    override val headers: Headers = Headers.Empty,
   ) : GetTimelinesTagByHashtagResponse()
 
   @Serializable
   public data class GetTimelinesTagByHashtagResponseUnknownFailure(
     public val statusCode: Int,
+    @Transient
+    override val headers: Headers = Headers.Empty,
   ) : GetTimelinesTagByHashtagResponse()
 }
