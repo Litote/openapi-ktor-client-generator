@@ -12,6 +12,7 @@ import kotlin.Boolean
 import kotlin.Int
 import kotlin.Long
 import kotlin.String
+import kotlin.coroutines.cancellation.CancellationException
 import kotlinx.serialization.SerialName
 import kotlinx.serialization.Serializable
 import kotlinx.serialization.json.JsonElement
@@ -53,6 +54,9 @@ public class AccountsClient(
         else -> GetAccountsResponseUnknownFailure(response.status.value)
       }
     }
+    catch(e: CancellationException) {
+      throw e
+    }
     catch(e: Exception) {
       configuration.exceptionLogger(e)
       return GetAccountsResponseUnknownFailure(500)
@@ -76,6 +80,9 @@ public class AccountsClient(
         else -> CreateAccountResponseUnknownFailure(response.status.value)
       }
     }
+    catch(e: CancellationException) {
+      throw e
+    }
     catch(e: Exception) {
       configuration.exceptionLogger(e)
       return CreateAccountResponseUnknownFailure(500)
@@ -97,6 +104,9 @@ public class AccountsClient(
         else -> GetAccountResponseUnknownFailure(response.status.value)
       }
     }
+    catch(e: CancellationException) {
+      throw e
+    }
     catch(e: Exception) {
       configuration.exceptionLogger(e)
       return GetAccountResponseUnknownFailure(500)
@@ -117,6 +127,9 @@ public class AccountsClient(
         else -> PostAccountBlockResponseUnknownFailure(response.status.value)
       }
     }
+    catch(e: CancellationException) {
+      throw e
+    }
     catch(e: Exception) {
       configuration.exceptionLogger(e)
       return PostAccountBlockResponseUnknownFailure(500)
@@ -136,6 +149,9 @@ public class AccountsClient(
         410 -> PostAccountEndorseResponseFailure
         else -> PostAccountEndorseResponseUnknownFailure(response.status.value)
       }
+    }
+    catch(e: CancellationException) {
+      throw e
     }
     catch(e: Exception) {
       configuration.exceptionLogger(e)
@@ -174,6 +190,9 @@ public class AccountsClient(
         else -> GetAccountEndorsementsResponseUnknownFailure(response.status.value)
       }
     }
+    catch(e: CancellationException) {
+      throw e
+    }
     catch(e: Exception) {
       configuration.exceptionLogger(e)
       return GetAccountEndorsementsResponseUnknownFailure(500)
@@ -194,6 +213,9 @@ public class AccountsClient(
         422 -> GetAccountFeaturedTagsResponseFailure(response.body<ValidationError>())
         else -> GetAccountFeaturedTagsResponseUnknownFailure(response.status.value)
       }
+    }
+    catch(e: CancellationException) {
+      throw e
     }
     catch(e: Exception) {
       configuration.exceptionLogger(e)
@@ -216,6 +238,9 @@ public class AccountsClient(
         410 -> PostAccountFollowResponseFailure
         else -> PostAccountFollowResponseUnknownFailure(response.status.value)
       }
+    }
+    catch(e: CancellationException) {
+      throw e
     }
     catch(e: Exception) {
       configuration.exceptionLogger(e)
@@ -258,6 +283,9 @@ public class AccountsClient(
         else -> GetAccountFollowersResponseUnknownFailure(response.status.value)
       }
     }
+    catch(e: CancellationException) {
+      throw e
+    }
     catch(e: Exception) {
       configuration.exceptionLogger(e)
       return GetAccountFollowersResponseUnknownFailure(500)
@@ -299,6 +327,9 @@ public class AccountsClient(
         else -> GetAccountFollowingResponseUnknownFailure(response.status.value)
       }
     }
+    catch(e: CancellationException) {
+      throw e
+    }
     catch(e: Exception) {
       configuration.exceptionLogger(e)
       return GetAccountFollowingResponseUnknownFailure(500)
@@ -319,6 +350,9 @@ public class AccountsClient(
         else -> GetAccountIdentityProofsResponseUnknownFailure(response.status.value)
       }
     }
+    catch(e: CancellationException) {
+      throw e
+    }
     catch(e: Exception) {
       configuration.exceptionLogger(e)
       return GetAccountIdentityProofsResponseUnknownFailure(500)
@@ -338,6 +372,9 @@ public class AccountsClient(
         410 -> GetAccountListsResponseFailure
         else -> GetAccountListsResponseUnknownFailure(response.status.value)
       }
+    }
+    catch(e: CancellationException) {
+      throw e
     }
     catch(e: Exception) {
       configuration.exceptionLogger(e)
@@ -361,6 +398,9 @@ public class AccountsClient(
         else -> PostAccountMuteResponseUnknownFailure(response.status.value)
       }
     }
+    catch(e: CancellationException) {
+      throw e
+    }
     catch(e: Exception) {
       configuration.exceptionLogger(e)
       return PostAccountMuteResponseUnknownFailure(500)
@@ -383,6 +423,9 @@ public class AccountsClient(
         else -> PostAccountNoteResponseUnknownFailure(response.status.value)
       }
     }
+    catch(e: CancellationException) {
+      throw e
+    }
     catch(e: Exception) {
       configuration.exceptionLogger(e)
       return PostAccountNoteResponseUnknownFailure(500)
@@ -403,6 +446,9 @@ public class AccountsClient(
         else -> PostAccountPinResponseUnknownFailure(response.status.value)
       }
     }
+    catch(e: CancellationException) {
+      throw e
+    }
     catch(e: Exception) {
       configuration.exceptionLogger(e)
       return PostAccountPinResponseUnknownFailure(500)
@@ -422,6 +468,9 @@ public class AccountsClient(
         410 -> PostAccountRemoveFromFollowersResponseFailure
         else -> PostAccountRemoveFromFollowersResponseUnknownFailure(response.status.value)
       }
+    }
+    catch(e: CancellationException) {
+      throw e
     }
     catch(e: Exception) {
       configuration.exceptionLogger(e)
@@ -484,6 +533,9 @@ public class AccountsClient(
         else -> GetAccountStatusesResponseUnknownFailure(response.status.value)
       }
     }
+    catch(e: CancellationException) {
+      throw e
+    }
     catch(e: Exception) {
       configuration.exceptionLogger(e)
       return GetAccountStatusesResponseUnknownFailure(500)
@@ -503,6 +555,9 @@ public class AccountsClient(
         410 -> PostAccountUnblockResponseFailure
         else -> PostAccountUnblockResponseUnknownFailure(response.status.value)
       }
+    }
+    catch(e: CancellationException) {
+      throw e
     }
     catch(e: Exception) {
       configuration.exceptionLogger(e)
@@ -524,6 +579,9 @@ public class AccountsClient(
         else -> PostAccountUnendorseResponseUnknownFailure(response.status.value)
       }
     }
+    catch(e: CancellationException) {
+      throw e
+    }
     catch(e: Exception) {
       configuration.exceptionLogger(e)
       return PostAccountUnendorseResponseUnknownFailure(500)
@@ -543,6 +601,9 @@ public class AccountsClient(
         410 -> PostAccountUnfollowResponseFailure
         else -> PostAccountUnfollowResponseUnknownFailure(response.status.value)
       }
+    }
+    catch(e: CancellationException) {
+      throw e
     }
     catch(e: Exception) {
       configuration.exceptionLogger(e)
@@ -564,6 +625,9 @@ public class AccountsClient(
         else -> PostAccountUnmuteResponseUnknownFailure(response.status.value)
       }
     }
+    catch(e: CancellationException) {
+      throw e
+    }
     catch(e: Exception) {
       configuration.exceptionLogger(e)
       return PostAccountUnmuteResponseUnknownFailure(500)
@@ -583,6 +647,9 @@ public class AccountsClient(
         410 -> PostAccountUnpinResponseFailure
         else -> PostAccountUnpinResponseUnknownFailure(response.status.value)
       }
+    }
+    catch(e: CancellationException) {
+      throw e
     }
     catch(e: Exception) {
       configuration.exceptionLogger(e)
@@ -609,6 +676,9 @@ public class AccountsClient(
         else -> GetAccountsFamiliarFollowersResponseUnknownFailure(response.status.value)
       }
     }
+    catch(e: CancellationException) {
+      throw e
+    }
     catch(e: Exception) {
       configuration.exceptionLogger(e)
       return GetAccountsFamiliarFollowersResponseUnknownFailure(500)
@@ -632,6 +702,9 @@ public class AccountsClient(
         422 -> GetAccountLookupResponseFailure(response.body<ValidationError>())
         else -> GetAccountLookupResponseUnknownFailure(response.status.value)
       }
+    }
+    catch(e: CancellationException) {
+      throw e
     }
     catch(e: Exception) {
       configuration.exceptionLogger(e)
@@ -660,6 +733,9 @@ public class AccountsClient(
         410 -> GetAccountRelationshipsResponseFailure
         else -> GetAccountRelationshipsResponseUnknownFailure(response.status.value)
       }
+    }
+    catch(e: CancellationException) {
+      throw e
     }
     catch(e: Exception) {
       configuration.exceptionLogger(e)
@@ -703,6 +779,9 @@ public class AccountsClient(
         else -> GetAccountSearchResponseUnknownFailure(response.status.value)
       }
     }
+    catch(e: CancellationException) {
+      throw e
+    }
     catch(e: Exception) {
       configuration.exceptionLogger(e)
       return GetAccountSearchResponseUnknownFailure(500)
@@ -725,6 +804,9 @@ public class AccountsClient(
         else -> PatchAccountsUpdateCredentialsResponseUnknownFailure(response.status.value)
       }
     }
+    catch(e: CancellationException) {
+      throw e
+    }
     catch(e: Exception) {
       configuration.exceptionLogger(e)
       return PatchAccountsUpdateCredentialsResponseUnknownFailure(500)
@@ -744,6 +826,9 @@ public class AccountsClient(
         410 -> GetAccountsVerifyCredentialsResponseFailure
         else -> GetAccountsVerifyCredentialsResponseUnknownFailure(response.status.value)
       }
+    }
+    catch(e: CancellationException) {
+      throw e
     }
     catch(e: Exception) {
       configuration.exceptionLogger(e)

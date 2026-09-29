@@ -9,6 +9,7 @@ import io.ktor.client.request.setBody
 import io.ktor.http.ContentType
 import io.ktor.http.contentType
 import kotlin.Int
+import kotlin.coroutines.cancellation.CancellationException
 import kotlinx.serialization.Serializable
 
 public class Client(
@@ -24,6 +25,9 @@ public class Client(
         200 -> CreateStatusResponseSuccess(response.body<StatusCreated>())
         else -> CreateStatusResponseUnknownFailure(response.status.value)
       }
+    }
+    catch(e: CancellationException) {
+      throw e
     }
     catch(e: Exception) {
       configuration.exceptionLogger(e)

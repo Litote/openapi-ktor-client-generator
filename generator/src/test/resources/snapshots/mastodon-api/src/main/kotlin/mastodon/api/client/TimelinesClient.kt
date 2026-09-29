@@ -8,6 +8,7 @@ import kotlin.Int
 import kotlin.Long
 import kotlin.String
 import kotlin.collections.List
+import kotlin.coroutines.cancellation.CancellationException
 import kotlinx.serialization.Serializable
 import mastodon.api.client.ClientConfiguration.Companion.defaultClientConfiguration
 import mastodon.api.model.Error
@@ -51,6 +52,9 @@ public class TimelinesClient(
         else -> GetTimelineDirectResponseUnknownFailure(response.status.value)
       }
     }
+    catch(e: CancellationException) {
+      throw e
+    }
     catch(e: Exception) {
       configuration.exceptionLogger(e)
       return GetTimelineDirectResponseUnknownFailure(500)
@@ -91,6 +95,9 @@ public class TimelinesClient(
         422 -> GetTimelineHomeResponseFailure(response.body<ValidationError>())
         else -> GetTimelineHomeResponseUnknownFailure(response.status.value)
       }
+    }
+    catch(e: CancellationException) {
+      throw e
     }
     catch(e: Exception) {
       configuration.exceptionLogger(e)
@@ -134,6 +141,9 @@ public class TimelinesClient(
         else -> GetTimelineLinkResponseUnknownFailure(response.status.value)
       }
     }
+    catch(e: CancellationException) {
+      throw e
+    }
     catch(e: Exception) {
       configuration.exceptionLogger(e)
       return GetTimelineLinkResponseUnknownFailure(500)
@@ -174,6 +184,9 @@ public class TimelinesClient(
         422 -> GetTimelinesListByListIdResponseFailure(response.body<ValidationError>())
         else -> GetTimelinesListByListIdResponseUnknownFailure(response.status.value)
       }
+    }
+    catch(e: CancellationException) {
+      throw e
     }
     catch(e: Exception) {
       configuration.exceptionLogger(e)
@@ -226,6 +239,9 @@ public class TimelinesClient(
         422 -> GetTimelinePublicResponseFailure(response.body<ValidationError>())
         else -> GetTimelinePublicResponseUnknownFailure(response.status.value)
       }
+    }
+    catch(e: CancellationException) {
+      throw e
     }
     catch(e: Exception) {
       configuration.exceptionLogger(e)
@@ -291,6 +307,9 @@ public class TimelinesClient(
         422 -> GetTimelinesTagByHashtagResponseFailure(response.body<ValidationError>())
         else -> GetTimelinesTagByHashtagResponseUnknownFailure(response.status.value)
       }
+    }
+    catch(e: CancellationException) {
+      throw e
     }
     catch(e: Exception) {
       configuration.exceptionLogger(e)

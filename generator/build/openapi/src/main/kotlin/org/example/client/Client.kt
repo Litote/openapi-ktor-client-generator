@@ -8,6 +8,7 @@ import io.ktor.http.contentType
 import io.ktor.http.encodeURLPathPart
 import kotlin.Int
 import kotlin.String
+import kotlin.coroutines.cancellation.CancellationException
 import kotlinx.serialization.Serializable
 import org.example.client.ClientConfiguration.Companion.defaultClientConfiguration
 import org.example.model.TestRequest
@@ -38,6 +39,9 @@ public class Client(
         201 -> PostTestWithTestIdResponseSuccess(response.body<TestResponse>())
         else -> PostTestWithTestIdResponseUnknownFailure(response.status.value)
       }
+    }
+    catch(e: CancellationException) {
+      throw e
     }
     catch(e: Exception) {
       configuration.exceptionLogger(e)

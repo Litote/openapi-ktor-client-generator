@@ -6,6 +6,7 @@ import io.ktor.http.encodeURLPathPart
 import kotlin.Int
 import kotlin.String
 import kotlin.collections.List
+import kotlin.coroutines.cancellation.CancellationException
 import kotlinx.serialization.Serializable
 import kotlinx.serialization.json.JsonElement
 import mastodon.api.client.ClientConfiguration.Companion.defaultClientConfiguration
@@ -37,6 +38,9 @@ public class InstanceClient(
         else -> GetInstanceResponseUnknownFailure(response.status.value)
       }
     }
+    catch(e: CancellationException) {
+      throw e
+    }
     catch(e: Exception) {
       configuration.exceptionLogger(e)
       return GetInstanceResponseUnknownFailure(500)
@@ -57,6 +61,9 @@ public class InstanceClient(
         422 -> GetInstanceActivityResponseFailure(response.body<ValidationError>())
         else -> GetInstanceActivityResponseUnknownFailure(response.status.value)
       }
+    }
+    catch(e: CancellationException) {
+      throw e
     }
     catch(e: Exception) {
       configuration.exceptionLogger(e)
@@ -79,6 +86,9 @@ public class InstanceClient(
         else -> GetInstanceDomainBlocksResponseUnknownFailure(response.status.value)
       }
     }
+    catch(e: CancellationException) {
+      throw e
+    }
     catch(e: Exception) {
       configuration.exceptionLogger(e)
       return GetInstanceDomainBlocksResponseUnknownFailure(500)
@@ -99,6 +109,9 @@ public class InstanceClient(
         422 -> GetInstanceExtendedDescriptionResponseFailure(response.body<ValidationError>())
         else -> GetInstanceExtendedDescriptionResponseUnknownFailure(response.status.value)
       }
+    }
+    catch(e: CancellationException) {
+      throw e
     }
     catch(e: Exception) {
       configuration.exceptionLogger(e)
@@ -121,6 +134,9 @@ public class InstanceClient(
         else -> GetInstancePeersResponseUnknownFailure(response.status.value)
       }
     }
+    catch(e: CancellationException) {
+      throw e
+    }
     catch(e: Exception) {
       configuration.exceptionLogger(e)
       return GetInstancePeersResponseUnknownFailure(500)
@@ -141,6 +157,9 @@ public class InstanceClient(
         422 -> GetInstancePrivacyPolicyResponseFailure(response.body<ValidationError>())
         else -> GetInstancePrivacyPolicyResponseUnknownFailure(response.status.value)
       }
+    }
+    catch(e: CancellationException) {
+      throw e
     }
     catch(e: Exception) {
       configuration.exceptionLogger(e)
@@ -163,6 +182,9 @@ public class InstanceClient(
         else -> GetInstanceRulesResponseUnknownFailure(response.status.value)
       }
     }
+    catch(e: CancellationException) {
+      throw e
+    }
     catch(e: Exception) {
       configuration.exceptionLogger(e)
       return GetInstanceRulesResponseUnknownFailure(500)
@@ -183,6 +205,9 @@ public class InstanceClient(
         422 -> GetInstanceTermsOfServiceResponseFailure(response.body<ValidationError>())
         else -> GetInstanceTermsOfServiceResponseUnknownFailure(response.status.value)
       }
+    }
+    catch(e: CancellationException) {
+      throw e
     }
     catch(e: Exception) {
       configuration.exceptionLogger(e)
@@ -205,6 +230,9 @@ public class InstanceClient(
         else -> GetInstanceTermsOfServiceByDateResponseUnknownFailure(response.status.value)
       }
     }
+    catch(e: CancellationException) {
+      throw e
+    }
     catch(e: Exception) {
       configuration.exceptionLogger(e)
       return GetInstanceTermsOfServiceByDateResponseUnknownFailure(500)
@@ -226,6 +254,9 @@ public class InstanceClient(
         else -> GetInstanceTranslationLanguagesResponseUnknownFailure(response.status.value)
       }
     }
+    catch(e: CancellationException) {
+      throw e
+    }
     catch(e: Exception) {
       configuration.exceptionLogger(e)
       return GetInstanceTranslationLanguagesResponseUnknownFailure(500)
@@ -246,6 +277,9 @@ public class InstanceClient(
         422 -> GetInstanceV2ResponseFailure(response.body<ValidationError>())
         else -> GetInstanceV2ResponseUnknownFailure(response.status.value)
       }
+    }
+    catch(e: CancellationException) {
+      throw e
     }
     catch(e: Exception) {
       configuration.exceptionLogger(e)

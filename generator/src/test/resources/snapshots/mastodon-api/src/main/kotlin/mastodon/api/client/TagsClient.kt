@@ -6,6 +6,7 @@ import io.ktor.client.request.post
 import io.ktor.http.encodeURLPathPart
 import kotlin.Int
 import kotlin.String
+import kotlin.coroutines.cancellation.CancellationException
 import kotlinx.serialization.Serializable
 import mastodon.api.client.ClientConfiguration.Companion.defaultClientConfiguration
 import mastodon.api.model.Error
@@ -30,6 +31,9 @@ public class TagsClient(
         else -> PostTagFeatureResponseUnknownFailure(response.status.value)
       }
     }
+    catch(e: CancellationException) {
+      throw e
+    }
     catch(e: Exception) {
       configuration.exceptionLogger(e)
       return PostTagFeatureResponseUnknownFailure(500)
@@ -50,6 +54,9 @@ public class TagsClient(
         422 -> PostTagUnfeatureResponseFailure(response.body<ValidationError>())
         else -> PostTagUnfeatureResponseUnknownFailure(response.status.value)
       }
+    }
+    catch(e: CancellationException) {
+      throw e
     }
     catch(e: Exception) {
       configuration.exceptionLogger(e)
@@ -72,6 +79,9 @@ public class TagsClient(
         else -> GetTagsByNameResponseUnknownFailure(response.status.value)
       }
     }
+    catch(e: CancellationException) {
+      throw e
+    }
     catch(e: Exception) {
       configuration.exceptionLogger(e)
       return GetTagsByNameResponseUnknownFailure(500)
@@ -91,6 +101,9 @@ public class TagsClient(
         410 -> PostTagFollowResponseFailure
         else -> PostTagFollowResponseUnknownFailure(response.status.value)
       }
+    }
+    catch(e: CancellationException) {
+      throw e
     }
     catch(e: Exception) {
       configuration.exceptionLogger(e)
@@ -112,6 +125,9 @@ public class TagsClient(
         422 -> PostTagUnfollowResponseFailure(response.body<ValidationError>())
         else -> PostTagUnfollowResponseUnknownFailure(response.status.value)
       }
+    }
+    catch(e: CancellationException) {
+      throw e
     }
     catch(e: Exception) {
       configuration.exceptionLogger(e)

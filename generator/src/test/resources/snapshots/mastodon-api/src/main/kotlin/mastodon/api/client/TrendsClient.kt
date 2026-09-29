@@ -5,6 +5,7 @@ import io.ktor.client.request.`get`
 import kotlin.Int
 import kotlin.Long
 import kotlin.collections.List
+import kotlin.coroutines.cancellation.CancellationException
 import kotlinx.serialization.Serializable
 import mastodon.api.client.ClientConfiguration.Companion.defaultClientConfiguration
 import mastodon.api.model.Error
@@ -39,6 +40,9 @@ public class TrendsClient(
         else -> GetTrendLinksResponseUnknownFailure(response.status.value)
       }
     }
+    catch(e: CancellationException) {
+      throw e
+    }
     catch(e: Exception) {
       configuration.exceptionLogger(e)
       return GetTrendLinksResponseUnknownFailure(500)
@@ -68,6 +72,9 @@ public class TrendsClient(
         else -> GetTrendStatusesResponseUnknownFailure(response.status.value)
       }
     }
+    catch(e: CancellationException) {
+      throw e
+    }
     catch(e: Exception) {
       configuration.exceptionLogger(e)
       return GetTrendStatusesResponseUnknownFailure(500)
@@ -96,6 +103,9 @@ public class TrendsClient(
         422 -> GetTrendTagsResponseFailure(response.body<ValidationError>())
         else -> GetTrendTagsResponseUnknownFailure(response.status.value)
       }
+    }
+    catch(e: CancellationException) {
+      throw e
     }
     catch(e: Exception) {
       configuration.exceptionLogger(e)

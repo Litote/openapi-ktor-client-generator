@@ -9,6 +9,7 @@ import io.ktor.http.contentType
 import kotlin.Int
 import kotlin.String
 import kotlin.collections.List
+import kotlin.coroutines.cancellation.CancellationException
 import kotlinx.serialization.SerialName
 import kotlinx.serialization.Serializable
 import mastodon.api.client.ClientConfiguration.Companion.defaultClientConfiguration
@@ -36,6 +37,9 @@ public class AppsClient(
         else -> CreateAppResponseUnknownFailure(response.status.value)
       }
     }
+    catch(e: CancellationException) {
+      throw e
+    }
     catch(e: Exception) {
       configuration.exceptionLogger(e)
       return CreateAppResponseUnknownFailure(500)
@@ -56,6 +60,9 @@ public class AppsClient(
         422 -> GetAppsVerifyCredentialsResponseFailure(response.body<ValidationError>())
         else -> GetAppsVerifyCredentialsResponseUnknownFailure(response.status.value)
       }
+    }
+    catch(e: CancellationException) {
+      throw e
     }
     catch(e: Exception) {
       configuration.exceptionLogger(e)

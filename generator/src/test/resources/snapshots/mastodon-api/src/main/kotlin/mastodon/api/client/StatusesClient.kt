@@ -14,6 +14,7 @@ import kotlin.Int
 import kotlin.Long
 import kotlin.String
 import kotlin.collections.List
+import kotlin.coroutines.cancellation.CancellationException
 import kotlinx.serialization.SerialName
 import kotlinx.serialization.Serializable
 import kotlinx.serialization.json.JsonElement
@@ -53,6 +54,9 @@ public class StatusesClient(
         else -> GetStatusesResponseUnknownFailure(response.status.value)
       }
     }
+    catch(e: CancellationException) {
+      throw e
+    }
     catch(e: Exception) {
       configuration.exceptionLogger(e)
       return GetStatusesResponseUnknownFailure(500)
@@ -78,6 +82,9 @@ public class StatusesClient(
         else -> CreateStatusResponseUnknownFailure(response.status.value)
       }
     }
+    catch(e: CancellationException) {
+      throw e
+    }
     catch(e: Exception) {
       configuration.exceptionLogger(e)
       return CreateStatusResponseUnknownFailure(500)
@@ -98,6 +105,9 @@ public class StatusesClient(
         422 -> GetStatusResponseFailure(response.body<ValidationError>())
         else -> GetStatusResponseUnknownFailure(response.status.value)
       }
+    }
+    catch(e: CancellationException) {
+      throw e
     }
     catch(e: Exception) {
       configuration.exceptionLogger(e)
@@ -120,6 +130,9 @@ public class StatusesClient(
         410 -> UpdateStatusResponseFailure
         else -> UpdateStatusResponseUnknownFailure(response.status.value)
       }
+    }
+    catch(e: CancellationException) {
+      throw e
     }
     catch(e: Exception) {
       configuration.exceptionLogger(e)
@@ -147,6 +160,9 @@ public class StatusesClient(
         else -> DeleteStatusResponseUnknownFailure(response.status.value)
       }
     }
+    catch(e: CancellationException) {
+      throw e
+    }
     catch(e: Exception) {
       configuration.exceptionLogger(e)
       return DeleteStatusResponseUnknownFailure(500)
@@ -167,6 +183,9 @@ public class StatusesClient(
         422 -> PostStatusBookmarkResponseFailure(response.body<ValidationError>())
         else -> PostStatusBookmarkResponseUnknownFailure(response.status.value)
       }
+    }
+    catch(e: CancellationException) {
+      throw e
     }
     catch(e: Exception) {
       configuration.exceptionLogger(e)
@@ -189,6 +208,9 @@ public class StatusesClient(
         else -> GetStatusContextResponseUnknownFailure(response.status.value)
       }
     }
+    catch(e: CancellationException) {
+      throw e
+    }
     catch(e: Exception) {
       configuration.exceptionLogger(e)
       return GetStatusContextResponseUnknownFailure(500)
@@ -209,6 +231,9 @@ public class StatusesClient(
         422 -> PostStatusFavouriteResponseFailure(response.body<ValidationError>())
         else -> PostStatusFavouriteResponseUnknownFailure(response.status.value)
       }
+    }
+    catch(e: CancellationException) {
+      throw e
     }
     catch(e: Exception) {
       configuration.exceptionLogger(e)
@@ -247,6 +272,9 @@ public class StatusesClient(
         else -> GetStatusFavouritedByResponseUnknownFailure(response.status.value)
       }
     }
+    catch(e: CancellationException) {
+      throw e
+    }
     catch(e: Exception) {
       configuration.exceptionLogger(e)
       return GetStatusFavouritedByResponseUnknownFailure(500)
@@ -267,6 +295,9 @@ public class StatusesClient(
         422 -> GetStatusHistoryResponseFailure(response.body<ValidationError>())
         else -> GetStatusHistoryResponseUnknownFailure(response.status.value)
       }
+    }
+    catch(e: CancellationException) {
+      throw e
     }
     catch(e: Exception) {
       configuration.exceptionLogger(e)
@@ -291,6 +322,9 @@ public class StatusesClient(
         else -> UpdateStatusInteractionPolicyResponseUnknownFailure(response.status.value)
       }
     }
+    catch(e: CancellationException) {
+      throw e
+    }
     catch(e: Exception) {
       configuration.exceptionLogger(e)
       return UpdateStatusInteractionPolicyResponseUnknownFailure(500)
@@ -312,6 +346,9 @@ public class StatusesClient(
         else -> PostStatusMuteResponseUnknownFailure(response.status.value)
       }
     }
+    catch(e: CancellationException) {
+      throw e
+    }
     catch(e: Exception) {
       configuration.exceptionLogger(e)
       return PostStatusMuteResponseUnknownFailure(500)
@@ -331,6 +368,9 @@ public class StatusesClient(
         410 -> PostStatusPinResponseFailure
         else -> PostStatusPinResponseUnknownFailure(response.status.value)
       }
+    }
+    catch(e: CancellationException) {
+      throw e
     }
     catch(e: Exception) {
       configuration.exceptionLogger(e)
@@ -369,6 +409,9 @@ public class StatusesClient(
         else -> GetStatusQuotesResponseUnknownFailure(response.status.value)
       }
     }
+    catch(e: CancellationException) {
+      throw e
+    }
     catch(e: Exception) {
       configuration.exceptionLogger(e)
       return GetStatusQuotesResponseUnknownFailure(500)
@@ -389,6 +432,9 @@ public class StatusesClient(
         422 -> PostStatusesByIdQuotesByQuotingStatusIdRevokeResponseFailure(response.body<ValidationError>())
         else -> PostStatusesByIdQuotesByQuotingStatusIdRevokeResponseUnknownFailure(response.status.value)
       }
+    }
+    catch(e: CancellationException) {
+      throw e
     }
     catch(e: Exception) {
       configuration.exceptionLogger(e)
@@ -412,6 +458,9 @@ public class StatusesClient(
         422 -> PostStatusReblogResponseFailure(response.body<ValidationError>())
         else -> PostStatusReblogResponseUnknownFailure(response.status.value)
       }
+    }
+    catch(e: CancellationException) {
+      throw e
     }
     catch(e: Exception) {
       configuration.exceptionLogger(e)
@@ -450,6 +499,9 @@ public class StatusesClient(
         else -> GetStatusRebloggedByResponseUnknownFailure(response.status.value)
       }
     }
+    catch(e: CancellationException) {
+      throw e
+    }
     catch(e: Exception) {
       configuration.exceptionLogger(e)
       return GetStatusRebloggedByResponseUnknownFailure(500)
@@ -470,6 +522,9 @@ public class StatusesClient(
         422 -> GetStatusSourceResponseFailure(response.body<ValidationError>())
         else -> GetStatusSourceResponseUnknownFailure(response.status.value)
       }
+    }
+    catch(e: CancellationException) {
+      throw e
     }
     catch(e: Exception) {
       configuration.exceptionLogger(e)
@@ -494,6 +549,9 @@ public class StatusesClient(
         else -> PostStatusTranslateResponseUnknownFailure(response.status.value)
       }
     }
+    catch(e: CancellationException) {
+      throw e
+    }
     catch(e: Exception) {
       configuration.exceptionLogger(e)
       return PostStatusTranslateResponseUnknownFailure(500)
@@ -514,6 +572,9 @@ public class StatusesClient(
         422 -> PostStatusUnbookmarkResponseFailure(response.body<ValidationError>())
         else -> PostStatusUnbookmarkResponseUnknownFailure(response.status.value)
       }
+    }
+    catch(e: CancellationException) {
+      throw e
     }
     catch(e: Exception) {
       configuration.exceptionLogger(e)
@@ -536,6 +597,9 @@ public class StatusesClient(
         else -> PostStatusUnfavouriteResponseUnknownFailure(response.status.value)
       }
     }
+    catch(e: CancellationException) {
+      throw e
+    }
     catch(e: Exception) {
       configuration.exceptionLogger(e)
       return PostStatusUnfavouriteResponseUnknownFailure(500)
@@ -556,6 +620,9 @@ public class StatusesClient(
         422 -> PostStatusUnmuteResponseFailure(response.body<ValidationError>())
         else -> PostStatusUnmuteResponseUnknownFailure(response.status.value)
       }
+    }
+    catch(e: CancellationException) {
+      throw e
     }
     catch(e: Exception) {
       configuration.exceptionLogger(e)
@@ -578,6 +645,9 @@ public class StatusesClient(
         else -> PostStatusUnpinResponseUnknownFailure(response.status.value)
       }
     }
+    catch(e: CancellationException) {
+      throw e
+    }
     catch(e: Exception) {
       configuration.exceptionLogger(e)
       return PostStatusUnpinResponseUnknownFailure(500)
@@ -598,6 +668,9 @@ public class StatusesClient(
         422 -> PostStatusUnreblogResponseFailure(response.body<ValidationError>())
         else -> PostStatusUnreblogResponseUnknownFailure(response.status.value)
       }
+    }
+    catch(e: CancellationException) {
+      throw e
     }
     catch(e: Exception) {
       configuration.exceptionLogger(e)

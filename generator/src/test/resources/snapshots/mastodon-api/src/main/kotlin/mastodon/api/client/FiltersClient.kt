@@ -14,6 +14,7 @@ import kotlin.Int
 import kotlin.Long
 import kotlin.String
 import kotlin.collections.List
+import kotlin.coroutines.cancellation.CancellationException
 import kotlinx.serialization.SerialName
 import kotlinx.serialization.Serializable
 import kotlinx.serialization.json.JsonElement
@@ -44,6 +45,9 @@ public class FiltersClient(
         else -> GetFiltersResponseUnknownFailure(response.status.value)
       }
     }
+    catch(e: CancellationException) {
+      throw e
+    }
     catch(e: Exception) {
       configuration.exceptionLogger(e)
       return GetFiltersResponseUnknownFailure(500)
@@ -66,6 +70,9 @@ public class FiltersClient(
         else -> CreateFilterResponseUnknownFailure(response.status.value)
       }
     }
+    catch(e: CancellationException) {
+      throw e
+    }
     catch(e: Exception) {
       configuration.exceptionLogger(e)
       return CreateFilterResponseUnknownFailure(500)
@@ -86,6 +93,9 @@ public class FiltersClient(
         422 -> GetFilterResponseFailure(response.body<ValidationError>())
         else -> GetFilterResponseUnknownFailure(response.status.value)
       }
+    }
+    catch(e: CancellationException) {
+      throw e
     }
     catch(e: Exception) {
       configuration.exceptionLogger(e)
@@ -109,6 +119,9 @@ public class FiltersClient(
         else -> UpdateFilterResponseUnknownFailure(response.status.value)
       }
     }
+    catch(e: CancellationException) {
+      throw e
+    }
     catch(e: Exception) {
       configuration.exceptionLogger(e)
       return UpdateFilterResponseUnknownFailure(500)
@@ -130,6 +143,9 @@ public class FiltersClient(
         else -> DeleteFilterResponseUnknownFailure(response.status.value)
       }
     }
+    catch(e: CancellationException) {
+      throw e
+    }
     catch(e: Exception) {
       configuration.exceptionLogger(e)
       return DeleteFilterResponseUnknownFailure(500)
@@ -150,6 +166,9 @@ public class FiltersClient(
         422 -> GetFiltersV2ResponseFailure(response.body<ValidationError>())
         else -> GetFiltersV2ResponseUnknownFailure(response.status.value)
       }
+    }
+    catch(e: CancellationException) {
+      throw e
     }
     catch(e: Exception) {
       configuration.exceptionLogger(e)
@@ -173,6 +192,9 @@ public class FiltersClient(
         else -> CreateFilterV2ResponseUnknownFailure(response.status.value)
       }
     }
+    catch(e: CancellationException) {
+      throw e
+    }
     catch(e: Exception) {
       configuration.exceptionLogger(e)
       return CreateFilterV2ResponseUnknownFailure(500)
@@ -193,6 +215,9 @@ public class FiltersClient(
         422 -> GetFilterKeywordsV2ResponseFailure(response.body<ValidationError>())
         else -> GetFilterKeywordsV2ResponseUnknownFailure(response.status.value)
       }
+    }
+    catch(e: CancellationException) {
+      throw e
     }
     catch(e: Exception) {
       configuration.exceptionLogger(e)
@@ -216,6 +241,9 @@ public class FiltersClient(
         else -> PostFilterKeywordsV2ResponseUnknownFailure(response.status.value)
       }
     }
+    catch(e: CancellationException) {
+      throw e
+    }
     catch(e: Exception) {
       configuration.exceptionLogger(e)
       return PostFilterKeywordsV2ResponseUnknownFailure(500)
@@ -236,6 +264,9 @@ public class FiltersClient(
         422 -> GetFilterStatusesV2ResponseFailure(response.body<ValidationError>())
         else -> GetFilterStatusesV2ResponseUnknownFailure(response.status.value)
       }
+    }
+    catch(e: CancellationException) {
+      throw e
     }
     catch(e: Exception) {
       configuration.exceptionLogger(e)
@@ -260,6 +291,9 @@ public class FiltersClient(
         else -> PostFilterStatusesV2ResponseUnknownFailure(response.status.value)
       }
     }
+    catch(e: CancellationException) {
+      throw e
+    }
     catch(e: Exception) {
       configuration.exceptionLogger(e)
       return PostFilterStatusesV2ResponseUnknownFailure(500)
@@ -280,6 +314,9 @@ public class FiltersClient(
         422 -> GetFilterV2ResponseFailure(response.body<ValidationError>())
         else -> GetFilterV2ResponseUnknownFailure(response.status.value)
       }
+    }
+    catch(e: CancellationException) {
+      throw e
     }
     catch(e: Exception) {
       configuration.exceptionLogger(e)
@@ -304,6 +341,9 @@ public class FiltersClient(
         else -> UpdateFilterV2ResponseUnknownFailure(response.status.value)
       }
     }
+    catch(e: CancellationException) {
+      throw e
+    }
     catch(e: Exception) {
       configuration.exceptionLogger(e)
       return UpdateFilterV2ResponseUnknownFailure(500)
@@ -325,6 +365,9 @@ public class FiltersClient(
         else -> DeleteFilterV2ResponseUnknownFailure(response.status.value)
       }
     }
+    catch(e: CancellationException) {
+      throw e
+    }
     catch(e: Exception) {
       configuration.exceptionLogger(e)
       return DeleteFilterV2ResponseUnknownFailure(500)
@@ -345,6 +388,9 @@ public class FiltersClient(
         422 -> GetFiltersKeywordsByIdV2ResponseFailure(response.body<ValidationError>())
         else -> GetFiltersKeywordsByIdV2ResponseUnknownFailure(response.status.value)
       }
+    }
+    catch(e: CancellationException) {
+      throw e
     }
     catch(e: Exception) {
       configuration.exceptionLogger(e)
@@ -368,6 +414,9 @@ public class FiltersClient(
         else -> UpdateFiltersKeywordsByIdV2ResponseUnknownFailure(response.status.value)
       }
     }
+    catch(e: CancellationException) {
+      throw e
+    }
     catch(e: Exception) {
       configuration.exceptionLogger(e)
       return UpdateFiltersKeywordsByIdV2ResponseUnknownFailure(500)
@@ -388,6 +437,9 @@ public class FiltersClient(
         422 -> DeleteFiltersKeywordsByIdV2ResponseFailure(response.body<ValidationError>())
         else -> DeleteFiltersKeywordsByIdV2ResponseUnknownFailure(response.status.value)
       }
+    }
+    catch(e: CancellationException) {
+      throw e
     }
     catch(e: Exception) {
       configuration.exceptionLogger(e)
@@ -410,6 +462,9 @@ public class FiltersClient(
         else -> GetFiltersStatusesByIdV2ResponseUnknownFailure(response.status.value)
       }
     }
+    catch(e: CancellationException) {
+      throw e
+    }
     catch(e: Exception) {
       configuration.exceptionLogger(e)
       return GetFiltersStatusesByIdV2ResponseUnknownFailure(500)
@@ -430,6 +485,9 @@ public class FiltersClient(
         422 -> DeleteFiltersStatusesByIdV2ResponseFailure(response.body<ValidationError>())
         else -> DeleteFiltersStatusesByIdV2ResponseUnknownFailure(response.status.value)
       }
+    }
+    catch(e: CancellationException) {
+      throw e
     }
     catch(e: Exception) {
       configuration.exceptionLogger(e)

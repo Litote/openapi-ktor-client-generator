@@ -5,6 +5,7 @@ import io.ktor.client.request.`get`
 import kotlin.Int
 import kotlin.Long
 import kotlin.String
+import kotlin.coroutines.cancellation.CancellationException
 import kotlinx.serialization.Serializable
 import mastodon.api.client.ClientConfiguration.Companion.defaultClientConfiguration
 import mastodon.api.model.Error
@@ -41,6 +42,9 @@ public class OembedClient(
         422 -> GetOembedResponseFailure(response.body<ValidationError>())
         else -> GetOembedResponseUnknownFailure(response.status.value)
       }
+    }
+    catch(e: CancellationException) {
+      throw e
     }
     catch(e: Exception) {
       configuration.exceptionLogger(e)

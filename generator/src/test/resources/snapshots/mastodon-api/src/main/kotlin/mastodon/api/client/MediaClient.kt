@@ -15,6 +15,7 @@ import io.ktor.http.encodeURLPathPart
 import kotlin.ByteArray
 import kotlin.Int
 import kotlin.String
+import kotlin.coroutines.cancellation.CancellationException
 import kotlinx.serialization.Serializable
 import mastodon.api.client.ClientConfiguration.Companion.defaultClientConfiguration
 import mastodon.api.model.Error
@@ -56,6 +57,9 @@ public class MediaClient(
         else -> CreateMediaResponseUnknownFailure(response.status.value)
       }
     }
+    catch(e: CancellationException) {
+      throw e
+    }
     catch(e: Exception) {
       configuration.exceptionLogger(e)
       return CreateMediaResponseUnknownFailure(500)
@@ -76,6 +80,9 @@ public class MediaClient(
         410 -> GetMediaResponseFailure
         else -> GetMediaResponseUnknownFailure(response.status.value)
       }
+    }
+    catch(e: CancellationException) {
+      throw e
     }
     catch(e: Exception) {
       configuration.exceptionLogger(e)
@@ -111,6 +118,9 @@ public class MediaClient(
         else -> UpdateMediaResponseUnknownFailure(response.status.value)
       }
     }
+    catch(e: CancellationException) {
+      throw e
+    }
     catch(e: Exception) {
       configuration.exceptionLogger(e)
       return UpdateMediaResponseUnknownFailure(500)
@@ -131,6 +141,9 @@ public class MediaClient(
         422 -> DeleteMediaResponseFailure(response.body<ValidationError>())
         else -> DeleteMediaResponseUnknownFailure(response.status.value)
       }
+    }
+    catch(e: CancellationException) {
+      throw e
     }
     catch(e: Exception) {
       configuration.exceptionLogger(e)
@@ -169,6 +182,9 @@ public class MediaClient(
         410 -> CreateMediaV2ResponseFailure
         else -> CreateMediaV2ResponseUnknownFailure(response.status.value)
       }
+    }
+    catch(e: CancellationException) {
+      throw e
     }
     catch(e: Exception) {
       configuration.exceptionLogger(e)

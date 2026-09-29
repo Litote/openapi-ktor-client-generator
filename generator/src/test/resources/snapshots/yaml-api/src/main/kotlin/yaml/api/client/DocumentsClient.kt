@@ -8,6 +8,7 @@ import io.ktor.http.ContentType
 import io.ktor.http.contentType
 import kotlin.Int
 import kotlin.collections.List
+import kotlin.coroutines.cancellation.CancellationException
 import kotlinx.serialization.Serializable
 import yaml.api.client.ClientConfiguration.Companion.defaultClientConfiguration
 import yaml.api.model.Document
@@ -26,6 +27,9 @@ public class DocumentsClient(
         200 -> ListDocumentsResponseSuccess(response.body<List<Document>>())
         else -> ListDocumentsResponseUnknownFailure(response.status.value)
       }
+    }
+    catch(e: CancellationException) {
+      throw e
     }
     catch(e: Exception) {
       configuration.exceptionLogger(e)
@@ -46,6 +50,9 @@ public class DocumentsClient(
         200 -> CreateDocumentResponseSuccess(response.body<Document>())
         else -> CreateDocumentResponseUnknownFailure(response.status.value)
       }
+    }
+    catch(e: CancellationException) {
+      throw e
     }
     catch(e: Exception) {
       configuration.exceptionLogger(e)

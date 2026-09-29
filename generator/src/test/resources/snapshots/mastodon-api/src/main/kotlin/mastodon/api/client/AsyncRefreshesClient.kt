@@ -5,6 +5,7 @@ import io.ktor.client.request.`get`
 import io.ktor.http.encodeURLPathPart
 import kotlin.Int
 import kotlin.String
+import kotlin.coroutines.cancellation.CancellationException
 import kotlinx.serialization.Serializable
 import mastodon.api.client.ClientConfiguration.Companion.defaultClientConfiguration
 import mastodon.api.model.AsyncRefreshResponse
@@ -28,6 +29,9 @@ public class AsyncRefreshesClient(
         422 -> GetAsyncRefreshV1AlphaResponseFailure(response.body<ValidationError>())
         else -> GetAsyncRefreshV1AlphaResponseUnknownFailure(response.status.value)
       }
+    }
+    catch(e: CancellationException) {
+      throw e
     }
     catch(e: Exception) {
       configuration.exceptionLogger(e)

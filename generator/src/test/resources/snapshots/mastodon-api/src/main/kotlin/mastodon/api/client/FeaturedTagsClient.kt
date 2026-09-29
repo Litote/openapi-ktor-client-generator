@@ -11,6 +11,7 @@ import io.ktor.http.encodeURLPathPart
 import kotlin.Int
 import kotlin.String
 import kotlin.collections.List
+import kotlin.coroutines.cancellation.CancellationException
 import kotlinx.serialization.Serializable
 import mastodon.api.client.ClientConfiguration.Companion.defaultClientConfiguration
 import mastodon.api.model.Error
@@ -36,6 +37,9 @@ public class FeaturedTagsClient(
         else -> GetFeaturedTagsResponseUnknownFailure(response.status.value)
       }
     }
+    catch(e: CancellationException) {
+      throw e
+    }
     catch(e: Exception) {
       configuration.exceptionLogger(e)
       return GetFeaturedTagsResponseUnknownFailure(500)
@@ -58,6 +62,9 @@ public class FeaturedTagsClient(
         else -> CreateFeaturedTagResponseUnknownFailure(response.status.value)
       }
     }
+    catch(e: CancellationException) {
+      throw e
+    }
     catch(e: Exception) {
       configuration.exceptionLogger(e)
       return CreateFeaturedTagResponseUnknownFailure(500)
@@ -79,6 +86,9 @@ public class FeaturedTagsClient(
         else -> DeleteFeaturedTagResponseUnknownFailure(response.status.value)
       }
     }
+    catch(e: CancellationException) {
+      throw e
+    }
     catch(e: Exception) {
       configuration.exceptionLogger(e)
       return DeleteFeaturedTagResponseUnknownFailure(500)
@@ -99,6 +109,9 @@ public class FeaturedTagsClient(
         422 -> GetFeaturedTagSuggestionsResponseFailure(response.body<ValidationError>())
         else -> GetFeaturedTagSuggestionsResponseUnknownFailure(response.status.value)
       }
+    }
+    catch(e: CancellationException) {
+      throw e
     }
     catch(e: Exception) {
       configuration.exceptionLogger(e)

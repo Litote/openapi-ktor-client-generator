@@ -13,6 +13,7 @@ import kotlin.Boolean
 import kotlin.Int
 import kotlin.Long
 import kotlin.String
+import kotlin.coroutines.cancellation.CancellationException
 import kotlinx.serialization.SerialName
 import kotlinx.serialization.Serializable
 import mastodon.api.client.ClientConfiguration.Companion.defaultClientConfiguration
@@ -41,6 +42,9 @@ public class ListsClient(
         else -> GetListsResponseUnknownFailure(response.status.value)
       }
     }
+    catch(e: CancellationException) {
+      throw e
+    }
     catch(e: Exception) {
       configuration.exceptionLogger(e)
       return GetListsResponseUnknownFailure(500)
@@ -63,6 +67,9 @@ public class ListsClient(
         else -> CreateListResponseUnknownFailure(response.status.value)
       }
     }
+    catch(e: CancellationException) {
+      throw e
+    }
     catch(e: Exception) {
       configuration.exceptionLogger(e)
       return CreateListResponseUnknownFailure(500)
@@ -83,6 +90,9 @@ public class ListsClient(
         422 -> GetListResponseFailure(response.body<ValidationError>())
         else -> GetListResponseUnknownFailure(response.status.value)
       }
+    }
+    catch(e: CancellationException) {
+      throw e
     }
     catch(e: Exception) {
       configuration.exceptionLogger(e)
@@ -106,6 +116,9 @@ public class ListsClient(
         else -> UpdateListResponseUnknownFailure(response.status.value)
       }
     }
+    catch(e: CancellationException) {
+      throw e
+    }
     catch(e: Exception) {
       configuration.exceptionLogger(e)
       return UpdateListResponseUnknownFailure(500)
@@ -126,6 +139,9 @@ public class ListsClient(
         422 -> DeleteListResponseFailure(response.body<ValidationError>())
         else -> DeleteListResponseUnknownFailure(response.status.value)
       }
+    }
+    catch(e: CancellationException) {
+      throw e
     }
     catch(e: Exception) {
       configuration.exceptionLogger(e)
@@ -168,6 +184,9 @@ public class ListsClient(
         else -> GetListAccountsResponseUnknownFailure(response.status.value)
       }
     }
+    catch(e: CancellationException) {
+      throw e
+    }
     catch(e: Exception) {
       configuration.exceptionLogger(e)
       return GetListAccountsResponseUnknownFailure(500)
@@ -189,6 +208,9 @@ public class ListsClient(
         410 -> PostListAccountsResponseFailure
         else -> PostListAccountsResponseUnknownFailure(response.status.value)
       }
+    }
+    catch(e: CancellationException) {
+      throw e
     }
     catch(e: Exception) {
       configuration.exceptionLogger(e)
@@ -212,6 +234,9 @@ public class ListsClient(
         422 -> DeleteListAccountsResponseFailure(response.body<ValidationError>())
         else -> DeleteListAccountsResponseUnknownFailure(response.status.value)
       }
+    }
+    catch(e: CancellationException) {
+      throw e
     }
     catch(e: Exception) {
       configuration.exceptionLogger(e)

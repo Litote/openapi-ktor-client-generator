@@ -8,6 +8,7 @@ import kotlin.Int
 import kotlin.Long
 import kotlin.String
 import kotlin.collections.List
+import kotlin.coroutines.cancellation.CancellationException
 import kotlinx.serialization.Serializable
 import mastodon.api.client.ClientConfiguration.Companion.defaultClientConfiguration
 import mastodon.api.model.Account
@@ -38,6 +39,9 @@ public class SuggestionsClient(
         else -> GetSuggestionsResponseUnknownFailure(response.status.value)
       }
     }
+    catch(e: CancellationException) {
+      throw e
+    }
     catch(e: Exception) {
       configuration.exceptionLogger(e)
       return GetSuggestionsResponseUnknownFailure(500)
@@ -58,6 +62,9 @@ public class SuggestionsClient(
         422 -> DeleteSuggestionsByAccountIdResponseFailure(response.body<ValidationError>())
         else -> DeleteSuggestionsByAccountIdResponseUnknownFailure(response.status.value)
       }
+    }
+    catch(e: CancellationException) {
+      throw e
     }
     catch(e: Exception) {
       configuration.exceptionLogger(e)
@@ -84,6 +91,9 @@ public class SuggestionsClient(
         422 -> GetSuggestionsV2ResponseFailure(response.body<ValidationError>())
         else -> GetSuggestionsV2ResponseUnknownFailure(response.status.value)
       }
+    }
+    catch(e: CancellationException) {
+      throw e
     }
     catch(e: Exception) {
       configuration.exceptionLogger(e)
