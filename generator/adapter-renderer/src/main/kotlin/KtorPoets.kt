@@ -4,3 +4,4 @@ import com.squareup.kotlinpoet.MemberName
 
 internal const val ALIAS_HEADER = "setHeader"
 internal val headerMember = MemberName("io.ktor.client.request", "header")
+internal val cookieMember = MemberName("io.ktor.client.request", "cookie")

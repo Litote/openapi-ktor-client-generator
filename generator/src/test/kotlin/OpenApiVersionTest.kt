@@ -4,8 +4,10 @@ import org.litote.openapi.ktor.client.generator.adapter.parser.OpenApiSpecificat
 import org.litote.openapi.ktor.client.generator.domain.DomainTypeSpec
 import org.litote.openapi.ktor.client.generator.domain.ModelSpec
 import org.litote.openapi.ktor.client.generator.domain.ParameterLocationSpec
+import org.litote.openapi.ktor.client.generator.domain.ParameterStyleSpec
 import kotlin.test.Test
 import kotlin.test.assertEquals
+import kotlin.test.assertFalse
 import kotlin.test.assertTrue
 
 class OpenApiVersionTest {
@@ -129,6 +131,36 @@ class OpenApiVersionTest {
         val idParam = getItemOp.parameters.first { it.originalName == "id" }
         assertEquals(ParameterLocationSpec.PATH, idParam.location)
         assertTrue(idParam.required)
+    }
+
+    @Test
+    fun `GIVEN openapi 3_1 spec with cookie and styled parameters WHEN parsing THEN location and style are kept`() {
+        val spec = parseSpec("openapi-31.json")
+        val parameters =
+            spec.clients
+                .first()
+                .operations
+                .first { it.name == "ListItems" }
+                .parameters
+        assertEquals(ParameterLocationSpec.COOKIE, parameters.first { it.originalName == "session" }.location)
+        val tags = parameters.first { it.originalName == "tags" }
+        assertEquals(ParameterStyleSpec.PIPE_DELIMITED, tags.style)
+        assertFalse(tags.explode)
+    }
+
+    @Test
+    fun `GIVEN openapi 3_2 spec with cookie and styled parameters WHEN parsing THEN location and style are kept`() {
+        val spec = parseSpec("openapi-32.json")
+        val parameters =
+            spec.clients
+                .first()
+                .operations
+                .first { it.name == "ListItems" }
+                .parameters
+        assertEquals(ParameterLocationSpec.COOKIE, parameters.first { it.originalName == "session" }.location)
+        val tags = parameters.first { it.originalName == "tags" }
+        assertEquals(ParameterStyleSpec.PIPE_DELIMITED, tags.style)
+        assertFalse(tags.explode)
     }
 
     @Test

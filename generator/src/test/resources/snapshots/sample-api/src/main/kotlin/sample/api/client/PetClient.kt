@@ -33,7 +33,7 @@ public class PetClient(
     try {
       val response = configuration.client.`get`("pet/findByStatus/MultipleExamples") {
         url {
-          parameters.append("status", status.joinToString(",") { it.serialName() })
+          parameters.appendAll("status", status.map { it.serialName() })
           if (test != null) {
             parameters.append("test", test)
           }
@@ -64,7 +64,7 @@ public class PetClient(
     try {
       val response = configuration.client.`get`("pet/findByStatus/singleExample") {
         url {
-          parameters.append("status", status.joinToString(",") { it.serialName() })
+          parameters.appendAll("status", status.map { it.serialName() })
         }
       }
       return when (response.status.value) {

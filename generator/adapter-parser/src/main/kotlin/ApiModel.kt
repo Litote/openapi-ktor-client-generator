@@ -363,8 +363,9 @@ internal class ApiModel private constructor(
             (parameters?.mapNotNull { it as? Reference } ?: emptyList()) +
             (
                 parameters?.flatMap {
-                    (it as? Parameter)?.parameterContent?.values?.flatMap { v -> v.schema.allReferences() }
-                        ?: emptyList()
+                    val parameter = it as? Parameter
+                    parameter?.schema.allReferences() +
+                        (parameter?.parameterContent?.values?.flatMap { v -> v.schema.allReferences() } ?: emptyList())
                 }
                     ?: emptyList()
             ) +

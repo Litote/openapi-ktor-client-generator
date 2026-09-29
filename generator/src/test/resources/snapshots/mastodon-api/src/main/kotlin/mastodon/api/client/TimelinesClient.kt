@@ -271,10 +271,10 @@ public class TimelinesClient(
       val response = configuration.client.`get`("api/v1/timelines/tag/{hashtag}".replace("/{hashtag}", "/${hashtag.encodeURLPathPart()}")) {
         url {
           if (all != null) {
-            parameters.append("all", all.joinToString(","))
+            parameters.appendAll("all", all)
           }
           if (any != null) {
-            parameters.append("any", any.joinToString(","))
+            parameters.appendAll("any", any)
           }
           if (limit != null) {
             parameters.append("limit", limit.toString())
@@ -289,7 +289,7 @@ public class TimelinesClient(
             parameters.append("min_id", minId)
           }
           if (none != null) {
-            parameters.append("none", none.joinToString(","))
+            parameters.appendAll("none", none)
           }
           if (onlyMedia != null) {
             parameters.append("only_media", onlyMedia.toString())
@@ -318,15 +318,6 @@ public class TimelinesClient(
       return GetTimelinesTagByHashtagResponseUnknownFailure(500)
     }
   }
-
-  @Serializable
-  public object All
-
-  @Serializable
-  public object Any
-
-  @Serializable
-  public object None
 
   @Serializable
   public sealed class GetTimelineDirectResponse {

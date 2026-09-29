@@ -14,6 +14,7 @@ import community.flock.kotlinx.openapi.bindings.OpenAPIV30Schema
 import community.flock.kotlinx.openapi.bindings.OpenAPIV30SecurityScheme
 import community.flock.kotlinx.openapi.bindings.OpenAPIV30SecuritySchemeType
 import community.flock.kotlinx.openapi.bindings.OpenAPIV30SingleType
+import community.flock.kotlinx.openapi.bindings.OpenAPIV30Style
 import community.flock.kotlinx.openapi.bindings.OpenAPIV30Type
 import community.flock.kotlinx.openapi.bindings.OpenAPIV30TypeArray
 import community.flock.kotlinx.openapi.bindings.OpenAPIV31Header
@@ -26,6 +27,7 @@ import community.flock.kotlinx.openapi.bindings.OpenAPIV31Schema
 import community.flock.kotlinx.openapi.bindings.OpenAPIV31SecurityScheme
 import community.flock.kotlinx.openapi.bindings.OpenAPIV31SecuritySchemeType
 import community.flock.kotlinx.openapi.bindings.OpenAPIV31SingleType
+import community.flock.kotlinx.openapi.bindings.OpenAPIV31Style
 import community.flock.kotlinx.openapi.bindings.OpenAPIV31Type
 import community.flock.kotlinx.openapi.bindings.OpenAPIV31TypeArray
 import community.flock.kotlinx.openapi.bindings.OpenAPIV32Header
@@ -38,6 +40,7 @@ import community.flock.kotlinx.openapi.bindings.OpenAPIV32Schema
 import community.flock.kotlinx.openapi.bindings.OpenAPIV32SecurityScheme
 import community.flock.kotlinx.openapi.bindings.OpenAPIV32SecuritySchemeType
 import community.flock.kotlinx.openapi.bindings.OpenAPIV32SingleType
+import community.flock.kotlinx.openapi.bindings.OpenAPIV32Style
 import community.flock.kotlinx.openapi.bindings.OpenAPIV32Type
 import community.flock.kotlinx.openapi.bindings.OpenAPIV32TypeArray
 import community.flock.kotlinx.openapi.bindings.OpenAPIV3Model
@@ -217,6 +220,27 @@ internal val community.flock.kotlinx.openapi.bindings.Parameter.parameterLocatio
             else -> null
         }
 
+/** OpenAPI parameter styles, including the ones the generator does not render. */
+internal enum class ApiParameterStyle { MATRIX, LABEL, FORM, SIMPLE, SPACE_DELIMITED, PIPE_DELIMITED, DEEP_OBJECT }
+
+internal val community.flock.kotlinx.openapi.bindings.Parameter.parameterStyle: ApiParameterStyle?
+    get() =
+        when (this) {
+            is OpenAPIV30Parameter -> style?.toApiParameterStyle()
+            is OpenAPIV31Parameter -> style?.toApiParameterStyle()
+            is OpenAPIV32Parameter -> style?.toApiParameterStyle()
+            else -> null
+        }
+
+internal val community.flock.kotlinx.openapi.bindings.Parameter.parameterExplode: Boolean?
+    get() =
+        when (this) {
+            is OpenAPIV30Parameter -> explode
+            is OpenAPIV31Parameter -> explode
+            is OpenAPIV32Parameter -> explode
+            else -> null
+        }
+
 internal val community.flock.kotlinx.openapi.bindings.Parameter.parameterContent: Map<MediaType, MediaTypeObject>?
     get() =
         when (this) {
@@ -388,7 +412,7 @@ private fun OpenAPIV30ParameterLocation.toLocationSpec(): ParameterLocationSpec 
         OpenAPIV30ParameterLocation.HEADER -> ParameterLocationSpec.HEADER
         OpenAPIV30ParameterLocation.PATH -> ParameterLocationSpec.PATH
         OpenAPIV30ParameterLocation.QUERY -> ParameterLocationSpec.QUERY
-        OpenAPIV30ParameterLocation.COOKIE -> ParameterLocationSpec.QUERY
+        OpenAPIV30ParameterLocation.COOKIE -> ParameterLocationSpec.COOKIE
     }
 
 private fun OpenAPIV31ParameterLocation.toLocationSpec(): ParameterLocationSpec =
@@ -396,7 +420,7 @@ private fun OpenAPIV31ParameterLocation.toLocationSpec(): ParameterLocationSpec 
         OpenAPIV31ParameterLocation.HEADER -> ParameterLocationSpec.HEADER
         OpenAPIV31ParameterLocation.PATH -> ParameterLocationSpec.PATH
         OpenAPIV31ParameterLocation.QUERY -> ParameterLocationSpec.QUERY
-        OpenAPIV31ParameterLocation.COOKIE -> ParameterLocationSpec.QUERY
+        OpenAPIV31ParameterLocation.COOKIE -> ParameterLocationSpec.COOKIE
     }
 
 private fun OpenAPIV32ParameterLocation.toLocationSpec(): ParameterLocationSpec =
@@ -404,5 +428,38 @@ private fun OpenAPIV32ParameterLocation.toLocationSpec(): ParameterLocationSpec 
         OpenAPIV32ParameterLocation.HEADER -> ParameterLocationSpec.HEADER
         OpenAPIV32ParameterLocation.PATH -> ParameterLocationSpec.PATH
         OpenAPIV32ParameterLocation.QUERY -> ParameterLocationSpec.QUERY
-        OpenAPIV32ParameterLocation.COOKIE -> ParameterLocationSpec.QUERY
+        OpenAPIV32ParameterLocation.COOKIE -> ParameterLocationSpec.COOKIE
+    }
+
+private fun OpenAPIV30Style.toApiParameterStyle(): ApiParameterStyle =
+    when (this) {
+        OpenAPIV30Style.MATRIX -> ApiParameterStyle.MATRIX
+        OpenAPIV30Style.LABEL -> ApiParameterStyle.LABEL
+        OpenAPIV30Style.FORM -> ApiParameterStyle.FORM
+        OpenAPIV30Style.SIMPLE -> ApiParameterStyle.SIMPLE
+        OpenAPIV30Style.SPACE_DELIMITED -> ApiParameterStyle.SPACE_DELIMITED
+        OpenAPIV30Style.PIPE_DELIMITED -> ApiParameterStyle.PIPE_DELIMITED
+        OpenAPIV30Style.DEEP_OBJECT -> ApiParameterStyle.DEEP_OBJECT
+    }
+
+private fun OpenAPIV31Style.toApiParameterStyle(): ApiParameterStyle =
+    when (this) {
+        OpenAPIV31Style.MATRIX -> ApiParameterStyle.MATRIX
+        OpenAPIV31Style.LABEL -> ApiParameterStyle.LABEL
+        OpenAPIV31Style.FORM -> ApiParameterStyle.FORM
+        OpenAPIV31Style.SIMPLE -> ApiParameterStyle.SIMPLE
+        OpenAPIV31Style.SPACE_DELIMITED -> ApiParameterStyle.SPACE_DELIMITED
+        OpenAPIV31Style.PIPE_DELIMITED -> ApiParameterStyle.PIPE_DELIMITED
+        OpenAPIV31Style.DEEP_OBJECT -> ApiParameterStyle.DEEP_OBJECT
+    }
+
+private fun OpenAPIV32Style.toApiParameterStyle(): ApiParameterStyle =
+    when (this) {
+        OpenAPIV32Style.MATRIX -> ApiParameterStyle.MATRIX
+        OpenAPIV32Style.LABEL -> ApiParameterStyle.LABEL
+        OpenAPIV32Style.FORM -> ApiParameterStyle.FORM
+        OpenAPIV32Style.SIMPLE -> ApiParameterStyle.SIMPLE
+        OpenAPIV32Style.SPACE_DELIMITED -> ApiParameterStyle.SPACE_DELIMITED
+        OpenAPIV32Style.PIPE_DELIMITED -> ApiParameterStyle.PIPE_DELIMITED
+        OpenAPIV32Style.DEEP_OBJECT -> ApiParameterStyle.DEEP_OBJECT
     }

@@ -1,0 +1,157 @@
+{
+  "openapi": "3.0.3",
+  "info": {
+    "title": "Parameter styles API",
+    "version": "1.0.0"
+  },
+  "paths": {
+    "/items": {
+      "get": {
+        "tags": ["items"],
+        "operationId": "listItems",
+        "parameters": [
+          {
+            "name": "ids",
+            "in": "query",
+            "schema": { "type": "array", "items": { "type": "string" } }
+          },
+          {
+            "name": "tagsCsv",
+            "in": "query",
+            "style": "form",
+            "explode": false,
+            "schema": { "type": "array", "items": { "type": "string" } }
+          },
+          {
+            "name": "tagsSpace",
+            "in": "query",
+            "style": "spaceDelimited",
+            "explode": false,
+            "schema": { "type": "array", "items": { "type": "integer" } }
+          },
+          {
+            "name": "tagsPipe",
+            "in": "query",
+            "style": "pipeDelimited",
+            "explode": false,
+            "schema": { "type": "array", "items": { "type": "string" } }
+          },
+          {
+            "name": "statuses",
+            "in": "query",
+            "schema": { "type": "array", "items": { "type": "string", "enum": ["open", "closed"] } }
+          },
+          {
+            "name": "filter",
+            "in": "query",
+            "style": "deepObject",
+            "explode": true,
+            "schema": {
+              "type": "object",
+              "properties": {
+                "name": { "type": "string" },
+                "minPrice": { "type": "number" }
+              }
+            }
+          },
+          {
+            "name": "range",
+            "in": "query",
+            "explode": false,
+            "schema": { "$ref": "#/components/schemas/Range" }
+          },
+          {
+            "name": "page",
+            "in": "query",
+            "schema": { "$ref": "#/components/schemas/Pagination" }
+          },
+          {
+            "name": "session",
+            "in": "cookie",
+            "required": true,
+            "schema": { "type": "string" }
+          },
+          {
+            "name": "prefs",
+            "in": "cookie",
+            "schema": { "type": "array", "items": { "type": "string" } }
+          },
+          {
+            "name": "X-Request-Ids",
+            "in": "header",
+            "schema": { "type": "array", "items": { "type": "string" } }
+          },
+          {
+            "name": "X-Mode",
+            "in": "header",
+            "schema": { "type": "string", "enum": ["fast", "slow"] }
+          },
+          {
+            "name": "level",
+            "in": "query",
+            "schema": { "$ref": "#/components/schemas/Level" }
+          },
+          {
+            "name": "levels",
+            "in": "query",
+            "schema": { "type": "array", "items": { "$ref": "#/components/schemas/Level" } }
+          },
+          {
+            "name": "X-Level",
+            "in": "header",
+            "schema": { "$ref": "#/components/schemas/Level" }
+          },
+          {
+            "name": "X-Free-Form",
+            "in": "header",
+            "schema": { "type": "object" }
+          },
+          {
+            "name": "invalidMatrix",
+            "in": "query",
+            "style": "matrix",
+            "schema": { "type": "string" }
+          },
+          {
+            "name": "invalidDeep",
+            "in": "query",
+            "style": "deepObject",
+            "schema": { "type": "integer" }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Items",
+            "content": {
+              "application/json": {
+                "schema": { "type": "array", "items": { "type": "string" } }
+              }
+            }
+          }
+        }
+      }
+    }
+  },
+  "components": {
+    "schemas": {
+      "Range": {
+        "type": "object",
+        "properties": {
+          "from": { "type": "integer" },
+          "to": { "type": "integer" }
+        }
+      },
+      "Level": {
+        "type": "string",
+        "enum": ["low-level", "high-level"]
+      },
+      "Pagination": {
+        "type": "object",
+        "properties": {
+          "offset": { "type": "integer" },
+          "limit": { "type": "integer" }
+        }
+      }
+    }
+  }
+}

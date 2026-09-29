@@ -39,12 +39,12 @@ public class AccountsClient(
   /**
    * Get multiple accounts
    */
-  public suspend fun getAccounts(id: CollectionsList<GetAccountsId>? = null): GetAccountsResponse {
+  public suspend fun getAccounts(id: CollectionsList<String>? = null): GetAccountsResponse {
     try {
       val response = configuration.client.`get`("api/v1/accounts") {
         url {
           if (id != null) {
-            parameters.append("id", id.joinToString(","))
+            parameters.appendAll("id", id)
           }
         }
       }
@@ -662,12 +662,12 @@ public class AccountsClient(
   /**
    * Find familiar followers
    */
-  public suspend fun getAccountsFamiliarFollowers(id: CollectionsList<GetAccountsFamiliarFollowersId>? = null): GetAccountsFamiliarFollowersResponse {
+  public suspend fun getAccountsFamiliarFollowers(id: CollectionsList<String>? = null): GetAccountsFamiliarFollowersResponse {
     try {
       val response = configuration.client.`get`("api/v1/accounts/familiar_followers") {
         url {
           if (id != null) {
-            parameters.append("id", id.joinToString(","))
+            parameters.appendAll("id", id)
           }
         }
       }
@@ -717,12 +717,12 @@ public class AccountsClient(
   /**
    * Check relationships to other accounts
    */
-  public suspend fun getAccountRelationships(id: CollectionsList<GetAccountRelationshipsId>? = null, withSuspended: Boolean? = false): GetAccountRelationshipsResponse {
+  public suspend fun getAccountRelationships(id: CollectionsList<String>? = null, withSuspended: Boolean? = false): GetAccountRelationshipsResponse {
     try {
       val response = configuration.client.`get`("api/v1/accounts/relationships") {
         url {
           if (id != null) {
-            parameters.append("id", id.joinToString(","))
+            parameters.appendAll("id", id)
           }
           if (withSuspended != null) {
             parameters.append("with_suspended", withSuspended.toString())
@@ -837,15 +837,6 @@ public class AccountsClient(
       return GetAccountsVerifyCredentialsResponseUnknownFailure(500)
     }
   }
-
-  @Serializable
-  public object GetAccountsId
-
-  @Serializable
-  public object GetAccountsFamiliarFollowersId
-
-  @Serializable
-  public object GetAccountRelationshipsId
 
   @Serializable
   public sealed class GetAccountsResponse {

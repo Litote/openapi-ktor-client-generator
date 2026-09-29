@@ -81,7 +81,10 @@ public fun collectModelRefs(model: ModelSpec): Set<String> =
 private fun collectDirectRefs(client: ClientSpec): Set<String> {
     val refs = mutableSetOf<String>()
     client.operations.forEach { op ->
-        op.parameters.forEach { param -> refs.addAll(collectModelRefs(param.type)) }
+        op.parameters.forEach { param ->
+            refs.addAll(collectModelRefs(param.type))
+            param.additionalModel?.let { refs.addAll(collectModelRefs(it)) }
+        }
         op.requestBody?.let { body -> refs.addAll(collectModelRefs(body.type)) }
         op.responses.forEach { response -> response.bodyType?.let { refs.addAll(collectModelRefs(it)) } }
     }

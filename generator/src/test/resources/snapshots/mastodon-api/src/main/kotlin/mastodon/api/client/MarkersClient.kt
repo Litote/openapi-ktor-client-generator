@@ -32,7 +32,7 @@ public class MarkersClient(
       val response = configuration.client.`get`("api/v1/markers") {
         url {
           if (timeline != null) {
-            parameters.append("timeline", timeline.joinToString(","))
+            parameters.appendAll("timeline", timeline.map { it.serialName() })
           }
         }
       }
