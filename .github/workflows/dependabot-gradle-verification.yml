@@ -11,6 +11,15 @@ jobs:
   update-verification-metadata:
     name: Regenerate verification metadata
     if: github.actor == 'dependabot[bot]'
+    # Shared with the other dependabot workflow: both push a commit to the PR branch
+    # on top of its current HEAD, so running them in parallel makes the second ref
+    # update fail with "Update is not a fast forward". Declared at job level so that
+    # runs skipped by the `if` above (triggered by our own bot commits) stay out of
+    # the group; `queue: max` keeps every pending job instead of replacing it.
+    concurrency:
+      group: dependabot-branch-update-${{ github.head_ref }}
+      cancel-in-progress: false
+      queue: max
     runs-on: ubuntu-latest
     permissions:
       contents: write
