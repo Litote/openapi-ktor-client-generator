@@ -59,6 +59,11 @@ public sealed class DomainTypeSpec {
         override val nullable: Boolean = false,
     ) : DomainTypeSpec()
 
+    /** Raw binary content (`ByteArray`), e.g. an `application/octet-stream` or `image/png` response body. */
+    public data class BinaryTypeSpec(
+        override val nullable: Boolean = false,
+    ) : DomainTypeSpec()
+
     public fun asNullable(): DomainTypeSpec =
         when (this) {
             is PrimitiveSpec -> copy(nullable = true)
@@ -68,6 +73,7 @@ public sealed class DomainTypeSpec {
             is ModelReferenceSpec -> copy(nullable = true)
             is InlineTypeSpec -> copy(nullable = true)
             is JsonTypeSpec -> copy(nullable = true)
+            is BinaryTypeSpec -> copy(nullable = true)
         }
 
     public val isString: Boolean get() = this is PrimitiveSpec && kind == PrimitiveSpec.KindSpec.STRING
@@ -82,5 +88,6 @@ public sealed class DomainTypeSpec {
             is ModelReferenceSpec -> copy(nullable = false)
             is InlineTypeSpec -> copy(nullable = false)
             is JsonTypeSpec -> copy(nullable = false)
+            is BinaryTypeSpec -> copy(nullable = false)
         }
 }

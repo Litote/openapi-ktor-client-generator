@@ -472,7 +472,7 @@ graph TD
     IL["ModelSpec (inline)"]
     MS["ModelSpec\n(DataClassSpec | SealedClassSpec\n| EnumSpec | AliasSpec | ObjectSpec | InterfaceSpec)"]
     MP["ModelPropertySpec"]
-    DT["DomainTypeSpec\n(PrimitiveSpec | ListTypeSpec | SetTypeSpec\n| MapTypeSpec | ModelReferenceSpec\n| InlineTypeSpec | JsonTypeSpec)"]
+    DT["DomainTypeSpec\n(PrimitiveSpec | ListTypeSpec | SetTypeSpec\n| MapTypeSpec | ModelReferenceSpec\n| InlineTypeSpec | JsonTypeSpec\n| BinaryTypeSpec)"]
 
     GS -->|clientConfiguration| CC
     GS -->|clients| CS
@@ -491,6 +491,21 @@ graph TD
 ```
 
 **`DomainTypeSpec.ModelReferenceSpec(name)`** is the link between operations/models and named model classes generated in the model package.
+
+**`DomainTypeSpec.BinaryTypeSpec`** renders as `ByteArray` (raw binary response bodies). It references no model.
+
+### Response media type resolution (`OpenApiSpecificationParser.resolveResponseBody`)
+
+| Declared media type | `ResponseEntrySpec.bodyType` | `ResponseEntrySpec.contentTypes` |
+|---|---|---|
+| `application/json`, `application/yaml`, `application/x-yaml`, `*/*` with a schema (checked in this order) | schema type, or `BinaryTypeSpec` for a `string/binary` schema | empty |
+| only `text/*` types | `PrimitiveSpec(STRING)` | normalized types (parameters stripped, lowercase) |
+| any other type (`application/octet-stream`, `image/*`, `application/pdf`, …) | `BinaryTypeSpec` | normalized types |
+| `text/event-stream` | `null` (SSE operation, see `OperationSpec.isSse`) | empty |
+| `*+json` / `*+yaml` without a plain JSON/YAML entry | `null` + "Unknown media type" warning | empty |
+
+`OperationBuilder` emits `accept(ContentType.parse(...))` for the `contentTypes` of success entries, because `ContentNegotiation` only adds `Accept: application/json`.
+Bodies are read with `response.body<ByteArray>()` or `response.body<String>()`, which `ContentNegotiation` ignores by default. There is no `ByteReadChannel` streaming.
 
 ---
 

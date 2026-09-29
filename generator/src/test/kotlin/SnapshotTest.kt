@@ -74,6 +74,14 @@ class SnapshotTest {
     }
 
     @Test
+    fun `GIVEN binary and text responses spec WHEN generating THEN output matches snapshot`() {
+        runSnapshotTest(
+            snapshotName = "binary-api",
+            openApiFile = "src/test/resources/binary-responses.json",
+        )
+    }
+
+    @Test
     fun `GIVEN openapi spec in yaml format WHEN generating THEN output matches json spec snapshot`() {
         runSnapshotTest(
             snapshotName = "simple-api",

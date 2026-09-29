@@ -49,16 +49,19 @@ internal class OperationBuilder(
     private data class ResponseBuildContext(
         val entries: List<RenderedResponseEntry>,
         val baseName: String,
+        val acceptContentTypes: List<String>,
     )
 
     private companion object {
         private const val KTOR_HTTP = "io.ktor.http"
+        private const val KTOR_REQUEST = "io.ktor.client.request"
         private const val KTOR_FORMS = "io.ktor.client.request.forms"
         private const val IF_NOT_NULL = "if (%N != null)"
 
         val bodyMember = MemberName("io.ktor.client.call", "body")
-        val setBodyMember = MemberName("io.ktor.client.request", "setBody")
+        val setBodyMember = MemberName(KTOR_REQUEST, "setBody")
         val contentTypeMember = MemberName(KTOR_HTTP, "contentType")
+        val acceptMember = MemberName(KTOR_REQUEST, "accept")
         val contentTypeClass = ClassName(KTOR_HTTP, "ContentType")
         val formDataMember = MemberName(KTOR_FORMS, "formData")
         val formDataContentClass = ClassName(KTOR_FORMS, "FormDataContent")
@@ -139,7 +142,7 @@ internal class OperationBuilder(
                 modelPackageOverrides,
             )
 
-        val methodMember = MemberName("io.ktor.client.request", operationInfo.method)
+        val methodMember = MemberName(KTOR_REQUEST, operationInfo.method)
         val funBuilder =
             FunSpec
                 .builder(functionName)
@@ -178,6 +181,11 @@ internal class OperationBuilder(
                     ResponseBuildContext(
                         entries = responseEntries,
                         baseName = responseBaseName,
+                        acceptContentTypes =
+                            operationInfo.responses
+                                .filter { it.isSuccess }
+                                .flatMap { it.contentTypes }
+                                .distinct(),
                     ),
             ),
         )
@@ -432,6 +440,9 @@ internal class OperationBuilder(
         val builder = CodeBlock.builder()
         builder.beginControlFlow("try")
         builder.beginControlFlow("val response = configuration.client.%M(%L)", methodMember, operationParams.trimmedPath)
+        responseCtx.acceptContentTypes.forEach { contentType ->
+            builder.addStatement("%M(%T.parse(%S))", acceptMember, contentTypeClass, contentType)
+        }
         addRegularHeaderParams(builder, operationParams.headerParameters)
         addQueryParams(builder, operationParams.queryParameters)
         addRequestBodyCode(builder, requestBodyCtx)

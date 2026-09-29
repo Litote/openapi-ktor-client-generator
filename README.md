@@ -87,6 +87,29 @@ val client = UserClient(config) // UserClient is the generated client
 val users = client.getUsers() // returns a sealed class to manage errors
 ```
 
+### Response body types
+
+The type of the `body` property of each generated response class depends on the declared media type:
+
+| Response media type | Generated `body` type |
+|---|---|
+| `application/json`, `application/yaml`, `*/*` with a schema | The schema type (`ByteArray` for a `type: string, format: binary` schema) |
+| `text/plain`, `text/csv`, … (any `text/*`) | `String` |
+| `application/octet-stream`, `image/png`, `application/pdf`, … (any other non-JSON type) | `ByteArray` |
+| `text/event-stream` | SSE operation (a `block: suspend ClientSSESession.() -> Unit` callback) |
+
+For text and binary responses, the generated method also sends an `Accept` header with the declared media types.
+When a response declares both JSON and a binary type, the JSON schema is used.
+
+```kotlin
+when (val response = client.downloadFile("42")) {
+    is DownloadFileResponseSuccess -> File("report.pdf").writeBytes(response.body)
+    else -> error("download failed: $response")
+}
+```
+
+The whole body is loaded into memory. Streaming large files with `ByteReadChannel` is not supported yet.
+
 ## Gradle task configuration properties
 
 ### Root properties
@@ -129,7 +152,7 @@ See [ADVANCED_USAGE.md](ADVANCED_USAGE.md#rich-types-for-string-formats) for det
 
 ## Advanced usage and troubleshooting
 
-See [ADVANCED_USAGE.md](CONTRIBUTING.md)
+See [ADVANCED_USAGE.md](ADVANCED_USAGE.md)
 
 ## Generating subprojects
 
