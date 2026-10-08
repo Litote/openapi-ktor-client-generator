@@ -44,3 +44,18 @@ internal fun parameterDefaultLiteral(
         else -> null
     }
 }
+
+/**
+ * Raw default value of a model property, converted to a valid Kotlin literal for numeric types
+ * (e.g. `default: 25` on a `number` property becomes `25.0`). Other values are returned as declared.
+ */
+internal fun propertyDefaultLiteral(
+    defaultValue: JsonPrimitive,
+    typeName: TypeName,
+): String =
+    when {
+        defaultValue.isString -> null
+        typeName.isDouble() -> defaultValue.doubleOrNull?.toString()
+        typeName.isFloat() -> defaultValue.floatOrNull?.let { "${it}F" }
+        else -> null
+    } ?: defaultValue.content
