@@ -403,6 +403,12 @@ public class ApiClientConfigurationGenerator public constructor(
         val companion = buildCompanion()
         val clientConfiguration = buildClientConfiguration(constructor, companion)
         writeFile(clientConfiguration)
+        StringFormatSerializersGenerator(
+            clientPackage = configuration.clientPackage,
+            outputDirectory = configuration.outputDirectory,
+            stringFormatTypes = stringFormatTypes,
+            fileSystemWriter = fileSystemWriter,
+        ).render()
         if (this.clientConfiguration.hasYamlContentType) {
             YamlContentConverterGenerator(
                 clientPackage = configuration.clientPackage,

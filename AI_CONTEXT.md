@@ -371,13 +371,21 @@ Hooks are declared on `ApiConfigurationGeneratorConfig`, `ApiClientGeneratorConf
 - The parser always keeps the OpenAPI `format` of `string` schemas in `DomainTypeSpec.PrimitiveSpec.format`
   (`binary` excepted). Inside the parser it travels on the KotlinPoet `STRING` TypeName as a `StringFormatTag`
   (`TypeNameConverter.kt`, `stringTypeName()`); tags do not affect `TypeName` equality, so `== STRING` checks still hold.
-- `ApiGeneratorModule.processTypeMapping(ApiTypeMappingConfig)` (port) fills `stringFormatTypes: format → StringFormatType(qualifiedName, parseFunction)`.
+- `ApiGeneratorModule.processTypeMapping(ApiTypeMappingConfig)` (port) fills `stringFormatTypes: format → StringFormatType(qualifiedName, parseFunction, formatSuffix)`.
   `List<ApiGeneratorModule>.stringFormatTypes()` (config) resolves the map; each renderer (`ApiModelGenerator`,
   `ApiClientGenerator` → `OperationBuilder`/`ResponseBuilder`, `ApiClientConfigurationGenerator`) computes it from its modules.
 - **Every `DomainTypeSpec.toTypeName(...)` call must pass `stringFormatTypes`**, otherwise the type silently falls back to `String`.
-- Mapped types: path/query params use `.toString()`, string defaults render `Type.parse("…")`, and component-parameter
+- Mapped types: path/query/header/cookie/form params use `StringFormatType.formatSuffix` (default
+  `StringFormatType.DEFAULT_FORMAT_SUFFIX` = `.toString()`), string defaults render `Type.parse("…")`, and component-parameter
   defaults become a non-`const` `val` in `ClientConfiguration.Companion`.
-- Modules: `KotlinTimeInstantModule` (`date-time` → `kotlin.time.Instant`), `KotlinxDateTimeLocalDateModule`
+- A `formatSuffix` other than `.toString()` (`StringFormatType.needsSerializer`) makes `ApiClientConfigurationGenerator`
+  generate `StringFormatSerializers.kt` (`StringFormatSerializersGenerator`: one `<Format>FormatSerializer` object per format,
+  in the client package, i.e. in the global shared subproject in split mode). `ApiModelGenerator` (constructed with
+  `clientPackage`) annotates the property types with `@Serializable(with = …)` through
+  `toTypeName(..., formatSerializerPackage = clientPackage)`; function parameters are never annotated.
+- Modules: `KotlinTimeInstantModule(precision: InstantPrecision = MILLISECONDS)` (`date-time` → `kotlin.time.Instant`,
+  sent truncated to `SECONDS` / `MILLISECONDS` / `MICROSECONDS`, or untruncated with `NANOSECONDS`; public so it can be
+  configured through `customModules`), `KotlinxDateTimeLocalDateModule`
   (`date` → `kotlinx.datetime.LocalDate`, needs kotlinx-datetime), `KotlinUuidModule` (`uuid` → `kotlin.uuid.Uuid`).
 
 `BasicAuthModule` adds `accessToken: String?` and sets `httpClientAuthorization` to `{ accessToken?.let { token -> defaultRequest { header("Authorization", "Bearer " + token) } } }`.
@@ -530,6 +538,7 @@ type (`default: 25` on a `number` → `25.0`, on a `float` → `25.0F`), like `p
 | Declared media type | `ResponseEntrySpec.bodyType` | `ResponseEntrySpec.contentTypes` |
 |---|---|---|
 | `application/json`, `application/yaml`, `application/x-yaml`, `*/*` with a schema (checked in this order) | schema type, or `BinaryTypeSpec` for a `string/binary` schema | empty |
+| same, with an inline `object` schema with `properties` and no `oneOf` | `InlineTypeSpec("<Op>ResponseBody")` (or `<Op>Response<code>Body` when several responses of the operation are inline objects); the model is added to `OperationSpec.inlineModels` and nested in the client interface | empty |
 | only `text/*` types | `PrimitiveSpec(STRING)` | normalized types (parameters stripped, lowercase) |
 | any other type (`application/octet-stream`, `image/*`, `application/pdf`, …) | `BinaryTypeSpec` | normalized types |
 | `text/event-stream` | `null` (SSE operation, see `OperationSpec.isSse`) | empty |
@@ -586,7 +595,8 @@ See [CONTRIBUTING.md — allOf-only schemas → Kotlin interface](CONTRIBUTING.m
 > - property types (via `collectModelRefs(DomainTypeSpec)`)
 > - nested model types inside properties
 >
-> `collectDirectRefs(ClientSpec)` also collects the refs of inline parameter models (`OperationParameterSpec.additionalModel`).
+> `collectDirectRefs(ClientSpec)` also collects the refs of inline parameter models (`OperationParameterSpec.additionalModel`)
+> and of operation inline models (`OperationSpec.inlineModels`: inline request and response bodies).
 
 ---
 

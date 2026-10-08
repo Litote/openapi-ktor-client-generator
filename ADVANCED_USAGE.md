@@ -55,6 +55,13 @@ when (val response = client.downloadFile("42")) {
 
 The whole body is loaded into memory. Streaming large files with `ByteReadChannel` is not supported yet.
 
+### Inline response schemas
+
+A JSON/YAML response whose schema is an inline object with `properties` (instead of a `$ref`) is generated as a data
+class nested in the client interface, named `<Operation>ResponseBody` (e.g. `PlanResponseBody`). When several responses
+of the same operation are inline objects, the status code is part of the name (`StopsResponse200Body`,
+`StopsResponse404Body`). A free-form `type: object` without `properties` is still typed `JsonElement`.
+
 ### Response headers
 
 Every generated response class, including the `*ResponseUnknownFailure` fallback, exposes the raw Ktor
@@ -177,6 +184,29 @@ form parameters (converted with `toString()`, which produces the ISO-8601 / cano
 built into kotlinx-serialization (`Instant`, `Uuid`) and kotlinx-datetime (`LocalDate`). The generated code requires
 Kotlin 2.4+, where `kotlin.uuid.Uuid` is stable.
 
+`KotlinTimeInstantModule` truncates the `Instant` values it sends (parameters, form fields and JSON bodies) to the
+millisecond by default, e.g. `2026-10-09T15:23:39.886Z`: some servers misread the nanosecond precision of
+`Instant.toString()`. Received values are parsed whatever their precision. To choose another precision
+(`SECONDS`, `MILLISECONDS`, `MICROSECONDS`, or `NANOSECONDS` for plain `Instant.toString()`), declare the module
+in `customModules` instead of `modulesIds`:
+
+```kotlin
+import org.litote.openapi.ktor.client.generator.module.kotlintimeinstant.InstantPrecision
+import org.litote.openapi.ktor.client.generator.module.kotlintimeinstant.KotlinTimeInstantModule
+
+apiClientGenerator {
+    generators {
+        create("openapi") {
+            openApiFile = file("src/main/openapi/openapi.json")
+            customModules.add(KotlinTimeInstantModule(InstantPrecision.SECONDS))
+        }
+    }
+}
+```
+
+In JSON bodies, the truncation relies on a `DateTimeFormatSerializer` generated next to `ClientConfiguration` and
+applied to the model properties (`createdAt: @Serializable(with = DateTimeFormatSerializer::class) Instant`).
+
 With `initApiClientSubproject`, add the kotlinx-datetime dependency through
 `initSubproject { additionalDependencies.add("org.jetbrains.kotlinx:kotlinx-datetime:<version>") }`.
 
@@ -187,6 +217,11 @@ override fun processTypeMapping(config: ApiTypeMappingConfig) {
     config.stringFormatTypes["uri"] = StringFormatType("com.example.Uri", parseFunction = "parse")
 }
 ```
+
+`StringFormatType.formatSuffix` (default `.toString()`) is the Kotlin expression suffix appended to a value
+to format it as a path, query, header, cookie or form parameter. When it is not `.toString()`, a
+`<Format>FormatSerializer` (e.g. `UriFormatSerializer`) using it is generated next to `ClientConfiguration` and
+applied to the model properties, so JSON bodies use the same format.
 
 #### Custom module at runtime
 

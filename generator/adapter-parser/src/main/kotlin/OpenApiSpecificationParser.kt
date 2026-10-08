@@ -272,9 +272,9 @@ public class OpenApiSpecificationParser(
             operation.requestBody?.asRequestBody?.let {
                 buildRequestBodySpec(it, methodName, apiModel, configuration, modelPackage)
             }
-        val responseEntries = buildResponseEntries(operation, methodName, apiModel, modelPackage)
+        val responseEntries = buildResponseEntries(operation, methodName, apiModel, configuration)
         val isSse = isSseOperation(operation)
-        val inlineModels = requestBodySpec?.inlineModels ?: emptyList()
+        val inlineModels = (requestBodySpec?.inlineModels ?: emptyList()) + responseEntries.inlineModels
 
         return OperationSpec(
             name = methodName,
@@ -282,7 +282,7 @@ public class OpenApiSpecificationParser(
             method = apiOperation.method,
             parameters = parameters,
             requestBody = requestBodySpec,
-            responses = responseEntries,
+            responses = responseEntries.entries,
             isSse = isSse,
             summary = operation.summary,
             inlineModels = inlineModels,
@@ -580,38 +580,49 @@ public class OpenApiSpecificationParser(
         operation: community.flock.kotlinx.openapi.bindings.Operation,
         operationName: String,
         apiModel: ApiModel,
-        modelPackage: String,
-    ): List<ResponseEntrySpec> {
-        val responses = operation.responses ?: return emptyList()
+        configuration: ApiGeneratorConfiguration,
+    ): ResponseEntries {
+        val responses = operation.responses ?: return ResponseEntries(emptyList(), emptyList())
+        val inlineResponseCount = responses.values.count { it is Response && it.inlineObjectSchema() != null }
 
         val parsedResponses =
             responses.entries
                 .mapNotNull { (key, responseOrRef) ->
                     val code = key.value.toIntOrNull() ?: return@mapNotNull null
                     if (responseOrRef !is Response) return@mapNotNull null
+                    // A single inline body keeps the short name, several ones are told apart by their status code.
+                    val inlineModelName =
+                        if (inlineResponseCount == 1) "${operationName}ResponseBody" else "${operationName}Response${code}Body"
                     ParsedResponse(
                         code = code,
-                        body = resolveResponseBody(responseOrRef, operationName, apiModel, modelPackage),
+                        body = resolveResponseBody(responseOrRef, operationName, inlineModelName, apiModel, configuration),
                         headers = buildResponseHeaders(responseOrRef, apiModel),
                     )
                 }.sortedBy { it.code }
 
-        return parsedResponses
-            .groupBy { it.body.type to (it.code in 200 until 300) }
-            .map { (key, values) ->
-                ResponseEntrySpec(
-                    statusCodes = values.map { it.code },
-                    bodyType = key.first,
-                    isSuccess = key.second,
-                    contentTypes = values.flatMap { it.body.contentTypes }.distinct(),
-                    headers =
-                        values
-                            .flatMap { it.headers }
-                            .distinctBy { it.originalName.lowercase() }
-                            .sortedBy { it.originalName.lowercase() },
-                )
-            }
+        val entries =
+            parsedResponses
+                .groupBy { it.body.type to (it.code in 200 until 300) }
+                .map { (key, values) ->
+                    ResponseEntrySpec(
+                        statusCodes = values.map { it.code },
+                        bodyType = key.first,
+                        isSuccess = key.second,
+                        contentTypes = values.flatMap { it.body.contentTypes }.distinct(),
+                        headers =
+                            values
+                                .flatMap { it.headers }
+                                .distinctBy { it.originalName.lowercase() }
+                                .sortedBy { it.originalName.lowercase() },
+                    )
+                }
+        return ResponseEntries(entries, parsedResponses.mapNotNull { it.body.inlineModel })
     }
+
+    private data class ResponseEntries(
+        val entries: List<ResponseEntrySpec>,
+        val inlineModels: List<ModelSpec>,
+    )
 
     private data class ParsedResponse(
         val code: Int,
@@ -661,19 +672,37 @@ public class OpenApiSpecificationParser(
     private data class ResponseBody(
         val type: DomainTypeSpec?,
         val contentTypes: List<String> = emptyList(),
+        val inlineModel: ModelSpec? = null,
     )
+
+    /** The JSON/YAML body schema of this response when it is an inline object with properties (and no `oneOf`). */
+    private fun ResponseOrReference.inlineObjectSchema(): Schema? =
+        responseContent
+            ?.let { content -> STRUCTURED_RESPONSE_MEDIA_TYPES.firstNotNullOfOrNull { content[MediaType(it)]?.schema } }
+            ?.let { it as? Schema }
+            ?.takeIf { it.oneOfSchemas.isNullOrEmpty() && !it.properties.isNullOrEmpty() }
 
     // Resolves the body type of a response from its declared media types:
     // - JSON / YAML / wildcard with a schema -> the schema type (ByteArray for a string/binary schema)
     // - text media types (text/plain, text/csv, ...) -> String
     // - any other non-JSON media type (application/octet-stream, images, application/pdf, ...) -> ByteArray
+    // - an inline object schema with properties -> a model nested in the client interface
     private fun resolveResponseBody(
         response: ResponseOrReference,
         operationName: String,
+        inlineModelName: String,
         apiModel: ApiModel,
-        modelPackage: String,
+        configuration: ApiGeneratorConfiguration,
     ): ResponseBody {
+        val modelPackage = configuration.resolvedModelPackage
         val content = response.responseContent ?: return ResponseBody(null)
+        val inlineObjectSchema = response.inlineObjectSchema()
+        if (inlineObjectSchema != null) {
+            val inlineModel = buildModelSpecFromSchema(inlineModelName, inlineObjectSchema, apiModel, configuration)
+            if (inlineModel != null) {
+                return ResponseBody(DomainTypeSpec.InlineTypeSpec(inlineModelName), inlineModel = inlineModel)
+            }
+        }
         val schema = STRUCTURED_RESPONSE_MEDIA_TYPES.firstNotNullOfOrNull { content[MediaType(it)]?.schema }
         if (schema != null) {
             val type =

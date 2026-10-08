@@ -24,6 +24,14 @@ class StringFormatTypesTest {
             }
         }
 
+    private val truncatingModule =
+        object : ApiGeneratorModule {
+            override fun processTypeMapping(config: ApiTypeMappingConfig) {
+                config.stringFormatTypes["date-time"] = StringFormatType("kotlin.time.Instant", formatSuffix = ".truncated()")
+                config.stringFormatTypes["uuid"] = StringFormatType("kotlin.uuid.Uuid")
+            }
+        }
+
     private fun generateFiles(
         modules: List<ApiGeneratorModule>,
         splitByClient: Boolean = false,
@@ -119,6 +127,55 @@ class StringFormatTypesTest {
         assertTrue(client.contains("day: LocalDate? = LocalDate.parse(\"2024-01-31\")"), client)
         assertTrue(client.contains("eventId.toString().encodeURLPathPart()"), client)
         assertTrue(client.contains("parameters.append(\"since\", since.toString())"), client)
+    }
+
+    @Test
+    fun `GIVEN a format with a custom suffix WHEN generating client THEN parameters and form fields use it`() {
+        val client = generateFiles(listOf(truncatingModule)).getValue("EventClient.kt")
+
+        assertTrue(client.contains("parameters.append(\"since\", since.truncated())"), client)
+        assertTrue(client.contains("parameters.appendAll(\"slots\", slots.map { value -> value.truncated() })"), client)
+        assertTrue(client.contains("append(\"at\", form.at.truncated())"), client)
+        assertTrue(client.contains("append(\"until\", value.truncated())"), client)
+    }
+
+    @Test
+    fun `GIVEN a format with a custom suffix WHEN generating models THEN properties use the generated serializer`() {
+        val event = generateFiles(listOf(truncatingModule)).getValue("Event.kt")
+
+        assertTrue(event.contains("public val createdAt: @Serializable(with = DateTimeFormatSerializer::class) Instant"), event)
+        assertTrue(event.contains("public val updatedAt: @Serializable(with = DateTimeFormatSerializer::class) Instant? = null"), event)
+        assertTrue(event.contains("public val history: List<@Serializable(with = DateTimeFormatSerializer::class) Instant>?"), event)
+        assertTrue(event.contains("import org.example.client.DateTimeFormatSerializer"), event)
+        assertTrue(event.contains("public val id: Uuid"), event)
+    }
+
+    @Test
+    fun `GIVEN a format with a custom suffix WHEN generating THEN a serializer using it is generated`() {
+        val serializers = generateFiles(listOf(truncatingModule)).getValue("StringFormatSerializers.kt")
+
+        assertTrue(serializers.contains("public object DateTimeFormatSerializer : KSerializer<Instant>"), serializers)
+        assertTrue(serializers.contains("encoder.encodeString(value.truncated())"), serializers)
+        assertTrue(serializers.contains("Instant = Instant.parse(decoder.decodeString())"), serializers)
+        assertFalse(serializers.contains("Uuid"), serializers)
+    }
+
+    @Test
+    fun `GIVEN only toString formats WHEN generating THEN no serializer is generated`() {
+        val files = generateFiles(listOf(allFormatsModule))
+
+        assertFalse(files.containsKey("StringFormatSerializers.kt"), files.keys.toString())
+        assertFalse(files.getValue("Event.kt").contains("FormatSerializer"))
+    }
+
+    @Test
+    fun `GIVEN a format with a custom suffix and split by client WHEN generating THEN the serializer is only in the shared subproject`() {
+        val clientFiles = generateFiles(listOf(truncatingModule), splitByClient = true, targetClientName = "EventClient")
+        val sharedFiles = generateFiles(listOf(truncatingModule), splitByClient = true)
+
+        assertFalse(clientFiles.containsKey("StringFormatSerializers.kt"), clientFiles.keys.toString())
+        assertTrue(clientFiles.getValue("Event.kt").contains("DateTimeFormatSerializer::class"))
+        assertTrue(sharedFiles.containsKey("StringFormatSerializers.kt"), sharedFiles.keys.toString())
     }
 
     @Test

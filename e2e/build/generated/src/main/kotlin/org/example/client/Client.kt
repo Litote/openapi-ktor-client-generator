@@ -114,7 +114,7 @@ public class DefaultClient(
             parameters.append("day", day.toString())
           }
           if (runIds != null) {
-            parameters.appendAll("runIds", runIds.map { it.toString() })
+            parameters.appendAll("runIds", runIds.map { value -> value.toString() })
           }
           if (statuses != null) {
             parameters.append("statuses", statuses.joinToString("|") { it.serialName() })
