@@ -33,6 +33,7 @@ kotlin {
         "src/test/resources/snapshots/yaml-api/src/main/kotlin",
         "src/test/resources/snapshots/karto-api/src/main/kotlin",
         "src/test/resources/snapshots/binary-api/src/main/kotlin",
+        "src/test/resources/snapshots/inline-response-api/src/main/kotlin",
     )
 }
 

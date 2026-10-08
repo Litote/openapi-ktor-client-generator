@@ -86,6 +86,7 @@ private fun collectDirectRefs(client: ClientSpec): Set<String> {
             param.additionalModel?.let { refs.addAll(collectModelRefs(it)) }
         }
         op.requestBody?.let { body -> refs.addAll(collectModelRefs(body.type)) }
+        op.inlineModels.forEach { model -> refs.addAll(collectModelRefs(model)) }
         op.responses.forEach { response -> response.bodyType?.let { refs.addAll(collectModelRefs(it)) } }
     }
     return refs

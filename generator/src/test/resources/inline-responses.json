@@ -1,0 +1,117 @@
+{
+  "openapi": "3.0.3",
+  "info": {
+    "title": "Inline responses",
+    "version": "1.0.0"
+  },
+  "paths": {
+    "/plan": {
+      "get": {
+        "tags": ["routing"],
+        "operationId": "plan",
+        "responses": {
+          "200": {
+            "description": "The computed itineraries",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "required": ["itineraries", "nextPageCursor"],
+                  "properties": {
+                    "itineraries": {
+                      "type": "array",
+                      "items": { "$ref": "#/components/schemas/Itinerary" }
+                    },
+                    "nextPageCursor": { "type": "string" },
+                    "debug": {
+                      "type": "object",
+                      "properties": {
+                        "durationMs": { "type": "integer", "format": "int64" }
+                      }
+                    }
+                  }
+                }
+              }
+            }
+          },
+          "400": {
+            "description": "Bad request",
+            "content": {
+              "application/json": {
+                "schema": { "$ref": "#/components/schemas/Error" }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/stops": {
+      "get": {
+        "tags": ["routing"],
+        "operationId": "stops",
+        "responses": {
+          "200": {
+            "description": "Stops",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "properties": {
+                    "count": { "type": "integer" }
+                  }
+                }
+              }
+            }
+          },
+          "404": {
+            "description": "Not found",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "required": ["reason"],
+                  "properties": {
+                    "reason": { "type": "string" }
+                  }
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/raw": {
+      "get": {
+        "tags": ["routing"],
+        "operationId": "raw",
+        "responses": {
+          "200": {
+            "description": "Free-form object",
+            "content": {
+              "application/json": {
+                "schema": { "type": "object" }
+              }
+            }
+          }
+        }
+      }
+    }
+  },
+  "components": {
+    "schemas": {
+      "Itinerary": {
+        "type": "object",
+        "required": ["duration"],
+        "properties": {
+          "duration": { "type": "integer" }
+        }
+      },
+      "Error": {
+        "type": "object",
+        "properties": {
+          "message": { "type": "string" }
+        }
+      }
+    }
+  }
+}

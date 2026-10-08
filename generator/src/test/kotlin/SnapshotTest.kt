@@ -82,6 +82,14 @@ class SnapshotTest {
     }
 
     @Test
+    fun `GIVEN inline response schemas spec WHEN generating THEN output matches snapshot`() {
+        runSnapshotTest(
+            snapshotName = "inline-response-api",
+            openApiFile = "src/test/resources/inline-responses.json",
+        )
+    }
+
+    @Test
     fun `GIVEN response headers spec WHEN generating THEN output matches snapshot`() {
         runSnapshotTest(
             snapshotName = "response-headers-api",

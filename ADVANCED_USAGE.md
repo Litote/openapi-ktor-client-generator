@@ -55,6 +55,13 @@ when (val response = client.downloadFile("42")) {
 
 The whole body is loaded into memory. Streaming large files with `ByteReadChannel` is not supported yet.
 
+### Inline response schemas
+
+A JSON/YAML response whose schema is an inline object with `properties` (instead of a `$ref`) is generated as a data
+class nested in the client interface, named `<Operation>ResponseBody` (e.g. `PlanResponseBody`). When several responses
+of the same operation are inline objects, the status code is part of the name (`StopsResponse200Body`,
+`StopsResponse404Body`). A free-form `type: object` without `properties` is still typed `JsonElement`.
+
 ### Response headers
 
 Every generated response class, including the `*ResponseUnknownFailure` fallback, exposes the raw Ktor

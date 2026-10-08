@@ -522,6 +522,7 @@ graph TD
 | Declared media type | `ResponseEntrySpec.bodyType` | `ResponseEntrySpec.contentTypes` |
 |---|---|---|
 | `application/json`, `application/yaml`, `application/x-yaml`, `*/*` with a schema (checked in this order) | schema type, or `BinaryTypeSpec` for a `string/binary` schema | empty |
+| same, with an inline `object` schema with `properties` and no `oneOf` | `InlineTypeSpec("<Op>ResponseBody")` (or `<Op>Response<code>Body` when several responses of the operation are inline objects); the model is added to `OperationSpec.inlineModels` and nested in the client interface | empty |
 | only `text/*` types | `PrimitiveSpec(STRING)` | normalized types (parameters stripped, lowercase) |
 | any other type (`application/octet-stream`, `image/*`, `application/pdf`, …) | `BinaryTypeSpec` | normalized types |
 | `text/event-stream` | `null` (SSE operation, see `OperationSpec.isSse`) | empty |
@@ -578,7 +579,8 @@ See [CONTRIBUTING.md — allOf-only schemas → Kotlin interface](CONTRIBUTING.m
 > - property types (via `collectModelRefs(DomainTypeSpec)`)
 > - nested model types inside properties
 >
-> `collectDirectRefs(ClientSpec)` also collects the refs of inline parameter models (`OperationParameterSpec.additionalModel`).
+> `collectDirectRefs(ClientSpec)` also collects the refs of inline parameter models (`OperationParameterSpec.additionalModel`)
+> and of operation inline models (`OperationSpec.inlineModels`: inline request and response bodies).
 
 ---
 
