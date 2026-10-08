@@ -517,6 +517,11 @@ graph TD
 
 **`DomainTypeSpec.BinaryTypeSpec`** renders as `ByteArray` (raw binary response bodies). It references no model.
 
+**Non-object component schemas** (`type: array`, `number`, `integer`, `boolean`, or `string` without `enum`) are
+not generated as model classes: `ApiModel.getClassName` replaces every `$ref` to them by their Kotlin type
+(`ApiModel.isInlinedSchema`, e.g. `List<List<Double>>`, `Double`). Arrays whose items are inline enums are
+excluded and keep the previous behavior. Recursive definitions stop on the model reference.
+
 **Model property defaults**: `propertyDefaultLiteral` (`ParserNames.kt`) converts numeric defaults to the property
 type (`default: 25` on a `number` → `25.0`, on a `float` → `25.0F`), like `parameterDefaultLiteral` does for parameters.
 

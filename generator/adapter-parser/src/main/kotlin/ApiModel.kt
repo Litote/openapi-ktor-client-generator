@@ -572,13 +572,43 @@ internal class ApiModel private constructor(
         }
     }
 
+    /**
+     * Returns true for a component schema that is not generated as a model class (array, number, integer,
+     * boolean or non-enum string): references to it are replaced by its Kotlin type.
+     */
+    internal fun isInlinedSchema(schema: Schema): Boolean =
+        when (schema.firstApiType) {
+            ApiSchemaType.ARRAY -> !schema.hasInlineEnumItems()
+            ApiSchemaType.NUMBER, ApiSchemaType.INTEGER, ApiSchemaType.BOOLEAN -> true
+            ApiSchemaType.STRING -> schema.enum.isNullOrEmpty()
+            else -> false
+        }
+
+    private fun Schema.hasInlineEnumItems(): Boolean {
+        val itemSchema = items as? Schema ?: return false
+        return !itemSchema.enum.isNullOrEmpty() || itemSchema.hasInlineEnumItems()
+    }
+
+    /** Names of the inlined component schemas being resolved, to stop on recursive definitions. */
+    private val inliningSchemaNames = mutableSetOf<String>()
+
+    private fun resolveInlinedReference(refName: String): TypeName? {
+        val schema = model.componentSchemas?.get(refName) as? Schema ?: return null
+        if (!isInlinedSchema(schema) || !inliningSchemaNames.add(refName)) return null
+        return try {
+            getClassName(refName, schema as SchemaOrReference)
+        } finally {
+            inliningSchemaNames.remove(refName)
+        }
+    }
+
     fun getClassName(
         name: String,
         schemaOrReference: SchemaOrReference,
     ): TypeName =
         when (schemaOrReference) {
             is Reference -> {
-                ClassName(
+                resolveInlinedReference(schemaOrReference.refClassName) ?: ClassName(
                     configuration.resolvedModelPackage,
                     schemaOrReference.refClassName.let {
                         if (it == "Companion") {
