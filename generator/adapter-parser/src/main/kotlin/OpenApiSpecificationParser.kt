@@ -730,7 +730,7 @@ public class OpenApiSpecificationParser(
         configuration: ApiGeneratorConfiguration,
     ): List<ModelSpec> {
         val specs = mutableListOf<ModelSpec>()
-        apiModel.schemas.forEach { (name, schema) ->
+        apiModel.schemas.filterValues { !apiModel.isInlinedSchema(it) }.forEach { (name, schema) ->
             buildModelSpecFromSchema(name, schema, apiModel, configuration)?.let { specs.add(it) }
         }
         apiModel.requestBodySealedParents.keys.forEach { name ->

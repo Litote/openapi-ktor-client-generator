@@ -18,6 +18,6 @@ public data class CredentialApplication(
   public val name: String,
   @SerialName("redirect_uris")
   public val redirectUris: List<String>? = null,
-  public val scopes: OAuthScopes? = null,
+  public val scopes: List<OAuthScope>? = null,
   public val website: String? = null,
 )

@@ -23,7 +23,7 @@ public data class DiscoverOauthServerConfigurationResponse(
   @SerialName("revocation_endpoint")
   public val revocationEndpoint: String,
   @SerialName("scopes_supported")
-  public val scopesSupported: OAuthScopes,
+  public val scopesSupported: List<OAuthScope>,
   @SerialName("service_documentation")
   public val serviceDocumentation: String,
   @SerialName("token_endpoint")
