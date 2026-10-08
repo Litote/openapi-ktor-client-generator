@@ -174,6 +174,8 @@ data class ApiGeneratorConfiguration(
     val sharedModelGranularity: SharedModelGranularity = SHARED_ALL,
     val targetSharedGroup: Set<String>? = null, // generate only models for this client group
     val modelPackageOverrides: Map<String, String> = emptyMap(), // model name → package
+    val userAgent: String? = null,             // default of ClientConfiguration.userAgent (Ktor UserAgent plugin)
+    val engine: String = CIO_ENGINE,           // default engine: qualified HttpClientEngineFactory name, or PLATFORM_ENGINE ("platform")
 )
 ```
 
@@ -362,7 +364,8 @@ Hooks are declared on `ApiConfigurationGeneratorConfig`, `ApiClientGeneratorConf
 `ApiConfigurationGeneratorConfig` exposes:
 - `jsonDefaultValueProperties: MutableMap<String, String>` — add/modify Json builder properties
 - `exceptionLoggingDefaultValue: String` — replace the exception logger lambda
-- `httpClientAuthorizationDefaultValue: String` — lambda body for the `httpClientAuthorization` constructor parameter (default `"{}"`)
+- `httpClientAuthorizationDefaultValue: String` — lambda body for the `httpClientAuthorization` constructor parameter (default `"{}"`); a single value, replaced by the last module that sets it
+- `httpClientAuthorizationStatements: MutableList<String>` — statements appended, in order, to the default `httpClientAuthorization` lambda (after `httpClientAuthorizationDefaultValue`, rendered as a local `defaultAuthorization` lambda when it is not `{}`). Composable across modules: prefer it
 - `additionalStringParameters: MutableList<String>` — param names (type `String?`, default `null`) injected before `httpClientAuthorization` in the constructor; referenced by name inside `httpClientAuthorizationDefaultValue` lambdas
 - `logLevelDefaultValue: String` — default value for the `logLevel: LogLevel` constructor parameter (default `"LogLevel.HEADERS"`, matching Ktor's own default)
 
@@ -388,7 +391,18 @@ Hooks are declared on `ApiConfigurationGeneratorConfig`, `ApiClientGeneratorConf
   configured through `customModules`), `KotlinxDateTimeLocalDateModule`
   (`date` → `kotlinx.datetime.LocalDate`, needs kotlinx-datetime), `KotlinUuidModule` (`uuid` → `kotlin.uuid.Uuid`).
 
-`BasicAuthModule` adds `accessToken: String?` and sets `httpClientAuthorization` to `{ accessToken?.let { token -> defaultRequest { header("Authorization", "Bearer " + token) } } }`.
+`BasicAuthModule` adds `accessToken: String?` and the `httpClientAuthorization` statement `accessToken?.let { token -> defaultRequest { header("Authorization", "Bearer " + token) } }`.
+
+`ClientConfiguration` always has a `userAgent: String?` parameter (after the module parameters, before `engine`), whose default is
+`ApiGeneratorConfiguration.userAgent` (Gradle DSL `userAgent`). `defaultHttpClientConfig(..., userAgent: String? = null, httpClientAuthorization)`
+installs the Ktor `UserAgent` plugin when it is not null, before calling `httpClientAuthorization()`.
+
+`ClientConfiguration.engine` defaults to `ApiGeneratorConfiguration.engine` (Gradle DSL `engine`, default `CIO_ENGINE`), rendered as an imported
+`MemberName`. With `PLATFORM_ENGINE` (`"platform"`), `engine` is `HttpClientEngineFactory<*>? = null` and `client` defaults to
+`engine?.let { HttpClient(it) { … } } ?: HttpClient { … }` so Ktor selects the platform engine (e.g. `ktor-client-engine-defaults`).
+`initApiClientSubproject` with `multiplatform = true` puts `ktor-client-engine-defaults` (not `ktor-client-cio`) in `commonMain`
+and adds `engine = "platform"` to every generator block (`InitSubprojectTask.buildGeneratorContent`); JVM projects keep CIO.
+An engine name without package makes the generation fail (`require` in `ApiClientConfigurationGenerator`). CIO supports HTTPS only on the JVM.
 
 ---
 

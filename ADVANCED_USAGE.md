@@ -9,12 +9,83 @@ All parameters have sensible defaults — only override what you need.
 |---|---|---|---|
 | `baseUrl` | `String` | value from spec | Base URL prepended to every request |
 | `logLevel` | `LogLevel` | `LogLevel.HEADERS` | Ktor logging verbosity (`ALL`, `HEADERS`, `BODY`, `INFO`, `NONE`) |
-| `engine` | `HttpClientEngineFactory<*>` | `CIO` | Ktor engine (swap for `MockEngine` in tests, `OkHttp` on Android, etc.) |
+| `userAgent` | `String?` | `userAgent` generator property, or `null` | `User-Agent` header sent with every request (see [User-Agent](#user-agent)). `null` keeps the Ktor default |
+| `engine` | `HttpClientEngineFactory<*>` (`HttpClientEngineFactory<*>?` with `engine = "platform"`) | `engine` generator property (`CIO`) | Ktor engine (swap for `MockEngine` in tests, `OkHttp` on Android, etc.), see [HTTP engine](#http-engine) |
 | `json` | `Json` | `Json { ignoreUnknownKeys = true }` | kotlinx.serialization `Json` instance |
 | `httpClientAuthorization` | `HttpClientConfig<*>.() -> Unit` | `{}` | Hook to inject auth headers or other per-request config |
 | `httpClientConfig` | `HttpClientConfig<*>.() -> Unit` | `defaultHttpClientConfig(…)` | Full Ktor client config — override to replace the default setup entirely |
 | `client` | `HttpClient` | built from `engine` + `httpClientConfig` | Pre-built `HttpClient` — inject a mock in tests |
 | `exceptionLogger` | `Throwable.() -> Unit` | `{ printStackTrace() }` | Called when a client catches an unexpected exception (`CancellationException` is always rethrown and never passed to this logger) |
+
+### User-Agent
+
+Some public APIs ask clients to identify themselves with a `User-Agent` header. Set its default value with the
+`userAgent` generator property:
+
+```kotlin
+apiClientGenerator {
+    generators {
+        create("openapi") {
+            userAgent = "MyApp/1.0 (+https://example.com)"
+        }
+    }
+}
+```
+
+Every `ClientConfiguration()` then sends this header. It can still be changed at runtime:
+`ClientConfiguration(userAgent = "MyApp/2.0 (+mailto:contact@example.com)")`. A `User-Agent` header set on a request
+takes precedence. The header is installed with the Ktor `UserAgent` plugin by `defaultHttpClientConfig`, so it is
+not applied when `httpClientConfig` or `client` is replaced.
+
+#### In a browser
+
+Browsers do not let scripts change the `User-Agent` header (nor the `Referer` header): on Kotlin/JS and Kotlin/Wasm
+targets running in a browser, the `userAgent` value is ignored and the browser sends its own `User-Agent`.
+The calling site is then identified by the `Referer` header, which the browser fills in from the page URL. If the
+API asks clients to identify themselves:
+
+- check whether the API accepts the `Referer` in place of the `User-Agent` (for instance when the site shows a
+  contact address);
+- display the contact information required by the API on the site;
+- keep a `Referrer-Policy` that sends the `Referer` to the API. The browser default
+  (`strict-origin-when-cross-origin`) sends only the origin (`https://example.com/`) to another site, and
+  `no-referrer` removes it.
+
+Nothing in the generated code checks these points.
+
+### HTTP engine
+
+`ClientConfiguration` uses the Ktor `CIO` engine by default. CIO supports HTTPS only on the JVM: on Kotlin/Native
+the calls fail with "TLS sessions are not supported on Native platform". Choose another default engine with the
+`engine` generator property:
+
+```kotlin
+apiClientGenerator {
+    generators {
+        create("openapi") {
+            // a single engine, for every platform
+            engine = "io.ktor.client.engine.okhttp.OkHttp"
+            // or: no default engine, Ktor selects the engine available on each platform
+            engine = "platform"
+        }
+    }
+}
+```
+
+With `"platform"`, `engine` is `null` by default and the `HttpClient` is created without engine: Ktor uses the engine
+found in the dependencies of each platform. `io.ktor:ktor-client-engine-defaults` (experimental, Ktor 3.6.0+) adds
+OkHttp on the JVM and Android, Curl on Linux, Darwin on Apple platforms and Js on JS/Wasm; you can also declare the
+engines yourself in each source set. The `ktor-client-cio` dependency is then no longer needed.
+
+```kotlin
+kotlin {
+    sourceSets {
+        commonMain.dependencies {
+            implementation("io.ktor:ktor-client-engine-defaults:<ktor version>")
+        }
+    }
+}
+```
 
 ### Testing code that uses a client
 
@@ -152,7 +223,7 @@ apiClientGenerator {
 | `UnknownEnumValueModule` | Adds an `UNKNOWN_` fallback constant to every generated enum and enables `coerceInputValues = true` in the Json configuration, so unknown server values never cause a deserialization error |
 | `LoggingSl4jModule` | Configures the `ClientConfiguration` exception logger to use SLF4J (`LoggerFactory.getLogger(…).error(…)`). **JVM-only** — do not use in KMP projects targeting non-JVM platforms |
 | `LoggingKotlinModule` | Configures the `ClientConfiguration` exception logger to use kotlin-logging / oshai (`KotlinLogging.logger(…).error(…)`) |
-| `BasicAuthModule` | Adds an `accessToken: String?` parameter to `ClientConfiguration` and configures `httpClientAuthorization` to inject an `Authorization: Bearer <token>` header on every request |
+| `BasicAuthModule` | Adds an `accessToken: String?` parameter to `ClientConfiguration` and adds a statement to the default `httpClientAuthorization` to inject an `Authorization: Bearer <token>` header on every request |
 | `KotlinTimeInstantModule` | Maps `type: string, format: date-time` to `kotlin.time.Instant` (stdlib, no extra dependency) |
 | `KotlinxDateTimeLocalDateModule` | Maps `type: string, format: date` to `kotlinx.datetime.LocalDate`. **Requires** `org.jetbrains.kotlinx:kotlinx-datetime` in the project compiling the generated code |
 | `KotlinUuidModule` | Maps `type: string, format: uuid` to `kotlin.uuid.Uuid` (stdlib, no extra dependency) |
@@ -283,13 +354,26 @@ A module can implement any combination of the following hooks — all are no-ops
 
 | Hook | Called when | Can do |
 |---|---|---|
-| `processConfiguration(ApiConfigurationGeneratorConfig)` | Before `ClientConfiguration` is rendered | Set custom Json properties (`coerceInputValues`, etc.), override the exception-logging lambda |
+| `processConfiguration(ApiConfigurationGeneratorConfig)` | Before `ClientConfiguration` is rendered | Set custom Json properties (`coerceInputValues`, etc.), override the exception-logging lambda, add `String?` constructor parameters, add statements to the default `httpClientAuthorization` lambda (`httpClientAuthorizationStatements`) |
 | `processClient(ApiClientGeneratorConfig)` | Before any client class is rendered | Configure client-level rendering options (reserved for future use) |
 | `processModel(ApiModelGeneratorConfig)` | Before any model class is rendered | Set a fallback enum constant (`defaultEnumValue`) |
 | `processTypeMapping(ApiTypeMappingConfig)` | Once, before models, clients and `ClientConfiguration` are rendered | Map an OpenAPI `string` format to a Kotlin type (`stringFormatTypes["uuid"] = StringFormatType("kotlin.uuid.Uuid")`) |
 | `transformClientSpec(ClientSpec): ClientSpec` | For each client, before KotlinPoet rendering | Add, remove or rewrite operations; rename the client; change parameters or response types |
 | `transformModelSpec(ModelSpec): ModelSpec` | For each model, before KotlinPoet rendering | Add, remove or rewrite properties; change the model kind (data class, enum, sealed…) |
 | `transformFile(GeneratedFileSpec): GeneratedFileSpec` | After KotlinPoet rendering, before writing to disk | Add a file header, rewrite imports, inject code at the text level |
+
+To configure the HTTP client, add statements to `httpClientAuthorizationStatements` rather than replacing
+`httpClientAuthorizationDefaultValue`: the statements of all the modules are kept, in order, while
+`httpClientAuthorizationDefaultValue` only keeps the value of the last module that sets it (it is applied before
+the statements).
+
+```kotlin
+override fun processConfiguration(generator: ApiConfigurationGeneratorConfig) {
+    generator.additionalStringParameters.add("tenantId")
+    generator.httpClientAuthorizationStatements.add("""tenantId?.let { id -> defaultRequest { header("X-Tenant", id) } }""")
+    generator.additionalImports.add("io.ktor.client.request" to "header")
+}
+```
 
 Hooks are applied in the order the modules are listed. `transform*` hooks receive an immutable domain object and must return the (possibly modified) replacement — the original is never mutated.
 

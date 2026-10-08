@@ -10,6 +10,7 @@ import org.gradle.api.tasks.Internal
 import org.gradle.api.tasks.Optional
 import org.gradle.api.tasks.TaskAction
 import org.gradle.work.DisableCachingByDefault
+import org.litote.openapi.ktor.client.generator.ApiGeneratorConfiguration
 import org.litote.openapi.ktor.client.generator.SplitGranularity
 import org.litote.openapi.ktor.client.generator.computeSharedGroupDependencies
 import org.litote.openapi.ktor.client.generator.parseClientNames
@@ -499,6 +500,7 @@ public abstract class InitSubprojectTask : DefaultTask() {
                     generatorName = generatorName,
                     properties = listOf("""openApiFile = file("$OPENAPI_SRC_DIR/$openApiFileName")"""),
                     generatorConfigExtra = options.generatorConfigExtra,
+                    multiplatform = options.multiplatform,
                 )
             return "$header\n\n$generatorBlock"
         }
@@ -529,6 +531,7 @@ public abstract class InitSubprojectTask : DefaultTask() {
                     generatorName = spec.nameWithoutExt,
                     properties = properties,
                     generatorConfigExtra = options.generatorConfigExtra,
+                    multiplatform = options.multiplatform,
                 )
             return "$header\n\n$generatorBlock"
         }
@@ -585,6 +588,7 @@ public abstract class InitSubprojectTask : DefaultTask() {
                     generatorName = spec.nameWithoutExt,
                     properties = properties,
                     generatorConfigExtra = options.generatorConfigExtra,
+                    multiplatform = options.multiplatform,
                 )
             return "$header\n\n$generatorBlock"
         }
@@ -627,6 +631,7 @@ public abstract class InitSubprojectTask : DefaultTask() {
                     generatorName = spec.nameWithoutExt,
                     properties = properties,
                     generatorConfigExtra = options.generatorConfigExtra,
+                    multiplatform = options.multiplatform,
                 )
             return "$header\n\n$generatorBlock"
         }
@@ -703,6 +708,7 @@ public abstract class InitSubprojectTask : DefaultTask() {
                     generatorName = spec.nameWithoutExt,
                     properties = properties,
                     generatorConfigExtra = options.generatorConfigExtra,
+                    multiplatform = options.multiplatform,
                 )
             return "$header\n\n$generatorBlock"
         }
@@ -732,7 +738,7 @@ public abstract class InitSubprojectTask : DefaultTask() {
                         commonMain.dependencies {
                             implementation("org.jetbrains.kotlinx:kotlinx-serialization-json:$serializationVersion")
                             implementation("org.jetbrains.kotlinx:kotlinx-coroutines-core:$coroutinesVersion")
-                            implementation("io.ktor:ktor-client-cio:$ktorVersion")
+                            implementation("io.ktor:ktor-client-engine-defaults:$ktorVersion")
                             implementation("io.ktor:ktor-client-content-negotiation:$ktorVersion")
                             implementation("io.ktor:ktor-client-core:$ktorVersion")
                             implementation("io.ktor:ktor-serialization-kotlinx-json:$ktorVersion")
@@ -799,7 +805,7 @@ public abstract class InitSubprojectTask : DefaultTask() {
                 $indentedDeps
                             implementation("org.jetbrains.kotlinx:kotlinx-serialization-json:$serializationVersion")
                             implementation("org.jetbrains.kotlinx:kotlinx-coroutines-core:$coroutinesVersion")
-                            implementation("io.ktor:ktor-client-cio:$ktorVersion")
+                            implementation("io.ktor:ktor-client-engine-defaults:$ktorVersion")
                             implementation("io.ktor:ktor-client-content-negotiation:$ktorVersion")
                             implementation("io.ktor:ktor-client-core:$ktorVersion")
                             implementation("io.ktor:ktor-serialization-kotlinx-json:$ktorVersion")
@@ -857,7 +863,7 @@ public abstract class InitSubprojectTask : DefaultTask() {
                             api(project("$sharedProjectRef"))
                             implementation("org.jetbrains.kotlinx:kotlinx-serialization-json:$serializationVersion")
                             implementation("org.jetbrains.kotlinx:kotlinx-coroutines-core:$coroutinesVersion")
-                            implementation("io.ktor:ktor-client-cio:$ktorVersion")
+                            implementation("io.ktor:ktor-client-engine-defaults:$ktorVersion")
                             implementation("io.ktor:ktor-client-content-negotiation:$ktorVersion")
                             implementation("io.ktor:ktor-client-core:$ktorVersion")
                             implementation("io.ktor:ktor-serialization-kotlinx-json:$ktorVersion")
@@ -922,7 +928,7 @@ public abstract class InitSubprojectTask : DefaultTask() {
                 $indentedGroupDeps
                             implementation("org.jetbrains.kotlinx:kotlinx-serialization-json:$serializationVersion")
                             implementation("org.jetbrains.kotlinx:kotlinx-coroutines-core:$coroutinesVersion")
-                            implementation("io.ktor:ktor-client-cio:$ktorVersion")
+                            implementation("io.ktor:ktor-client-engine-defaults:$ktorVersion")
                             implementation("io.ktor:ktor-client-content-negotiation:$ktorVersion")
                             implementation("io.ktor:ktor-client-core:$ktorVersion")
                             implementation("io.ktor:ktor-serialization-kotlinx-json:$ktorVersion")
@@ -1002,16 +1008,24 @@ public abstract class InitSubprojectTask : DefaultTask() {
                 "dependencies {\n${deps.joinToString("\n")}\n}"
             }
 
+        /**
+         * KMP projects depend on `ktor-client-engine-defaults` instead of `ktor-client-cio`, which supports HTTPS only on
+         * the JVM: the generated `ClientConfiguration` lets Ktor select the engine of each platform.
+         */
+        private const val PLATFORM_ENGINE_PROPERTY = "engine = \"${ApiGeneratorConfiguration.PLATFORM_ENGINE}\""
+
         private fun buildGeneratorContent(
             generatorName: String,
             properties: List<String>,
             generatorConfigExtra: String?,
+            multiplatform: Boolean,
         ): String =
             buildString {
                 appendLine("apiClientGenerator {")
                 appendLine("    generators {")
                 appendLine("        create(\"$generatorName\") {")
                 properties.forEach { prop -> appendLine("            $prop") }
+                if (multiplatform) appendLine("            $PLATFORM_ENGINE_PROPERTY")
                 generatorConfigExtra?.trimIndent()?.lines()?.forEach { line ->
                     if (line.isBlank()) appendLine() else appendLine("            $line")
                 }

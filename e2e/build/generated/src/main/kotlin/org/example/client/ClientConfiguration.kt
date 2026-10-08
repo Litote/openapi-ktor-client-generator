@@ -3,7 +3,7 @@ package org.example.client
 import io.ktor.client.HttpClient
 import io.ktor.client.HttpClientConfig
 import io.ktor.client.engine.HttpClientEngineFactory
-import io.ktor.client.engine.cio.CIO
+import io.ktor.client.plugins.UserAgent
 import io.ktor.client.plugins.contentnegotiation.ContentNegotiation
 import io.ktor.client.plugins.defaultRequest
 import io.ktor.client.plugins.logging.LogLevel
@@ -19,16 +19,19 @@ public class ClientConfiguration(
   public val baseUrl: String = "http://localhost:8080/",
   public val logLevel: LogLevel = LogLevel.HEADERS,
   public val accessToken: String? = null,
-  public val engine: HttpClientEngineFactory<*> = CIO,
+  public val userAgent: String? = "openapi-ktor-client-generator-e2e/1.0",
+  public val engine: HttpClientEngineFactory<*>? = null,
   public val json: Json = Json { 
       ignoreUnknownKeys = true
       coerceInputValues = true
        },
-  public val httpClientAuthorization:
-      HttpClientConfig<*>.() -> Unit = { accessToken?.let { token -> defaultRequest { header("Authorization", "Bearer " + token) } } },
+  public val httpClientAuthorization: HttpClientConfig<*>.() -> Unit = {
+    accessToken?.let { token -> defaultRequest { header("Authorization", "Bearer " + token) } }
+  },
   public val httpClientConfig:
-      HttpClientConfig<*>.() -> Unit = defaultHttpClientConfig(baseUrl, json, logLevel, httpClientAuthorization),
-  public val client: HttpClient = HttpClient(engine) { httpClientConfig() },
+      HttpClientConfig<*>.() -> Unit = defaultHttpClientConfig(baseUrl, json, logLevel, userAgent, httpClientAuthorization),
+  public val client:
+      HttpClient = engine?.let { HttpClient(it) { httpClientConfig() } } ?: HttpClient { httpClientConfig() },
   public val exceptionLogger: Throwable.() -> Unit = { printStackTrace() },
 ) {
   public companion object {
@@ -38,6 +41,7 @@ public class ClientConfiguration(
       baseUrl: String,
       json: Json,
       logLevel: LogLevel,
+      userAgent: String? = null,
       httpClientAuthorization: HttpClientConfig<*>.() -> Unit,
     ): HttpClientConfig<*>.() -> Unit = {
       install(Logging) {
@@ -48,6 +52,11 @@ public class ClientConfiguration(
       }
       defaultRequest {
         url(baseUrl)
+      }
+      if (userAgent != null) {
+        install(UserAgent) {
+          agent = userAgent
+        }
       }
       httpClientAuthorization()
     }

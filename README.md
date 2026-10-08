@@ -116,6 +116,8 @@ See [ADVANCED_USAGE.md](ADVANCED_USAGE.md#testing-code-that-uses-a-client) for t
 | `customModules`    | Custom module instances defined inline in the build script                           | empty                                   | Any `ApiGeneratorModule` implementation (see [ADVANCED_USAGE.md](ADVANCED_USAGE.md))            |
 | `skip`             | Skip this generator                                                                  | `false`                                 | Boolean                                                                 |
 | `splitByClient`    | Enable split-by-client mode — see [PROJECT_GENERATION.md](PROJECT_GENERATION.md)     | `false`                                 | Boolean                                                                 |
+| `userAgent`        | Default `User-Agent` header sent by the generated clients (default value of the `userAgent` parameter of `ClientConfiguration`, see [ADVANCED_USAGE.md](ADVANCED_USAGE.md#user-agent)) | not set (Ktor default `ktor-client`) | Any string, e.g. `"MyApp/1.0 (+https://example.com)"` |
+| `engine`           | Default Ktor engine of `ClientConfiguration`: fully qualified name of an `HttpClientEngineFactory`, or `"platform"` to let Ktor select the engine of each platform (see [ADVANCED_USAGE.md](ADVANCED_USAGE.md#http-engine)) | `"io.ktor.client.engine.cio.CIO"` | e.g. `"io.ktor.client.engine.okhttp.OkHttp"`, `"platform"` |
 | `targetClientName` | In split mode: name of the client to generate (`null` = shared subproject) — see [PROJECT_GENERATION.md](PROJECT_GENERATION.md) | `null`                                  | Any tag-derived client name from the spec                               |
 
 ## Advanced usage and troubleshooting

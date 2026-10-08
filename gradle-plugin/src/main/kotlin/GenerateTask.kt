@@ -101,6 +101,16 @@ public abstract class GenerateTask : DefaultTask() {
     @get:Input
     public abstract val additionalSharedGroupPackages: MapProperty<String, String>
 
+    /** Default `User-Agent` header of the generated `ClientConfiguration`. */
+    @get:Input
+    @get:Optional
+    public abstract val userAgent: Property<String>
+
+    /** Default Ktor engine of the generated `ClientConfiguration` (fully qualified name, or `"platform"`). */
+    @get:Input
+    @get:Optional
+    public abstract val engine: Property<String>
+
     @TaskAction
     public fun generate() {
         val allowedPaths = allowedPaths.get()
@@ -160,6 +170,8 @@ public abstract class GenerateTask : DefaultTask() {
                 sharedModelGranularity = sharedModelGranularityValue,
                 targetSharedGroup = targetSharedGroupValue,
                 modelPackageOverrides = modelPackageOverrides,
+                userAgent = userAgent.orNull,
+                engine = engine.getOrElse(ApiGeneratorConfiguration.CIO_ENGINE),
             )
 
         if (skip.get() == true) {

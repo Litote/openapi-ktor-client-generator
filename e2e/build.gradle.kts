@@ -26,6 +26,8 @@ apiClientGenerator {
         create("openapi") {
             outputDirectory = file("build/generated")
             allowedPaths = setOf("/test-status")
+            userAgent = "openapi-ktor-client-generator-e2e/1.0"
+            engine = "platform"
             modulesIds =
                 setOf(
                     "UnknownEnumValueModule",

@@ -8,6 +8,7 @@ import org.gradle.api.model.ObjectFactory
 import org.gradle.api.provider.MapProperty
 import org.gradle.api.provider.Property
 import org.gradle.api.provider.SetProperty
+import org.litote.openapi.ktor.client.generator.ApiGeneratorConfiguration
 import org.litote.openapi.ktor.client.generator.ApiGeneratorModule
 import javax.inject.Inject
 
@@ -86,6 +87,21 @@ public abstract class ApiClientGenerator
         public val additionalSharedGroupPackages: MapProperty<String, String> =
             objects.mapProperty(String::class.java, String::class.java)
 
+        /**
+         * Default `User-Agent` header sent by the generated clients (e.g. `"MyApp/1.0 (+https://example.com)"`).
+         * It can still be changed at runtime with the `userAgent` parameter of `ClientConfiguration`.
+         * When not set, no `User-Agent` header is added and Ktor sends its own default.
+         */
+        public val userAgent: Property<String> = objects.property(String::class.java)
+
+        /**
+         * Default Ktor engine of the generated `ClientConfiguration`: the fully qualified name of an
+         * `HttpClientEngineFactory` (e.g. `"io.ktor.client.engine.okhttp.OkHttp"`), or `"platform"` to let Ktor
+         * select the engine available on each platform (e.g. with `io.ktor:ktor-client-engine-defaults`).
+         * Defaults to `"io.ktor.client.engine.cio.CIO"`, which supports HTTPS only on the JVM.
+         */
+        public val engine: Property<String> = objects.property(String::class.java)
+
         internal fun initConventions(project: Project) {
             openApiFile.convention(project.layout.projectDirectory.file("src/main/openapi/$name.json"))
             basePackage.convention("org.example")
@@ -100,5 +116,6 @@ public abstract class ApiClientGenerator
             sharedModelGranularity.convention("SHARED_ALL")
             targetSharedGroup.convention(null as String?)
             additionalSharedGroupPackages.convention(emptyMap())
+            engine.convention(ApiGeneratorConfiguration.CIO_ENGINE)
         }
     }

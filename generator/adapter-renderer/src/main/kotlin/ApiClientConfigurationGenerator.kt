@@ -12,6 +12,7 @@ import com.squareup.kotlinpoet.ParameterizedTypeName
 import com.squareup.kotlinpoet.ParameterizedTypeName.Companion.parameterizedBy
 import com.squareup.kotlinpoet.PropertySpec
 import com.squareup.kotlinpoet.STAR
+import com.squareup.kotlinpoet.TypeName
 import com.squareup.kotlinpoet.TypeSpec
 import com.squareup.kotlinpoet.UNIT
 import com.squareup.kotlinpoet.asTypeName
@@ -38,6 +39,7 @@ public class ApiClientConfigurationGenerator public constructor(
     private val stringFormatTypes: Map<String, StringFormatType> = configuration.modules.stringFormatTypes()
 
     private companion object {
+        const val EMPTY_LAMBDA: String = "{}"
         val engineFactoryType: ParameterizedTypeName =
             HttpClientEngineFactory::class.asTypeName().parameterizedBy(STAR)
         val httpClientConfigType: LambdaTypeName =
@@ -51,13 +53,26 @@ public class ApiClientConfigurationGenerator public constructor(
             ClassName("io.ktor.client.plugins.contentnegotiation", "ContentNegotiation")
         val jsonMember: MemberName = MemberName("io.ktor.serialization.kotlinx.json", "json")
         val contentTypeClass: ClassName = ClassName("io.ktor.http", "ContentType")
-        val cioMember: MemberName = MemberName("io.ktor.client.engine.cio", "CIO")
+        val userAgentMember: MemberName = MemberName("io.ktor.client.plugins", "UserAgent")
+        val nullableStringType: TypeName = String::class.asTypeName().copy(nullable = true)
         val exceptionLoggerType: LambdaTypeName =
             LambdaTypeName.get(
                 receiver = Throwable::class.asTypeName(),
                 returnType = UNIT,
             )
     }
+
+    /** The default engine, or null when Ktor selects the engine of the platform. */
+    private val engineMember: MemberName? =
+        configuration.engine.takeUnless { it == ApiGeneratorConfiguration.PLATFORM_ENGINE }?.let { engine ->
+            val separator = engine.lastIndexOf('.')
+            require(separator > 0 && separator < engine.length - 1) {
+                "engine must be the fully qualified name of an HttpClientEngineFactory or " +
+                    "\"${ApiGeneratorConfiguration.PLATFORM_ENGINE}\", found \"$engine\""
+            }
+            MemberName(engine.substring(0, separator), engine.substring(separator + 1))
+        }
+    private val engineType: TypeName = engineFactoryType.copy(nullable = engineMember == null)
 
     private val hasApiKeys: Boolean = clientConfiguration.apiKeySchemes.isNotEmpty()
     private val headerApiKeys =
@@ -124,6 +139,11 @@ public class ApiClientConfigurationGenerator public constructor(
 
         builder
             .endControlFlow()
+            .beginControlFlow("if (%N != null)", "userAgent")
+            .beginControlFlow("install(%M)", userAgentMember)
+            .addStatement("agent = %N", "userAgent")
+            .endControlFlow()
+            .endControlFlow()
             .addStatement("%N()", "httpClientAuthorization")
             .endControlFlow()
 
@@ -146,11 +166,17 @@ public class ApiClientConfigurationGenerator public constructor(
             )
         }
 
-        funBuilder.addParameter(
-            ParameterSpec
-                .builder("httpClientAuthorization", httpClientConfigType)
-                .build(),
-        )
+        funBuilder
+            .addParameter(
+                ParameterSpec
+                    .builder("userAgent", nullableStringType)
+                    .defaultValue("null")
+                    .build(),
+            ).addParameter(
+                ParameterSpec
+                    .builder("httpClientAuthorization", httpClientConfigType)
+                    .build(),
+            )
 
         return funBuilder
             .returns(httpClientConfigType)
@@ -161,7 +187,8 @@ public class ApiClientConfigurationGenerator public constructor(
     // mutable properties for modules
     override val jsonDefaultValueProperties: MutableMap<String, String> = mutableMapOf("ignoreUnknownKeys" to "true")
     override var exceptionLoggingDefaultValue: String = "{ printStackTrace() }"
-    override var httpClientAuthorizationDefaultValue: String = "{}"
+    override var httpClientAuthorizationDefaultValue: String = EMPTY_LAMBDA
+    override val httpClientAuthorizationStatements: MutableList<String> = mutableListOf()
     override val additionalStringParameters: MutableList<String> = mutableListOf()
     override var logLevelDefaultValue: String = "LogLevel.HEADERS"
     override val additionalImports: MutableList<Pair<String, String>> = mutableListOf()
@@ -183,6 +210,25 @@ public class ApiClientConfigurationGenerator public constructor(
                     } }",
                     Json::class,
                 ).build()
+
+    /**
+     * Default value of the `httpClientAuthorization` parameter: [httpClientAuthorizationDefaultValue]
+     * followed by the [httpClientAuthorizationStatements] added by the modules.
+     */
+    private val httpClientAuthorizationDefault: CodeBlock
+        get() {
+            if (httpClientAuthorizationStatements.isEmpty()) {
+                return CodeBlock.of("%L", httpClientAuthorizationDefaultValue)
+            }
+            val builder = CodeBlock.builder().add("{\n").indent()
+            if (httpClientAuthorizationDefaultValue.trim() != EMPTY_LAMBDA) {
+                builder
+                    .addStatement("val defaultAuthorization: %T = %L", httpClientConfigType, httpClientAuthorizationDefaultValue)
+                    .addStatement("defaultAuthorization()")
+            }
+            httpClientAuthorizationStatements.forEach { builder.addStatement("%L", it) }
+            return builder.unindent().add("}").build()
+        }
 
     internal fun buildConstructor(): FunSpec {
         val builder =
@@ -218,11 +264,17 @@ public class ApiClientConfigurationGenerator public constructor(
             )
         }
 
+        val userAgent = configuration.userAgent
         builder
             .addParameter(
                 ParameterSpec
-                    .builder("engine", engineFactoryType)
-                    .defaultValue("%M", cioMember)
+                    .builder("userAgent", nullableStringType)
+                    .apply { if (userAgent == null) defaultValue("null") else defaultValue("%S", userAgent) }
+                    .build(),
+            ).addParameter(
+                ParameterSpec
+                    .builder("engine", engineType)
+                    .apply { if (engineMember == null) defaultValue("null") else defaultValue("%M", engineMember) }
                     .build(),
             ).addParameter(
                 ParameterSpec
@@ -232,7 +284,7 @@ public class ApiClientConfigurationGenerator public constructor(
             ).addParameter(
                 ParameterSpec
                     .builder("httpClientAuthorization", httpClientConfigType)
-                    .defaultValue("%L", httpClientAuthorizationDefaultValue)
+                    .defaultValue(httpClientAuthorizationDefault)
                     .build(),
             )
 
@@ -242,7 +294,7 @@ public class ApiClientConfigurationGenerator public constructor(
                     append(clientConfiguration.apiKeySchemes.joinToString(", ") { it.paramName })
                     append(", ")
                 }
-                append("%N")
+                append("%N, %N")
             }
         val httpClientConfigDefaultValue =
             CodeBlock.of(
@@ -251,6 +303,7 @@ public class ApiClientConfigurationGenerator public constructor(
                 "baseUrl",
                 "json",
                 "logLevel",
+                "userAgent",
                 "httpClientAuthorization",
             )
 
@@ -263,8 +316,20 @@ public class ApiClientConfigurationGenerator public constructor(
             ).addParameter(
                 ParameterSpec
                     .builder("client", HttpClient::class)
-                    .defaultValue("%T(%N) { %N() }", HttpClient::class, "engine", "httpClientConfig")
-                    .build(),
+                    .apply {
+                        if (engineMember == null) {
+                            defaultValue(
+                                "%N?.let { %T(it) { %N() } } ?: %T { %N() }",
+                                "engine",
+                                HttpClient::class,
+                                "httpClientConfig",
+                                HttpClient::class,
+                                "httpClientConfig",
+                            )
+                        } else {
+                            defaultValue("%T(%N) { %N() }", HttpClient::class, "engine", "httpClientConfig")
+                        }
+                    }.build(),
             ).addParameter(
                 ParameterSpec
                     .builder("exceptionLogger", exceptionLoggerType)
@@ -349,7 +414,12 @@ public class ApiClientConfigurationGenerator public constructor(
         builder
             .addProperty(
                 PropertySpec
-                    .builder("engine", engineFactoryType)
+                    .builder("userAgent", nullableStringType)
+                    .initializer("userAgent")
+                    .build(),
+            ).addProperty(
+                PropertySpec
+                    .builder("engine", engineType)
                     .initializer("engine")
                     .build(),
             ).addProperty(
