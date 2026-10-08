@@ -44,7 +44,7 @@ class BasicAuthModuleIntegrationTest {
                 "ClientConfiguration should import io.ktor.client.request.header for the httpClientAuthorization lambda",
             )
             assertTrue(
-                content.contains("defaultHttpClientConfig(baseUrl, json, logLevel, httpClientAuthorization)"),
+                content.contains("defaultHttpClientConfig(baseUrl, json, logLevel, userAgent, httpClientAuthorization)"),
                 "httpClientConfig default should reference logLevel and httpClientAuthorization",
             )
             assertTrue(

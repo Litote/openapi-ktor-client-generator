@@ -12,8 +12,18 @@ public interface ApiConfigurationGeneratorConfig {
      * Default lambda body for the `httpClientAuthorization` parameter in the generated ClientConfiguration.
      * The lambda type is `HttpClientConfig<*>.() -> Unit`.
      * Default is `{}` (no-op). Modules can override this to inject authorization logic.
+     * Prefer [httpClientAuthorizationStatements], which composes with the other modules:
+     * a value set here is replaced by the next module that sets it.
      */
     public var httpClientAuthorizationDefaultValue: String
+
+    /**
+     * Statements added, in order, to the body of the default `httpClientAuthorization` lambda
+     * (receiver `HttpClientConfig<*>`), after [httpClientAuthorizationDefaultValue] when it is not `{}`.
+     * Each module can add its own statements without replacing those of the other modules.
+     * The constructor parameters of the generated ClientConfiguration (e.g. [additionalStringParameters]) are in scope.
+     */
+    public val httpClientAuthorizationStatements: MutableList<String>
 
     /**
      * Additional nullable `String` parameters to inject into the ClientConfiguration constructor,

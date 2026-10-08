@@ -6,8 +6,9 @@ import org.litote.openapi.ktor.client.generator.port.ApiConfigurationGeneratorCo
 internal class BasicAuthModule : ApiGeneratorModule {
     override fun processConfiguration(generator: ApiConfigurationGeneratorConfig) {
         generator.additionalStringParameters.add("accessToken")
-        generator.httpClientAuthorizationDefaultValue =
-            """{ accessToken?.let { token -> defaultRequest { header("Authorization", "Bearer " + token) } } }"""
+        generator.httpClientAuthorizationStatements.add(
+            """accessToken?.let { token -> defaultRequest { header("Authorization", "Bearer " + token) } }""",
+        )
         generator.additionalImports.add("io.ktor.client.request" to "header")
     }
 }

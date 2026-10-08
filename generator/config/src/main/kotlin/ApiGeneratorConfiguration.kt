@@ -43,7 +43,28 @@ public data class ApiGeneratorConfiguration(
      * Example: `mapOf("OrderModel" to "org.example.sharedOrderUser.model")`
      */
     val modelPackageOverrides: Map<String, String> = emptyMap(),
+    /**
+     * Default value of the `userAgent` parameter of the generated `ClientConfiguration`,
+     * sent as the `User-Agent` header of every request (e.g. `"MyApp/1.0 (+https://example.com)"`).
+     * When null, no `User-Agent` header is added and Ktor sends its own default.
+     */
+    val userAgent: String? = null,
+    /**
+     * Default Ktor engine of the generated `ClientConfiguration`: the fully qualified name of an
+     * `HttpClientEngineFactory` (e.g. `"io.ktor.client.engine.okhttp.OkHttp"`), or [PLATFORM_ENGINE]
+     * to let Ktor select the engine available on each platform (e.g. with `io.ktor:ktor-client-engine-defaults`).
+     * Defaults to [CIO_ENGINE], which supports HTTPS only on the JVM.
+     */
+    val engine: String = CIO_ENGINE,
 ) {
+    public companion object {
+        /** The Ktor CIO engine, the default [engine]. */
+        public const val CIO_ENGINE: String = "io.ktor.client.engine.cio.CIO"
+
+        /** [engine] value for which the generated code creates the `HttpClient` without engine, so Ktor selects it. */
+        public const val PLATFORM_ENGINE: String = "platform"
+    }
+
     /** Package used to reference `ClientConfiguration` — the shared module's client package when set. */
     val configPackage: String = "${sharedBasePackage ?: basePackage}.client"
 

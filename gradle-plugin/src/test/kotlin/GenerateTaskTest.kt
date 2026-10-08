@@ -28,6 +28,27 @@ internal class GenerateTaskTest {
         return task
     }
 
+    private fun writeSpec(): File =
+        tempDir.resolve("openapi.json").also {
+            it.writeText(
+                """
+                {
+                  "openapi": "3.0.0",
+                  "info": { "title": "Test", "version": "1.0" },
+                  "paths": {
+                    "/items": {
+                      "get": {
+                        "tags": ["Items"],
+                        "operationId": "listItems",
+                        "responses": { "200": { "description": "ok" } }
+                      }
+                    }
+                  }
+                }
+                """.trimIndent(),
+            )
+        }
+
     @Test
     fun `GIVEN unknown module id WHEN generating THEN warning is logged and task succeeds`() {
         val task = buildTask()
@@ -39,26 +60,7 @@ internal class GenerateTaskTest {
 
     @Test
     fun `GIVEN customModules WHEN generating THEN custom module transforms are applied`() {
-        val specFile =
-            tempDir.resolve("openapi.json").also {
-                it.writeText(
-                    """
-                    {
-                      "openapi": "3.0.0",
-                      "info": { "title": "Test", "version": "1.0" },
-                      "paths": {
-                        "/items": {
-                          "get": {
-                            "tags": ["Items"],
-                            "operationId": "listItems",
-                            "responses": { "200": { "description": "ok" } }
-                          }
-                        }
-                      }
-                    }
-                    """.trimIndent(),
-                )
-            }
+        val specFile = writeSpec()
         val outputDir = Files.createTempDirectory("generate-task-custom-module-test").toFile()
         try {
             val headerComment = "// custom module header"
@@ -87,6 +89,48 @@ internal class GenerateTaskTest {
             assertTrue(
                 generatedFiles.all { it.readText().startsWith(headerComment) },
                 "All generated files should start with the custom module header",
+            )
+        } finally {
+            outputDir.deleteRecursively()
+        }
+    }
+
+    @Test
+    fun `GIVEN userAgent WHEN generating THEN ClientConfiguration uses it as default User-Agent`() {
+        val outputDir = Files.createTempDirectory("generate-task-user-agent-test").toFile()
+        try {
+            val task = buildTask(skip = false)
+            task.openApiFile.set(writeSpec())
+            task.outputDirectory.set(outputDir)
+            task.userAgent.set("MyApp/1.0 (+https://example.com)")
+
+            task.generate()
+
+            val clientConfiguration = outputDir.walkTopDown().first { it.name == "ClientConfiguration.kt" }
+            assertTrue(
+                clientConfiguration.readText().contains("userAgent: String? = \"MyApp/1.0 (+https://example.com)\""),
+                "ClientConfiguration should use the configured User-Agent as default value",
+            )
+        } finally {
+            outputDir.deleteRecursively()
+        }
+    }
+
+    @Test
+    fun `GIVEN platform engine WHEN generating THEN ClientConfiguration lets Ktor select the engine`() {
+        val outputDir = Files.createTempDirectory("generate-task-engine-test").toFile()
+        try {
+            val task = buildTask(skip = false)
+            task.openApiFile.set(writeSpec())
+            task.outputDirectory.set(outputDir)
+            task.engine.set("platform")
+
+            task.generate()
+
+            val clientConfiguration = outputDir.walkTopDown().first { it.name == "ClientConfiguration.kt" }
+            assertTrue(
+                clientConfiguration.readText().contains("engine: HttpClientEngineFactory<*>? = null"),
+                "ClientConfiguration should not set a default engine",
             )
         } finally {
             outputDir.deleteRecursively()

@@ -1458,11 +1458,11 @@ internal class SettingsUpdaterTest {
         assertContains(content, """kotlin("multiplatform") version "${DEFAULT_KOTLIN_VERSION}"""")
         assertFalse(content.contains("""kotlin("jvm") version"""), "Should not contain jvm plugin")
         assertContains(content, "commonMain.dependencies")
-        assertContains(content, "io.ktor:ktor-client-cio:${DEFAULT_KTOR_VERSION}")
+        assertContains(content, "io.ktor:ktor-client-engine-defaults:${DEFAULT_KTOR_VERSION}")
     }
 
     @Test
-    fun `GIVEN multiplatform=true WHEN buildGradleKtsContent THEN ktor-client-cio is in commonMain`() {
+    fun `GIVEN multiplatform=true WHEN buildGradleKtsContent THEN platform engine is used`() {
         val content =
             InitSubprojectTask.buildGradleKtsContent(
                 generatorName = "petstore",
@@ -1478,10 +1478,14 @@ internal class SettingsUpdaterTest {
             )
 
         assertTrue(
-            content.substringAfter("commonMain.dependencies").contains("io.ktor:ktor-client-cio:${DEFAULT_KTOR_VERSION}"),
-            "ktor-client-cio must be in commonMain.dependencies — CIO supports JVM, Native, JS and WasmJs since Ktor 3.x",
+            content
+                .substringAfter("commonMain.dependencies")
+                .contains("io.ktor:ktor-client-engine-defaults:${DEFAULT_KTOR_VERSION}"),
+            "ktor-client-engine-defaults must be in commonMain.dependencies — it adds the engine of each platform",
         )
-        assertFalse(content.contains("jvmMain.dependencies"), "Should not need a jvmMain block for ktor-client-cio")
+        assertFalse(content.contains("ktor-client-cio"), "CIO supports HTTPS only on the JVM")
+        assertContains(content, """engine = "platform"""")
+        assertFalse(content.contains("jvmMain.dependencies"), "Should not need a jvmMain block for the engine")
     }
 
     @Test
@@ -1503,10 +1507,12 @@ internal class SettingsUpdaterTest {
         assertContains(content, """kotlin("jvm") version "${DEFAULT_KOTLIN_VERSION}"""")
         assertFalse(content.contains("kotlin(\"multiplatform\")"), "Should not contain multiplatform plugin")
         assertFalse(content.contains("commonMain.dependencies"), "Should not contain KMP source sets")
+        assertContains(content, "io.ktor:ktor-client-cio:${DEFAULT_KTOR_VERSION}")
+        assertFalse(content.contains("engine = "), "The JVM project keeps the default CIO engine")
     }
 
     @Test
-    fun `GIVEN multiplatform=true WHEN buildClientGradleKtsContent THEN ktor-client-cio is in commonMain`() {
+    fun `GIVEN multiplatform=true WHEN buildClientGradleKtsContent THEN platform engine is used`() {
         val content =
             InitSubprojectTask.buildClientGradleKtsContent(
                 clientName = "UserClient",
@@ -1528,10 +1534,14 @@ internal class SettingsUpdaterTest {
             )
 
         assertTrue(
-            content.substringAfter("commonMain.dependencies").contains("io.ktor:ktor-client-cio:${DEFAULT_KTOR_VERSION}"),
-            "ktor-client-cio must be in commonMain.dependencies — CIO supports JVM, Native, JS and WasmJs since Ktor 3.x",
+            content
+                .substringAfter("commonMain.dependencies")
+                .contains("io.ktor:ktor-client-engine-defaults:${DEFAULT_KTOR_VERSION}"),
+            "ktor-client-engine-defaults must be in commonMain.dependencies — it adds the engine of each platform",
         )
-        assertFalse(content.contains("jvmMain.dependencies"), "Should not need a jvmMain block for ktor-client-cio")
+        assertFalse(content.contains("ktor-client-cio"), "CIO supports HTTPS only on the JVM")
+        assertContains(content, """engine = "platform"""")
+        assertFalse(content.contains("jvmMain.dependencies"), "Should not need a jvmMain block for the engine")
     }
 
     @Test
@@ -1636,7 +1646,7 @@ internal class SettingsUpdaterTest {
     }
 
     @Test
-    fun `GIVEN multiplatform=true WHEN buildSharedGroupGradleKtsContent THEN ktor-client-cio is in commonMain`() {
+    fun `GIVEN multiplatform=true WHEN buildSharedGroupGradleKtsContent THEN platform engine is used`() {
         val content =
             InitSubprojectTask.buildSharedGroupGradleKtsContent(
                 spec =
@@ -1661,14 +1671,18 @@ internal class SettingsUpdaterTest {
             )
 
         assertTrue(
-            content.substringAfter("commonMain.dependencies").contains("io.ktor:ktor-client-cio:${DEFAULT_KTOR_VERSION}"),
-            "ktor-client-cio must be in commonMain.dependencies — CIO supports JVM, Native, JS and WasmJs since Ktor 3.x",
+            content
+                .substringAfter("commonMain.dependencies")
+                .contains("io.ktor:ktor-client-engine-defaults:${DEFAULT_KTOR_VERSION}"),
+            "ktor-client-engine-defaults must be in commonMain.dependencies — it adds the engine of each platform",
         )
-        assertFalse(content.contains("jvmMain.dependencies"), "Should not need a jvmMain block for ktor-client-cio")
+        assertFalse(content.contains("ktor-client-cio"), "CIO supports HTTPS only on the JVM")
+        assertContains(content, """engine = "platform"""")
+        assertFalse(content.contains("jvmMain.dependencies"), "Should not need a jvmMain block for the engine")
     }
 
     @Test
-    fun `GIVEN multiplatform=true WHEN buildClientPerGroupGradleKtsContent THEN ktor-client-cio is in commonMain`() {
+    fun `GIVEN multiplatform=true WHEN buildClientPerGroupGradleKtsContent THEN platform engine is used`() {
         val content =
             InitSubprojectTask.buildClientPerGroupGradleKtsContent(
                 clientName = "UserClient",
@@ -1691,10 +1705,14 @@ internal class SettingsUpdaterTest {
             )
 
         assertTrue(
-            content.substringAfter("commonMain.dependencies").contains("io.ktor:ktor-client-cio:${DEFAULT_KTOR_VERSION}"),
-            "ktor-client-cio must be in commonMain.dependencies — CIO supports JVM, Native, JS and WasmJs since Ktor 3.x",
+            content
+                .substringAfter("commonMain.dependencies")
+                .contains("io.ktor:ktor-client-engine-defaults:${DEFAULT_KTOR_VERSION}"),
+            "ktor-client-engine-defaults must be in commonMain.dependencies — it adds the engine of each platform",
         )
-        assertFalse(content.contains("jvmMain.dependencies"), "Should not need a jvmMain block for ktor-client-cio")
+        assertFalse(content.contains("ktor-client-cio"), "CIO supports HTTPS only on the JVM")
+        assertContains(content, """engine = "platform"""")
+        assertFalse(content.contains("jvmMain.dependencies"), "Should not need a jvmMain block for the engine")
     }
 
     @Test

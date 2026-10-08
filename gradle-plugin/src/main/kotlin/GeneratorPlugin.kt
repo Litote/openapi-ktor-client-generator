@@ -76,6 +76,8 @@ public class GeneratorPlugin : Plugin<Project> {
                         task.sharedModelGranularity.set(generatorExtension.sharedModelGranularity)
                         task.targetSharedGroup.set(generatorExtension.targetSharedGroup)
                         task.additionalSharedGroupPackages.set(generatorExtension.additionalSharedGroupPackages)
+                        task.userAgent.set(generatorExtension.userAgent)
+                        task.engine.set(generatorExtension.engine)
                         val generatorSkip: Boolean? = generatorExtension.skip.getOrNull()
                         if (skip == true && generatorSkip != false) {
                             task.skip.set(true)
