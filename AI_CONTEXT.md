@@ -517,6 +517,9 @@ graph TD
 
 **`DomainTypeSpec.BinaryTypeSpec`** renders as `ByteArray` (raw binary response bodies). It references no model.
 
+**Model property defaults**: `propertyDefaultLiteral` (`ParserNames.kt`) converts numeric defaults to the property
+type (`default: 25` on a `number` → `25.0`, on a `float` → `25.0F`), like `parameterDefaultLiteral` does for parameters.
+
 ### Response media type resolution (`OpenApiSpecificationParser.resolveResponseBody`)
 
 | Declared media type | `ResponseEntrySpec.bodyType` | `ResponseEntrySpec.contentTypes` |

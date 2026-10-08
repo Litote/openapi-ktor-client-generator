@@ -1,0 +1,52 @@
+{
+  "openapi": "3.0.3",
+  "info": { "title": "Non object schemas", "version": "1.0.0" },
+  "paths": {
+    "/route": {
+      "get": {
+        "tags": ["route"],
+        "operationId": "getRoute",
+        "parameters": [
+          { "name": "speed", "in": "query", "required": false, "schema": { "$ref": "#/components/schemas/Speed" } }
+        ],
+        "responses": {
+          "200": {
+            "description": "ok",
+            "content": { "application/json": { "schema": { "$ref": "#/components/schemas/Route" } } }
+          }
+        }
+      }
+    }
+  },
+  "components": {
+    "schemas": {
+      "Route": {
+        "type": "object",
+        "required": ["tokens"],
+        "properties": {
+          "tokens": { "$ref": "#/components/schemas/Token" },
+          "shape": { "$ref": "#/components/schemas/Shape" },
+          "speed": { "$ref": "#/components/schemas/Speed" },
+          "label": { "$ref": "#/components/schemas/Label" },
+          "maxMatchingDistance": { "type": "number", "default": 25 },
+          "ratio": { "type": "number", "format": "float", "default": 2 },
+          "count": { "type": "integer", "format": "int64", "default": 3 }
+        }
+      },
+      "Token": {
+        "type": "array",
+        "items": { "type": "array", "items": { "type": "number" } }
+      },
+      "Shape": {
+        "type": "array",
+        "items": { "$ref": "#/components/schemas/Point" }
+      },
+      "Point": {
+        "type": "object",
+        "properties": { "lat": { "type": "number" } }
+      },
+      "Speed": { "type": "number" },
+      "Label": { "type": "string" }
+    }
+  }
+}
