@@ -23,6 +23,12 @@
             "schema": { "type": "string", "format": "date-time" }
           },
           {
+            "name": "slots",
+            "in": "query",
+            "required": false,
+            "schema": { "type": "array", "items": { "type": "string", "format": "date-time" } }
+          },
+          {
             "name": "day",
             "in": "query",
             "required": false,
@@ -39,6 +45,29 @@
               }
             }
           }
+        }
+      }
+    },
+    "/events": {
+      "post": {
+        "tags": ["event"],
+        "operationId": "createEvent",
+        "requestBody": {
+          "content": {
+            "application/x-www-form-urlencoded": {
+              "schema": {
+                "type": "object",
+                "required": ["at"],
+                "properties": {
+                  "at": { "type": "string", "format": "date-time" },
+                  "until": { "type": "string", "format": "date-time" }
+                }
+              }
+            }
+          }
+        },
+        "responses": {
+          "204": { "description": "Created" }
         }
       }
     }
@@ -64,6 +93,10 @@
           "relatedIds": {
             "type": "array",
             "items": { "type": "string", "format": "uuid" }
+          },
+          "history": {
+            "type": "array",
+            "items": { "type": "string", "format": "date-time" }
           },
           "startDay": { "type": "string", "format": "date", "default": "2024-01-01" },
           "contact": { "type": "string", "format": "email" },

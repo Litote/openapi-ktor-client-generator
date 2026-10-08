@@ -2,6 +2,8 @@ package org.litote.openapi.ktor.client.generator
 
 import org.junit.jupiter.api.parallel.Execution
 import org.junit.jupiter.api.parallel.ExecutionMode
+import org.litote.openapi.ktor.client.generator.port.ApiTypeMappingConfig
+import org.litote.openapi.ktor.client.generator.port.StringFormatType
 import java.io.File
 import kotlin.test.Test
 import kotlin.test.assertTrue
@@ -24,6 +26,10 @@ class SnapshotTest {
     companion object {
         private const val SNAPSHOTS_DIR = "src/test/resources/snapshots"
         private const val OUTPUT_DIR = "build/snapshot-test-output"
+
+        // Same suffix as KotlinTimeInstantModule with the default precision, which is not a generator dependency.
+        private const val MILLISECONDS_INSTANT_SUFFIX =
+            ".let { kotlin.time.Instant.fromEpochSeconds(it.epochSeconds, it.nanosecondsOfSecond / 1_000_000 * 1_000_000) }.toString()"
 
         /**
          * Check if we should update snapshots instead of comparing.
@@ -90,6 +96,24 @@ class SnapshotTest {
     }
 
     @Test
+    fun `GIVEN string formats spec with truncated instants WHEN generating THEN output matches snapshot`() {
+        runSnapshotTest(
+            snapshotName = "string-format-api",
+            openApiFile = "src/test/resources/string-formats.json",
+            modules =
+                listOf(
+                    object : ApiGeneratorModule {
+                        override fun processTypeMapping(config: ApiTypeMappingConfig) {
+                            config.stringFormatTypes["date-time"] =
+                                StringFormatType("kotlin.time.Instant", formatSuffix = MILLISECONDS_INSTANT_SUFFIX)
+                            config.stringFormatTypes["uuid"] = StringFormatType("kotlin.uuid.Uuid")
+                        }
+                    },
+                ),
+        )
+    }
+
+    @Test
     fun `GIVEN response headers spec WHEN generating THEN output matches snapshot`() {
         runSnapshotTest(
             snapshotName = "response-headers-api",
@@ -111,6 +135,7 @@ class SnapshotTest {
     private fun runSnapshotTest(
         snapshotName: String,
         openApiFile: String,
+        modules: List<ApiGeneratorModule> = emptyList(),
     ) {
         // Given
         val config =
@@ -118,6 +143,7 @@ class SnapshotTest {
                 openApiFile = openApiFile,
                 outputDirectory = "$OUTPUT_DIR/$snapshotName",
                 basePackage = snapshotName.replace('-', '.'),
+                modules = modules,
             )
 
         // Clean output directory

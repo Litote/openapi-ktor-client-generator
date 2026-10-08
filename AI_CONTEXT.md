@@ -371,13 +371,21 @@ Hooks are declared on `ApiConfigurationGeneratorConfig`, `ApiClientGeneratorConf
 - The parser always keeps the OpenAPI `format` of `string` schemas in `DomainTypeSpec.PrimitiveSpec.format`
   (`binary` excepted). Inside the parser it travels on the KotlinPoet `STRING` TypeName as a `StringFormatTag`
   (`TypeNameConverter.kt`, `stringTypeName()`); tags do not affect `TypeName` equality, so `== STRING` checks still hold.
-- `ApiGeneratorModule.processTypeMapping(ApiTypeMappingConfig)` (port) fills `stringFormatTypes: format → StringFormatType(qualifiedName, parseFunction)`.
+- `ApiGeneratorModule.processTypeMapping(ApiTypeMappingConfig)` (port) fills `stringFormatTypes: format → StringFormatType(qualifiedName, parseFunction, formatSuffix)`.
   `List<ApiGeneratorModule>.stringFormatTypes()` (config) resolves the map; each renderer (`ApiModelGenerator`,
   `ApiClientGenerator` → `OperationBuilder`/`ResponseBuilder`, `ApiClientConfigurationGenerator`) computes it from its modules.
 - **Every `DomainTypeSpec.toTypeName(...)` call must pass `stringFormatTypes`**, otherwise the type silently falls back to `String`.
-- Mapped types: path/query params use `.toString()`, string defaults render `Type.parse("…")`, and component-parameter
+- Mapped types: path/query/header/cookie/form params use `StringFormatType.formatSuffix` (default
+  `StringFormatType.DEFAULT_FORMAT_SUFFIX` = `.toString()`), string defaults render `Type.parse("…")`, and component-parameter
   defaults become a non-`const` `val` in `ClientConfiguration.Companion`.
-- Modules: `KotlinTimeInstantModule` (`date-time` → `kotlin.time.Instant`), `KotlinxDateTimeLocalDateModule`
+- A `formatSuffix` other than `.toString()` (`StringFormatType.needsSerializer`) makes `ApiClientConfigurationGenerator`
+  generate `StringFormatSerializers.kt` (`StringFormatSerializersGenerator`: one `<Format>FormatSerializer` object per format,
+  in the client package, i.e. in the global shared subproject in split mode). `ApiModelGenerator` (constructed with
+  `clientPackage`) annotates the property types with `@Serializable(with = …)` through
+  `toTypeName(..., formatSerializerPackage = clientPackage)`; function parameters are never annotated.
+- Modules: `KotlinTimeInstantModule(precision: InstantPrecision = MILLISECONDS)` (`date-time` → `kotlin.time.Instant`,
+  sent truncated to `SECONDS` / `MILLISECONDS` / `MICROSECONDS`, or untruncated with `NANOSECONDS`; public so it can be
+  configured through `customModules`), `KotlinxDateTimeLocalDateModule`
   (`date` → `kotlinx.datetime.LocalDate`, needs kotlinx-datetime), `KotlinUuidModule` (`uuid` → `kotlin.uuid.Uuid`).
 
 `BasicAuthModule` adds `accessToken: String?` and sets `httpClientAuthorization` to `{ accessToken?.let { token -> defaultRequest { header("Authorization", "Bearer " + token) } } }`.

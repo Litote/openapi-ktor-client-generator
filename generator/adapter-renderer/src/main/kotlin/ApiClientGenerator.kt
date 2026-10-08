@@ -94,6 +94,7 @@ public class ApiClientGenerator public constructor(
                 modelPackageOverrides = configuration.modelPackageOverrides,
                 fallbackModelPackage = configuration.resolvedModelPackage,
                 modules = configuration.modules,
+                clientPackage = configuration.clientPackage,
             )
         val operationBuilder =
             OperationBuilder(

@@ -196,6 +196,7 @@ public fun generate(configuration: ApiGeneratorConfiguration): GenerationResult 
                 modelPackageOverrides = configuration.modelPackageOverrides,
                 fallbackModelPackage = configuration.resolvedModelPackage,
                 modules = configuration.modules,
+                clientPackage = configuration.clientPackage,
             ).apply { configuration.modules.forEach { it.processModel(this) } }
         val modelRenderer =
             ApiModelRenderer { modelSpec ->

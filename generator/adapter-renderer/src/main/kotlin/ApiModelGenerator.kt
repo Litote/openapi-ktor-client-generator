@@ -41,6 +41,11 @@ public class ApiModelGenerator public constructor(
      */
     private val fallbackModelPackage: String = modelPackage,
     private val modules: List<ApiGeneratorModule> = emptyList(),
+    /**
+     * Package of the string format serializers generated next to `ClientConfiguration`.
+     * When null, model properties use the default serializer of their type.
+     */
+    private val clientPackage: String? = null,
 ) : ApiModelGeneratorConfig {
     private val stringFormatTypes: Map<String, StringFormatType> = modules.stringFormatTypes()
 
@@ -249,8 +254,11 @@ public class ApiModelGenerator public constructor(
                 }
             }.build()
 
+    private fun ModelPropertySpec.serializableTypeName(): TypeName =
+        type.toTypeName(fallbackModelPackage, modelPackageOverrides, stringFormatTypes, formatSerializerPackage = clientPackage)
+
     private fun buildPropertyParameter(property: ModelPropertySpec): ParameterSpec {
-        val typeName = property.type.toTypeName(fallbackModelPackage, modelPackageOverrides, stringFormatTypes)
+        val typeName = property.serializableTypeName()
         val builder = ParameterSpec.builder(property.camelCaseName, typeName)
         val defaultValueString = computePropertyDefaultValue(property)
         val formatType = property.type.stringFormatType(stringFormatTypes)
@@ -313,7 +321,7 @@ public class ApiModelGenerator public constructor(
         }
 
     private fun buildPropertySpec(property: ModelPropertySpec): PropertySpec {
-        val typeName = property.type.toTypeName(fallbackModelPackage, modelPackageOverrides, stringFormatTypes)
+        val typeName = property.serializableTypeName()
         return PropertySpec
             .builder(property.camelCaseName, typeName)
             .initializer(property.camelCaseName)

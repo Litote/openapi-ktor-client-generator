@@ -477,15 +477,17 @@ internal class OperationBuilder(
                 is DomainTypeSpec.SetTypeSpec -> arrayType.element
                 else -> return ""
             }
+        val formatType = element.stringFormatType(stringFormatTypes)
         return when {
             isEnumArray -> ".map { it.serialName() }"
-            element.isString && element.stringFormatType(stringFormatTypes) == null -> ""
+            formatType != null -> ".map { value -> value${formatType.formatSuffix} }"
+            element.isString -> ""
             else -> ".map { it.toString() }"
         }
     }
 
     private fun OperationParameterSpec.joinedArrayCode(delimiter: String): CodeBlock =
-        CodeBlock.of("%N.joinToString(%S)${if (isEnumArray) " { it.serialName() }" else ""}", camelCaseName, delimiter)
+        CodeBlock.of("%N.joinToString(%S)${joinTransform(stringFormatTypes)}", camelCaseName, delimiter)
 
     private fun OperationParameterSpec.jsonElementCode(): CodeBlock =
         CodeBlock.of("configuration.json.%M(%N)", encodeToJsonElementMember, camelCaseName)
@@ -590,8 +592,15 @@ internal class OperationBuilder(
             val value =
                 when {
                     param.isObject -> param.delimitedObjectCode(",", if (param.explode) "=" else ",")
+
                     param.isArray -> param.joinedArrayCode(",")
+
                     param.isEnum -> CodeBlock.of("%N.serialName()", param.camelCaseName)
+
+                    param.type.stringFormatType(
+                        stringFormatTypes,
+                    ) != null -> CodeBlock.of("%N${param.toStringSuffix(stringFormatTypes)}", param.camelCaseName)
+
                     else -> CodeBlock.of("%N", param.camelCaseName)
                 }
             addIfNotNull(builder, param) {
@@ -708,10 +717,14 @@ internal class OperationBuilder(
             if (typeName.isString()) {
                 builder.addStatement("append(%S, %L)", field.originalName, valueReference)
             } else {
-                builder.addStatement("append(%S, %L.toString())", field.originalName, valueReference)
+                builder.addStatement("append(%S, %L%L)", field.originalName, valueReference, field.type.formatSuffix())
             }
         }
     }
+
+    /** Suffix formatting a non-`String` value of this type, e.g. `.toString()`. */
+    private fun DomainTypeSpec.formatSuffix(): String =
+        stringFormatType(stringFormatTypes)?.formatSuffix ?: StringFormatType.DEFAULT_FORMAT_SUFFIX
 
     private fun buildUrlEncodedFormData(requestBody: RequestBodySpec): CodeBlock {
         val builder = CodeBlock.builder()
@@ -719,10 +732,10 @@ internal class OperationBuilder(
             val fieldAccess = "${requestBody.parameterName}.${field.parameterName}"
             if (field.isOptional) {
                 builder.beginControlFlow("%L?.let { value ->", fieldAccess)
-                builder.addStatement("append(%S, value.toString())", field.originalName)
+                builder.addStatement("append(%S, value%L)", field.originalName, field.type.formatSuffix())
                 builder.endControlFlow()
             } else {
-                builder.addStatement("append(%S, %L.toString())", field.originalName, fieldAccess)
+                builder.addStatement("append(%S, %L%L)", field.originalName, fieldAccess, field.type.formatSuffix())
             }
         }
         return builder.build()
@@ -760,10 +773,24 @@ private fun OperationParameterSpec.toStringSuffix(stringFormatTypes: Map<String,
         }
 
         type is DomainTypeSpec.ListTypeSpec || type is DomainTypeSpec.SetTypeSpec -> {
-            ".joinToString(\",\")${if (isEnumArray) " { it.serialName() }" else ""}"
+            ".joinToString(\",\")${joinTransform(stringFormatTypes)}"
         }
 
         else -> {
-            ".toString()"
+            type.stringFormatType(stringFormatTypes)?.formatSuffix ?: StringFormatType.DEFAULT_FORMAT_SUFFIX
         }
     }
+
+/** Trailing lambda of `joinToString` for an array parameter, e.g. ` { it.serialName() }`, or empty when `toString()` is enough. */
+private fun OperationParameterSpec.joinTransform(stringFormatTypes: Map<String, StringFormatType>): String {
+    val element =
+        when (val arrayType = type) {
+            is DomainTypeSpec.ListTypeSpec -> arrayType.element
+            is DomainTypeSpec.SetTypeSpec -> arrayType.element
+            else -> null
+        }
+    return when {
+        isEnumArray -> " { it.serialName() }"
+        else -> element?.stringFormatType(stringFormatTypes)?.let { " { value -> value${it.formatSuffix} }" }.orEmpty()
+    }
+}
