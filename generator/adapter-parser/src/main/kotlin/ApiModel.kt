@@ -157,72 +157,54 @@ internal class ApiModel private constructor(
                 configuration.operationFilter(meta)
             }.groupBy(keySelector = { it.first }, valueTransform = { it.second })
 
+    /** Operations kept by the operation filter, once each even when they have several tags. */
+    private val filteredOperations: List<Operation> =
+        pathsByTags
+            .values
+            .flatten()
+            .distinctBy { it.path to it.method }
+            .map { it.operation }
+
     val schemaParentMap: Map<String, Set<String>> =
         model.componentSchemas
             ?.mapValues { (_, v) -> v.allReferences().map { it.refClassName }.toSet() }
             ?: emptyMap()
 
     internal val requestBodySealedParents: Map<String, List<String>> =
-        model.paths
-            .orEmpty()
-            .values
-            .flatMap { pathItem ->
-                listOfNotNull(
-                    pathItem.get,
-                    pathItem.post,
-                    pathItem.put,
-                    pathItem.delete,
-                    pathItem.patch,
-                    pathItem.options,
-                    pathItem.head,
-                    pathItem.trace,
-                ).mapNotNull { op ->
-                    val opId = op.operationId ?: return@mapNotNull null
-                    val schema =
-                        op.requestBody
-                            ?.asRequestBody
-                            ?.content
-                            ?.values
-                            ?.firstOrNull()
-                            ?.schema as? Schema
-                            ?: return@mapNotNull null
-                    val refs = schema.oneOfSchemas?.filterIsInstance<Reference>() ?: return@mapNotNull null
-                    if (refs.size < 2) return@mapNotNull null
-                    val sealedName = "${opId.snakeToCamelCase().capitalize()}Request"
-                    sealedName to refs.map { it.refClassName }
-                }
+        filteredOperations
+            .mapNotNull { op ->
+                val opId = op.operationId ?: return@mapNotNull null
+                val schema =
+                    op.requestBody
+                        ?.asRequestBody
+                        ?.content
+                        ?.values
+                        ?.firstOrNull()
+                        ?.schema as? Schema
+                        ?: return@mapNotNull null
+                val refs = schema.oneOfSchemas?.filterIsInstance<Reference>() ?: return@mapNotNull null
+                if (refs.size < 2) return@mapNotNull null
+                val sealedName = "${opId.snakeToCamelCase().capitalize()}Request"
+                sealedName to refs.map { it.refClassName }
             }.toMap()
 
     internal val responseSealedParents: Map<String, List<String>> =
-        model.paths
-            .orEmpty()
-            .values
-            .flatMap { pathItem ->
-                listOfNotNull(
-                    pathItem.get,
-                    pathItem.post,
-                    pathItem.put,
-                    pathItem.delete,
-                    pathItem.patch,
-                    pathItem.options,
-                    pathItem.head,
-                    pathItem.trace,
-                ).mapNotNull { op ->
-                    val opId = op.operationId ?: return@mapNotNull null
-                    val refs =
-                        op.responses?.values?.firstNotNullOfOrNull { responseOrRef ->
-                            if (responseOrRef !is Response) return@firstNotNullOfOrNull null
-                            responseOrRef.responseContent?.values?.firstNotNullOfOrNull { mediaType ->
-                                val schema = mediaType.schema as? Schema ?: return@firstNotNullOfOrNull null
-                                val oneOfRefs =
-                                    schema.oneOfSchemas?.filterIsInstance<Reference>()
-                                        ?: return@firstNotNullOfOrNull null
-                                if (oneOfRefs.size >= 2) oneOfRefs else null
-                            }
-                        } ?: return@mapNotNull null
-                    val sealedName = "${opId.snakeToCamelCase().capitalize()}Response"
-                    sealedName to refs.map { it.refClassName }
-                }
+        filteredOperations
+            .mapNotNull { op ->
+                val opId = op.operationId ?: return@mapNotNull null
+                val refs =
+                    op.responses?.values?.firstNotNullOfOrNull { responseOrRef ->
+                        if (responseOrRef !is Response) return@firstNotNullOfOrNull null
+                        responseOrRef.responseContent?.values?.firstNotNullOfOrNull { mediaType ->
+                            val schema = mediaType.schema as? Schema ?: return@firstNotNullOfOrNull null
+                            val oneOfRefs =
+                                schema.oneOfSchemas?.filterIsInstance<Reference>()
+                                    ?: return@firstNotNullOfOrNull null
+                            if (oneOfRefs.size >= 2) oneOfRefs else null
+                        }
+                    } ?: return@mapNotNull null
+                val sealedName = "${opId.snakeToCamelCase().capitalize()}Response"
+                sealedName to refs.map { it.refClassName }
             }.toMap()
 
     val sealedParents: Map<String, List<String>> =

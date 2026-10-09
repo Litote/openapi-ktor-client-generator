@@ -620,6 +620,10 @@ See [CONTRIBUTING.md — Response oneOf — Polymorphic Sealed Classes](CONTRIBU
 
 Key classes: `SubtypeHint` (domain), `ApiModel.responseSealedParents`, `ApiModelGenerator.buildPolymorphicSerializerCompanion`.
 
+`ApiModel.requestBodySealedParents` / `responseSealedParents` only consider the operations kept by `operationFilter`
+(`ApiModel.filteredOperations`): the `<Op>Request` / `<Op>Response` sealed classes of a filtered-out operation are not
+generated, since their subtypes would not be either.
+
 ---
 
 ## Version Constants for initApiClientSubproject gradle task
