@@ -1,5 +1,23 @@
 # Changelog
 
+## [0.9.0](https://github.com/Litote/openapi-ktor-client-generator/compare/v0.8.0...v0.9.0) (2026-10-09)
+
+
+### ⚠ BREAKING CHANGES
+
+* ClientConfiguration has a new `userAgent` parameter before `engine`, and defaultHttpClientConfig a new `userAgent` parameter before `httpClientAuthorization`: calls passing these arguments by position must be updated.
+
+### Features
+
+* configurable User-Agent and HTTP engine ([#93](https://github.com/Litote/openapi-ktor-client-generator/issues/93)) ([f94e17c](https://github.com/Litote/openapi-ktor-client-generator/commit/f94e17c6b57422ecf88779d6166c7f9888909593))
+
+
+### Bug Fixes
+
+* convert numeric default values of model properties to the property type ([6955482](https://github.com/Litote/openapi-ktor-client-generator/commit/69554829ce8f6075edba464b0e89b8b605980c29))
+* do not generate oneOf request/response models of filtered-out operations ([#94](https://github.com/Litote/openapi-ktor-client-generator/issues/94)) ([388246b](https://github.com/Litote/openapi-ktor-client-generator/commit/388246b47e7cc12d784dfc29c39f602c9138aabf))
+* use the target type for references to non-object component schemas ([129da9c](https://github.com/Litote/openapi-ktor-client-generator/commit/129da9cca4f4eb591787f18df90a38b63c6252f6))
+
 ## [0.8.0](https://github.com/Litote/openapi-ktor-client-generator/compare/v0.7.0...v0.8.0) (2026-09-29)
 
 
