@@ -217,4 +217,42 @@ class GenerationSpecTest {
         assertEquals("https://api.example.com/", spec.serverUrl)
         assertTrue(spec.apiKeySchemes.isEmpty())
     }
+
+    @Test
+    fun `GIVEN operation filter excluding a path WHEN parsing THEN oneOf request and response models of that path are not generated`() {
+        val config =
+            ApiGeneratorConfiguration(
+                openApiFile = "src/test/resources/mastodon.json",
+                outputDirectory = "build/openapi-spec-test",
+                operationFilter = { it.path == "/api/v1/accounts/{id}" },
+            )
+        val spec = OpenApiSpecificationParser(config).parse(config.operationFilter)
+        val modelNames = spec.models.map { it.name }.toSet()
+
+        assertTrue("CreateStatusRequest" !in modelNames, "Request oneOf of a filtered-out path must not be generated")
+        assertTrue("CreateStatusResponse" !in modelNames, "Response oneOf of a filtered-out path must not be generated")
+        spec.models.filterIsInstance<ModelSpec.DataClassSpec>().forEach { model ->
+            model.sealedParentName?.let { parent ->
+                assertTrue(parent in modelNames, "Sealed parent $parent of ${model.name} must be generated")
+            }
+        }
+    }
+
+    @Test
+    fun `GIVEN operation filter including a path WHEN parsing THEN oneOf request and response models of that path are generated`() {
+        val config =
+            ApiGeneratorConfiguration(
+                openApiFile = "src/test/resources/mastodon.json",
+                outputDirectory = "build/openapi-spec-test",
+                operationFilter = { it.path == "/api/v1/statuses" && it.method == "post" },
+            )
+        val spec = OpenApiSpecificationParser(config).parse(config.operationFilter)
+        val modelNames = spec.models.map { it.name }.toSet()
+
+        assertTrue("CreateStatusRequest" in modelNames)
+        val response = spec.models.filterIsInstance<ModelSpec.SealedClassSpec>().first { it.name == "CreateStatusResponse" }
+        response.subtypeHints.orEmpty().forEach { hint ->
+            assertTrue(hint.subtypeName in modelNames, "Subtype ${hint.subtypeName} must be generated")
+        }
+    }
 }
