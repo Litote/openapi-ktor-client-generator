@@ -2,8 +2,8 @@
 
 > **Purpose**: Instructions for AI agents working on this codebase.
 > For installation, configuration, and usage, see [`README.md`](README.md) and [`PROJECT_GENERATION.md`](PROJECT_GENERATION.md).
-> For contributing guidelines and project architecture, see (MANDATORY!) [`CONTRIBUTING.md`](CONTRIBUTING.md).
-> For a project analysis, see (MANDATORY!) [`AI_CONTEXT.md`](AI_CONTEXT.md).
+> Read [`CONTRIBUTING.md`](CONTRIBUTING.md) (contributing guidelines, architecture) before changing code.
+> Read [`AI_CONTEXT.md`](AI_CONTEXT.md) (codebase analysis) before changing code.
 ---
 
 ## Critical Rules
@@ -17,7 +17,7 @@
 | **Dependencies** | Add/upgrade dependencies without explicit request, change version catalogs       |
 | **Security**     | Log secrets/API keys, expose environment variables, commit credentials           |
 | **Scope**        | Mass refactors, rename symbols unnecessarily, formatting-only changes            |
-| **Deploy**       | `./gradlew deploy`, `./gradlew deployPlugins`, triggering releases manually      |
+| **Deploy**       | `./gradlew publishToMavenCentral`, `publishAndReleaseToMavenCentral`, `publishPlugins`, or triggering releases manually (release-please CI publishes) |
 | **Commit**       | Commit unless the user explicitly asks for a commit or a PR                      |
 | **Generated**    | Edit `PluginVersion.kt` manually (generated at build time from `libs.versions.toml`); modify files under `e2e/build/` or `e2e-split/client/` |
 
@@ -26,7 +26,7 @@
 | Category                   | Required Actions                                                                                          |
 |----------------------------|-----------------------------------------------------------------------------------------------------------|
 | **Validation**             | Run `./gradlew formatKotlin && ./gradlew check` after every iteration                                     |
-| **Quality Gate**           | Run `./gradlew check jacocoAggregatedReport sonar sonarCheck` before finalizing **every** task — **`sonarCheck` must pass (0 issues, 0 hotspots, gate OK)**. Requires `systemProp.sonar.token` in `~/.gradle/gradle.properties`. If the token is unavailable locally, note it explicitly and let CI validate. This includes `.github/workflows/` YAML files (analysed by Sonar for security). `.md`-only changes do **not** require Sonar. |
+| **Quality Gate**           | Run `./gradlew check jacocoAggregatedReport sonar sonarCheck` before finalizing **every** task — **`sonarCheck` must pass (0 issues, 0 hotspots, gate OK)**. Requires `systemProp.sonar.token` in `~/.gradle/gradle.properties`. This includes `.md`-only changes and `.github/workflows/` YAML files (analysed by Sonar for security). |
 | **Testing**                | When you try to fix a bug, start by adding the test and THEN fix the bug. Add tests for all logic changes |
 | **Imports**                | Use single imports only                                                                                   |
 | **Language**               | Write all code, comments, and documentation in English                                                    |

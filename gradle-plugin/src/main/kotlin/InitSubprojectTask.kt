@@ -147,7 +147,7 @@ public abstract class InitSubprojectTask : DefaultTask() {
      * Optional intermediate directory name used to group all generated multi-module subprojects
      * under a common subdirectory. When set to e.g. `"clients"`, modules `shared` and `user-client`
      * are created at `clients/shared` and `clients/user-client`, and the settings include becomes
-     * `include("clients/shared", "clients/user-client")`.
+     * `include(":clients:shared", ":clients:user-client")`.
      * Passed via -PsubprojectRootDirectory=...
      */
     @get:Input
