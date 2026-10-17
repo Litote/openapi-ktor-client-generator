@@ -476,6 +476,8 @@ public class ApiClientConfigurationGenerator public constructor(
         OperationResponseGenerator(
             clientPackage = configuration.clientPackage,
             outputDirectory = configuration.outputDirectory,
+            // a sealed type requires its implementations in the same module and package
+            sealed = !configuration.splitByClient && configuration.configPackage == configuration.clientPackage,
             fileSystemWriter = fileSystemWriter,
         ).render()
         StringFormatSerializersGenerator(

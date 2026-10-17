@@ -195,13 +195,15 @@ fun <T> OperationResponse<T>.bodyOrThrow(): T =
         is OperationResponseSuccess<T> -> body
         is OperationResponseFailure<*> -> throw ApiException("API error: $body")
         is OperationResponseUnknownFailure -> throw ApiException("HTTP status $statusCode")
-        else -> error("unexpected response: $this")
     }
 
 val user: User = client.getUser(id = "42").bodyOrThrow()
 ```
 
-The interfaces are not sealed (the operations may be generated in other modules), hence the `else` branch.
+The interfaces are `sealed` when the clients are generated in the same module and package as `ClientConfiguration`
+(the default), so this `when` is exhaustive. A sealed type requires its implementations in its module and package:
+in split-by-client mode, or when `clientPackage` differs from the package of `ClientConfiguration`, the interfaces are
+not sealed and the `when` needs an `else` branch.
 
 ### Parameter serialization
 

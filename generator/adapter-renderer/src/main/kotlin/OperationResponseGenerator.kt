@@ -25,10 +25,14 @@ internal class OperationResponseTypes(
 /**
  * Generates the interfaces common to the response types of all the operations, so that they can be handled generically
  * (e.g. one function returning the body of any successful response, or throwing on failures).
+ *
+ * They are [sealed] when the response types are generated in the same module and package: a `when` on them is then
+ * exhaustive without `else` branch.
  */
 internal class OperationResponseGenerator(
     private val clientPackage: String,
     private val outputDirectory: String,
+    private val sealed: Boolean,
     private val fileSystemWriter: ApiFileSystemWriter,
 ) {
     private companion object {
@@ -39,36 +43,35 @@ internal class OperationResponseGenerator(
         val outE: TypeVariableName = TypeVariableName("E", variance = KModifier.OUT)
     }
 
+    private fun interfaceBuilder(className: ClassName): TypeSpec.Builder =
+        TypeSpec.interfaceBuilder(className).apply { if (sealed) addModifiers(KModifier.SEALED) }
+
     fun render() {
         val types = OperationResponseTypes(clientPackage)
         val fileSpec =
             FileSpec
                 .builder(clientPackage, FILE_NAME)
                 .addType(
-                    TypeSpec
-                        .interfaceBuilder(types.response)
+                    interfaceBuilder(types.response)
                         .addKdoc("Response of an operation: [T] is the body type of its successful responses.\n")
                         .addTypeVariable(outT)
                         .addProperty(PropertySpec.builder("headers", headersClass).build())
                         .build(),
                 ).addType(
-                    TypeSpec
-                        .interfaceBuilder(types.success)
+                    interfaceBuilder(types.success)
                         .addKdoc("Successful response declared by the specification ([body] is `Unit` when it has none).\n")
                         .addTypeVariable(outT)
                         .addSuperinterface(types.response.parameterizedBy(TypeVariableName("T")))
                         .addProperty(PropertySpec.builder(BODY_PROPERTY, TypeVariableName("T")).build())
                         .build(),
                 ).addType(
-                    TypeSpec
-                        .interfaceBuilder(types.failure)
+                    interfaceBuilder(types.failure)
                         .addKdoc("Failure response declared by the specification, of body [E] (`Unit` when it has none).\n")
                         .addTypeVariable(outE)
                         .addProperty(PropertySpec.builder(BODY_PROPERTY, TypeVariableName("E")).build())
                         .build(),
                 ).addType(
-                    TypeSpec
-                        .interfaceBuilder(types.unknownFailure)
+                    interfaceBuilder(types.unknownFailure)
                         .addKdoc(
                             "Response with a status not declared by the specification, or failure of the call " +
                                 "(network error, unreadable body: status 500).\n",

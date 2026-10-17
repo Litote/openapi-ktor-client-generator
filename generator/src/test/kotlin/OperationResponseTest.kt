@@ -1,19 +1,23 @@
 package org.litote.openapi.ktor.client.generator
 
+import org.junit.jupiter.api.io.TempDir
 import java.io.File
 import kotlin.test.Test
 import kotlin.test.assertTrue
 
 class OperationResponseTest {
-    private val config =
+    @TempDir
+    lateinit var tempDir: File
+
+    private val config: ApiGeneratorConfiguration by lazy {
         ApiGeneratorConfiguration(
             openApiFile = "src/test/resources/operation-responses.json",
-            outputDirectory = "build/operation-responses-test",
+            outputDirectory = tempDir.resolve("default").absolutePath,
             basePackage = "responses.test",
         )
+    }
 
     private val sources: Map<String, String> by lazy {
-        File(config.outputDirectory).deleteRecursively()
         val result = generate(config)
         assertTrue(result.isSuccess, "Generation should succeed: $result")
         File(config.outputDirectory)
@@ -31,14 +35,47 @@ class OperationResponseTest {
         assertTrue(expected in source, "Expected:\n$expected\nin:\n$source")
     }
 
+    private fun generateResponses(configuration: ApiGeneratorConfiguration): String {
+        val result = generate(configuration)
+        assertTrue(result.isSuccess, "Generation should succeed: $result")
+        return File(configuration.outputDirectory)
+            .walkTopDown()
+            .first { it.name == "OperationResponse.kt" }
+            .readText()
+    }
+
     @Test
-    fun `GIVEN a spec WHEN generating THEN the common response interfaces are generated with the client configuration`() {
+    fun `GIVEN a single module WHEN generating THEN the common response interfaces are sealed`() {
         val responses = source("OperationResponse.kt")
 
         assertContains(responses, "package responses.test.client")
+        assertContains(responses, "public sealed interface OperationResponse<out T> {")
+        assertContains(responses, "public sealed interface OperationResponseSuccess<out T> : OperationResponse<T> {")
+        assertContains(responses, "public sealed interface OperationResponseFailure<out E> {")
+        assertContains(responses, "public sealed interface OperationResponseUnknownFailure {")
+    }
+
+    @Test
+    fun `GIVEN split by client WHEN generating the shared module THEN the common response interfaces are not sealed`() {
+        val responses =
+            generateResponses(
+                config.copy(outputDirectory = tempDir.resolve("split").absolutePath, splitByClient = true, targetClientName = null),
+            )
+
         assertContains(responses, "public interface OperationResponse<out T> {")
         assertContains(responses, "public interface OperationResponseSuccess<out T> : OperationResponse<T> {")
         assertContains(responses, "public interface OperationResponseFailure<out E> {")
+        assertContains(responses, "public interface OperationResponseUnknownFailure {")
+    }
+
+    @Test
+    fun `GIVEN clients in another package WHEN generating THEN the common response interfaces are not sealed`() {
+        val responses =
+            generateResponses(
+                config.copy(outputDirectory = tempDir.resolve("package").absolutePath, clientPackage = "responses.test.api"),
+            )
+
+        assertContains(responses, "public interface OperationResponse<out T> {")
         assertContains(responses, "public interface OperationResponseUnknownFailure {")
     }
 
