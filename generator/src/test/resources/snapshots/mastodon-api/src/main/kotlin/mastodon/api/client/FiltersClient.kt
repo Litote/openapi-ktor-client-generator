@@ -14,6 +14,7 @@ import kotlin.Boolean
 import kotlin.Int
 import kotlin.Long
 import kotlin.String
+import kotlin.Unit
 import kotlin.collections.List
 import kotlin.coroutines.cancellation.CancellationException
 import kotlinx.serialization.SerialName
@@ -126,16 +127,17 @@ public interface FiltersClient {
   public suspend fun deleteFiltersStatusesByIdV2(id: String): DeleteFiltersStatusesByIdV2Response
 
   @Serializable
-  public sealed class GetFiltersResponse {
-    public abstract val headers: Headers
+  public sealed class GetFiltersResponse : OperationResponse<V1Filter> {
+    abstract override val headers: Headers
   }
 
   @Serializable
   public data class GetFiltersResponseSuccess(
-    public val body: V1Filter,
+    override val body: V1Filter,
     @Transient
     override val headers: Headers = Headers.Empty,
-  ) : GetFiltersResponse() {
+  ) : GetFiltersResponse(),
+      OperationResponseSuccess<V1Filter> {
     /**
      * Number of requests permitted per time period
      */
@@ -157,30 +159,37 @@ public interface FiltersClient {
 
   @Serializable
   public data class GetFiltersResponseFailure401(
-    public val body: Error,
+    override val body: Error,
     @Transient
     override val headers: Headers = Headers.Empty,
-  ) : GetFiltersResponse()
+  ) : GetFiltersResponse(),
+      OperationResponseFailure<Error>
 
   @Serializable
   public data class GetFiltersResponseFailure410(
     @Transient
     override val headers: Headers = Headers.Empty,
-  ) : GetFiltersResponse()
+  ) : GetFiltersResponse(),
+      OperationResponseFailure<Unit> {
+    override val body: Unit
+      get() = Unit
+  }
 
   @Serializable
   public data class GetFiltersResponseFailure(
-    public val body: ValidationError,
+    override val body: ValidationError,
     @Transient
     override val headers: Headers = Headers.Empty,
-  ) : GetFiltersResponse()
+  ) : GetFiltersResponse(),
+      OperationResponseFailure<ValidationError>
 
   @Serializable
   public data class GetFiltersResponseUnknownFailure(
-    public val statusCode: Int,
+    override val statusCode: Int,
     @Transient
     override val headers: Headers = Headers.Empty,
-  ) : GetFiltersResponse()
+  ) : GetFiltersResponse(),
+      OperationResponseUnknownFailure
 
   @Serializable
   public data class CreateFilterRequest(
@@ -194,16 +203,17 @@ public interface FiltersClient {
   )
 
   @Serializable
-  public sealed class CreateFilterResponse {
-    public abstract val headers: Headers
+  public sealed class CreateFilterResponse : OperationResponse<V1Filter> {
+    abstract override val headers: Headers
   }
 
   @Serializable
   public data class CreateFilterResponseSuccess(
-    public val body: V1Filter,
+    override val body: V1Filter,
     @Transient
     override val headers: Headers = Headers.Empty,
-  ) : CreateFilterResponse() {
+  ) : CreateFilterResponse(),
+      OperationResponseSuccess<V1Filter> {
     /**
      * Number of requests permitted per time period
      */
@@ -225,35 +235,42 @@ public interface FiltersClient {
 
   @Serializable
   public data class CreateFilterResponseFailure401(
-    public val body: Error,
+    override val body: Error,
     @Transient
     override val headers: Headers = Headers.Empty,
-  ) : CreateFilterResponse()
+  ) : CreateFilterResponse(),
+      OperationResponseFailure<Error>
 
   @Serializable
   public data class CreateFilterResponseFailure(
     @Transient
     override val headers: Headers = Headers.Empty,
-  ) : CreateFilterResponse()
+  ) : CreateFilterResponse(),
+      OperationResponseFailure<Unit> {
+    override val body: Unit
+      get() = Unit
+  }
 
   @Serializable
   public data class CreateFilterResponseUnknownFailure(
-    public val statusCode: Int,
+    override val statusCode: Int,
     @Transient
     override val headers: Headers = Headers.Empty,
-  ) : CreateFilterResponse()
+  ) : CreateFilterResponse(),
+      OperationResponseUnknownFailure
 
   @Serializable
-  public sealed class GetFilterResponse {
-    public abstract val headers: Headers
+  public sealed class GetFilterResponse : OperationResponse<V1Filter> {
+    abstract override val headers: Headers
   }
 
   @Serializable
   public data class GetFilterResponseSuccess(
-    public val body: V1Filter,
+    override val body: V1Filter,
     @Transient
     override val headers: Headers = Headers.Empty,
-  ) : GetFilterResponse() {
+  ) : GetFilterResponse(),
+      OperationResponseSuccess<V1Filter> {
     /**
      * Number of requests permitted per time period
      */
@@ -275,30 +292,37 @@ public interface FiltersClient {
 
   @Serializable
   public data class GetFilterResponseFailure401(
-    public val body: Error,
+    override val body: Error,
     @Transient
     override val headers: Headers = Headers.Empty,
-  ) : GetFilterResponse()
+  ) : GetFilterResponse(),
+      OperationResponseFailure<Error>
 
   @Serializable
   public data class GetFilterResponseFailure410(
     @Transient
     override val headers: Headers = Headers.Empty,
-  ) : GetFilterResponse()
+  ) : GetFilterResponse(),
+      OperationResponseFailure<Unit> {
+    override val body: Unit
+      get() = Unit
+  }
 
   @Serializable
   public data class GetFilterResponseFailure(
-    public val body: ValidationError,
+    override val body: ValidationError,
     @Transient
     override val headers: Headers = Headers.Empty,
-  ) : GetFilterResponse()
+  ) : GetFilterResponse(),
+      OperationResponseFailure<ValidationError>
 
   @Serializable
   public data class GetFilterResponseUnknownFailure(
-    public val statusCode: Int,
+    override val statusCode: Int,
     @Transient
     override val headers: Headers = Headers.Empty,
-  ) : GetFilterResponse()
+  ) : GetFilterResponse(),
+      OperationResponseUnknownFailure
 
   @Serializable
   public data class UpdateFilterRequest(
@@ -312,16 +336,17 @@ public interface FiltersClient {
   )
 
   @Serializable
-  public sealed class UpdateFilterResponse {
-    public abstract val headers: Headers
+  public sealed class UpdateFilterResponse : OperationResponse<V1Filter> {
+    abstract override val headers: Headers
   }
 
   @Serializable
   public data class UpdateFilterResponseSuccess(
-    public val body: V1Filter,
+    override val body: V1Filter,
     @Transient
     override val headers: Headers = Headers.Empty,
-  ) : UpdateFilterResponse() {
+  ) : UpdateFilterResponse(),
+      OperationResponseSuccess<V1Filter> {
     /**
      * Number of requests permitted per time period
      */
@@ -343,34 +368,44 @@ public interface FiltersClient {
 
   @Serializable
   public data class UpdateFilterResponseFailure401(
-    public val body: Error,
+    override val body: Error,
     @Transient
     override val headers: Headers = Headers.Empty,
-  ) : UpdateFilterResponse()
+  ) : UpdateFilterResponse(),
+      OperationResponseFailure<Error>
 
   @Serializable
   public data class UpdateFilterResponseFailure(
     @Transient
     override val headers: Headers = Headers.Empty,
-  ) : UpdateFilterResponse()
+  ) : UpdateFilterResponse(),
+      OperationResponseFailure<Unit> {
+    override val body: Unit
+      get() = Unit
+  }
 
   @Serializable
   public data class UpdateFilterResponseUnknownFailure(
-    public val statusCode: Int,
+    override val statusCode: Int,
     @Transient
     override val headers: Headers = Headers.Empty,
-  ) : UpdateFilterResponse()
+  ) : UpdateFilterResponse(),
+      OperationResponseUnknownFailure
 
   @Serializable
-  public sealed class DeleteFilterResponse {
-    public abstract val headers: Headers
+  public sealed class DeleteFilterResponse : OperationResponse<Unit> {
+    abstract override val headers: Headers
   }
 
   @Serializable
   public data class DeleteFilterResponseSuccess(
     @Transient
     override val headers: Headers = Headers.Empty,
-  ) : DeleteFilterResponse() {
+  ) : DeleteFilterResponse(),
+      OperationResponseSuccess<Unit> {
+    override val body: Unit
+      get() = Unit
+
     /**
      * Number of requests permitted per time period
      */
@@ -392,42 +427,50 @@ public interface FiltersClient {
 
   @Serializable
   public data class DeleteFilterResponseFailure401(
-    public val body: Error,
+    override val body: Error,
     @Transient
     override val headers: Headers = Headers.Empty,
-  ) : DeleteFilterResponse()
+  ) : DeleteFilterResponse(),
+      OperationResponseFailure<Error>
 
   @Serializable
   public data class DeleteFilterResponseFailure410(
     @Transient
     override val headers: Headers = Headers.Empty,
-  ) : DeleteFilterResponse()
+  ) : DeleteFilterResponse(),
+      OperationResponseFailure<Unit> {
+    override val body: Unit
+      get() = Unit
+  }
 
   @Serializable
   public data class DeleteFilterResponseFailure(
-    public val body: ValidationError,
+    override val body: ValidationError,
     @Transient
     override val headers: Headers = Headers.Empty,
-  ) : DeleteFilterResponse()
+  ) : DeleteFilterResponse(),
+      OperationResponseFailure<ValidationError>
 
   @Serializable
   public data class DeleteFilterResponseUnknownFailure(
-    public val statusCode: Int,
+    override val statusCode: Int,
     @Transient
     override val headers: Headers = Headers.Empty,
-  ) : DeleteFilterResponse()
+  ) : DeleteFilterResponse(),
+      OperationResponseUnknownFailure
 
   @Serializable
-  public sealed class GetFiltersV2Response {
-    public abstract val headers: Headers
+  public sealed class GetFiltersV2Response : OperationResponse<List<Filter>> {
+    abstract override val headers: Headers
   }
 
   @Serializable
   public data class GetFiltersV2ResponseSuccess(
-    public val body: List<Filter>,
+    override val body: List<Filter>,
     @Transient
     override val headers: Headers = Headers.Empty,
-  ) : GetFiltersV2Response() {
+  ) : GetFiltersV2Response(),
+      OperationResponseSuccess<List<Filter>> {
     /**
      * Number of requests permitted per time period
      */
@@ -449,30 +492,37 @@ public interface FiltersClient {
 
   @Serializable
   public data class GetFiltersV2ResponseFailure401(
-    public val body: Error,
+    override val body: Error,
     @Transient
     override val headers: Headers = Headers.Empty,
-  ) : GetFiltersV2Response()
+  ) : GetFiltersV2Response(),
+      OperationResponseFailure<Error>
 
   @Serializable
   public data class GetFiltersV2ResponseFailure410(
     @Transient
     override val headers: Headers = Headers.Empty,
-  ) : GetFiltersV2Response()
+  ) : GetFiltersV2Response(),
+      OperationResponseFailure<Unit> {
+    override val body: Unit
+      get() = Unit
+  }
 
   @Serializable
   public data class GetFiltersV2ResponseFailure(
-    public val body: ValidationError,
+    override val body: ValidationError,
     @Transient
     override val headers: Headers = Headers.Empty,
-  ) : GetFiltersV2Response()
+  ) : GetFiltersV2Response(),
+      OperationResponseFailure<ValidationError>
 
   @Serializable
   public data class GetFiltersV2ResponseUnknownFailure(
-    public val statusCode: Int,
+    override val statusCode: Int,
     @Transient
     override val headers: Headers = Headers.Empty,
-  ) : GetFiltersV2Response()
+  ) : GetFiltersV2Response(),
+      OperationResponseUnknownFailure
 
   @Serializable
   public data class CreateFilterV2Request(
@@ -487,16 +537,17 @@ public interface FiltersClient {
   )
 
   @Serializable
-  public sealed class CreateFilterV2Response {
-    public abstract val headers: Headers
+  public sealed class CreateFilterV2Response : OperationResponse<Filter> {
+    abstract override val headers: Headers
   }
 
   @Serializable
   public data class CreateFilterV2ResponseSuccess(
-    public val body: Filter,
+    override val body: Filter,
     @Transient
     override val headers: Headers = Headers.Empty,
-  ) : CreateFilterV2Response() {
+  ) : CreateFilterV2Response(),
+      OperationResponseSuccess<Filter> {
     /**
      * Number of requests permitted per time period
      */
@@ -518,35 +569,42 @@ public interface FiltersClient {
 
   @Serializable
   public data class CreateFilterV2ResponseFailure401(
-    public val body: Error,
+    override val body: Error,
     @Transient
     override val headers: Headers = Headers.Empty,
-  ) : CreateFilterV2Response()
+  ) : CreateFilterV2Response(),
+      OperationResponseFailure<Error>
 
   @Serializable
   public data class CreateFilterV2ResponseFailure(
     @Transient
     override val headers: Headers = Headers.Empty,
-  ) : CreateFilterV2Response()
+  ) : CreateFilterV2Response(),
+      OperationResponseFailure<Unit> {
+    override val body: Unit
+      get() = Unit
+  }
 
   @Serializable
   public data class CreateFilterV2ResponseUnknownFailure(
-    public val statusCode: Int,
+    override val statusCode: Int,
     @Transient
     override val headers: Headers = Headers.Empty,
-  ) : CreateFilterV2Response()
+  ) : CreateFilterV2Response(),
+      OperationResponseUnknownFailure
 
   @Serializable
-  public sealed class GetFilterKeywordsV2Response {
-    public abstract val headers: Headers
+  public sealed class GetFilterKeywordsV2Response : OperationResponse<List<FilterKeyword>> {
+    abstract override val headers: Headers
   }
 
   @Serializable
   public data class GetFilterKeywordsV2ResponseSuccess(
-    public val body: List<FilterKeyword>,
+    override val body: List<FilterKeyword>,
     @Transient
     override val headers: Headers = Headers.Empty,
-  ) : GetFilterKeywordsV2Response() {
+  ) : GetFilterKeywordsV2Response(),
+      OperationResponseSuccess<List<FilterKeyword>> {
     /**
      * Number of requests permitted per time period
      */
@@ -568,30 +626,37 @@ public interface FiltersClient {
 
   @Serializable
   public data class GetFilterKeywordsV2ResponseFailure401(
-    public val body: Error,
+    override val body: Error,
     @Transient
     override val headers: Headers = Headers.Empty,
-  ) : GetFilterKeywordsV2Response()
+  ) : GetFilterKeywordsV2Response(),
+      OperationResponseFailure<Error>
 
   @Serializable
   public data class GetFilterKeywordsV2ResponseFailure410(
     @Transient
     override val headers: Headers = Headers.Empty,
-  ) : GetFilterKeywordsV2Response()
+  ) : GetFilterKeywordsV2Response(),
+      OperationResponseFailure<Unit> {
+    override val body: Unit
+      get() = Unit
+  }
 
   @Serializable
   public data class GetFilterKeywordsV2ResponseFailure(
-    public val body: ValidationError,
+    override val body: ValidationError,
     @Transient
     override val headers: Headers = Headers.Empty,
-  ) : GetFilterKeywordsV2Response()
+  ) : GetFilterKeywordsV2Response(),
+      OperationResponseFailure<ValidationError>
 
   @Serializable
   public data class GetFilterKeywordsV2ResponseUnknownFailure(
-    public val statusCode: Int,
+    override val statusCode: Int,
     @Transient
     override val headers: Headers = Headers.Empty,
-  ) : GetFilterKeywordsV2Response()
+  ) : GetFilterKeywordsV2Response(),
+      OperationResponseUnknownFailure
 
   @Serializable
   public data class PostFilterKeywordsV2Request(
@@ -601,16 +666,17 @@ public interface FiltersClient {
   )
 
   @Serializable
-  public sealed class PostFilterKeywordsV2Response {
-    public abstract val headers: Headers
+  public sealed class PostFilterKeywordsV2Response : OperationResponse<FilterKeyword> {
+    abstract override val headers: Headers
   }
 
   @Serializable
   public data class PostFilterKeywordsV2ResponseSuccess(
-    public val body: FilterKeyword,
+    override val body: FilterKeyword,
     @Transient
     override val headers: Headers = Headers.Empty,
-  ) : PostFilterKeywordsV2Response() {
+  ) : PostFilterKeywordsV2Response(),
+      OperationResponseSuccess<FilterKeyword> {
     /**
      * Number of requests permitted per time period
      */
@@ -632,35 +698,42 @@ public interface FiltersClient {
 
   @Serializable
   public data class PostFilterKeywordsV2ResponseFailure401(
-    public val body: Error,
+    override val body: Error,
     @Transient
     override val headers: Headers = Headers.Empty,
-  ) : PostFilterKeywordsV2Response()
+  ) : PostFilterKeywordsV2Response(),
+      OperationResponseFailure<Error>
 
   @Serializable
   public data class PostFilterKeywordsV2ResponseFailure(
     @Transient
     override val headers: Headers = Headers.Empty,
-  ) : PostFilterKeywordsV2Response()
+  ) : PostFilterKeywordsV2Response(),
+      OperationResponseFailure<Unit> {
+    override val body: Unit
+      get() = Unit
+  }
 
   @Serializable
   public data class PostFilterKeywordsV2ResponseUnknownFailure(
-    public val statusCode: Int,
+    override val statusCode: Int,
     @Transient
     override val headers: Headers = Headers.Empty,
-  ) : PostFilterKeywordsV2Response()
+  ) : PostFilterKeywordsV2Response(),
+      OperationResponseUnknownFailure
 
   @Serializable
-  public sealed class GetFilterStatusesV2Response {
-    public abstract val headers: Headers
+  public sealed class GetFilterStatusesV2Response : OperationResponse<List<FilterStatus>> {
+    abstract override val headers: Headers
   }
 
   @Serializable
   public data class GetFilterStatusesV2ResponseSuccess(
-    public val body: List<FilterStatus>,
+    override val body: List<FilterStatus>,
     @Transient
     override val headers: Headers = Headers.Empty,
-  ) : GetFilterStatusesV2Response() {
+  ) : GetFilterStatusesV2Response(),
+      OperationResponseSuccess<List<FilterStatus>> {
     /**
      * Number of requests permitted per time period
      */
@@ -682,30 +755,37 @@ public interface FiltersClient {
 
   @Serializable
   public data class GetFilterStatusesV2ResponseFailure401(
-    public val body: Error,
+    override val body: Error,
     @Transient
     override val headers: Headers = Headers.Empty,
-  ) : GetFilterStatusesV2Response()
+  ) : GetFilterStatusesV2Response(),
+      OperationResponseFailure<Error>
 
   @Serializable
   public data class GetFilterStatusesV2ResponseFailure410(
     @Transient
     override val headers: Headers = Headers.Empty,
-  ) : GetFilterStatusesV2Response()
+  ) : GetFilterStatusesV2Response(),
+      OperationResponseFailure<Unit> {
+    override val body: Unit
+      get() = Unit
+  }
 
   @Serializable
   public data class GetFilterStatusesV2ResponseFailure(
-    public val body: ValidationError,
+    override val body: ValidationError,
     @Transient
     override val headers: Headers = Headers.Empty,
-  ) : GetFilterStatusesV2Response()
+  ) : GetFilterStatusesV2Response(),
+      OperationResponseFailure<ValidationError>
 
   @Serializable
   public data class GetFilterStatusesV2ResponseUnknownFailure(
-    public val statusCode: Int,
+    override val statusCode: Int,
     @Transient
     override val headers: Headers = Headers.Empty,
-  ) : GetFilterStatusesV2Response()
+  ) : GetFilterStatusesV2Response(),
+      OperationResponseUnknownFailure
 
   @Serializable
   public data class PostFilterStatusesV2Request(
@@ -714,16 +794,17 @@ public interface FiltersClient {
   )
 
   @Serializable
-  public sealed class PostFilterStatusesV2Response {
-    public abstract val headers: Headers
+  public sealed class PostFilterStatusesV2Response : OperationResponse<FilterStatus> {
+    abstract override val headers: Headers
   }
 
   @Serializable
   public data class PostFilterStatusesV2ResponseSuccess(
-    public val body: FilterStatus,
+    override val body: FilterStatus,
     @Transient
     override val headers: Headers = Headers.Empty,
-  ) : PostFilterStatusesV2Response() {
+  ) : PostFilterStatusesV2Response(),
+      OperationResponseSuccess<FilterStatus> {
     /**
      * Number of requests permitted per time period
      */
@@ -745,42 +826,50 @@ public interface FiltersClient {
 
   @Serializable
   public data class PostFilterStatusesV2ResponseFailure401(
-    public val body: Error,
+    override val body: Error,
     @Transient
     override val headers: Headers = Headers.Empty,
-  ) : PostFilterStatusesV2Response()
+  ) : PostFilterStatusesV2Response(),
+      OperationResponseFailure<Error>
 
   @Serializable
   public data class PostFilterStatusesV2ResponseFailure410(
     @Transient
     override val headers: Headers = Headers.Empty,
-  ) : PostFilterStatusesV2Response()
+  ) : PostFilterStatusesV2Response(),
+      OperationResponseFailure<Unit> {
+    override val body: Unit
+      get() = Unit
+  }
 
   @Serializable
   public data class PostFilterStatusesV2ResponseFailure(
-    public val body: ValidationError,
+    override val body: ValidationError,
     @Transient
     override val headers: Headers = Headers.Empty,
-  ) : PostFilterStatusesV2Response()
+  ) : PostFilterStatusesV2Response(),
+      OperationResponseFailure<ValidationError>
 
   @Serializable
   public data class PostFilterStatusesV2ResponseUnknownFailure(
-    public val statusCode: Int,
+    override val statusCode: Int,
     @Transient
     override val headers: Headers = Headers.Empty,
-  ) : PostFilterStatusesV2Response()
+  ) : PostFilterStatusesV2Response(),
+      OperationResponseUnknownFailure
 
   @Serializable
-  public sealed class GetFilterV2Response {
-    public abstract val headers: Headers
+  public sealed class GetFilterV2Response : OperationResponse<Filter> {
+    abstract override val headers: Headers
   }
 
   @Serializable
   public data class GetFilterV2ResponseSuccess(
-    public val body: Filter,
+    override val body: Filter,
     @Transient
     override val headers: Headers = Headers.Empty,
-  ) : GetFilterV2Response() {
+  ) : GetFilterV2Response(),
+      OperationResponseSuccess<Filter> {
     /**
      * Number of requests permitted per time period
      */
@@ -802,30 +891,37 @@ public interface FiltersClient {
 
   @Serializable
   public data class GetFilterV2ResponseFailure401(
-    public val body: Error,
+    override val body: Error,
     @Transient
     override val headers: Headers = Headers.Empty,
-  ) : GetFilterV2Response()
+  ) : GetFilterV2Response(),
+      OperationResponseFailure<Error>
 
   @Serializable
   public data class GetFilterV2ResponseFailure410(
     @Transient
     override val headers: Headers = Headers.Empty,
-  ) : GetFilterV2Response()
+  ) : GetFilterV2Response(),
+      OperationResponseFailure<Unit> {
+    override val body: Unit
+      get() = Unit
+  }
 
   @Serializable
   public data class GetFilterV2ResponseFailure(
-    public val body: ValidationError,
+    override val body: ValidationError,
     @Transient
     override val headers: Headers = Headers.Empty,
-  ) : GetFilterV2Response()
+  ) : GetFilterV2Response(),
+      OperationResponseFailure<ValidationError>
 
   @Serializable
   public data class GetFilterV2ResponseUnknownFailure(
-    public val statusCode: Int,
+    override val statusCode: Int,
     @Transient
     override val headers: Headers = Headers.Empty,
-  ) : GetFilterV2Response()
+  ) : GetFilterV2Response(),
+      OperationResponseUnknownFailure
 
   @Serializable
   public data class UpdateFilterV2Request(
@@ -840,16 +936,17 @@ public interface FiltersClient {
   )
 
   @Serializable
-  public sealed class UpdateFilterV2Response {
-    public abstract val headers: Headers
+  public sealed class UpdateFilterV2Response : OperationResponse<Filter> {
+    abstract override val headers: Headers
   }
 
   @Serializable
   public data class UpdateFilterV2ResponseSuccess(
-    public val body: Filter,
+    override val body: Filter,
     @Transient
     override val headers: Headers = Headers.Empty,
-  ) : UpdateFilterV2Response() {
+  ) : UpdateFilterV2Response(),
+      OperationResponseSuccess<Filter> {
     /**
      * Number of requests permitted per time period
      */
@@ -871,41 +968,52 @@ public interface FiltersClient {
 
   @Serializable
   public data class UpdateFilterV2ResponseFailure401(
-    public val body: Error,
+    override val body: Error,
     @Transient
     override val headers: Headers = Headers.Empty,
-  ) : UpdateFilterV2Response()
+  ) : UpdateFilterV2Response(),
+      OperationResponseFailure<Error>
 
   @Serializable
   public data class UpdateFilterV2ResponseFailure410(
     @Transient
     override val headers: Headers = Headers.Empty,
-  ) : UpdateFilterV2Response()
+  ) : UpdateFilterV2Response(),
+      OperationResponseFailure<Unit> {
+    override val body: Unit
+      get() = Unit
+  }
 
   @Serializable
   public data class UpdateFilterV2ResponseFailure(
-    public val body: ValidationError,
+    override val body: ValidationError,
     @Transient
     override val headers: Headers = Headers.Empty,
-  ) : UpdateFilterV2Response()
+  ) : UpdateFilterV2Response(),
+      OperationResponseFailure<ValidationError>
 
   @Serializable
   public data class UpdateFilterV2ResponseUnknownFailure(
-    public val statusCode: Int,
+    override val statusCode: Int,
     @Transient
     override val headers: Headers = Headers.Empty,
-  ) : UpdateFilterV2Response()
+  ) : UpdateFilterV2Response(),
+      OperationResponseUnknownFailure
 
   @Serializable
-  public sealed class DeleteFilterV2Response {
-    public abstract val headers: Headers
+  public sealed class DeleteFilterV2Response : OperationResponse<Unit> {
+    abstract override val headers: Headers
   }
 
   @Serializable
   public data class DeleteFilterV2ResponseSuccess(
     @Transient
     override val headers: Headers = Headers.Empty,
-  ) : DeleteFilterV2Response() {
+  ) : DeleteFilterV2Response(),
+      OperationResponseSuccess<Unit> {
+    override val body: Unit
+      get() = Unit
+
     /**
      * Number of requests permitted per time period
      */
@@ -927,42 +1035,50 @@ public interface FiltersClient {
 
   @Serializable
   public data class DeleteFilterV2ResponseFailure401(
-    public val body: Error,
+    override val body: Error,
     @Transient
     override val headers: Headers = Headers.Empty,
-  ) : DeleteFilterV2Response()
+  ) : DeleteFilterV2Response(),
+      OperationResponseFailure<Error>
 
   @Serializable
   public data class DeleteFilterV2ResponseFailure410(
     @Transient
     override val headers: Headers = Headers.Empty,
-  ) : DeleteFilterV2Response()
+  ) : DeleteFilterV2Response(),
+      OperationResponseFailure<Unit> {
+    override val body: Unit
+      get() = Unit
+  }
 
   @Serializable
   public data class DeleteFilterV2ResponseFailure(
-    public val body: ValidationError,
+    override val body: ValidationError,
     @Transient
     override val headers: Headers = Headers.Empty,
-  ) : DeleteFilterV2Response()
+  ) : DeleteFilterV2Response(),
+      OperationResponseFailure<ValidationError>
 
   @Serializable
   public data class DeleteFilterV2ResponseUnknownFailure(
-    public val statusCode: Int,
+    override val statusCode: Int,
     @Transient
     override val headers: Headers = Headers.Empty,
-  ) : DeleteFilterV2Response()
+  ) : DeleteFilterV2Response(),
+      OperationResponseUnknownFailure
 
   @Serializable
-  public sealed class GetFiltersKeywordsByIdV2Response {
-    public abstract val headers: Headers
+  public sealed class GetFiltersKeywordsByIdV2Response : OperationResponse<FilterKeyword> {
+    abstract override val headers: Headers
   }
 
   @Serializable
   public data class GetFiltersKeywordsByIdV2ResponseSuccess(
-    public val body: FilterKeyword,
+    override val body: FilterKeyword,
     @Transient
     override val headers: Headers = Headers.Empty,
-  ) : GetFiltersKeywordsByIdV2Response() {
+  ) : GetFiltersKeywordsByIdV2Response(),
+      OperationResponseSuccess<FilterKeyword> {
     /**
      * Number of requests permitted per time period
      */
@@ -984,30 +1100,37 @@ public interface FiltersClient {
 
   @Serializable
   public data class GetFiltersKeywordsByIdV2ResponseFailure401(
-    public val body: Error,
+    override val body: Error,
     @Transient
     override val headers: Headers = Headers.Empty,
-  ) : GetFiltersKeywordsByIdV2Response()
+  ) : GetFiltersKeywordsByIdV2Response(),
+      OperationResponseFailure<Error>
 
   @Serializable
   public data class GetFiltersKeywordsByIdV2ResponseFailure410(
     @Transient
     override val headers: Headers = Headers.Empty,
-  ) : GetFiltersKeywordsByIdV2Response()
+  ) : GetFiltersKeywordsByIdV2Response(),
+      OperationResponseFailure<Unit> {
+    override val body: Unit
+      get() = Unit
+  }
 
   @Serializable
   public data class GetFiltersKeywordsByIdV2ResponseFailure(
-    public val body: ValidationError,
+    override val body: ValidationError,
     @Transient
     override val headers: Headers = Headers.Empty,
-  ) : GetFiltersKeywordsByIdV2Response()
+  ) : GetFiltersKeywordsByIdV2Response(),
+      OperationResponseFailure<ValidationError>
 
   @Serializable
   public data class GetFiltersKeywordsByIdV2ResponseUnknownFailure(
-    public val statusCode: Int,
+    override val statusCode: Int,
     @Transient
     override val headers: Headers = Headers.Empty,
-  ) : GetFiltersKeywordsByIdV2Response()
+  ) : GetFiltersKeywordsByIdV2Response(),
+      OperationResponseUnknownFailure
 
   @Serializable
   public data class UpdateFiltersKeywordsByIdV2Request(
@@ -1017,16 +1140,17 @@ public interface FiltersClient {
   )
 
   @Serializable
-  public sealed class UpdateFiltersKeywordsByIdV2Response {
-    public abstract val headers: Headers
+  public sealed class UpdateFiltersKeywordsByIdV2Response : OperationResponse<FilterKeyword> {
+    abstract override val headers: Headers
   }
 
   @Serializable
   public data class UpdateFiltersKeywordsByIdV2ResponseSuccess(
-    public val body: FilterKeyword,
+    override val body: FilterKeyword,
     @Transient
     override val headers: Headers = Headers.Empty,
-  ) : UpdateFiltersKeywordsByIdV2Response() {
+  ) : UpdateFiltersKeywordsByIdV2Response(),
+      OperationResponseSuccess<FilterKeyword> {
     /**
      * Number of requests permitted per time period
      */
@@ -1048,34 +1172,44 @@ public interface FiltersClient {
 
   @Serializable
   public data class UpdateFiltersKeywordsByIdV2ResponseFailure401(
-    public val body: Error,
+    override val body: Error,
     @Transient
     override val headers: Headers = Headers.Empty,
-  ) : UpdateFiltersKeywordsByIdV2Response()
+  ) : UpdateFiltersKeywordsByIdV2Response(),
+      OperationResponseFailure<Error>
 
   @Serializable
   public data class UpdateFiltersKeywordsByIdV2ResponseFailure(
     @Transient
     override val headers: Headers = Headers.Empty,
-  ) : UpdateFiltersKeywordsByIdV2Response()
+  ) : UpdateFiltersKeywordsByIdV2Response(),
+      OperationResponseFailure<Unit> {
+    override val body: Unit
+      get() = Unit
+  }
 
   @Serializable
   public data class UpdateFiltersKeywordsByIdV2ResponseUnknownFailure(
-    public val statusCode: Int,
+    override val statusCode: Int,
     @Transient
     override val headers: Headers = Headers.Empty,
-  ) : UpdateFiltersKeywordsByIdV2Response()
+  ) : UpdateFiltersKeywordsByIdV2Response(),
+      OperationResponseUnknownFailure
 
   @Serializable
-  public sealed class DeleteFiltersKeywordsByIdV2Response {
-    public abstract val headers: Headers
+  public sealed class DeleteFiltersKeywordsByIdV2Response : OperationResponse<Unit> {
+    abstract override val headers: Headers
   }
 
   @Serializable
   public data class DeleteFiltersKeywordsByIdV2ResponseSuccess(
     @Transient
     override val headers: Headers = Headers.Empty,
-  ) : DeleteFiltersKeywordsByIdV2Response() {
+  ) : DeleteFiltersKeywordsByIdV2Response(),
+      OperationResponseSuccess<Unit> {
+    override val body: Unit
+      get() = Unit
+
     /**
      * Number of requests permitted per time period
      */
@@ -1097,42 +1231,50 @@ public interface FiltersClient {
 
   @Serializable
   public data class DeleteFiltersKeywordsByIdV2ResponseFailure401(
-    public val body: Error,
+    override val body: Error,
     @Transient
     override val headers: Headers = Headers.Empty,
-  ) : DeleteFiltersKeywordsByIdV2Response()
+  ) : DeleteFiltersKeywordsByIdV2Response(),
+      OperationResponseFailure<Error>
 
   @Serializable
   public data class DeleteFiltersKeywordsByIdV2ResponseFailure410(
     @Transient
     override val headers: Headers = Headers.Empty,
-  ) : DeleteFiltersKeywordsByIdV2Response()
+  ) : DeleteFiltersKeywordsByIdV2Response(),
+      OperationResponseFailure<Unit> {
+    override val body: Unit
+      get() = Unit
+  }
 
   @Serializable
   public data class DeleteFiltersKeywordsByIdV2ResponseFailure(
-    public val body: ValidationError,
+    override val body: ValidationError,
     @Transient
     override val headers: Headers = Headers.Empty,
-  ) : DeleteFiltersKeywordsByIdV2Response()
+  ) : DeleteFiltersKeywordsByIdV2Response(),
+      OperationResponseFailure<ValidationError>
 
   @Serializable
   public data class DeleteFiltersKeywordsByIdV2ResponseUnknownFailure(
-    public val statusCode: Int,
+    override val statusCode: Int,
     @Transient
     override val headers: Headers = Headers.Empty,
-  ) : DeleteFiltersKeywordsByIdV2Response()
+  ) : DeleteFiltersKeywordsByIdV2Response(),
+      OperationResponseUnknownFailure
 
   @Serializable
-  public sealed class GetFiltersStatusesByIdV2Response {
-    public abstract val headers: Headers
+  public sealed class GetFiltersStatusesByIdV2Response : OperationResponse<FilterStatus> {
+    abstract override val headers: Headers
   }
 
   @Serializable
   public data class GetFiltersStatusesByIdV2ResponseSuccess(
-    public val body: FilterStatus,
+    override val body: FilterStatus,
     @Transient
     override val headers: Headers = Headers.Empty,
-  ) : GetFiltersStatusesByIdV2Response() {
+  ) : GetFiltersStatusesByIdV2Response(),
+      OperationResponseSuccess<FilterStatus> {
     /**
      * Number of requests permitted per time period
      */
@@ -1154,42 +1296,50 @@ public interface FiltersClient {
 
   @Serializable
   public data class GetFiltersStatusesByIdV2ResponseFailure401(
-    public val body: Error,
+    override val body: Error,
     @Transient
     override val headers: Headers = Headers.Empty,
-  ) : GetFiltersStatusesByIdV2Response()
+  ) : GetFiltersStatusesByIdV2Response(),
+      OperationResponseFailure<Error>
 
   @Serializable
   public data class GetFiltersStatusesByIdV2ResponseFailure410(
     @Transient
     override val headers: Headers = Headers.Empty,
-  ) : GetFiltersStatusesByIdV2Response()
+  ) : GetFiltersStatusesByIdV2Response(),
+      OperationResponseFailure<Unit> {
+    override val body: Unit
+      get() = Unit
+  }
 
   @Serializable
   public data class GetFiltersStatusesByIdV2ResponseFailure(
-    public val body: ValidationError,
+    override val body: ValidationError,
     @Transient
     override val headers: Headers = Headers.Empty,
-  ) : GetFiltersStatusesByIdV2Response()
+  ) : GetFiltersStatusesByIdV2Response(),
+      OperationResponseFailure<ValidationError>
 
   @Serializable
   public data class GetFiltersStatusesByIdV2ResponseUnknownFailure(
-    public val statusCode: Int,
+    override val statusCode: Int,
     @Transient
     override val headers: Headers = Headers.Empty,
-  ) : GetFiltersStatusesByIdV2Response()
+  ) : GetFiltersStatusesByIdV2Response(),
+      OperationResponseUnknownFailure
 
   @Serializable
-  public sealed class DeleteFiltersStatusesByIdV2Response {
-    public abstract val headers: Headers
+  public sealed class DeleteFiltersStatusesByIdV2Response : OperationResponse<FilterStatus> {
+    abstract override val headers: Headers
   }
 
   @Serializable
   public data class DeleteFiltersStatusesByIdV2ResponseSuccess(
-    public val body: FilterStatus,
+    override val body: FilterStatus,
     @Transient
     override val headers: Headers = Headers.Empty,
-  ) : DeleteFiltersStatusesByIdV2Response() {
+  ) : DeleteFiltersStatusesByIdV2Response(),
+      OperationResponseSuccess<FilterStatus> {
     /**
      * Number of requests permitted per time period
      */
@@ -1211,30 +1361,37 @@ public interface FiltersClient {
 
   @Serializable
   public data class DeleteFiltersStatusesByIdV2ResponseFailure401(
-    public val body: Error,
+    override val body: Error,
     @Transient
     override val headers: Headers = Headers.Empty,
-  ) : DeleteFiltersStatusesByIdV2Response()
+  ) : DeleteFiltersStatusesByIdV2Response(),
+      OperationResponseFailure<Error>
 
   @Serializable
   public data class DeleteFiltersStatusesByIdV2ResponseFailure410(
     @Transient
     override val headers: Headers = Headers.Empty,
-  ) : DeleteFiltersStatusesByIdV2Response()
+  ) : DeleteFiltersStatusesByIdV2Response(),
+      OperationResponseFailure<Unit> {
+    override val body: Unit
+      get() = Unit
+  }
 
   @Serializable
   public data class DeleteFiltersStatusesByIdV2ResponseFailure(
-    public val body: ValidationError,
+    override val body: ValidationError,
     @Transient
     override val headers: Headers = Headers.Empty,
-  ) : DeleteFiltersStatusesByIdV2Response()
+  ) : DeleteFiltersStatusesByIdV2Response(),
+      OperationResponseFailure<ValidationError>
 
   @Serializable
   public data class DeleteFiltersStatusesByIdV2ResponseUnknownFailure(
-    public val statusCode: Int,
+    override val statusCode: Int,
     @Transient
     override val headers: Headers = Headers.Empty,
-  ) : DeleteFiltersStatusesByIdV2Response()
+  ) : DeleteFiltersStatusesByIdV2Response(),
+      OperationResponseUnknownFailure
 }
 
 public fun FiltersClient(configuration: ClientConfiguration = defaultClientConfiguration): FiltersClient = DefaultFiltersClient(configuration)

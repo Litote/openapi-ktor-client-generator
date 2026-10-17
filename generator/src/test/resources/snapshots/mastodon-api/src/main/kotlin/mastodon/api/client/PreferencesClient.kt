@@ -5,6 +5,7 @@ import io.ktor.client.request.`get`
 import io.ktor.http.Headers
 import kotlin.Int
 import kotlin.String
+import kotlin.Unit
 import kotlin.coroutines.cancellation.CancellationException
 import kotlinx.serialization.Serializable
 import kotlinx.serialization.Transient
@@ -19,15 +20,19 @@ public interface PreferencesClient {
   public suspend fun getPreferences(): GetPreferencesResponse
 
   @Serializable
-  public sealed class GetPreferencesResponse {
-    public abstract val headers: Headers
+  public sealed class GetPreferencesResponse : OperationResponse<Unit> {
+    abstract override val headers: Headers
   }
 
   @Serializable
   public data class GetPreferencesResponseSuccess(
     @Transient
     override val headers: Headers = Headers.Empty,
-  ) : GetPreferencesResponse() {
+  ) : GetPreferencesResponse(),
+      OperationResponseSuccess<Unit> {
+    override val body: Unit
+      get() = Unit
+
     /**
      * Number of requests permitted per time period
      */
@@ -49,30 +54,37 @@ public interface PreferencesClient {
 
   @Serializable
   public data class GetPreferencesResponseFailure401(
-    public val body: Error,
+    override val body: Error,
     @Transient
     override val headers: Headers = Headers.Empty,
-  ) : GetPreferencesResponse()
+  ) : GetPreferencesResponse(),
+      OperationResponseFailure<Error>
 
   @Serializable
   public data class GetPreferencesResponseFailure410(
     @Transient
     override val headers: Headers = Headers.Empty,
-  ) : GetPreferencesResponse()
+  ) : GetPreferencesResponse(),
+      OperationResponseFailure<Unit> {
+    override val body: Unit
+      get() = Unit
+  }
 
   @Serializable
   public data class GetPreferencesResponseFailure(
-    public val body: ValidationError,
+    override val body: ValidationError,
     @Transient
     override val headers: Headers = Headers.Empty,
-  ) : GetPreferencesResponse()
+  ) : GetPreferencesResponse(),
+      OperationResponseFailure<ValidationError>
 
   @Serializable
   public data class GetPreferencesResponseUnknownFailure(
-    public val statusCode: Int,
+    override val statusCode: Int,
     @Transient
     override val headers: Headers = Headers.Empty,
-  ) : GetPreferencesResponse()
+  ) : GetPreferencesResponse(),
+      OperationResponseUnknownFailure
 }
 
 public fun PreferencesClient(configuration: ClientConfiguration = defaultClientConfiguration): PreferencesClient = DefaultPreferencesClient(configuration)

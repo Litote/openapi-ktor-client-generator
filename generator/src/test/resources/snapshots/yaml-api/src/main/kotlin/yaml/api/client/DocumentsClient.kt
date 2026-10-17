@@ -27,42 +27,46 @@ public interface DocumentsClient {
   public suspend fun createDocument(request: Document): CreateDocumentResponse
 
   @Serializable
-  public sealed class ListDocumentsResponse {
-    public abstract val headers: Headers
+  public sealed class ListDocumentsResponse : OperationResponse<List<Document>> {
+    abstract override val headers: Headers
   }
 
   @Serializable
   public data class ListDocumentsResponseSuccess(
-    public val body: List<Document>,
+    override val body: List<Document>,
     @Transient
     override val headers: Headers = Headers.Empty,
-  ) : ListDocumentsResponse()
+  ) : ListDocumentsResponse(),
+      OperationResponseSuccess<List<Document>>
 
   @Serializable
   public data class ListDocumentsResponseUnknownFailure(
-    public val statusCode: Int,
+    override val statusCode: Int,
     @Transient
     override val headers: Headers = Headers.Empty,
-  ) : ListDocumentsResponse()
+  ) : ListDocumentsResponse(),
+      OperationResponseUnknownFailure
 
   @Serializable
-  public sealed class CreateDocumentResponse {
-    public abstract val headers: Headers
+  public sealed class CreateDocumentResponse : OperationResponse<Document> {
+    abstract override val headers: Headers
   }
 
   @Serializable
   public data class CreateDocumentResponseSuccess(
-    public val body: Document,
+    override val body: Document,
     @Transient
     override val headers: Headers = Headers.Empty,
-  ) : CreateDocumentResponse()
+  ) : CreateDocumentResponse(),
+      OperationResponseSuccess<Document>
 
   @Serializable
   public data class CreateDocumentResponseUnknownFailure(
-    public val statusCode: Int,
+    override val statusCode: Int,
     @Transient
     override val headers: Headers = Headers.Empty,
-  ) : CreateDocumentResponse()
+  ) : CreateDocumentResponse(),
+      OperationResponseUnknownFailure
 }
 
 public fun DocumentsClient(configuration: ClientConfiguration = defaultClientConfiguration): DocumentsClient = DefaultDocumentsClient(configuration)

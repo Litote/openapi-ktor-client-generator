@@ -11,6 +11,7 @@ import io.ktor.http.contentType
 import io.ktor.http.encodeURLPathPart
 import kotlin.Int
 import kotlin.String
+import kotlin.Unit
 import kotlin.collections.List
 import kotlin.coroutines.cancellation.CancellationException
 import kotlinx.serialization.Serializable
@@ -43,16 +44,17 @@ public interface FeaturedTagsClient {
   public suspend fun getFeaturedTagSuggestions(): GetFeaturedTagSuggestionsResponse
 
   @Serializable
-  public sealed class GetFeaturedTagsResponse {
-    public abstract val headers: Headers
+  public sealed class GetFeaturedTagsResponse : OperationResponse<List<FeaturedTag>> {
+    abstract override val headers: Headers
   }
 
   @Serializable
   public data class GetFeaturedTagsResponseSuccess(
-    public val body: List<FeaturedTag>,
+    override val body: List<FeaturedTag>,
     @Transient
     override val headers: Headers = Headers.Empty,
-  ) : GetFeaturedTagsResponse() {
+  ) : GetFeaturedTagsResponse(),
+      OperationResponseSuccess<List<FeaturedTag>> {
     /**
      * Number of requests permitted per time period
      */
@@ -74,30 +76,37 @@ public interface FeaturedTagsClient {
 
   @Serializable
   public data class GetFeaturedTagsResponseFailure401(
-    public val body: Error,
+    override val body: Error,
     @Transient
     override val headers: Headers = Headers.Empty,
-  ) : GetFeaturedTagsResponse()
+  ) : GetFeaturedTagsResponse(),
+      OperationResponseFailure<Error>
 
   @Serializable
   public data class GetFeaturedTagsResponseFailure410(
     @Transient
     override val headers: Headers = Headers.Empty,
-  ) : GetFeaturedTagsResponse()
+  ) : GetFeaturedTagsResponse(),
+      OperationResponseFailure<Unit> {
+    override val body: Unit
+      get() = Unit
+  }
 
   @Serializable
   public data class GetFeaturedTagsResponseFailure(
-    public val body: ValidationError,
+    override val body: ValidationError,
     @Transient
     override val headers: Headers = Headers.Empty,
-  ) : GetFeaturedTagsResponse()
+  ) : GetFeaturedTagsResponse(),
+      OperationResponseFailure<ValidationError>
 
   @Serializable
   public data class GetFeaturedTagsResponseUnknownFailure(
-    public val statusCode: Int,
+    override val statusCode: Int,
     @Transient
     override val headers: Headers = Headers.Empty,
-  ) : GetFeaturedTagsResponse()
+  ) : GetFeaturedTagsResponse(),
+      OperationResponseUnknownFailure
 
   @Serializable
   public data class CreateFeaturedTagRequest(
@@ -105,16 +114,17 @@ public interface FeaturedTagsClient {
   )
 
   @Serializable
-  public sealed class CreateFeaturedTagResponse {
-    public abstract val headers: Headers
+  public sealed class CreateFeaturedTagResponse : OperationResponse<FeaturedTag> {
+    abstract override val headers: Headers
   }
 
   @Serializable
   public data class CreateFeaturedTagResponseSuccess(
-    public val body: FeaturedTag,
+    override val body: FeaturedTag,
     @Transient
     override val headers: Headers = Headers.Empty,
-  ) : CreateFeaturedTagResponse() {
+  ) : CreateFeaturedTagResponse(),
+      OperationResponseSuccess<FeaturedTag> {
     /**
      * Number of requests permitted per time period
      */
@@ -136,34 +146,44 @@ public interface FeaturedTagsClient {
 
   @Serializable
   public data class CreateFeaturedTagResponseFailure401(
-    public val body: Error,
+    override val body: Error,
     @Transient
     override val headers: Headers = Headers.Empty,
-  ) : CreateFeaturedTagResponse()
+  ) : CreateFeaturedTagResponse(),
+      OperationResponseFailure<Error>
 
   @Serializable
   public data class CreateFeaturedTagResponseFailure(
     @Transient
     override val headers: Headers = Headers.Empty,
-  ) : CreateFeaturedTagResponse()
+  ) : CreateFeaturedTagResponse(),
+      OperationResponseFailure<Unit> {
+    override val body: Unit
+      get() = Unit
+  }
 
   @Serializable
   public data class CreateFeaturedTagResponseUnknownFailure(
-    public val statusCode: Int,
+    override val statusCode: Int,
     @Transient
     override val headers: Headers = Headers.Empty,
-  ) : CreateFeaturedTagResponse()
+  ) : CreateFeaturedTagResponse(),
+      OperationResponseUnknownFailure
 
   @Serializable
-  public sealed class DeleteFeaturedTagResponse {
-    public abstract val headers: Headers
+  public sealed class DeleteFeaturedTagResponse : OperationResponse<Unit> {
+    abstract override val headers: Headers
   }
 
   @Serializable
   public data class DeleteFeaturedTagResponseSuccess(
     @Transient
     override val headers: Headers = Headers.Empty,
-  ) : DeleteFeaturedTagResponse() {
+  ) : DeleteFeaturedTagResponse(),
+      OperationResponseSuccess<Unit> {
+    override val body: Unit
+      get() = Unit
+
     /**
      * Number of requests permitted per time period
      */
@@ -185,42 +205,50 @@ public interface FeaturedTagsClient {
 
   @Serializable
   public data class DeleteFeaturedTagResponseFailure401(
-    public val body: Error,
+    override val body: Error,
     @Transient
     override val headers: Headers = Headers.Empty,
-  ) : DeleteFeaturedTagResponse()
+  ) : DeleteFeaturedTagResponse(),
+      OperationResponseFailure<Error>
 
   @Serializable
   public data class DeleteFeaturedTagResponseFailure410(
     @Transient
     override val headers: Headers = Headers.Empty,
-  ) : DeleteFeaturedTagResponse()
+  ) : DeleteFeaturedTagResponse(),
+      OperationResponseFailure<Unit> {
+    override val body: Unit
+      get() = Unit
+  }
 
   @Serializable
   public data class DeleteFeaturedTagResponseFailure(
-    public val body: ValidationError,
+    override val body: ValidationError,
     @Transient
     override val headers: Headers = Headers.Empty,
-  ) : DeleteFeaturedTagResponse()
+  ) : DeleteFeaturedTagResponse(),
+      OperationResponseFailure<ValidationError>
 
   @Serializable
   public data class DeleteFeaturedTagResponseUnknownFailure(
-    public val statusCode: Int,
+    override val statusCode: Int,
     @Transient
     override val headers: Headers = Headers.Empty,
-  ) : DeleteFeaturedTagResponse()
+  ) : DeleteFeaturedTagResponse(),
+      OperationResponseUnknownFailure
 
   @Serializable
-  public sealed class GetFeaturedTagSuggestionsResponse {
-    public abstract val headers: Headers
+  public sealed class GetFeaturedTagSuggestionsResponse : OperationResponse<List<Tag>> {
+    abstract override val headers: Headers
   }
 
   @Serializable
   public data class GetFeaturedTagSuggestionsResponseSuccess(
-    public val body: List<Tag>,
+    override val body: List<Tag>,
     @Transient
     override val headers: Headers = Headers.Empty,
-  ) : GetFeaturedTagSuggestionsResponse() {
+  ) : GetFeaturedTagSuggestionsResponse(),
+      OperationResponseSuccess<List<Tag>> {
     /**
      * Number of requests permitted per time period
      */
@@ -242,30 +270,37 @@ public interface FeaturedTagsClient {
 
   @Serializable
   public data class GetFeaturedTagSuggestionsResponseFailure401(
-    public val body: Error,
+    override val body: Error,
     @Transient
     override val headers: Headers = Headers.Empty,
-  ) : GetFeaturedTagSuggestionsResponse()
+  ) : GetFeaturedTagSuggestionsResponse(),
+      OperationResponseFailure<Error>
 
   @Serializable
   public data class GetFeaturedTagSuggestionsResponseFailure410(
     @Transient
     override val headers: Headers = Headers.Empty,
-  ) : GetFeaturedTagSuggestionsResponse()
+  ) : GetFeaturedTagSuggestionsResponse(),
+      OperationResponseFailure<Unit> {
+    override val body: Unit
+      get() = Unit
+  }
 
   @Serializable
   public data class GetFeaturedTagSuggestionsResponseFailure(
-    public val body: ValidationError,
+    override val body: ValidationError,
     @Transient
     override val headers: Headers = Headers.Empty,
-  ) : GetFeaturedTagSuggestionsResponse()
+  ) : GetFeaturedTagSuggestionsResponse(),
+      OperationResponseFailure<ValidationError>
 
   @Serializable
   public data class GetFeaturedTagSuggestionsResponseUnknownFailure(
-    public val statusCode: Int,
+    override val statusCode: Int,
     @Transient
     override val headers: Headers = Headers.Empty,
-  ) : GetFeaturedTagSuggestionsResponse()
+  ) : GetFeaturedTagSuggestionsResponse(),
+      OperationResponseUnknownFailure
 }
 
 public fun FeaturedTagsClient(configuration: ClientConfiguration = defaultClientConfiguration): FeaturedTagsClient = DefaultFeaturedTagsClient(configuration)

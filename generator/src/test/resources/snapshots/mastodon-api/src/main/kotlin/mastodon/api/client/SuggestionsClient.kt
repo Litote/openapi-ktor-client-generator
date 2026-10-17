@@ -8,6 +8,7 @@ import io.ktor.http.encodeURLPathPart
 import kotlin.Int
 import kotlin.Long
 import kotlin.String
+import kotlin.Unit
 import kotlin.collections.List
 import kotlin.coroutines.cancellation.CancellationException
 import kotlinx.serialization.Serializable
@@ -35,16 +36,17 @@ public interface SuggestionsClient {
   public suspend fun getSuggestionsV2(limit: Long? = 40): GetSuggestionsV2Response
 
   @Serializable
-  public sealed class GetSuggestionsResponse {
-    public abstract val headers: Headers
+  public sealed class GetSuggestionsResponse : OperationResponse<List<Account>> {
+    abstract override val headers: Headers
   }
 
   @Serializable
   public data class GetSuggestionsResponseSuccess(
-    public val body: List<Account>,
+    override val body: List<Account>,
     @Transient
     override val headers: Headers = Headers.Empty,
-  ) : GetSuggestionsResponse() {
+  ) : GetSuggestionsResponse(),
+      OperationResponseSuccess<List<Account>> {
     /**
      * Number of requests permitted per time period
      */
@@ -66,41 +68,52 @@ public interface SuggestionsClient {
 
   @Serializable
   public data class GetSuggestionsResponseFailure401(
-    public val body: Error,
+    override val body: Error,
     @Transient
     override val headers: Headers = Headers.Empty,
-  ) : GetSuggestionsResponse()
+  ) : GetSuggestionsResponse(),
+      OperationResponseFailure<Error>
 
   @Serializable
   public data class GetSuggestionsResponseFailure410(
     @Transient
     override val headers: Headers = Headers.Empty,
-  ) : GetSuggestionsResponse()
+  ) : GetSuggestionsResponse(),
+      OperationResponseFailure<Unit> {
+    override val body: Unit
+      get() = Unit
+  }
 
   @Serializable
   public data class GetSuggestionsResponseFailure(
-    public val body: ValidationError,
+    override val body: ValidationError,
     @Transient
     override val headers: Headers = Headers.Empty,
-  ) : GetSuggestionsResponse()
+  ) : GetSuggestionsResponse(),
+      OperationResponseFailure<ValidationError>
 
   @Serializable
   public data class GetSuggestionsResponseUnknownFailure(
-    public val statusCode: Int,
+    override val statusCode: Int,
     @Transient
     override val headers: Headers = Headers.Empty,
-  ) : GetSuggestionsResponse()
+  ) : GetSuggestionsResponse(),
+      OperationResponseUnknownFailure
 
   @Serializable
-  public sealed class DeleteSuggestionsByAccountIdResponse {
-    public abstract val headers: Headers
+  public sealed class DeleteSuggestionsByAccountIdResponse : OperationResponse<Unit> {
+    abstract override val headers: Headers
   }
 
   @Serializable
   public data class DeleteSuggestionsByAccountIdResponseSuccess(
     @Transient
     override val headers: Headers = Headers.Empty,
-  ) : DeleteSuggestionsByAccountIdResponse() {
+  ) : DeleteSuggestionsByAccountIdResponse(),
+      OperationResponseSuccess<Unit> {
+    override val body: Unit
+      get() = Unit
+
     /**
      * Number of requests permitted per time period
      */
@@ -122,42 +135,50 @@ public interface SuggestionsClient {
 
   @Serializable
   public data class DeleteSuggestionsByAccountIdResponseFailure401(
-    public val body: Error,
+    override val body: Error,
     @Transient
     override val headers: Headers = Headers.Empty,
-  ) : DeleteSuggestionsByAccountIdResponse()
+  ) : DeleteSuggestionsByAccountIdResponse(),
+      OperationResponseFailure<Error>
 
   @Serializable
   public data class DeleteSuggestionsByAccountIdResponseFailure410(
     @Transient
     override val headers: Headers = Headers.Empty,
-  ) : DeleteSuggestionsByAccountIdResponse()
+  ) : DeleteSuggestionsByAccountIdResponse(),
+      OperationResponseFailure<Unit> {
+    override val body: Unit
+      get() = Unit
+  }
 
   @Serializable
   public data class DeleteSuggestionsByAccountIdResponseFailure(
-    public val body: ValidationError,
+    override val body: ValidationError,
     @Transient
     override val headers: Headers = Headers.Empty,
-  ) : DeleteSuggestionsByAccountIdResponse()
+  ) : DeleteSuggestionsByAccountIdResponse(),
+      OperationResponseFailure<ValidationError>
 
   @Serializable
   public data class DeleteSuggestionsByAccountIdResponseUnknownFailure(
-    public val statusCode: Int,
+    override val statusCode: Int,
     @Transient
     override val headers: Headers = Headers.Empty,
-  ) : DeleteSuggestionsByAccountIdResponse()
+  ) : DeleteSuggestionsByAccountIdResponse(),
+      OperationResponseUnknownFailure
 
   @Serializable
-  public sealed class GetSuggestionsV2Response {
-    public abstract val headers: Headers
+  public sealed class GetSuggestionsV2Response : OperationResponse<List<Suggestion>> {
+    abstract override val headers: Headers
   }
 
   @Serializable
   public data class GetSuggestionsV2ResponseSuccess(
-    public val body: List<Suggestion>,
+    override val body: List<Suggestion>,
     @Transient
     override val headers: Headers = Headers.Empty,
-  ) : GetSuggestionsV2Response() {
+  ) : GetSuggestionsV2Response(),
+      OperationResponseSuccess<List<Suggestion>> {
     /**
      * Number of requests permitted per time period
      */
@@ -179,30 +200,37 @@ public interface SuggestionsClient {
 
   @Serializable
   public data class GetSuggestionsV2ResponseFailure401(
-    public val body: Error,
+    override val body: Error,
     @Transient
     override val headers: Headers = Headers.Empty,
-  ) : GetSuggestionsV2Response()
+  ) : GetSuggestionsV2Response(),
+      OperationResponseFailure<Error>
 
   @Serializable
   public data class GetSuggestionsV2ResponseFailure410(
     @Transient
     override val headers: Headers = Headers.Empty,
-  ) : GetSuggestionsV2Response()
+  ) : GetSuggestionsV2Response(),
+      OperationResponseFailure<Unit> {
+    override val body: Unit
+      get() = Unit
+  }
 
   @Serializable
   public data class GetSuggestionsV2ResponseFailure(
-    public val body: ValidationError,
+    override val body: ValidationError,
     @Transient
     override val headers: Headers = Headers.Empty,
-  ) : GetSuggestionsV2Response()
+  ) : GetSuggestionsV2Response(),
+      OperationResponseFailure<ValidationError>
 
   @Serializable
   public data class GetSuggestionsV2ResponseUnknownFailure(
-    public val statusCode: Int,
+    override val statusCode: Int,
     @Transient
     override val headers: Headers = Headers.Empty,
-  ) : GetSuggestionsV2Response()
+  ) : GetSuggestionsV2Response(),
+      OperationResponseUnknownFailure
 }
 
 public fun SuggestionsClient(configuration: ClientConfiguration = defaultClientConfiguration): SuggestionsClient = DefaultSuggestionsClient(configuration)

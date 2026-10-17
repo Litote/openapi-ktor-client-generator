@@ -7,6 +7,7 @@ import kotlin.Boolean
 import kotlin.Int
 import kotlin.Long
 import kotlin.String
+import kotlin.Unit
 import kotlin.coroutines.cancellation.CancellationException
 import kotlinx.serialization.Serializable
 import kotlinx.serialization.Transient
@@ -33,16 +34,17 @@ public interface SearchClient {
   ): GetSearchV2Response
 
   @Serializable
-  public sealed class GetSearchV2Response {
-    public abstract val headers: Headers
+  public sealed class GetSearchV2Response : OperationResponse<Search> {
+    abstract override val headers: Headers
   }
 
   @Serializable
   public data class GetSearchV2ResponseSuccess(
-    public val body: Search,
+    override val body: Search,
     @Transient
     override val headers: Headers = Headers.Empty,
-  ) : GetSearchV2Response() {
+  ) : GetSearchV2Response(),
+      OperationResponseSuccess<Search> {
     /**
      * Pagination links for browsing older or newer results. Format: Link: <https://mastodon.example/api/v1/endpoint?max_id=7163058>; rel="next", <https://mastodon.example/api/v1/endpoint?min_id=7275607>; rel="prev". See [RFC 8288](https://www.rfc-editor.org/rfc/rfc8288) for more information.
      */
@@ -70,30 +72,37 @@ public interface SearchClient {
 
   @Serializable
   public data class GetSearchV2ResponseFailure401(
-    public val body: Error,
+    override val body: Error,
     @Transient
     override val headers: Headers = Headers.Empty,
-  ) : GetSearchV2Response()
+  ) : GetSearchV2Response(),
+      OperationResponseFailure<Error>
 
   @Serializable
   public data class GetSearchV2ResponseFailure410(
     @Transient
     override val headers: Headers = Headers.Empty,
-  ) : GetSearchV2Response()
+  ) : GetSearchV2Response(),
+      OperationResponseFailure<Unit> {
+    override val body: Unit
+      get() = Unit
+  }
 
   @Serializable
   public data class GetSearchV2ResponseFailure(
-    public val body: ValidationError,
+    override val body: ValidationError,
     @Transient
     override val headers: Headers = Headers.Empty,
-  ) : GetSearchV2Response()
+  ) : GetSearchV2Response(),
+      OperationResponseFailure<ValidationError>
 
   @Serializable
   public data class GetSearchV2ResponseUnknownFailure(
-    public val statusCode: Int,
+    override val statusCode: Int,
     @Transient
     override val headers: Headers = Headers.Empty,
-  ) : GetSearchV2Response()
+  ) : GetSearchV2Response(),
+      OperationResponseUnknownFailure
 }
 
 public fun SearchClient(configuration: ClientConfiguration = defaultClientConfiguration): SearchClient = DefaultSearchClient(configuration)

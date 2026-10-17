@@ -9,6 +9,7 @@ import io.ktor.http.Headers
 import io.ktor.http.encodeURLPathPart
 import kotlin.Int
 import kotlin.String
+import kotlin.Unit
 import kotlin.collections.List
 import kotlin.coroutines.cancellation.CancellationException
 import kotlinx.serialization.Serializable
@@ -40,16 +41,17 @@ public interface AnnouncementsClient {
   public suspend fun deleteAnnouncementReaction(id: String, name: String): DeleteAnnouncementReactionResponse
 
   @Serializable
-  public sealed class GetAnnouncementsResponse {
-    public abstract val headers: Headers
+  public sealed class GetAnnouncementsResponse : OperationResponse<List<Announcement>> {
+    abstract override val headers: Headers
   }
 
   @Serializable
   public data class GetAnnouncementsResponseSuccess(
-    public val body: List<Announcement>,
+    override val body: List<Announcement>,
     @Transient
     override val headers: Headers = Headers.Empty,
-  ) : GetAnnouncementsResponse() {
+  ) : GetAnnouncementsResponse(),
+      OperationResponseSuccess<List<Announcement>> {
     /**
      * Number of requests permitted per time period
      */
@@ -71,41 +73,52 @@ public interface AnnouncementsClient {
 
   @Serializable
   public data class GetAnnouncementsResponseFailure401(
-    public val body: Error,
+    override val body: Error,
     @Transient
     override val headers: Headers = Headers.Empty,
-  ) : GetAnnouncementsResponse()
+  ) : GetAnnouncementsResponse(),
+      OperationResponseFailure<Error>
 
   @Serializable
   public data class GetAnnouncementsResponseFailure410(
     @Transient
     override val headers: Headers = Headers.Empty,
-  ) : GetAnnouncementsResponse()
+  ) : GetAnnouncementsResponse(),
+      OperationResponseFailure<Unit> {
+    override val body: Unit
+      get() = Unit
+  }
 
   @Serializable
   public data class GetAnnouncementsResponseFailure(
-    public val body: ValidationError,
+    override val body: ValidationError,
     @Transient
     override val headers: Headers = Headers.Empty,
-  ) : GetAnnouncementsResponse()
+  ) : GetAnnouncementsResponse(),
+      OperationResponseFailure<ValidationError>
 
   @Serializable
   public data class GetAnnouncementsResponseUnknownFailure(
-    public val statusCode: Int,
+    override val statusCode: Int,
     @Transient
     override val headers: Headers = Headers.Empty,
-  ) : GetAnnouncementsResponse()
+  ) : GetAnnouncementsResponse(),
+      OperationResponseUnknownFailure
 
   @Serializable
-  public sealed class PostAnnouncementDismissResponse {
-    public abstract val headers: Headers
+  public sealed class PostAnnouncementDismissResponse : OperationResponse<Unit> {
+    abstract override val headers: Headers
   }
 
   @Serializable
   public data class PostAnnouncementDismissResponseSuccess(
     @Transient
     override val headers: Headers = Headers.Empty,
-  ) : PostAnnouncementDismissResponse() {
+  ) : PostAnnouncementDismissResponse(),
+      OperationResponseSuccess<Unit> {
+    override val body: Unit
+      get() = Unit
+
     /**
      * Number of requests permitted per time period
      */
@@ -127,41 +140,52 @@ public interface AnnouncementsClient {
 
   @Serializable
   public data class PostAnnouncementDismissResponseFailure401(
-    public val body: Error,
+    override val body: Error,
     @Transient
     override val headers: Headers = Headers.Empty,
-  ) : PostAnnouncementDismissResponse()
+  ) : PostAnnouncementDismissResponse(),
+      OperationResponseFailure<Error>
 
   @Serializable
   public data class PostAnnouncementDismissResponseFailure410(
     @Transient
     override val headers: Headers = Headers.Empty,
-  ) : PostAnnouncementDismissResponse()
+  ) : PostAnnouncementDismissResponse(),
+      OperationResponseFailure<Unit> {
+    override val body: Unit
+      get() = Unit
+  }
 
   @Serializable
   public data class PostAnnouncementDismissResponseFailure(
-    public val body: ValidationError,
+    override val body: ValidationError,
     @Transient
     override val headers: Headers = Headers.Empty,
-  ) : PostAnnouncementDismissResponse()
+  ) : PostAnnouncementDismissResponse(),
+      OperationResponseFailure<ValidationError>
 
   @Serializable
   public data class PostAnnouncementDismissResponseUnknownFailure(
-    public val statusCode: Int,
+    override val statusCode: Int,
     @Transient
     override val headers: Headers = Headers.Empty,
-  ) : PostAnnouncementDismissResponse()
+  ) : PostAnnouncementDismissResponse(),
+      OperationResponseUnknownFailure
 
   @Serializable
-  public sealed class UpdateAnnouncementReactionResponse {
-    public abstract val headers: Headers
+  public sealed class UpdateAnnouncementReactionResponse : OperationResponse<Unit> {
+    abstract override val headers: Headers
   }
 
   @Serializable
   public data class UpdateAnnouncementReactionResponseSuccess(
     @Transient
     override val headers: Headers = Headers.Empty,
-  ) : UpdateAnnouncementReactionResponse() {
+  ) : UpdateAnnouncementReactionResponse(),
+      OperationResponseSuccess<Unit> {
+    override val body: Unit
+      get() = Unit
+
     /**
      * Number of requests permitted per time period
      */
@@ -183,34 +207,44 @@ public interface AnnouncementsClient {
 
   @Serializable
   public data class UpdateAnnouncementReactionResponseFailure401(
-    public val body: Error,
+    override val body: Error,
     @Transient
     override val headers: Headers = Headers.Empty,
-  ) : UpdateAnnouncementReactionResponse()
+  ) : UpdateAnnouncementReactionResponse(),
+      OperationResponseFailure<Error>
 
   @Serializable
   public data class UpdateAnnouncementReactionResponseFailure(
     @Transient
     override val headers: Headers = Headers.Empty,
-  ) : UpdateAnnouncementReactionResponse()
+  ) : UpdateAnnouncementReactionResponse(),
+      OperationResponseFailure<Unit> {
+    override val body: Unit
+      get() = Unit
+  }
 
   @Serializable
   public data class UpdateAnnouncementReactionResponseUnknownFailure(
-    public val statusCode: Int,
+    override val statusCode: Int,
     @Transient
     override val headers: Headers = Headers.Empty,
-  ) : UpdateAnnouncementReactionResponse()
+  ) : UpdateAnnouncementReactionResponse(),
+      OperationResponseUnknownFailure
 
   @Serializable
-  public sealed class DeleteAnnouncementReactionResponse {
-    public abstract val headers: Headers
+  public sealed class DeleteAnnouncementReactionResponse : OperationResponse<Unit> {
+    abstract override val headers: Headers
   }
 
   @Serializable
   public data class DeleteAnnouncementReactionResponseSuccess(
     @Transient
     override val headers: Headers = Headers.Empty,
-  ) : DeleteAnnouncementReactionResponse() {
+  ) : DeleteAnnouncementReactionResponse(),
+      OperationResponseSuccess<Unit> {
+    override val body: Unit
+      get() = Unit
+
     /**
      * Number of requests permitted per time period
      */
@@ -232,23 +266,29 @@ public interface AnnouncementsClient {
 
   @Serializable
   public data class DeleteAnnouncementReactionResponseFailure401(
-    public val body: Error,
+    override val body: Error,
     @Transient
     override val headers: Headers = Headers.Empty,
-  ) : DeleteAnnouncementReactionResponse()
+  ) : DeleteAnnouncementReactionResponse(),
+      OperationResponseFailure<Error>
 
   @Serializable
   public data class DeleteAnnouncementReactionResponseFailure(
     @Transient
     override val headers: Headers = Headers.Empty,
-  ) : DeleteAnnouncementReactionResponse()
+  ) : DeleteAnnouncementReactionResponse(),
+      OperationResponseFailure<Unit> {
+    override val body: Unit
+      get() = Unit
+  }
 
   @Serializable
   public data class DeleteAnnouncementReactionResponseUnknownFailure(
-    public val statusCode: Int,
+    override val statusCode: Int,
     @Transient
     override val headers: Headers = Headers.Empty,
-  ) : DeleteAnnouncementReactionResponse()
+  ) : DeleteAnnouncementReactionResponse(),
+      OperationResponseUnknownFailure
 }
 
 public fun AnnouncementsClient(configuration: ClientConfiguration = defaultClientConfiguration): AnnouncementsClient = DefaultAnnouncementsClient(configuration)

@@ -12,9 +12,11 @@ import io.ktor.http.ContentType
 import io.ktor.http.Headers
 import io.ktor.http.HttpHeaders
 import io.ktor.http.encodeURLPathPart
+import kotlin.Any
 import kotlin.ByteArray
 import kotlin.Int
 import kotlin.String
+import kotlin.Unit
 import kotlin.coroutines.cancellation.CancellationException
 import kotlinx.serialization.Serializable
 import kotlinx.serialization.Transient
@@ -63,16 +65,17 @@ public interface MediaClient {
   )
 
   @Serializable
-  public sealed class CreateMediaResponse {
-    public abstract val headers: Headers
+  public sealed class CreateMediaResponse : OperationResponse<MediaAttachment> {
+    abstract override val headers: Headers
   }
 
   @Serializable
   public data class CreateMediaResponseSuccess(
-    public val body: MediaAttachment,
+    override val body: MediaAttachment,
     @Transient
     override val headers: Headers = Headers.Empty,
-  ) : CreateMediaResponse() {
+  ) : CreateMediaResponse(),
+      OperationResponseSuccess<MediaAttachment> {
     /**
      * Number of requests permitted per time period
      */
@@ -94,35 +97,42 @@ public interface MediaClient {
 
   @Serializable
   public data class CreateMediaResponseFailure401(
-    public val body: Error,
+    override val body: Error,
     @Transient
     override val headers: Headers = Headers.Empty,
-  ) : CreateMediaResponse()
+  ) : CreateMediaResponse(),
+      OperationResponseFailure<Error>
 
   @Serializable
   public data class CreateMediaResponseFailure(
     @Transient
     override val headers: Headers = Headers.Empty,
-  ) : CreateMediaResponse()
+  ) : CreateMediaResponse(),
+      OperationResponseFailure<Unit> {
+    override val body: Unit
+      get() = Unit
+  }
 
   @Serializable
   public data class CreateMediaResponseUnknownFailure(
-    public val statusCode: Int,
+    override val statusCode: Int,
     @Transient
     override val headers: Headers = Headers.Empty,
-  ) : CreateMediaResponse()
+  ) : CreateMediaResponse(),
+      OperationResponseUnknownFailure
 
   @Serializable
-  public sealed class GetMediaResponse {
-    public abstract val headers: Headers
+  public sealed class GetMediaResponse : OperationResponse<Any?> {
+    abstract override val headers: Headers
   }
 
   @Serializable
   public data class GetMediaResponseSuccess200(
-    public val body: MediaAttachment,
+    override val body: MediaAttachment,
     @Transient
     override val headers: Headers = Headers.Empty,
-  ) : GetMediaResponse() {
+  ) : GetMediaResponse(),
+      OperationResponseSuccess<Any?> {
     /**
      * Number of requests permitted per time period
      */
@@ -146,7 +156,11 @@ public interface MediaClient {
   public data class GetMediaResponseSuccess(
     @Transient
     override val headers: Headers = Headers.Empty,
-  ) : GetMediaResponse() {
+  ) : GetMediaResponse(),
+      OperationResponseSuccess<Any?> {
+    override val body: Unit
+      get() = Unit
+
     /**
      * Number of requests permitted per time period
      */
@@ -168,23 +182,29 @@ public interface MediaClient {
 
   @Serializable
   public data class GetMediaResponseFailure401(
-    public val body: Error,
+    override val body: Error,
     @Transient
     override val headers: Headers = Headers.Empty,
-  ) : GetMediaResponse()
+  ) : GetMediaResponse(),
+      OperationResponseFailure<Error>
 
   @Serializable
   public data class GetMediaResponseFailure(
     @Transient
     override val headers: Headers = Headers.Empty,
-  ) : GetMediaResponse()
+  ) : GetMediaResponse(),
+      OperationResponseFailure<Unit> {
+    override val body: Unit
+      get() = Unit
+  }
 
   @Serializable
   public data class GetMediaResponseUnknownFailure(
-    public val statusCode: Int,
+    override val statusCode: Int,
     @Transient
     override val headers: Headers = Headers.Empty,
-  ) : GetMediaResponse()
+  ) : GetMediaResponse(),
+      OperationResponseUnknownFailure
 
   public data class UpdateMediaForm(
     public val description: String? = null,
@@ -199,16 +219,17 @@ public interface MediaClient {
   )
 
   @Serializable
-  public sealed class UpdateMediaResponse {
-    public abstract val headers: Headers
+  public sealed class UpdateMediaResponse : OperationResponse<MediaAttachment> {
+    abstract override val headers: Headers
   }
 
   @Serializable
   public data class UpdateMediaResponseSuccess(
-    public val body: MediaAttachment,
+    override val body: MediaAttachment,
     @Transient
     override val headers: Headers = Headers.Empty,
-  ) : UpdateMediaResponse() {
+  ) : UpdateMediaResponse(),
+      OperationResponseSuccess<MediaAttachment> {
     /**
      * Number of requests permitted per time period
      */
@@ -230,34 +251,44 @@ public interface MediaClient {
 
   @Serializable
   public data class UpdateMediaResponseFailure401(
-    public val body: Error,
+    override val body: Error,
     @Transient
     override val headers: Headers = Headers.Empty,
-  ) : UpdateMediaResponse()
+  ) : UpdateMediaResponse(),
+      OperationResponseFailure<Error>
 
   @Serializable
   public data class UpdateMediaResponseFailure(
     @Transient
     override val headers: Headers = Headers.Empty,
-  ) : UpdateMediaResponse()
+  ) : UpdateMediaResponse(),
+      OperationResponseFailure<Unit> {
+    override val body: Unit
+      get() = Unit
+  }
 
   @Serializable
   public data class UpdateMediaResponseUnknownFailure(
-    public val statusCode: Int,
+    override val statusCode: Int,
     @Transient
     override val headers: Headers = Headers.Empty,
-  ) : UpdateMediaResponse()
+  ) : UpdateMediaResponse(),
+      OperationResponseUnknownFailure
 
   @Serializable
-  public sealed class DeleteMediaResponse {
-    public abstract val headers: Headers
+  public sealed class DeleteMediaResponse : OperationResponse<Unit> {
+    abstract override val headers: Headers
   }
 
   @Serializable
   public data class DeleteMediaResponseSuccess(
     @Transient
     override val headers: Headers = Headers.Empty,
-  ) : DeleteMediaResponse() {
+  ) : DeleteMediaResponse(),
+      OperationResponseSuccess<Unit> {
+    override val body: Unit
+      get() = Unit
+
     /**
      * Number of requests permitted per time period
      */
@@ -279,30 +310,37 @@ public interface MediaClient {
 
   @Serializable
   public data class DeleteMediaResponseFailure401(
-    public val body: Error,
+    override val body: Error,
     @Transient
     override val headers: Headers = Headers.Empty,
-  ) : DeleteMediaResponse()
+  ) : DeleteMediaResponse(),
+      OperationResponseFailure<Error>
 
   @Serializable
   public data class DeleteMediaResponseFailure410(
     @Transient
     override val headers: Headers = Headers.Empty,
-  ) : DeleteMediaResponse()
+  ) : DeleteMediaResponse(),
+      OperationResponseFailure<Unit> {
+    override val body: Unit
+      get() = Unit
+  }
 
   @Serializable
   public data class DeleteMediaResponseFailure(
-    public val body: ValidationError,
+    override val body: ValidationError,
     @Transient
     override val headers: Headers = Headers.Empty,
-  ) : DeleteMediaResponse()
+  ) : DeleteMediaResponse(),
+      OperationResponseFailure<ValidationError>
 
   @Serializable
   public data class DeleteMediaResponseUnknownFailure(
-    public val statusCode: Int,
+    override val statusCode: Int,
     @Transient
     override val headers: Headers = Headers.Empty,
-  ) : DeleteMediaResponse()
+  ) : DeleteMediaResponse(),
+      OperationResponseUnknownFailure
 
   public data class CreateMediaV2Form(
     public val `file`: CreateMediaV2FormFile,
@@ -318,16 +356,17 @@ public interface MediaClient {
   )
 
   @Serializable
-  public sealed class CreateMediaV2Response {
-    public abstract val headers: Headers
+  public sealed class CreateMediaV2Response : OperationResponse<MediaAttachment> {
+    abstract override val headers: Headers
   }
 
   @Serializable
   public data class CreateMediaV2ResponseSuccess(
-    public val body: MediaAttachment,
+    override val body: MediaAttachment,
     @Transient
     override val headers: Headers = Headers.Empty,
-  ) : CreateMediaV2Response() {
+  ) : CreateMediaV2Response(),
+      OperationResponseSuccess<MediaAttachment> {
     /**
      * Number of requests permitted per time period
      */
@@ -349,23 +388,29 @@ public interface MediaClient {
 
   @Serializable
   public data class CreateMediaV2ResponseFailure401(
-    public val body: Error,
+    override val body: Error,
     @Transient
     override val headers: Headers = Headers.Empty,
-  ) : CreateMediaV2Response()
+  ) : CreateMediaV2Response(),
+      OperationResponseFailure<Error>
 
   @Serializable
   public data class CreateMediaV2ResponseFailure(
     @Transient
     override val headers: Headers = Headers.Empty,
-  ) : CreateMediaV2Response()
+  ) : CreateMediaV2Response(),
+      OperationResponseFailure<Unit> {
+    override val body: Unit
+      get() = Unit
+  }
 
   @Serializable
   public data class CreateMediaV2ResponseUnknownFailure(
-    public val statusCode: Int,
+    override val statusCode: Int,
     @Transient
     override val headers: Headers = Headers.Empty,
-  ) : CreateMediaV2Response()
+  ) : CreateMediaV2Response(),
+      OperationResponseUnknownFailure
 }
 
 public fun MediaClient(configuration: ClientConfiguration = defaultClientConfiguration): MediaClient = DefaultMediaClient(configuration)

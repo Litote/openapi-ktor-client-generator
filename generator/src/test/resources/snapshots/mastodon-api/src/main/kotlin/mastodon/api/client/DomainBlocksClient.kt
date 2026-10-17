@@ -11,6 +11,7 @@ import io.ktor.http.contentType
 import kotlin.Int
 import kotlin.Long
 import kotlin.String
+import kotlin.Unit
 import kotlin.collections.List
 import kotlin.coroutines.cancellation.CancellationException
 import kotlinx.serialization.Serializable
@@ -41,16 +42,17 @@ public interface DomainBlocksClient {
   public suspend fun deleteDomainBlocks(request: DeleteDomainBlocksRequest): DeleteDomainBlocksResponse
 
   @Serializable
-  public sealed class GetDomainBlocksResponse {
-    public abstract val headers: Headers
+  public sealed class GetDomainBlocksResponse : OperationResponse<List<String>> {
+    abstract override val headers: Headers
   }
 
   @Serializable
   public data class GetDomainBlocksResponseSuccess(
-    public val body: List<String>,
+    override val body: List<String>,
     @Transient
     override val headers: Headers = Headers.Empty,
-  ) : GetDomainBlocksResponse() {
+  ) : GetDomainBlocksResponse(),
+      OperationResponseSuccess<List<String>> {
     /**
      * Pagination links for browsing older or newer results. Format: Link: <https://mastodon.example/api/v1/endpoint?max_id=7163058>; rel="next", <https://mastodon.example/api/v1/endpoint?min_id=7275607>; rel="prev". See [RFC 8288](https://www.rfc-editor.org/rfc/rfc8288) for more information.
      */
@@ -78,30 +80,37 @@ public interface DomainBlocksClient {
 
   @Serializable
   public data class GetDomainBlocksResponseFailure401(
-    public val body: Error,
+    override val body: Error,
     @Transient
     override val headers: Headers = Headers.Empty,
-  ) : GetDomainBlocksResponse()
+  ) : GetDomainBlocksResponse(),
+      OperationResponseFailure<Error>
 
   @Serializable
   public data class GetDomainBlocksResponseFailure410(
     @Transient
     override val headers: Headers = Headers.Empty,
-  ) : GetDomainBlocksResponse()
+  ) : GetDomainBlocksResponse(),
+      OperationResponseFailure<Unit> {
+    override val body: Unit
+      get() = Unit
+  }
 
   @Serializable
   public data class GetDomainBlocksResponseFailure(
-    public val body: ValidationError,
+    override val body: ValidationError,
     @Transient
     override val headers: Headers = Headers.Empty,
-  ) : GetDomainBlocksResponse()
+  ) : GetDomainBlocksResponse(),
+      OperationResponseFailure<ValidationError>
 
   @Serializable
   public data class GetDomainBlocksResponseUnknownFailure(
-    public val statusCode: Int,
+    override val statusCode: Int,
     @Transient
     override val headers: Headers = Headers.Empty,
-  ) : GetDomainBlocksResponse()
+  ) : GetDomainBlocksResponse(),
+      OperationResponseUnknownFailure
 
   @Serializable
   public data class CreateDomainBlockRequest(
@@ -109,15 +118,19 @@ public interface DomainBlocksClient {
   )
 
   @Serializable
-  public sealed class CreateDomainBlockResponse {
-    public abstract val headers: Headers
+  public sealed class CreateDomainBlockResponse : OperationResponse<Unit> {
+    abstract override val headers: Headers
   }
 
   @Serializable
   public data class CreateDomainBlockResponseSuccess(
     @Transient
     override val headers: Headers = Headers.Empty,
-  ) : CreateDomainBlockResponse() {
+  ) : CreateDomainBlockResponse(),
+      OperationResponseSuccess<Unit> {
+    override val body: Unit
+      get() = Unit
+
     /**
      * Number of requests permitted per time period
      */
@@ -139,23 +152,29 @@ public interface DomainBlocksClient {
 
   @Serializable
   public data class CreateDomainBlockResponseFailure401(
-    public val body: Error,
+    override val body: Error,
     @Transient
     override val headers: Headers = Headers.Empty,
-  ) : CreateDomainBlockResponse()
+  ) : CreateDomainBlockResponse(),
+      OperationResponseFailure<Error>
 
   @Serializable
   public data class CreateDomainBlockResponseFailure(
     @Transient
     override val headers: Headers = Headers.Empty,
-  ) : CreateDomainBlockResponse()
+  ) : CreateDomainBlockResponse(),
+      OperationResponseFailure<Unit> {
+    override val body: Unit
+      get() = Unit
+  }
 
   @Serializable
   public data class CreateDomainBlockResponseUnknownFailure(
-    public val statusCode: Int,
+    override val statusCode: Int,
     @Transient
     override val headers: Headers = Headers.Empty,
-  ) : CreateDomainBlockResponse()
+  ) : CreateDomainBlockResponse(),
+      OperationResponseUnknownFailure
 
   @Serializable
   public data class DeleteDomainBlocksRequest(
@@ -163,15 +182,19 @@ public interface DomainBlocksClient {
   )
 
   @Serializable
-  public sealed class DeleteDomainBlocksResponse {
-    public abstract val headers: Headers
+  public sealed class DeleteDomainBlocksResponse : OperationResponse<Unit> {
+    abstract override val headers: Headers
   }
 
   @Serializable
   public data class DeleteDomainBlocksResponseSuccess(
     @Transient
     override val headers: Headers = Headers.Empty,
-  ) : DeleteDomainBlocksResponse() {
+  ) : DeleteDomainBlocksResponse(),
+      OperationResponseSuccess<Unit> {
+    override val body: Unit
+      get() = Unit
+
     /**
      * Number of requests permitted per time period
      */
@@ -193,23 +216,29 @@ public interface DomainBlocksClient {
 
   @Serializable
   public data class DeleteDomainBlocksResponseFailure401(
-    public val body: Error,
+    override val body: Error,
     @Transient
     override val headers: Headers = Headers.Empty,
-  ) : DeleteDomainBlocksResponse()
+  ) : DeleteDomainBlocksResponse(),
+      OperationResponseFailure<Error>
 
   @Serializable
   public data class DeleteDomainBlocksResponseFailure(
     @Transient
     override val headers: Headers = Headers.Empty,
-  ) : DeleteDomainBlocksResponse()
+  ) : DeleteDomainBlocksResponse(),
+      OperationResponseFailure<Unit> {
+    override val body: Unit
+      get() = Unit
+  }
 
   @Serializable
   public data class DeleteDomainBlocksResponseUnknownFailure(
-    public val statusCode: Int,
+    override val statusCode: Int,
     @Transient
     override val headers: Headers = Headers.Empty,
-  ) : DeleteDomainBlocksResponse()
+  ) : DeleteDomainBlocksResponse(),
+      OperationResponseUnknownFailure
 }
 
 public fun DomainBlocksClient(configuration: ClientConfiguration = defaultClientConfiguration): DomainBlocksClient = DefaultDomainBlocksClient(configuration)

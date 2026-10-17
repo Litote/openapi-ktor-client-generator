@@ -118,7 +118,7 @@ See [CONTRIBUTING.md — Gradle Dependency Graph](CONTRIBUTING.md#gradle-depende
 | `generator:application` | `*.application` | `GenerateCodeService`, `GenerationSpecPartitioner` |
 | `generator:adapter-writer` | `*.adapter.writer` | `KotlinPoetFileWriter` |
 | `generator:adapter-parser` | `*.adapter.parser` | `OpenApiSpecificationParser(configuration)`, `ApiModel`, `SchemaAdapter` (version-agnostic extensions), `TypeNameConverter`, `ParserNames`, `ParserTypes`, `ApiOperation`, `ApiClassProperty` |
-| `generator:adapter-renderer` | `*.adapter.renderer` | `ApiClientGenerator`, `ApiModelGenerator`, `ApiClientConfigurationGenerator`, `YamlContentConverterGenerator`, `OperationBuilder`, `ResponseBuilder`, `ParameterSerializationHelpers`, `KotlinPoets`, `KtorPoets` |
+| `generator:adapter-renderer` | `*.adapter.renderer` | `ApiClientGenerator`, `ApiModelGenerator`, `ApiClientConfigurationGenerator`, `OperationResponseGenerator`, `YamlContentConverterGenerator`, `OperationBuilder`, `ResponseBuilder`, `ParameterSerializationHelpers`, `KotlinPoets`, `KtorPoets` |
 | `generator` (root) | `*.generator` | `ApiGenerator.kt` — composition root, the ONLY file importing all layers |
 
 ### Architectural Invariants and Port Design
@@ -561,9 +561,15 @@ type (`default: 25` on a `number` → `25.0`, on a `float` → `25.0F`), like `p
 `OperationBuilder` emits `accept(ContentType.parse(...))` for the `contentTypes` of success entries, because `ContentNegotiation` only adds `Accept: application/json`.
 Bodies are read with `response.body<ByteArray>()` or `response.body<String>()`, which `ContentNegotiation` ignores by default. There is no `ByteReadChannel` streaming.
 
+### Common response interfaces (`OperationResponseGenerator`, `ResponseBuilder`)
+
+- `ApiClientConfigurationGenerator.render()` also writes `OperationResponse.kt` in `clientPackage` (next to `ClientConfiguration`, so in the global shared subproject in split mode): `OperationResponse<out T>` (`headers`), `OperationResponseSuccess<out T> : OperationResponse<T>` (`body: T`), `OperationResponseFailure<out E>` (`body: E`) and `OperationResponseUnknownFailure` (`statusCode`). They are not sealed: split clients live in other modules.
+- `ResponseBuilder` references them through `OperationResponseTypes(configuration.configPackage)` and builds the sealed class itself (in `buildResponseTypes`), as an `OperationResponse<T>`: `T` is the distinct success body type (`Unit` for a success without body), `Any?` when the success types differ, `Nothing` without success entry.
+- Success classes implement `OperationResponseSuccess<T>` with the `T` of the sealed class (a class cannot implement `OperationResponse` with two type arguments), overriding `body` with their own (sub)type. Failure classes implement `OperationResponseFailure<body type or Unit>`, which does not extend `OperationResponse` for the same reason. A response without body gets `override val body: Unit get() = Unit` (not serialized).
+
 ### Response headers (`OpenApiSpecificationParser.buildResponseHeaders`)
 
-- Every response class is a `data class` (never an `object`) with `@Transient override val headers: Headers = Headers.Empty`. The sealed base declares `abstract val headers: Headers`, and `OperationBuilder` passes `response.headers` in every `when` branch. The exception branch (`UnknownFailure(500)`) uses the empty default.
+- Every response class is a `data class` (never an `object`) with `@Transient override val headers: Headers = Headers.Empty`. The sealed base declares `abstract override val headers: Headers` (from `OperationResponse`), and `OperationBuilder` passes `response.headers` in every `when` branch. The exception branch (`UnknownFailure(500)`) uses the empty default.
 - `ResponseEntrySpec.headers` holds the declared `responses.<code>.headers` (inline or `$ref` resolved via `ApiModel.resolveHeader` / `componentHeaders`). It is the union over the grouped status codes, deduplicated and sorted case-insensitively by name. `Content-Type` is skipped.
 - `ResponseHeaderSpec.type` is **always** a `PrimitiveSpec`: `integer`+`int64` → LONG, `integer` → INT, `number` → DOUBLE, `boolean` → BOOLEAN, anything else → STRING. Headers never reference models, so `ModelUsageAnalyzer` ignores them.
 - `ResponseBuilder` renders each header as a nullable computed property (`headers["X"]?.toIntOrNull()`, …). A property name clashing with `body` / `headers` / `statusCode` gets a `Header` suffix.

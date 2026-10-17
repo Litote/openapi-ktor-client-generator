@@ -27,23 +27,25 @@ public interface Client {
   ): PostTestWithTestIdResponse
 
   @Serializable
-  public sealed class PostTestWithTestIdResponse {
-    public abstract val headers: Headers
+  public sealed class PostTestWithTestIdResponse : OperationResponse<TestResponse> {
+    abstract override val headers: Headers
   }
 
   @Serializable
   public data class PostTestWithTestIdResponseSuccess(
-    public val body: TestResponse,
+    override val body: TestResponse,
     @Transient
     override val headers: Headers = Headers.Empty,
-  ) : PostTestWithTestIdResponse()
+  ) : PostTestWithTestIdResponse(),
+      OperationResponseSuccess<TestResponse>
 
   @Serializable
   public data class PostTestWithTestIdResponseUnknownFailure(
-    public val statusCode: Int,
+    override val statusCode: Int,
     @Transient
     override val headers: Headers = Headers.Empty,
-  ) : PostTestWithTestIdResponse()
+  ) : PostTestWithTestIdResponse(),
+      OperationResponseUnknownFailure
 }
 
 public fun Client(configuration: ClientConfiguration = defaultClientConfiguration): Client = DefaultClient(configuration)

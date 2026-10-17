@@ -10,6 +10,7 @@ import io.ktor.http.contentType
 import kotlin.Boolean
 import kotlin.Int
 import kotlin.String
+import kotlin.Unit
 import kotlin.coroutines.cancellation.CancellationException
 import kotlinx.serialization.SerialName
 import kotlinx.serialization.Serializable
@@ -51,15 +52,19 @@ public interface OauthClient {
   public suspend fun getOauthUserinfo(): GetOauthUserinfoResponse
 
   @Serializable
-  public sealed class GetOauthAuthorizeResponse {
-    public abstract val headers: Headers
+  public sealed class GetOauthAuthorizeResponse : OperationResponse<Unit> {
+    abstract override val headers: Headers
   }
 
   @Serializable
   public data class GetOauthAuthorizeResponseSuccess(
     @Transient
     override val headers: Headers = Headers.Empty,
-  ) : GetOauthAuthorizeResponse() {
+  ) : GetOauthAuthorizeResponse(),
+      OperationResponseSuccess<Unit> {
+    override val body: Unit
+      get() = Unit
+
     /**
      * Number of requests permitted per time period
      */
@@ -81,30 +86,37 @@ public interface OauthClient {
 
   @Serializable
   public data class GetOauthAuthorizeResponseFailure400(
-    public val body: Error,
+    override val body: Error,
     @Transient
     override val headers: Headers = Headers.Empty,
-  ) : GetOauthAuthorizeResponse()
+  ) : GetOauthAuthorizeResponse(),
+      OperationResponseFailure<Error>
 
   @Serializable
   public data class GetOauthAuthorizeResponseFailure410(
     @Transient
     override val headers: Headers = Headers.Empty,
-  ) : GetOauthAuthorizeResponse()
+  ) : GetOauthAuthorizeResponse(),
+      OperationResponseFailure<Unit> {
+    override val body: Unit
+      get() = Unit
+  }
 
   @Serializable
   public data class GetOauthAuthorizeResponseFailure(
-    public val body: ValidationError,
+    override val body: ValidationError,
     @Transient
     override val headers: Headers = Headers.Empty,
-  ) : GetOauthAuthorizeResponse()
+  ) : GetOauthAuthorizeResponse(),
+      OperationResponseFailure<ValidationError>
 
   @Serializable
   public data class GetOauthAuthorizeResponseUnknownFailure(
-    public val statusCode: Int,
+    override val statusCode: Int,
     @Transient
     override val headers: Headers = Headers.Empty,
-  ) : GetOauthAuthorizeResponse()
+  ) : GetOauthAuthorizeResponse(),
+      OperationResponseUnknownFailure
 
   @Serializable
   public data class PostOauthRevokeRequest(
@@ -116,15 +128,19 @@ public interface OauthClient {
   )
 
   @Serializable
-  public sealed class PostOauthRevokeResponse {
-    public abstract val headers: Headers
+  public sealed class PostOauthRevokeResponse : OperationResponse<Unit> {
+    abstract override val headers: Headers
   }
 
   @Serializable
   public data class PostOauthRevokeResponseSuccess(
     @Transient
     override val headers: Headers = Headers.Empty,
-  ) : PostOauthRevokeResponse() {
+  ) : PostOauthRevokeResponse(),
+      OperationResponseSuccess<Unit> {
+    override val body: Unit
+      get() = Unit
+
     /**
      * Number of requests permitted per time period
      */
@@ -146,30 +162,37 @@ public interface OauthClient {
 
   @Serializable
   public data class PostOauthRevokeResponseFailure401(
-    public val body: Error,
+    override val body: Error,
     @Transient
     override val headers: Headers = Headers.Empty,
-  ) : PostOauthRevokeResponse()
+  ) : PostOauthRevokeResponse(),
+      OperationResponseFailure<Error>
 
   @Serializable
   public data class PostOauthRevokeResponseFailure410(
     @Transient
     override val headers: Headers = Headers.Empty,
-  ) : PostOauthRevokeResponse()
+  ) : PostOauthRevokeResponse(),
+      OperationResponseFailure<Unit> {
+    override val body: Unit
+      get() = Unit
+  }
 
   @Serializable
   public data class PostOauthRevokeResponseFailure(
-    public val body: ValidationError,
+    override val body: ValidationError,
     @Transient
     override val headers: Headers = Headers.Empty,
-  ) : PostOauthRevokeResponse()
+  ) : PostOauthRevokeResponse(),
+      OperationResponseFailure<ValidationError>
 
   @Serializable
   public data class PostOauthRevokeResponseUnknownFailure(
-    public val statusCode: Int,
+    override val statusCode: Int,
     @Transient
     override val headers: Headers = Headers.Empty,
-  ) : PostOauthRevokeResponse()
+  ) : PostOauthRevokeResponse(),
+      OperationResponseUnknownFailure
 
   @Serializable
   public data class PostOauthTokenRequest(
@@ -188,16 +211,17 @@ public interface OauthClient {
   )
 
   @Serializable
-  public sealed class PostOauthTokenResponse {
-    public abstract val headers: Headers
+  public sealed class PostOauthTokenResponse : OperationResponse<Token> {
+    abstract override val headers: Headers
   }
 
   @Serializable
   public data class PostOauthTokenResponseSuccess(
-    public val body: Token,
+    override val body: Token,
     @Transient
     override val headers: Headers = Headers.Empty,
-  ) : PostOauthTokenResponse() {
+  ) : PostOauthTokenResponse(),
+      OperationResponseSuccess<Token> {
     /**
      * Number of requests permitted per time period
      */
@@ -219,41 +243,52 @@ public interface OauthClient {
 
   @Serializable
   public data class PostOauthTokenResponseFailure400(
-    public val body: Error,
+    override val body: Error,
     @Transient
     override val headers: Headers = Headers.Empty,
-  ) : PostOauthTokenResponse()
+  ) : PostOauthTokenResponse(),
+      OperationResponseFailure<Error>
 
   @Serializable
   public data class PostOauthTokenResponseFailure410(
     @Transient
     override val headers: Headers = Headers.Empty,
-  ) : PostOauthTokenResponse()
+  ) : PostOauthTokenResponse(),
+      OperationResponseFailure<Unit> {
+    override val body: Unit
+      get() = Unit
+  }
 
   @Serializable
   public data class PostOauthTokenResponseFailure(
-    public val body: ValidationError,
+    override val body: ValidationError,
     @Transient
     override val headers: Headers = Headers.Empty,
-  ) : PostOauthTokenResponse()
+  ) : PostOauthTokenResponse(),
+      OperationResponseFailure<ValidationError>
 
   @Serializable
   public data class PostOauthTokenResponseUnknownFailure(
-    public val statusCode: Int,
+    override val statusCode: Int,
     @Transient
     override val headers: Headers = Headers.Empty,
-  ) : PostOauthTokenResponse()
+  ) : PostOauthTokenResponse(),
+      OperationResponseUnknownFailure
 
   @Serializable
-  public sealed class GetOauthUserinfoResponse {
-    public abstract val headers: Headers
+  public sealed class GetOauthUserinfoResponse : OperationResponse<Unit> {
+    abstract override val headers: Headers
   }
 
   @Serializable
   public data class GetOauthUserinfoResponseSuccess(
     @Transient
     override val headers: Headers = Headers.Empty,
-  ) : GetOauthUserinfoResponse() {
+  ) : GetOauthUserinfoResponse(),
+      OperationResponseSuccess<Unit> {
+    override val body: Unit
+      get() = Unit
+
     /**
      * Number of requests permitted per time period
      */
@@ -275,30 +310,37 @@ public interface OauthClient {
 
   @Serializable
   public data class GetOauthUserinfoResponseFailure401(
-    public val body: Error,
+    override val body: Error,
     @Transient
     override val headers: Headers = Headers.Empty,
-  ) : GetOauthUserinfoResponse()
+  ) : GetOauthUserinfoResponse(),
+      OperationResponseFailure<Error>
 
   @Serializable
   public data class GetOauthUserinfoResponseFailure410(
     @Transient
     override val headers: Headers = Headers.Empty,
-  ) : GetOauthUserinfoResponse()
+  ) : GetOauthUserinfoResponse(),
+      OperationResponseFailure<Unit> {
+    override val body: Unit
+      get() = Unit
+  }
 
   @Serializable
   public data class GetOauthUserinfoResponseFailure(
-    public val body: ValidationError,
+    override val body: ValidationError,
     @Transient
     override val headers: Headers = Headers.Empty,
-  ) : GetOauthUserinfoResponse()
+  ) : GetOauthUserinfoResponse(),
+      OperationResponseFailure<ValidationError>
 
   @Serializable
   public data class GetOauthUserinfoResponseUnknownFailure(
-    public val statusCode: Int,
+    override val statusCode: Int,
     @Transient
     override val headers: Headers = Headers.Empty,
-  ) : GetOauthUserinfoResponse()
+  ) : GetOauthUserinfoResponse(),
+      OperationResponseUnknownFailure
 }
 
 public fun OauthClient(configuration: ClientConfiguration = defaultClientConfiguration): OauthClient = DefaultOauthClient(configuration)

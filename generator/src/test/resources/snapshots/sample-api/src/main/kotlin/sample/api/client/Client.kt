@@ -18,23 +18,25 @@ public interface Client {
   public suspend fun getVehicles(): GetVehiclesResponse
 
   @Serializable
-  public sealed class GetVehiclesResponse {
-    public abstract val headers: Headers
+  public sealed class GetVehiclesResponse : OperationResponse<List<Vehicle>> {
+    abstract override val headers: Headers
   }
 
   @Serializable
   public data class GetVehiclesResponseSuccess(
-    public val body: List<Vehicle>,
+    override val body: List<Vehicle>,
     @Transient
     override val headers: Headers = Headers.Empty,
-  ) : GetVehiclesResponse()
+  ) : GetVehiclesResponse(),
+      OperationResponseSuccess<List<Vehicle>>
 
   @Serializable
   public data class GetVehiclesResponseUnknownFailure(
-    public val statusCode: Int,
+    override val statusCode: Int,
     @Transient
     override val headers: Headers = Headers.Empty,
-  ) : GetVehiclesResponse()
+  ) : GetVehiclesResponse(),
+      OperationResponseUnknownFailure
 }
 
 public fun Client(configuration: ClientConfiguration = defaultClientConfiguration): Client = DefaultClient(configuration)

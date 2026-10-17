@@ -6,6 +6,7 @@ import io.ktor.http.Headers
 import io.ktor.http.encodeURLPathPart
 import kotlin.Int
 import kotlin.String
+import kotlin.Unit
 import kotlin.collections.List
 import kotlin.coroutines.cancellation.CancellationException
 import kotlinx.serialization.Serializable
@@ -79,16 +80,17 @@ public interface InstanceClient {
   public suspend fun getInstanceV2(): GetInstanceV2Response
 
   @Serializable
-  public sealed class GetInstanceResponse {
-    public abstract val headers: Headers
+  public sealed class GetInstanceResponse : OperationResponse<V1Instance> {
+    abstract override val headers: Headers
   }
 
   @Serializable
   public data class GetInstanceResponseSuccess(
-    public val body: V1Instance,
+    override val body: V1Instance,
     @Transient
     override val headers: Headers = Headers.Empty,
-  ) : GetInstanceResponse() {
+  ) : GetInstanceResponse(),
+      OperationResponseSuccess<V1Instance> {
     /**
      * Number of requests permitted per time period
      */
@@ -110,42 +112,50 @@ public interface InstanceClient {
 
   @Serializable
   public data class GetInstanceResponseFailure401(
-    public val body: Error,
+    override val body: Error,
     @Transient
     override val headers: Headers = Headers.Empty,
-  ) : GetInstanceResponse()
+  ) : GetInstanceResponse(),
+      OperationResponseFailure<Error>
 
   @Serializable
   public data class GetInstanceResponseFailure410(
     @Transient
     override val headers: Headers = Headers.Empty,
-  ) : GetInstanceResponse()
+  ) : GetInstanceResponse(),
+      OperationResponseFailure<Unit> {
+    override val body: Unit
+      get() = Unit
+  }
 
   @Serializable
   public data class GetInstanceResponseFailure(
-    public val body: ValidationError,
+    override val body: ValidationError,
     @Transient
     override val headers: Headers = Headers.Empty,
-  ) : GetInstanceResponse()
+  ) : GetInstanceResponse(),
+      OperationResponseFailure<ValidationError>
 
   @Serializable
   public data class GetInstanceResponseUnknownFailure(
-    public val statusCode: Int,
+    override val statusCode: Int,
     @Transient
     override val headers: Headers = Headers.Empty,
-  ) : GetInstanceResponse()
+  ) : GetInstanceResponse(),
+      OperationResponseUnknownFailure
 
   @Serializable
-  public sealed class GetInstanceActivityResponse {
-    public abstract val headers: Headers
+  public sealed class GetInstanceActivityResponse : OperationResponse<List<JsonElement>> {
+    abstract override val headers: Headers
   }
 
   @Serializable
   public data class GetInstanceActivityResponseSuccess(
-    public val body: List<JsonElement>,
+    override val body: List<JsonElement>,
     @Transient
     override val headers: Headers = Headers.Empty,
-  ) : GetInstanceActivityResponse() {
+  ) : GetInstanceActivityResponse(),
+      OperationResponseSuccess<List<JsonElement>> {
     /**
      * Number of requests permitted per time period
      */
@@ -167,42 +177,50 @@ public interface InstanceClient {
 
   @Serializable
   public data class GetInstanceActivityResponseFailure401(
-    public val body: Error,
+    override val body: Error,
     @Transient
     override val headers: Headers = Headers.Empty,
-  ) : GetInstanceActivityResponse()
+  ) : GetInstanceActivityResponse(),
+      OperationResponseFailure<Error>
 
   @Serializable
   public data class GetInstanceActivityResponseFailure410(
     @Transient
     override val headers: Headers = Headers.Empty,
-  ) : GetInstanceActivityResponse()
+  ) : GetInstanceActivityResponse(),
+      OperationResponseFailure<Unit> {
+    override val body: Unit
+      get() = Unit
+  }
 
   @Serializable
   public data class GetInstanceActivityResponseFailure(
-    public val body: ValidationError,
+    override val body: ValidationError,
     @Transient
     override val headers: Headers = Headers.Empty,
-  ) : GetInstanceActivityResponse()
+  ) : GetInstanceActivityResponse(),
+      OperationResponseFailure<ValidationError>
 
   @Serializable
   public data class GetInstanceActivityResponseUnknownFailure(
-    public val statusCode: Int,
+    override val statusCode: Int,
     @Transient
     override val headers: Headers = Headers.Empty,
-  ) : GetInstanceActivityResponse()
+  ) : GetInstanceActivityResponse(),
+      OperationResponseUnknownFailure
 
   @Serializable
-  public sealed class GetInstanceDomainBlocksResponse {
-    public abstract val headers: Headers
+  public sealed class GetInstanceDomainBlocksResponse : OperationResponse<List<DomainBlock>> {
+    abstract override val headers: Headers
   }
 
   @Serializable
   public data class GetInstanceDomainBlocksResponseSuccess(
-    public val body: List<DomainBlock>,
+    override val body: List<DomainBlock>,
     @Transient
     override val headers: Headers = Headers.Empty,
-  ) : GetInstanceDomainBlocksResponse() {
+  ) : GetInstanceDomainBlocksResponse(),
+      OperationResponseSuccess<List<DomainBlock>> {
     /**
      * Number of requests permitted per time period
      */
@@ -224,42 +242,50 @@ public interface InstanceClient {
 
   @Serializable
   public data class GetInstanceDomainBlocksResponseFailure401(
-    public val body: Error,
+    override val body: Error,
     @Transient
     override val headers: Headers = Headers.Empty,
-  ) : GetInstanceDomainBlocksResponse()
+  ) : GetInstanceDomainBlocksResponse(),
+      OperationResponseFailure<Error>
 
   @Serializable
   public data class GetInstanceDomainBlocksResponseFailure410(
     @Transient
     override val headers: Headers = Headers.Empty,
-  ) : GetInstanceDomainBlocksResponse()
+  ) : GetInstanceDomainBlocksResponse(),
+      OperationResponseFailure<Unit> {
+    override val body: Unit
+      get() = Unit
+  }
 
   @Serializable
   public data class GetInstanceDomainBlocksResponseFailure(
-    public val body: ValidationError,
+    override val body: ValidationError,
     @Transient
     override val headers: Headers = Headers.Empty,
-  ) : GetInstanceDomainBlocksResponse()
+  ) : GetInstanceDomainBlocksResponse(),
+      OperationResponseFailure<ValidationError>
 
   @Serializable
   public data class GetInstanceDomainBlocksResponseUnknownFailure(
-    public val statusCode: Int,
+    override val statusCode: Int,
     @Transient
     override val headers: Headers = Headers.Empty,
-  ) : GetInstanceDomainBlocksResponse()
+  ) : GetInstanceDomainBlocksResponse(),
+      OperationResponseUnknownFailure
 
   @Serializable
-  public sealed class GetInstanceExtendedDescriptionResponse {
-    public abstract val headers: Headers
+  public sealed class GetInstanceExtendedDescriptionResponse : OperationResponse<ExtendedDescription> {
+    abstract override val headers: Headers
   }
 
   @Serializable
   public data class GetInstanceExtendedDescriptionResponseSuccess(
-    public val body: ExtendedDescription,
+    override val body: ExtendedDescription,
     @Transient
     override val headers: Headers = Headers.Empty,
-  ) : GetInstanceExtendedDescriptionResponse() {
+  ) : GetInstanceExtendedDescriptionResponse(),
+      OperationResponseSuccess<ExtendedDescription> {
     /**
      * Number of requests permitted per time period
      */
@@ -281,42 +307,50 @@ public interface InstanceClient {
 
   @Serializable
   public data class GetInstanceExtendedDescriptionResponseFailure401(
-    public val body: Error,
+    override val body: Error,
     @Transient
     override val headers: Headers = Headers.Empty,
-  ) : GetInstanceExtendedDescriptionResponse()
+  ) : GetInstanceExtendedDescriptionResponse(),
+      OperationResponseFailure<Error>
 
   @Serializable
   public data class GetInstanceExtendedDescriptionResponseFailure410(
     @Transient
     override val headers: Headers = Headers.Empty,
-  ) : GetInstanceExtendedDescriptionResponse()
+  ) : GetInstanceExtendedDescriptionResponse(),
+      OperationResponseFailure<Unit> {
+    override val body: Unit
+      get() = Unit
+  }
 
   @Serializable
   public data class GetInstanceExtendedDescriptionResponseFailure(
-    public val body: ValidationError,
+    override val body: ValidationError,
     @Transient
     override val headers: Headers = Headers.Empty,
-  ) : GetInstanceExtendedDescriptionResponse()
+  ) : GetInstanceExtendedDescriptionResponse(),
+      OperationResponseFailure<ValidationError>
 
   @Serializable
   public data class GetInstanceExtendedDescriptionResponseUnknownFailure(
-    public val statusCode: Int,
+    override val statusCode: Int,
     @Transient
     override val headers: Headers = Headers.Empty,
-  ) : GetInstanceExtendedDescriptionResponse()
+  ) : GetInstanceExtendedDescriptionResponse(),
+      OperationResponseUnknownFailure
 
   @Serializable
-  public sealed class GetInstancePeersResponse {
-    public abstract val headers: Headers
+  public sealed class GetInstancePeersResponse : OperationResponse<List<String>> {
+    abstract override val headers: Headers
   }
 
   @Serializable
   public data class GetInstancePeersResponseSuccess(
-    public val body: List<String>,
+    override val body: List<String>,
     @Transient
     override val headers: Headers = Headers.Empty,
-  ) : GetInstancePeersResponse() {
+  ) : GetInstancePeersResponse(),
+      OperationResponseSuccess<List<String>> {
     /**
      * Number of requests permitted per time period
      */
@@ -338,42 +372,50 @@ public interface InstanceClient {
 
   @Serializable
   public data class GetInstancePeersResponseFailure401(
-    public val body: Error,
+    override val body: Error,
     @Transient
     override val headers: Headers = Headers.Empty,
-  ) : GetInstancePeersResponse()
+  ) : GetInstancePeersResponse(),
+      OperationResponseFailure<Error>
 
   @Serializable
   public data class GetInstancePeersResponseFailure410(
     @Transient
     override val headers: Headers = Headers.Empty,
-  ) : GetInstancePeersResponse()
+  ) : GetInstancePeersResponse(),
+      OperationResponseFailure<Unit> {
+    override val body: Unit
+      get() = Unit
+  }
 
   @Serializable
   public data class GetInstancePeersResponseFailure(
-    public val body: ValidationError,
+    override val body: ValidationError,
     @Transient
     override val headers: Headers = Headers.Empty,
-  ) : GetInstancePeersResponse()
+  ) : GetInstancePeersResponse(),
+      OperationResponseFailure<ValidationError>
 
   @Serializable
   public data class GetInstancePeersResponseUnknownFailure(
-    public val statusCode: Int,
+    override val statusCode: Int,
     @Transient
     override val headers: Headers = Headers.Empty,
-  ) : GetInstancePeersResponse()
+  ) : GetInstancePeersResponse(),
+      OperationResponseUnknownFailure
 
   @Serializable
-  public sealed class GetInstancePrivacyPolicyResponse {
-    public abstract val headers: Headers
+  public sealed class GetInstancePrivacyPolicyResponse : OperationResponse<PrivacyPolicy> {
+    abstract override val headers: Headers
   }
 
   @Serializable
   public data class GetInstancePrivacyPolicyResponseSuccess(
-    public val body: PrivacyPolicy,
+    override val body: PrivacyPolicy,
     @Transient
     override val headers: Headers = Headers.Empty,
-  ) : GetInstancePrivacyPolicyResponse() {
+  ) : GetInstancePrivacyPolicyResponse(),
+      OperationResponseSuccess<PrivacyPolicy> {
     /**
      * Number of requests permitted per time period
      */
@@ -395,42 +437,50 @@ public interface InstanceClient {
 
   @Serializable
   public data class GetInstancePrivacyPolicyResponseFailure401(
-    public val body: Error,
+    override val body: Error,
     @Transient
     override val headers: Headers = Headers.Empty,
-  ) : GetInstancePrivacyPolicyResponse()
+  ) : GetInstancePrivacyPolicyResponse(),
+      OperationResponseFailure<Error>
 
   @Serializable
   public data class GetInstancePrivacyPolicyResponseFailure410(
     @Transient
     override val headers: Headers = Headers.Empty,
-  ) : GetInstancePrivacyPolicyResponse()
+  ) : GetInstancePrivacyPolicyResponse(),
+      OperationResponseFailure<Unit> {
+    override val body: Unit
+      get() = Unit
+  }
 
   @Serializable
   public data class GetInstancePrivacyPolicyResponseFailure(
-    public val body: ValidationError,
+    override val body: ValidationError,
     @Transient
     override val headers: Headers = Headers.Empty,
-  ) : GetInstancePrivacyPolicyResponse()
+  ) : GetInstancePrivacyPolicyResponse(),
+      OperationResponseFailure<ValidationError>
 
   @Serializable
   public data class GetInstancePrivacyPolicyResponseUnknownFailure(
-    public val statusCode: Int,
+    override val statusCode: Int,
     @Transient
     override val headers: Headers = Headers.Empty,
-  ) : GetInstancePrivacyPolicyResponse()
+  ) : GetInstancePrivacyPolicyResponse(),
+      OperationResponseUnknownFailure
 
   @Serializable
-  public sealed class GetInstanceRulesResponse {
-    public abstract val headers: Headers
+  public sealed class GetInstanceRulesResponse : OperationResponse<List<Rule>> {
+    abstract override val headers: Headers
   }
 
   @Serializable
   public data class GetInstanceRulesResponseSuccess(
-    public val body: List<Rule>,
+    override val body: List<Rule>,
     @Transient
     override val headers: Headers = Headers.Empty,
-  ) : GetInstanceRulesResponse() {
+  ) : GetInstanceRulesResponse(),
+      OperationResponseSuccess<List<Rule>> {
     /**
      * Number of requests permitted per time period
      */
@@ -452,42 +502,50 @@ public interface InstanceClient {
 
   @Serializable
   public data class GetInstanceRulesResponseFailure401(
-    public val body: Error,
+    override val body: Error,
     @Transient
     override val headers: Headers = Headers.Empty,
-  ) : GetInstanceRulesResponse()
+  ) : GetInstanceRulesResponse(),
+      OperationResponseFailure<Error>
 
   @Serializable
   public data class GetInstanceRulesResponseFailure410(
     @Transient
     override val headers: Headers = Headers.Empty,
-  ) : GetInstanceRulesResponse()
+  ) : GetInstanceRulesResponse(),
+      OperationResponseFailure<Unit> {
+    override val body: Unit
+      get() = Unit
+  }
 
   @Serializable
   public data class GetInstanceRulesResponseFailure(
-    public val body: ValidationError,
+    override val body: ValidationError,
     @Transient
     override val headers: Headers = Headers.Empty,
-  ) : GetInstanceRulesResponse()
+  ) : GetInstanceRulesResponse(),
+      OperationResponseFailure<ValidationError>
 
   @Serializable
   public data class GetInstanceRulesResponseUnknownFailure(
-    public val statusCode: Int,
+    override val statusCode: Int,
     @Transient
     override val headers: Headers = Headers.Empty,
-  ) : GetInstanceRulesResponse()
+  ) : GetInstanceRulesResponse(),
+      OperationResponseUnknownFailure
 
   @Serializable
-  public sealed class GetInstanceTermsOfServiceResponse {
-    public abstract val headers: Headers
+  public sealed class GetInstanceTermsOfServiceResponse : OperationResponse<TermsOfService> {
+    abstract override val headers: Headers
   }
 
   @Serializable
   public data class GetInstanceTermsOfServiceResponseSuccess(
-    public val body: TermsOfService,
+    override val body: TermsOfService,
     @Transient
     override val headers: Headers = Headers.Empty,
-  ) : GetInstanceTermsOfServiceResponse() {
+  ) : GetInstanceTermsOfServiceResponse(),
+      OperationResponseSuccess<TermsOfService> {
     /**
      * Number of requests permitted per time period
      */
@@ -509,42 +567,50 @@ public interface InstanceClient {
 
   @Serializable
   public data class GetInstanceTermsOfServiceResponseFailure401(
-    public val body: Error,
+    override val body: Error,
     @Transient
     override val headers: Headers = Headers.Empty,
-  ) : GetInstanceTermsOfServiceResponse()
+  ) : GetInstanceTermsOfServiceResponse(),
+      OperationResponseFailure<Error>
 
   @Serializable
   public data class GetInstanceTermsOfServiceResponseFailure410(
     @Transient
     override val headers: Headers = Headers.Empty,
-  ) : GetInstanceTermsOfServiceResponse()
+  ) : GetInstanceTermsOfServiceResponse(),
+      OperationResponseFailure<Unit> {
+    override val body: Unit
+      get() = Unit
+  }
 
   @Serializable
   public data class GetInstanceTermsOfServiceResponseFailure(
-    public val body: ValidationError,
+    override val body: ValidationError,
     @Transient
     override val headers: Headers = Headers.Empty,
-  ) : GetInstanceTermsOfServiceResponse()
+  ) : GetInstanceTermsOfServiceResponse(),
+      OperationResponseFailure<ValidationError>
 
   @Serializable
   public data class GetInstanceTermsOfServiceResponseUnknownFailure(
-    public val statusCode: Int,
+    override val statusCode: Int,
     @Transient
     override val headers: Headers = Headers.Empty,
-  ) : GetInstanceTermsOfServiceResponse()
+  ) : GetInstanceTermsOfServiceResponse(),
+      OperationResponseUnknownFailure
 
   @Serializable
-  public sealed class GetInstanceTermsOfServiceByDateResponse {
-    public abstract val headers: Headers
+  public sealed class GetInstanceTermsOfServiceByDateResponse : OperationResponse<TermsOfService> {
+    abstract override val headers: Headers
   }
 
   @Serializable
   public data class GetInstanceTermsOfServiceByDateResponseSuccess(
-    public val body: TermsOfService,
+    override val body: TermsOfService,
     @Transient
     override val headers: Headers = Headers.Empty,
-  ) : GetInstanceTermsOfServiceByDateResponse() {
+  ) : GetInstanceTermsOfServiceByDateResponse(),
+      OperationResponseSuccess<TermsOfService> {
     /**
      * Number of requests permitted per time period
      */
@@ -566,41 +632,52 @@ public interface InstanceClient {
 
   @Serializable
   public data class GetInstanceTermsOfServiceByDateResponseFailure401(
-    public val body: Error,
+    override val body: Error,
     @Transient
     override val headers: Headers = Headers.Empty,
-  ) : GetInstanceTermsOfServiceByDateResponse()
+  ) : GetInstanceTermsOfServiceByDateResponse(),
+      OperationResponseFailure<Error>
 
   @Serializable
   public data class GetInstanceTermsOfServiceByDateResponseFailure410(
     @Transient
     override val headers: Headers = Headers.Empty,
-  ) : GetInstanceTermsOfServiceByDateResponse()
+  ) : GetInstanceTermsOfServiceByDateResponse(),
+      OperationResponseFailure<Unit> {
+    override val body: Unit
+      get() = Unit
+  }
 
   @Serializable
   public data class GetInstanceTermsOfServiceByDateResponseFailure(
-    public val body: ValidationError,
+    override val body: ValidationError,
     @Transient
     override val headers: Headers = Headers.Empty,
-  ) : GetInstanceTermsOfServiceByDateResponse()
+  ) : GetInstanceTermsOfServiceByDateResponse(),
+      OperationResponseFailure<ValidationError>
 
   @Serializable
   public data class GetInstanceTermsOfServiceByDateResponseUnknownFailure(
-    public val statusCode: Int,
+    override val statusCode: Int,
     @Transient
     override val headers: Headers = Headers.Empty,
-  ) : GetInstanceTermsOfServiceByDateResponse()
+  ) : GetInstanceTermsOfServiceByDateResponse(),
+      OperationResponseUnknownFailure
 
   @Serializable
-  public sealed class GetInstanceTranslationLanguagesResponse {
-    public abstract val headers: Headers
+  public sealed class GetInstanceTranslationLanguagesResponse : OperationResponse<Unit> {
+    abstract override val headers: Headers
   }
 
   @Serializable
   public data class GetInstanceTranslationLanguagesResponseSuccess(
     @Transient
     override val headers: Headers = Headers.Empty,
-  ) : GetInstanceTranslationLanguagesResponse() {
+  ) : GetInstanceTranslationLanguagesResponse(),
+      OperationResponseSuccess<Unit> {
+    override val body: Unit
+      get() = Unit
+
     /**
      * Number of requests permitted per time period
      */
@@ -622,42 +699,50 @@ public interface InstanceClient {
 
   @Serializable
   public data class GetInstanceTranslationLanguagesResponseFailure401(
-    public val body: Error,
+    override val body: Error,
     @Transient
     override val headers: Headers = Headers.Empty,
-  ) : GetInstanceTranslationLanguagesResponse()
+  ) : GetInstanceTranslationLanguagesResponse(),
+      OperationResponseFailure<Error>
 
   @Serializable
   public data class GetInstanceTranslationLanguagesResponseFailure410(
     @Transient
     override val headers: Headers = Headers.Empty,
-  ) : GetInstanceTranslationLanguagesResponse()
+  ) : GetInstanceTranslationLanguagesResponse(),
+      OperationResponseFailure<Unit> {
+    override val body: Unit
+      get() = Unit
+  }
 
   @Serializable
   public data class GetInstanceTranslationLanguagesResponseFailure(
-    public val body: ValidationError,
+    override val body: ValidationError,
     @Transient
     override val headers: Headers = Headers.Empty,
-  ) : GetInstanceTranslationLanguagesResponse()
+  ) : GetInstanceTranslationLanguagesResponse(),
+      OperationResponseFailure<ValidationError>
 
   @Serializable
   public data class GetInstanceTranslationLanguagesResponseUnknownFailure(
-    public val statusCode: Int,
+    override val statusCode: Int,
     @Transient
     override val headers: Headers = Headers.Empty,
-  ) : GetInstanceTranslationLanguagesResponse()
+  ) : GetInstanceTranslationLanguagesResponse(),
+      OperationResponseUnknownFailure
 
   @Serializable
-  public sealed class GetInstanceV2Response {
-    public abstract val headers: Headers
+  public sealed class GetInstanceV2Response : OperationResponse<Instance> {
+    abstract override val headers: Headers
   }
 
   @Serializable
   public data class GetInstanceV2ResponseSuccess(
-    public val body: Instance,
+    override val body: Instance,
     @Transient
     override val headers: Headers = Headers.Empty,
-  ) : GetInstanceV2Response() {
+  ) : GetInstanceV2Response(),
+      OperationResponseSuccess<Instance> {
     /**
      * Number of requests permitted per time period
      */
@@ -679,30 +764,37 @@ public interface InstanceClient {
 
   @Serializable
   public data class GetInstanceV2ResponseFailure401(
-    public val body: Error,
+    override val body: Error,
     @Transient
     override val headers: Headers = Headers.Empty,
-  ) : GetInstanceV2Response()
+  ) : GetInstanceV2Response(),
+      OperationResponseFailure<Error>
 
   @Serializable
   public data class GetInstanceV2ResponseFailure410(
     @Transient
     override val headers: Headers = Headers.Empty,
-  ) : GetInstanceV2Response()
+  ) : GetInstanceV2Response(),
+      OperationResponseFailure<Unit> {
+    override val body: Unit
+      get() = Unit
+  }
 
   @Serializable
   public data class GetInstanceV2ResponseFailure(
-    public val body: ValidationError,
+    override val body: ValidationError,
     @Transient
     override val headers: Headers = Headers.Empty,
-  ) : GetInstanceV2Response()
+  ) : GetInstanceV2Response(),
+      OperationResponseFailure<ValidationError>
 
   @Serializable
   public data class GetInstanceV2ResponseUnknownFailure(
-    public val statusCode: Int,
+    override val statusCode: Int,
     @Transient
     override val headers: Headers = Headers.Empty,
-  ) : GetInstanceV2Response()
+  ) : GetInstanceV2Response(),
+      OperationResponseUnknownFailure
 }
 
 public fun InstanceClient(configuration: ClientConfiguration = defaultClientConfiguration): InstanceClient = DefaultInstanceClient(configuration)

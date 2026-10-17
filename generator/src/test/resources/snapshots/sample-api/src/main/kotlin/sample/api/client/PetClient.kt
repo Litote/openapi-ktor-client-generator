@@ -9,7 +9,9 @@ import io.ktor.http.Headers
 import io.ktor.http.contentType
 import kotlin.Int
 import kotlin.Long
+import kotlin.Nothing
 import kotlin.String
+import kotlin.Unit
 import kotlin.collections.List
 import kotlin.coroutines.cancellation.CancellationException
 import kotlinx.serialization.SerialName
@@ -66,72 +68,89 @@ public interface PetClient {
   }
 
   @Serializable
-  public sealed class GetPetFindByStatusMultipleExamplesResponse {
-    public abstract val headers: Headers
+  public sealed class GetPetFindByStatusMultipleExamplesResponse : OperationResponse<List<Pet>> {
+    abstract override val headers: Headers
   }
 
   @Serializable
   public data class GetPetFindByStatusMultipleExamplesResponseSuccess(
-    public val body: List<Pet>,
+    override val body: List<Pet>,
     @Transient
     override val headers: Headers = Headers.Empty,
-  ) : GetPetFindByStatusMultipleExamplesResponse()
+  ) : GetPetFindByStatusMultipleExamplesResponse(),
+      OperationResponseSuccess<List<Pet>>
 
   @Serializable
   public data class GetPetFindByStatusMultipleExamplesResponseFailure(
     @Transient
     override val headers: Headers = Headers.Empty,
-  ) : GetPetFindByStatusMultipleExamplesResponse()
+  ) : GetPetFindByStatusMultipleExamplesResponse(),
+      OperationResponseFailure<Unit> {
+    override val body: Unit
+      get() = Unit
+  }
 
   @Serializable
   public data class GetPetFindByStatusMultipleExamplesResponseUnknownFailure(
-    public val statusCode: Int,
+    override val statusCode: Int,
     @Transient
     override val headers: Headers = Headers.Empty,
-  ) : GetPetFindByStatusMultipleExamplesResponse()
+  ) : GetPetFindByStatusMultipleExamplesResponse(),
+      OperationResponseUnknownFailure
 
   @Serializable
-  public sealed class GetPetFindByStatusSingleExampleResponse {
-    public abstract val headers: Headers
+  public sealed class GetPetFindByStatusSingleExampleResponse : OperationResponse<List<Pet>> {
+    abstract override val headers: Headers
   }
 
   @Serializable
   public data class GetPetFindByStatusSingleExampleResponseSuccess(
-    public val body: List<Pet>,
+    override val body: List<Pet>,
     @Transient
     override val headers: Headers = Headers.Empty,
-  ) : GetPetFindByStatusSingleExampleResponse()
+  ) : GetPetFindByStatusSingleExampleResponse(),
+      OperationResponseSuccess<List<Pet>>
 
   @Serializable
   public data class GetPetFindByStatusSingleExampleResponseFailure(
     @Transient
     override val headers: Headers = Headers.Empty,
-  ) : GetPetFindByStatusSingleExampleResponse()
+  ) : GetPetFindByStatusSingleExampleResponse(),
+      OperationResponseFailure<Unit> {
+    override val body: Unit
+      get() = Unit
+  }
 
   @Serializable
   public data class GetPetFindByStatusSingleExampleResponseUnknownFailure(
-    public val statusCode: Int,
+    override val statusCode: Int,
     @Transient
     override val headers: Headers = Headers.Empty,
-  ) : GetPetFindByStatusSingleExampleResponse()
+  ) : GetPetFindByStatusSingleExampleResponse(),
+      OperationResponseUnknownFailure
 
   @Serializable
-  public sealed class AddPetResponse {
-    public abstract val headers: Headers
+  public sealed class AddPetResponse : OperationResponse<Nothing> {
+    abstract override val headers: Headers
   }
 
   @Serializable
   public data class AddPetResponseFailure(
     @Transient
     override val headers: Headers = Headers.Empty,
-  ) : AddPetResponse()
+  ) : AddPetResponse(),
+      OperationResponseFailure<Unit> {
+    override val body: Unit
+      get() = Unit
+  }
 
   @Serializable
   public data class AddPetResponseUnknownFailure(
-    public val statusCode: Int,
+    override val statusCode: Int,
     @Transient
     override val headers: Headers = Headers.Empty,
-  ) : AddPetResponse()
+  ) : AddPetResponse(),
+      OperationResponseUnknownFailure
 }
 
 public fun PetClient(configuration: ClientConfiguration = defaultClientConfiguration): PetClient = DefaultPetClient(configuration)

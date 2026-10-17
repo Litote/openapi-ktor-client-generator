@@ -9,6 +9,7 @@ import io.ktor.http.Headers
 import io.ktor.http.contentType
 import kotlin.Int
 import kotlin.String
+import kotlin.Unit
 import kotlin.collections.List
 import kotlin.coroutines.cancellation.CancellationException
 import kotlinx.serialization.SerialName
@@ -42,16 +43,17 @@ public interface AppsClient {
   )
 
   @Serializable
-  public sealed class CreateAppResponse {
-    public abstract val headers: Headers
+  public sealed class CreateAppResponse : OperationResponse<CredentialApplication> {
+    abstract override val headers: Headers
   }
 
   @Serializable
   public data class CreateAppResponseSuccess(
-    public val body: CredentialApplication,
+    override val body: CredentialApplication,
     @Transient
     override val headers: Headers = Headers.Empty,
-  ) : CreateAppResponse() {
+  ) : CreateAppResponse(),
+      OperationResponseSuccess<CredentialApplication> {
     /**
      * Number of requests permitted per time period
      */
@@ -73,35 +75,42 @@ public interface AppsClient {
 
   @Serializable
   public data class CreateAppResponseFailure401(
-    public val body: Error,
+    override val body: Error,
     @Transient
     override val headers: Headers = Headers.Empty,
-  ) : CreateAppResponse()
+  ) : CreateAppResponse(),
+      OperationResponseFailure<Error>
 
   @Serializable
   public data class CreateAppResponseFailure(
     @Transient
     override val headers: Headers = Headers.Empty,
-  ) : CreateAppResponse()
+  ) : CreateAppResponse(),
+      OperationResponseFailure<Unit> {
+    override val body: Unit
+      get() = Unit
+  }
 
   @Serializable
   public data class CreateAppResponseUnknownFailure(
-    public val statusCode: Int,
+    override val statusCode: Int,
     @Transient
     override val headers: Headers = Headers.Empty,
-  ) : CreateAppResponse()
+  ) : CreateAppResponse(),
+      OperationResponseUnknownFailure
 
   @Serializable
-  public sealed class GetAppsVerifyCredentialsResponse {
-    public abstract val headers: Headers
+  public sealed class GetAppsVerifyCredentialsResponse : OperationResponse<Application> {
+    abstract override val headers: Headers
   }
 
   @Serializable
   public data class GetAppsVerifyCredentialsResponseSuccess(
-    public val body: Application,
+    override val body: Application,
     @Transient
     override val headers: Headers = Headers.Empty,
-  ) : GetAppsVerifyCredentialsResponse() {
+  ) : GetAppsVerifyCredentialsResponse(),
+      OperationResponseSuccess<Application> {
     /**
      * Number of requests permitted per time period
      */
@@ -123,30 +132,37 @@ public interface AppsClient {
 
   @Serializable
   public data class GetAppsVerifyCredentialsResponseFailure401(
-    public val body: Error,
+    override val body: Error,
     @Transient
     override val headers: Headers = Headers.Empty,
-  ) : GetAppsVerifyCredentialsResponse()
+  ) : GetAppsVerifyCredentialsResponse(),
+      OperationResponseFailure<Error>
 
   @Serializable
   public data class GetAppsVerifyCredentialsResponseFailure410(
     @Transient
     override val headers: Headers = Headers.Empty,
-  ) : GetAppsVerifyCredentialsResponse()
+  ) : GetAppsVerifyCredentialsResponse(),
+      OperationResponseFailure<Unit> {
+    override val body: Unit
+      get() = Unit
+  }
 
   @Serializable
   public data class GetAppsVerifyCredentialsResponseFailure(
-    public val body: ValidationError,
+    override val body: ValidationError,
     @Transient
     override val headers: Headers = Headers.Empty,
-  ) : GetAppsVerifyCredentialsResponse()
+  ) : GetAppsVerifyCredentialsResponse(),
+      OperationResponseFailure<ValidationError>
 
   @Serializable
   public data class GetAppsVerifyCredentialsResponseUnknownFailure(
-    public val statusCode: Int,
+    override val statusCode: Int,
     @Transient
     override val headers: Headers = Headers.Empty,
-  ) : GetAppsVerifyCredentialsResponse()
+  ) : GetAppsVerifyCredentialsResponse(),
+      OperationResponseUnknownFailure
 }
 
 public fun AppsClient(configuration: ClientConfiguration = defaultClientConfiguration): AppsClient = DefaultAppsClient(configuration)

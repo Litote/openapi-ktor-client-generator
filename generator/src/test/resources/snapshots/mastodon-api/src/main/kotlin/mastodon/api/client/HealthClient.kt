@@ -5,6 +5,7 @@ import io.ktor.client.request.`get`
 import io.ktor.http.Headers
 import kotlin.Int
 import kotlin.String
+import kotlin.Unit
 import kotlin.coroutines.cancellation.CancellationException
 import kotlinx.serialization.Serializable
 import kotlinx.serialization.Transient
@@ -19,15 +20,19 @@ public interface HealthClient {
   public suspend fun getHealth(): GetHealthResponse
 
   @Serializable
-  public sealed class GetHealthResponse {
-    public abstract val headers: Headers
+  public sealed class GetHealthResponse : OperationResponse<Unit> {
+    abstract override val headers: Headers
   }
 
   @Serializable
   public data class GetHealthResponseSuccess(
     @Transient
     override val headers: Headers = Headers.Empty,
-  ) : GetHealthResponse() {
+  ) : GetHealthResponse(),
+      OperationResponseSuccess<Unit> {
+    override val body: Unit
+      get() = Unit
+
     /**
      * Number of requests permitted per time period
      */
@@ -49,30 +54,37 @@ public interface HealthClient {
 
   @Serializable
   public data class GetHealthResponseFailure401(
-    public val body: Error,
+    override val body: Error,
     @Transient
     override val headers: Headers = Headers.Empty,
-  ) : GetHealthResponse()
+  ) : GetHealthResponse(),
+      OperationResponseFailure<Error>
 
   @Serializable
   public data class GetHealthResponseFailure410(
     @Transient
     override val headers: Headers = Headers.Empty,
-  ) : GetHealthResponse()
+  ) : GetHealthResponse(),
+      OperationResponseFailure<Unit> {
+    override val body: Unit
+      get() = Unit
+  }
 
   @Serializable
   public data class GetHealthResponseFailure(
-    public val body: ValidationError,
+    override val body: ValidationError,
     @Transient
     override val headers: Headers = Headers.Empty,
-  ) : GetHealthResponse()
+  ) : GetHealthResponse(),
+      OperationResponseFailure<ValidationError>
 
   @Serializable
   public data class GetHealthResponseUnknownFailure(
-    public val statusCode: Int,
+    override val statusCode: Int,
     @Transient
     override val headers: Headers = Headers.Empty,
-  ) : GetHealthResponse()
+  ) : GetHealthResponse(),
+      OperationResponseUnknownFailure
 }
 
 public fun HealthClient(configuration: ClientConfiguration = defaultClientConfiguration): HealthClient = DefaultHealthClient(configuration)

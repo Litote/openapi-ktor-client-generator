@@ -473,6 +473,11 @@ public class ApiClientConfigurationGenerator public constructor(
         val companion = buildCompanion()
         val clientConfiguration = buildClientConfiguration(constructor, companion)
         writeFile(clientConfiguration)
+        OperationResponseGenerator(
+            clientPackage = configuration.clientPackage,
+            outputDirectory = configuration.outputDirectory,
+            fileSystemWriter = fileSystemWriter,
+        ).render()
         StringFormatSerializersGenerator(
             clientPackage = configuration.clientPackage,
             outputDirectory = configuration.outputDirectory,

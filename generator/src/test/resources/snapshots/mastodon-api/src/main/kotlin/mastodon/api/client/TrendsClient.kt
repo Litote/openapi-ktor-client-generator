@@ -6,6 +6,7 @@ import io.ktor.http.Headers
 import kotlin.Int
 import kotlin.Long
 import kotlin.String
+import kotlin.Unit
 import kotlin.collections.List
 import kotlin.coroutines.cancellation.CancellationException
 import kotlinx.serialization.Serializable
@@ -34,16 +35,17 @@ public interface TrendsClient {
   public suspend fun getTrendTags(limit: Long? = 10, offset: Long? = null): GetTrendTagsResponse
 
   @Serializable
-  public sealed class GetTrendLinksResponse {
-    public abstract val headers: Headers
+  public sealed class GetTrendLinksResponse : OperationResponse<List<TrendsLink>> {
+    abstract override val headers: Headers
   }
 
   @Serializable
   public data class GetTrendLinksResponseSuccess(
-    public val body: List<TrendsLink>,
+    override val body: List<TrendsLink>,
     @Transient
     override val headers: Headers = Headers.Empty,
-  ) : GetTrendLinksResponse() {
+  ) : GetTrendLinksResponse(),
+      OperationResponseSuccess<List<TrendsLink>> {
     /**
      * Number of requests permitted per time period
      */
@@ -65,42 +67,50 @@ public interface TrendsClient {
 
   @Serializable
   public data class GetTrendLinksResponseFailure401(
-    public val body: Error,
+    override val body: Error,
     @Transient
     override val headers: Headers = Headers.Empty,
-  ) : GetTrendLinksResponse()
+  ) : GetTrendLinksResponse(),
+      OperationResponseFailure<Error>
 
   @Serializable
   public data class GetTrendLinksResponseFailure410(
     @Transient
     override val headers: Headers = Headers.Empty,
-  ) : GetTrendLinksResponse()
+  ) : GetTrendLinksResponse(),
+      OperationResponseFailure<Unit> {
+    override val body: Unit
+      get() = Unit
+  }
 
   @Serializable
   public data class GetTrendLinksResponseFailure(
-    public val body: ValidationError,
+    override val body: ValidationError,
     @Transient
     override val headers: Headers = Headers.Empty,
-  ) : GetTrendLinksResponse()
+  ) : GetTrendLinksResponse(),
+      OperationResponseFailure<ValidationError>
 
   @Serializable
   public data class GetTrendLinksResponseUnknownFailure(
-    public val statusCode: Int,
+    override val statusCode: Int,
     @Transient
     override val headers: Headers = Headers.Empty,
-  ) : GetTrendLinksResponse()
+  ) : GetTrendLinksResponse(),
+      OperationResponseUnknownFailure
 
   @Serializable
-  public sealed class GetTrendStatusesResponse {
-    public abstract val headers: Headers
+  public sealed class GetTrendStatusesResponse : OperationResponse<List<Status>> {
+    abstract override val headers: Headers
   }
 
   @Serializable
   public data class GetTrendStatusesResponseSuccess(
-    public val body: List<Status>,
+    override val body: List<Status>,
     @Transient
     override val headers: Headers = Headers.Empty,
-  ) : GetTrendStatusesResponse() {
+  ) : GetTrendStatusesResponse(),
+      OperationResponseSuccess<List<Status>> {
     /**
      * Number of requests permitted per time period
      */
@@ -122,42 +132,50 @@ public interface TrendsClient {
 
   @Serializable
   public data class GetTrendStatusesResponseFailure401(
-    public val body: Error,
+    override val body: Error,
     @Transient
     override val headers: Headers = Headers.Empty,
-  ) : GetTrendStatusesResponse()
+  ) : GetTrendStatusesResponse(),
+      OperationResponseFailure<Error>
 
   @Serializable
   public data class GetTrendStatusesResponseFailure410(
     @Transient
     override val headers: Headers = Headers.Empty,
-  ) : GetTrendStatusesResponse()
+  ) : GetTrendStatusesResponse(),
+      OperationResponseFailure<Unit> {
+    override val body: Unit
+      get() = Unit
+  }
 
   @Serializable
   public data class GetTrendStatusesResponseFailure(
-    public val body: ValidationError,
+    override val body: ValidationError,
     @Transient
     override val headers: Headers = Headers.Empty,
-  ) : GetTrendStatusesResponse()
+  ) : GetTrendStatusesResponse(),
+      OperationResponseFailure<ValidationError>
 
   @Serializable
   public data class GetTrendStatusesResponseUnknownFailure(
-    public val statusCode: Int,
+    override val statusCode: Int,
     @Transient
     override val headers: Headers = Headers.Empty,
-  ) : GetTrendStatusesResponse()
+  ) : GetTrendStatusesResponse(),
+      OperationResponseUnknownFailure
 
   @Serializable
-  public sealed class GetTrendTagsResponse {
-    public abstract val headers: Headers
+  public sealed class GetTrendTagsResponse : OperationResponse<List<Tag>> {
+    abstract override val headers: Headers
   }
 
   @Serializable
   public data class GetTrendTagsResponseSuccess(
-    public val body: List<Tag>,
+    override val body: List<Tag>,
     @Transient
     override val headers: Headers = Headers.Empty,
-  ) : GetTrendTagsResponse() {
+  ) : GetTrendTagsResponse(),
+      OperationResponseSuccess<List<Tag>> {
     /**
      * Number of requests permitted per time period
      */
@@ -179,30 +197,37 @@ public interface TrendsClient {
 
   @Serializable
   public data class GetTrendTagsResponseFailure401(
-    public val body: Error,
+    override val body: Error,
     @Transient
     override val headers: Headers = Headers.Empty,
-  ) : GetTrendTagsResponse()
+  ) : GetTrendTagsResponse(),
+      OperationResponseFailure<Error>
 
   @Serializable
   public data class GetTrendTagsResponseFailure410(
     @Transient
     override val headers: Headers = Headers.Empty,
-  ) : GetTrendTagsResponse()
+  ) : GetTrendTagsResponse(),
+      OperationResponseFailure<Unit> {
+    override val body: Unit
+      get() = Unit
+  }
 
   @Serializable
   public data class GetTrendTagsResponseFailure(
-    public val body: ValidationError,
+    override val body: ValidationError,
     @Transient
     override val headers: Headers = Headers.Empty,
-  ) : GetTrendTagsResponse()
+  ) : GetTrendTagsResponse(),
+      OperationResponseFailure<ValidationError>
 
   @Serializable
   public data class GetTrendTagsResponseUnknownFailure(
-    public val statusCode: Int,
+    override val statusCode: Int,
     @Transient
     override val headers: Headers = Headers.Empty,
-  ) : GetTrendTagsResponse()
+  ) : GetTrendTagsResponse(),
+      OperationResponseUnknownFailure
 }
 
 public fun TrendsClient(configuration: ClientConfiguration = defaultClientConfiguration): TrendsClient = DefaultTrendsClient(configuration)

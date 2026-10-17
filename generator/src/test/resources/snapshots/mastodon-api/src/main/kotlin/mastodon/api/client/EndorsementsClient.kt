@@ -6,6 +6,7 @@ import io.ktor.http.Headers
 import kotlin.Int
 import kotlin.Long
 import kotlin.String
+import kotlin.Unit
 import kotlin.collections.List
 import kotlin.coroutines.cancellation.CancellationException
 import kotlinx.serialization.Serializable
@@ -26,16 +27,17 @@ public interface EndorsementsClient {
   ): GetEndorsementsResponse
 
   @Serializable
-  public sealed class GetEndorsementsResponse {
-    public abstract val headers: Headers
+  public sealed class GetEndorsementsResponse : OperationResponse<List<Account>> {
+    abstract override val headers: Headers
   }
 
   @Serializable
   public data class GetEndorsementsResponseSuccess(
-    public val body: List<Account>,
+    override val body: List<Account>,
     @Transient
     override val headers: Headers = Headers.Empty,
-  ) : GetEndorsementsResponse() {
+  ) : GetEndorsementsResponse(),
+      OperationResponseSuccess<List<Account>> {
     /**
      * Pagination links for browsing older or newer results. Format: Link: <https://mastodon.example/api/v1/endpoint?max_id=7163058>; rel="next", <https://mastodon.example/api/v1/endpoint?min_id=7275607>; rel="prev". See [RFC 8288](https://www.rfc-editor.org/rfc/rfc8288) for more information.
      */
@@ -63,30 +65,37 @@ public interface EndorsementsClient {
 
   @Serializable
   public data class GetEndorsementsResponseFailure401(
-    public val body: Error,
+    override val body: Error,
     @Transient
     override val headers: Headers = Headers.Empty,
-  ) : GetEndorsementsResponse()
+  ) : GetEndorsementsResponse(),
+      OperationResponseFailure<Error>
 
   @Serializable
   public data class GetEndorsementsResponseFailure410(
     @Transient
     override val headers: Headers = Headers.Empty,
-  ) : GetEndorsementsResponse()
+  ) : GetEndorsementsResponse(),
+      OperationResponseFailure<Unit> {
+    override val body: Unit
+      get() = Unit
+  }
 
   @Serializable
   public data class GetEndorsementsResponseFailure(
-    public val body: ValidationError,
+    override val body: ValidationError,
     @Transient
     override val headers: Headers = Headers.Empty,
-  ) : GetEndorsementsResponse()
+  ) : GetEndorsementsResponse(),
+      OperationResponseFailure<ValidationError>
 
   @Serializable
   public data class GetEndorsementsResponseUnknownFailure(
-    public val statusCode: Int,
+    override val statusCode: Int,
     @Transient
     override val headers: Headers = Headers.Empty,
-  ) : GetEndorsementsResponse()
+  ) : GetEndorsementsResponse(),
+      OperationResponseUnknownFailure
 }
 
 public fun EndorsementsClient(configuration: ClientConfiguration = defaultClientConfiguration): EndorsementsClient = DefaultEndorsementsClient(configuration)

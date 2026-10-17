@@ -12,6 +12,7 @@ import io.ktor.http.contentType
 import kotlin.Boolean
 import kotlin.Int
 import kotlin.String
+import kotlin.Unit
 import kotlin.coroutines.cancellation.CancellationException
 import kotlinx.serialization.SerialName
 import kotlinx.serialization.Serializable
@@ -43,16 +44,17 @@ public interface PushClient {
   public suspend fun deletePushSubscription(): DeletePushSubscriptionResponse
 
   @Serializable
-  public sealed class GetPushSubscriptionResponse {
-    public abstract val headers: Headers
+  public sealed class GetPushSubscriptionResponse : OperationResponse<WebPushSubscription> {
+    abstract override val headers: Headers
   }
 
   @Serializable
   public data class GetPushSubscriptionResponseSuccess(
-    public val body: WebPushSubscription,
+    override val body: WebPushSubscription,
     @Transient
     override val headers: Headers = Headers.Empty,
-  ) : GetPushSubscriptionResponse() {
+  ) : GetPushSubscriptionResponse(),
+      OperationResponseSuccess<WebPushSubscription> {
     /**
      * Number of requests permitted per time period
      */
@@ -74,30 +76,37 @@ public interface PushClient {
 
   @Serializable
   public data class GetPushSubscriptionResponseFailure401(
-    public val body: Error,
+    override val body: Error,
     @Transient
     override val headers: Headers = Headers.Empty,
-  ) : GetPushSubscriptionResponse()
+  ) : GetPushSubscriptionResponse(),
+      OperationResponseFailure<Error>
 
   @Serializable
   public data class GetPushSubscriptionResponseFailure410(
     @Transient
     override val headers: Headers = Headers.Empty,
-  ) : GetPushSubscriptionResponse()
+  ) : GetPushSubscriptionResponse(),
+      OperationResponseFailure<Unit> {
+    override val body: Unit
+      get() = Unit
+  }
 
   @Serializable
   public data class GetPushSubscriptionResponseFailure(
-    public val body: ValidationError,
+    override val body: ValidationError,
     @Transient
     override val headers: Headers = Headers.Empty,
-  ) : GetPushSubscriptionResponse()
+  ) : GetPushSubscriptionResponse(),
+      OperationResponseFailure<ValidationError>
 
   @Serializable
   public data class GetPushSubscriptionResponseUnknownFailure(
-    public val statusCode: Int,
+    override val statusCode: Int,
     @Transient
     override val headers: Headers = Headers.Empty,
-  ) : GetPushSubscriptionResponse()
+  ) : GetPushSubscriptionResponse(),
+      OperationResponseUnknownFailure
 
   @Serializable
   public data class PutPushSubscriptionRequest(
@@ -128,16 +137,17 @@ public interface PushClient {
   }
 
   @Serializable
-  public sealed class PutPushSubscriptionResponse {
-    public abstract val headers: Headers
+  public sealed class PutPushSubscriptionResponse : OperationResponse<WebPushSubscription> {
+    abstract override val headers: Headers
   }
 
   @Serializable
   public data class PutPushSubscriptionResponseSuccess(
-    public val body: WebPushSubscription,
+    override val body: WebPushSubscription,
     @Transient
     override val headers: Headers = Headers.Empty,
-  ) : PutPushSubscriptionResponse() {
+  ) : PutPushSubscriptionResponse(),
+      OperationResponseSuccess<WebPushSubscription> {
     /**
      * Number of requests permitted per time period
      */
@@ -159,30 +169,37 @@ public interface PushClient {
 
   @Serializable
   public data class PutPushSubscriptionResponseFailure401(
-    public val body: Error,
+    override val body: Error,
     @Transient
     override val headers: Headers = Headers.Empty,
-  ) : PutPushSubscriptionResponse()
+  ) : PutPushSubscriptionResponse(),
+      OperationResponseFailure<Error>
 
   @Serializable
   public data class PutPushSubscriptionResponseFailure410(
     @Transient
     override val headers: Headers = Headers.Empty,
-  ) : PutPushSubscriptionResponse()
+  ) : PutPushSubscriptionResponse(),
+      OperationResponseFailure<Unit> {
+    override val body: Unit
+      get() = Unit
+  }
 
   @Serializable
   public data class PutPushSubscriptionResponseFailure(
-    public val body: ValidationError,
+    override val body: ValidationError,
     @Transient
     override val headers: Headers = Headers.Empty,
-  ) : PutPushSubscriptionResponse()
+  ) : PutPushSubscriptionResponse(),
+      OperationResponseFailure<ValidationError>
 
   @Serializable
   public data class PutPushSubscriptionResponseUnknownFailure(
-    public val statusCode: Int,
+    override val statusCode: Int,
     @Transient
     override val headers: Headers = Headers.Empty,
-  ) : PutPushSubscriptionResponse()
+  ) : PutPushSubscriptionResponse(),
+      OperationResponseUnknownFailure
 
   @Serializable
   public data class CreatePushSubscriptionRequest(
@@ -230,16 +247,17 @@ public interface PushClient {
   }
 
   @Serializable
-  public sealed class CreatePushSubscriptionResponse {
-    public abstract val headers: Headers
+  public sealed class CreatePushSubscriptionResponse : OperationResponse<WebPushSubscription> {
+    abstract override val headers: Headers
   }
 
   @Serializable
   public data class CreatePushSubscriptionResponseSuccess(
-    public val body: WebPushSubscription,
+    override val body: WebPushSubscription,
     @Transient
     override val headers: Headers = Headers.Empty,
-  ) : CreatePushSubscriptionResponse() {
+  ) : CreatePushSubscriptionResponse(),
+      OperationResponseSuccess<WebPushSubscription> {
     /**
      * Number of requests permitted per time period
      */
@@ -261,41 +279,52 @@ public interface PushClient {
 
   @Serializable
   public data class CreatePushSubscriptionResponseFailure401(
-    public val body: Error,
+    override val body: Error,
     @Transient
     override val headers: Headers = Headers.Empty,
-  ) : CreatePushSubscriptionResponse()
+  ) : CreatePushSubscriptionResponse(),
+      OperationResponseFailure<Error>
 
   @Serializable
   public data class CreatePushSubscriptionResponseFailure410(
     @Transient
     override val headers: Headers = Headers.Empty,
-  ) : CreatePushSubscriptionResponse()
+  ) : CreatePushSubscriptionResponse(),
+      OperationResponseFailure<Unit> {
+    override val body: Unit
+      get() = Unit
+  }
 
   @Serializable
   public data class CreatePushSubscriptionResponseFailure(
-    public val body: ValidationError,
+    override val body: ValidationError,
     @Transient
     override val headers: Headers = Headers.Empty,
-  ) : CreatePushSubscriptionResponse()
+  ) : CreatePushSubscriptionResponse(),
+      OperationResponseFailure<ValidationError>
 
   @Serializable
   public data class CreatePushSubscriptionResponseUnknownFailure(
-    public val statusCode: Int,
+    override val statusCode: Int,
     @Transient
     override val headers: Headers = Headers.Empty,
-  ) : CreatePushSubscriptionResponse()
+  ) : CreatePushSubscriptionResponse(),
+      OperationResponseUnknownFailure
 
   @Serializable
-  public sealed class DeletePushSubscriptionResponse {
-    public abstract val headers: Headers
+  public sealed class DeletePushSubscriptionResponse : OperationResponse<Unit> {
+    abstract override val headers: Headers
   }
 
   @Serializable
   public data class DeletePushSubscriptionResponseSuccess(
     @Transient
     override val headers: Headers = Headers.Empty,
-  ) : DeletePushSubscriptionResponse() {
+  ) : DeletePushSubscriptionResponse(),
+      OperationResponseSuccess<Unit> {
+    override val body: Unit
+      get() = Unit
+
     /**
      * Number of requests permitted per time period
      */
@@ -317,30 +346,37 @@ public interface PushClient {
 
   @Serializable
   public data class DeletePushSubscriptionResponseFailure401(
-    public val body: Error,
+    override val body: Error,
     @Transient
     override val headers: Headers = Headers.Empty,
-  ) : DeletePushSubscriptionResponse()
+  ) : DeletePushSubscriptionResponse(),
+      OperationResponseFailure<Error>
 
   @Serializable
   public data class DeletePushSubscriptionResponseFailure410(
     @Transient
     override val headers: Headers = Headers.Empty,
-  ) : DeletePushSubscriptionResponse()
+  ) : DeletePushSubscriptionResponse(),
+      OperationResponseFailure<Unit> {
+    override val body: Unit
+      get() = Unit
+  }
 
   @Serializable
   public data class DeletePushSubscriptionResponseFailure(
-    public val body: ValidationError,
+    override val body: ValidationError,
     @Transient
     override val headers: Headers = Headers.Empty,
-  ) : DeletePushSubscriptionResponse()
+  ) : DeletePushSubscriptionResponse(),
+      OperationResponseFailure<ValidationError>
 
   @Serializable
   public data class DeletePushSubscriptionResponseUnknownFailure(
-    public val statusCode: Int,
+    override val statusCode: Int,
     @Transient
     override val headers: Headers = Headers.Empty,
-  ) : DeletePushSubscriptionResponse()
+  ) : DeletePushSubscriptionResponse(),
+      OperationResponseUnknownFailure
 }
 
 public fun PushClient(configuration: ClientConfiguration = defaultClientConfiguration): PushClient = DefaultPushClient(configuration)

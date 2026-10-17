@@ -5,6 +5,7 @@ import io.ktor.client.request.`get`
 import io.ktor.http.Headers
 import kotlin.Int
 import kotlin.String
+import kotlin.Unit
 import kotlin.coroutines.cancellation.CancellationException
 import kotlinx.serialization.Serializable
 import kotlinx.serialization.Transient
@@ -20,16 +21,17 @@ public interface WellKnownClient {
   public suspend fun getWellKnownOauthAuthorizationServer(): GetWellKnownOauthAuthorizationServerResponse
 
   @Serializable
-  public sealed class GetWellKnownOauthAuthorizationServerResponse {
-    public abstract val headers: Headers
+  public sealed class GetWellKnownOauthAuthorizationServerResponse : OperationResponse<DiscoverOauthServerConfigurationResponse> {
+    abstract override val headers: Headers
   }
 
   @Serializable
   public data class GetWellKnownOauthAuthorizationServerResponseSuccess(
-    public val body: DiscoverOauthServerConfigurationResponse,
+    override val body: DiscoverOauthServerConfigurationResponse,
     @Transient
     override val headers: Headers = Headers.Empty,
-  ) : GetWellKnownOauthAuthorizationServerResponse() {
+  ) : GetWellKnownOauthAuthorizationServerResponse(),
+      OperationResponseSuccess<DiscoverOauthServerConfigurationResponse> {
     /**
      * Number of requests permitted per time period
      */
@@ -51,30 +53,37 @@ public interface WellKnownClient {
 
   @Serializable
   public data class GetWellKnownOauthAuthorizationServerResponseFailure401(
-    public val body: Error,
+    override val body: Error,
     @Transient
     override val headers: Headers = Headers.Empty,
-  ) : GetWellKnownOauthAuthorizationServerResponse()
+  ) : GetWellKnownOauthAuthorizationServerResponse(),
+      OperationResponseFailure<Error>
 
   @Serializable
   public data class GetWellKnownOauthAuthorizationServerResponseFailure410(
     @Transient
     override val headers: Headers = Headers.Empty,
-  ) : GetWellKnownOauthAuthorizationServerResponse()
+  ) : GetWellKnownOauthAuthorizationServerResponse(),
+      OperationResponseFailure<Unit> {
+    override val body: Unit
+      get() = Unit
+  }
 
   @Serializable
   public data class GetWellKnownOauthAuthorizationServerResponseFailure(
-    public val body: ValidationError,
+    override val body: ValidationError,
     @Transient
     override val headers: Headers = Headers.Empty,
-  ) : GetWellKnownOauthAuthorizationServerResponse()
+  ) : GetWellKnownOauthAuthorizationServerResponse(),
+      OperationResponseFailure<ValidationError>
 
   @Serializable
   public data class GetWellKnownOauthAuthorizationServerResponseUnknownFailure(
-    public val statusCode: Int,
+    override val statusCode: Int,
     @Transient
     override val headers: Headers = Headers.Empty,
-  ) : GetWellKnownOauthAuthorizationServerResponse()
+  ) : GetWellKnownOauthAuthorizationServerResponse(),
+      OperationResponseUnknownFailure
 }
 
 public fun WellKnownClient(configuration: ClientConfiguration = defaultClientConfiguration): WellKnownClient = DefaultWellKnownClient(configuration)

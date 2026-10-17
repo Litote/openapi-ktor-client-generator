@@ -171,6 +171,38 @@ with `body`, `headers` or `statusCode` gets a `Header` suffix (e.g. `bodyHeader`
 When several status codes share one response class, the class exposes the union of their headers.
 `headers` is `@Transient`, so it is not part of the kotlinx.serialization form of the response classes.
 
+### Common response interfaces
+
+The response types of every operation implement the interfaces generated in `OperationResponse.kt`, next to
+`ClientConfiguration` (in the shared subproject in split-by-client mode):
+
+| Interface | Implemented by | Members |
+|---|---|---|
+| `OperationResponse<T>` | the sealed response class of each operation | `headers` |
+| `OperationResponseSuccess<T>` | the successful responses (2xx) | `body: T` |
+| `OperationResponseFailure<E>` | the failure responses declared by the spec | `body: E` |
+| `OperationResponseUnknownFailure` | `*ResponseUnknownFailure` | `statusCode` |
+
+`T` is the body type of the successful responses of the operation: `Unit` when they have no body, `Any?` when they
+have different body types, `Nothing` when the operation has no successful response. The `body` of a response without
+body is `Unit`.
+
+They let you handle the responses of all the operations with a single function:
+
+```kotlin
+fun <T> OperationResponse<T>.bodyOrThrow(): T =
+    when (this) {
+        is OperationResponseSuccess<T> -> body
+        is OperationResponseFailure<*> -> throw ApiException("API error: $body")
+        is OperationResponseUnknownFailure -> throw ApiException("HTTP status $statusCode")
+        else -> error("unexpected response: $this")
+    }
+
+val user: User = client.getUser(id = "42").bodyOrThrow()
+```
+
+The interfaces are not sealed (the operations may be generated in other modules), hence the `else` branch.
+
 ### Parameter serialization
 
 Query, header, path and cookie parameters follow the OpenAPI `style` and `explode` keywords. When they are not

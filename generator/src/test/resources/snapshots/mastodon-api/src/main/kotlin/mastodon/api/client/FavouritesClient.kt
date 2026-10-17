@@ -6,6 +6,7 @@ import io.ktor.http.Headers
 import kotlin.Int
 import kotlin.Long
 import kotlin.String
+import kotlin.Unit
 import kotlin.collections.List
 import kotlin.coroutines.cancellation.CancellationException
 import kotlinx.serialization.Serializable
@@ -27,16 +28,17 @@ public interface FavouritesClient {
   ): GetFavouritesResponse
 
   @Serializable
-  public sealed class GetFavouritesResponse {
-    public abstract val headers: Headers
+  public sealed class GetFavouritesResponse : OperationResponse<List<Status>> {
+    abstract override val headers: Headers
   }
 
   @Serializable
   public data class GetFavouritesResponseSuccess(
-    public val body: List<Status>,
+    override val body: List<Status>,
     @Transient
     override val headers: Headers = Headers.Empty,
-  ) : GetFavouritesResponse() {
+  ) : GetFavouritesResponse(),
+      OperationResponseSuccess<List<Status>> {
     /**
      * Pagination links for browsing older or newer results. Format: Link: <https://mastodon.example/api/v1/endpoint?max_id=7163058>; rel="next", <https://mastodon.example/api/v1/endpoint?min_id=7275607>; rel="prev". See [RFC 8288](https://www.rfc-editor.org/rfc/rfc8288) for more information.
      */
@@ -64,30 +66,37 @@ public interface FavouritesClient {
 
   @Serializable
   public data class GetFavouritesResponseFailure401(
-    public val body: Error,
+    override val body: Error,
     @Transient
     override val headers: Headers = Headers.Empty,
-  ) : GetFavouritesResponse()
+  ) : GetFavouritesResponse(),
+      OperationResponseFailure<Error>
 
   @Serializable
   public data class GetFavouritesResponseFailure410(
     @Transient
     override val headers: Headers = Headers.Empty,
-  ) : GetFavouritesResponse()
+  ) : GetFavouritesResponse(),
+      OperationResponseFailure<Unit> {
+    override val body: Unit
+      get() = Unit
+  }
 
   @Serializable
   public data class GetFavouritesResponseFailure(
-    public val body: ValidationError,
+    override val body: ValidationError,
     @Transient
     override val headers: Headers = Headers.Empty,
-  ) : GetFavouritesResponse()
+  ) : GetFavouritesResponse(),
+      OperationResponseFailure<ValidationError>
 
   @Serializable
   public data class GetFavouritesResponseUnknownFailure(
-    public val statusCode: Int,
+    override val statusCode: Int,
     @Transient
     override val headers: Headers = Headers.Empty,
-  ) : GetFavouritesResponse()
+  ) : GetFavouritesResponse(),
+      OperationResponseUnknownFailure
 }
 
 public fun FavouritesClient(configuration: ClientConfiguration = defaultClientConfiguration): FavouritesClient = DefaultFavouritesClient(configuration)

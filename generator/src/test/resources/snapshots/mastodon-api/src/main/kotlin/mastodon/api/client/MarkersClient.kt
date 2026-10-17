@@ -9,6 +9,7 @@ import io.ktor.http.Headers
 import io.ktor.http.contentType
 import kotlin.Int
 import kotlin.String
+import kotlin.Unit
 import kotlin.collections.List
 import kotlin.collections.Map
 import kotlin.coroutines.cancellation.CancellationException
@@ -33,16 +34,17 @@ public interface MarkersClient {
   public suspend fun createMarker(request: CreateMarkerRequest): CreateMarkerResponse
 
   @Serializable
-  public sealed class GetMarkersResponse {
-    public abstract val headers: Headers
+  public sealed class GetMarkersResponse : OperationResponse<Map<String, Marker>> {
+    abstract override val headers: Headers
   }
 
   @Serializable
   public data class GetMarkersResponseSuccess(
-    public val body: Map<String, Marker>,
+    override val body: Map<String, Marker>,
     @Transient
     override val headers: Headers = Headers.Empty,
-  ) : GetMarkersResponse() {
+  ) : GetMarkersResponse(),
+      OperationResponseSuccess<Map<String, Marker>> {
     /**
      * Number of requests permitted per time period
      */
@@ -64,30 +66,37 @@ public interface MarkersClient {
 
   @Serializable
   public data class GetMarkersResponseFailure401(
-    public val body: Error,
+    override val body: Error,
     @Transient
     override val headers: Headers = Headers.Empty,
-  ) : GetMarkersResponse()
+  ) : GetMarkersResponse(),
+      OperationResponseFailure<Error>
 
   @Serializable
   public data class GetMarkersResponseFailure410(
     @Transient
     override val headers: Headers = Headers.Empty,
-  ) : GetMarkersResponse()
+  ) : GetMarkersResponse(),
+      OperationResponseFailure<Unit> {
+    override val body: Unit
+      get() = Unit
+  }
 
   @Serializable
   public data class GetMarkersResponseFailure(
-    public val body: ValidationError,
+    override val body: ValidationError,
     @Transient
     override val headers: Headers = Headers.Empty,
-  ) : GetMarkersResponse()
+  ) : GetMarkersResponse(),
+      OperationResponseFailure<ValidationError>
 
   @Serializable
   public data class GetMarkersResponseUnknownFailure(
-    public val statusCode: Int,
+    override val statusCode: Int,
     @Transient
     override val headers: Headers = Headers.Empty,
-  ) : GetMarkersResponse()
+  ) : GetMarkersResponse(),
+      OperationResponseUnknownFailure
 
   @Serializable
   public data class CreateMarkerRequest(
@@ -108,16 +117,17 @@ public interface MarkersClient {
   }
 
   @Serializable
-  public sealed class CreateMarkerResponse {
-    public abstract val headers: Headers
+  public sealed class CreateMarkerResponse : OperationResponse<Map<String, Marker>> {
+    abstract override val headers: Headers
   }
 
   @Serializable
   public data class CreateMarkerResponseSuccess(
-    public val body: Map<String, Marker>,
+    override val body: Map<String, Marker>,
     @Transient
     override val headers: Headers = Headers.Empty,
-  ) : CreateMarkerResponse() {
+  ) : CreateMarkerResponse(),
+      OperationResponseSuccess<Map<String, Marker>> {
     /**
      * Number of requests permitted per time period
      */
@@ -139,30 +149,37 @@ public interface MarkersClient {
 
   @Serializable
   public data class CreateMarkerResponseFailure401(
-    public val body: Error,
+    override val body: Error,
     @Transient
     override val headers: Headers = Headers.Empty,
-  ) : CreateMarkerResponse()
+  ) : CreateMarkerResponse(),
+      OperationResponseFailure<Error>
 
   @Serializable
   public data class CreateMarkerResponseFailure410(
     @Transient
     override val headers: Headers = Headers.Empty,
-  ) : CreateMarkerResponse()
+  ) : CreateMarkerResponse(),
+      OperationResponseFailure<Unit> {
+    override val body: Unit
+      get() = Unit
+  }
 
   @Serializable
   public data class CreateMarkerResponseFailure(
-    public val body: ValidationError,
+    override val body: ValidationError,
     @Transient
     override val headers: Headers = Headers.Empty,
-  ) : CreateMarkerResponse()
+  ) : CreateMarkerResponse(),
+      OperationResponseFailure<ValidationError>
 
   @Serializable
   public data class CreateMarkerResponseUnknownFailure(
-    public val statusCode: Int,
+    override val statusCode: Int,
     @Transient
     override val headers: Headers = Headers.Empty,
-  ) : CreateMarkerResponse()
+  ) : CreateMarkerResponse(),
+      OperationResponseUnknownFailure
 }
 
 public fun MarkersClient(configuration: ClientConfiguration = defaultClientConfiguration): MarkersClient = DefaultMarkersClient(configuration)

@@ -9,6 +9,7 @@ import kotlin.Boolean
 import kotlin.Int
 import kotlin.Long
 import kotlin.String
+import kotlin.Unit
 import kotlin.collections.List
 import kotlin.coroutines.cancellation.CancellationException
 import kotlinx.serialization.Serializable
@@ -153,16 +154,17 @@ public interface NotificationsClient {
   ): GetNotificationsUnreadCountV2Response
 
   @Serializable
-  public sealed class GetNotificationsResponse {
-    public abstract val headers: Headers
+  public sealed class GetNotificationsResponse : OperationResponse<List<Notification>> {
+    abstract override val headers: Headers
   }
 
   @Serializable
   public data class GetNotificationsResponseSuccess(
-    public val body: List<Notification>,
+    override val body: List<Notification>,
     @Transient
     override val headers: Headers = Headers.Empty,
-  ) : GetNotificationsResponse() {
+  ) : GetNotificationsResponse(),
+      OperationResponseSuccess<List<Notification>> {
     /**
      * Pagination links for browsing older or newer results. Format: Link: <https://mastodon.example/api/v1/endpoint?max_id=7163058>; rel="next", <https://mastodon.example/api/v1/endpoint?min_id=7275607>; rel="prev". See [RFC 8288](https://www.rfc-editor.org/rfc/rfc8288) for more information.
      */
@@ -190,42 +192,50 @@ public interface NotificationsClient {
 
   @Serializable
   public data class GetNotificationsResponseFailure401(
-    public val body: Error,
+    override val body: Error,
     @Transient
     override val headers: Headers = Headers.Empty,
-  ) : GetNotificationsResponse()
+  ) : GetNotificationsResponse(),
+      OperationResponseFailure<Error>
 
   @Serializable
   public data class GetNotificationsResponseFailure410(
     @Transient
     override val headers: Headers = Headers.Empty,
-  ) : GetNotificationsResponse()
+  ) : GetNotificationsResponse(),
+      OperationResponseFailure<Unit> {
+    override val body: Unit
+      get() = Unit
+  }
 
   @Serializable
   public data class GetNotificationsResponseFailure(
-    public val body: ValidationError,
+    override val body: ValidationError,
     @Transient
     override val headers: Headers = Headers.Empty,
-  ) : GetNotificationsResponse()
+  ) : GetNotificationsResponse(),
+      OperationResponseFailure<ValidationError>
 
   @Serializable
   public data class GetNotificationsResponseUnknownFailure(
-    public val statusCode: Int,
+    override val statusCode: Int,
     @Transient
     override val headers: Headers = Headers.Empty,
-  ) : GetNotificationsResponse()
+  ) : GetNotificationsResponse(),
+      OperationResponseUnknownFailure
 
   @Serializable
-  public sealed class GetNotificationResponse {
-    public abstract val headers: Headers
+  public sealed class GetNotificationResponse : OperationResponse<Notification> {
+    abstract override val headers: Headers
   }
 
   @Serializable
   public data class GetNotificationResponseSuccess(
-    public val body: Notification,
+    override val body: Notification,
     @Transient
     override val headers: Headers = Headers.Empty,
-  ) : GetNotificationResponse() {
+  ) : GetNotificationResponse(),
+      OperationResponseSuccess<Notification> {
     /**
      * Number of requests permitted per time period
      */
@@ -247,41 +257,52 @@ public interface NotificationsClient {
 
   @Serializable
   public data class GetNotificationResponseFailure401(
-    public val body: Error,
+    override val body: Error,
     @Transient
     override val headers: Headers = Headers.Empty,
-  ) : GetNotificationResponse()
+  ) : GetNotificationResponse(),
+      OperationResponseFailure<Error>
 
   @Serializable
   public data class GetNotificationResponseFailure410(
     @Transient
     override val headers: Headers = Headers.Empty,
-  ) : GetNotificationResponse()
+  ) : GetNotificationResponse(),
+      OperationResponseFailure<Unit> {
+    override val body: Unit
+      get() = Unit
+  }
 
   @Serializable
   public data class GetNotificationResponseFailure(
-    public val body: ValidationError,
+    override val body: ValidationError,
     @Transient
     override val headers: Headers = Headers.Empty,
-  ) : GetNotificationResponse()
+  ) : GetNotificationResponse(),
+      OperationResponseFailure<ValidationError>
 
   @Serializable
   public data class GetNotificationResponseUnknownFailure(
-    public val statusCode: Int,
+    override val statusCode: Int,
     @Transient
     override val headers: Headers = Headers.Empty,
-  ) : GetNotificationResponse()
+  ) : GetNotificationResponse(),
+      OperationResponseUnknownFailure
 
   @Serializable
-  public sealed class PostNotificationDismissResponse {
-    public abstract val headers: Headers
+  public sealed class PostNotificationDismissResponse : OperationResponse<Unit> {
+    abstract override val headers: Headers
   }
 
   @Serializable
   public data class PostNotificationDismissResponseSuccess(
     @Transient
     override val headers: Headers = Headers.Empty,
-  ) : PostNotificationDismissResponse() {
+  ) : PostNotificationDismissResponse(),
+      OperationResponseSuccess<Unit> {
+    override val body: Unit
+      get() = Unit
+
     /**
      * Number of requests permitted per time period
      */
@@ -303,41 +324,52 @@ public interface NotificationsClient {
 
   @Serializable
   public data class PostNotificationDismissResponseFailure401(
-    public val body: Error,
+    override val body: Error,
     @Transient
     override val headers: Headers = Headers.Empty,
-  ) : PostNotificationDismissResponse()
+  ) : PostNotificationDismissResponse(),
+      OperationResponseFailure<Error>
 
   @Serializable
   public data class PostNotificationDismissResponseFailure410(
     @Transient
     override val headers: Headers = Headers.Empty,
-  ) : PostNotificationDismissResponse()
+  ) : PostNotificationDismissResponse(),
+      OperationResponseFailure<Unit> {
+    override val body: Unit
+      get() = Unit
+  }
 
   @Serializable
   public data class PostNotificationDismissResponseFailure(
-    public val body: ValidationError,
+    override val body: ValidationError,
     @Transient
     override val headers: Headers = Headers.Empty,
-  ) : PostNotificationDismissResponse()
+  ) : PostNotificationDismissResponse(),
+      OperationResponseFailure<ValidationError>
 
   @Serializable
   public data class PostNotificationDismissResponseUnknownFailure(
-    public val statusCode: Int,
+    override val statusCode: Int,
     @Transient
     override val headers: Headers = Headers.Empty,
-  ) : PostNotificationDismissResponse()
+  ) : PostNotificationDismissResponse(),
+      OperationResponseUnknownFailure
 
   @Serializable
-  public sealed class CreateNotificationClearResponse {
-    public abstract val headers: Headers
+  public sealed class CreateNotificationClearResponse : OperationResponse<Unit> {
+    abstract override val headers: Headers
   }
 
   @Serializable
   public data class CreateNotificationClearResponseSuccess(
     @Transient
     override val headers: Headers = Headers.Empty,
-  ) : CreateNotificationClearResponse() {
+  ) : CreateNotificationClearResponse(),
+      OperationResponseSuccess<Unit> {
+    override val body: Unit
+      get() = Unit
+
     /**
      * Number of requests permitted per time period
      */
@@ -359,42 +391,50 @@ public interface NotificationsClient {
 
   @Serializable
   public data class CreateNotificationClearResponseFailure401(
-    public val body: Error,
+    override val body: Error,
     @Transient
     override val headers: Headers = Headers.Empty,
-  ) : CreateNotificationClearResponse()
+  ) : CreateNotificationClearResponse(),
+      OperationResponseFailure<Error>
 
   @Serializable
   public data class CreateNotificationClearResponseFailure410(
     @Transient
     override val headers: Headers = Headers.Empty,
-  ) : CreateNotificationClearResponse()
+  ) : CreateNotificationClearResponse(),
+      OperationResponseFailure<Unit> {
+    override val body: Unit
+      get() = Unit
+  }
 
   @Serializable
   public data class CreateNotificationClearResponseFailure(
-    public val body: ValidationError,
+    override val body: ValidationError,
     @Transient
     override val headers: Headers = Headers.Empty,
-  ) : CreateNotificationClearResponse()
+  ) : CreateNotificationClearResponse(),
+      OperationResponseFailure<ValidationError>
 
   @Serializable
   public data class CreateNotificationClearResponseUnknownFailure(
-    public val statusCode: Int,
+    override val statusCode: Int,
     @Transient
     override val headers: Headers = Headers.Empty,
-  ) : CreateNotificationClearResponse()
+  ) : CreateNotificationClearResponse(),
+      OperationResponseUnknownFailure
 
   @Serializable
-  public sealed class GetNotificationRequestsResponse {
-    public abstract val headers: Headers
+  public sealed class GetNotificationRequestsResponse : OperationResponse<List<NotificationRequest>> {
+    abstract override val headers: Headers
   }
 
   @Serializable
   public data class GetNotificationRequestsResponseSuccess(
-    public val body: List<NotificationRequest>,
+    override val body: List<NotificationRequest>,
     @Transient
     override val headers: Headers = Headers.Empty,
-  ) : GetNotificationRequestsResponse() {
+  ) : GetNotificationRequestsResponse(),
+      OperationResponseSuccess<List<NotificationRequest>> {
     /**
      * Pagination links for browsing older or newer results. Format: Link: <https://mastodon.example/api/v1/endpoint?max_id=7163058>; rel="next", <https://mastodon.example/api/v1/endpoint?min_id=7275607>; rel="prev". See [RFC 8288](https://www.rfc-editor.org/rfc/rfc8288) for more information.
      */
@@ -422,42 +462,50 @@ public interface NotificationsClient {
 
   @Serializable
   public data class GetNotificationRequestsResponseFailure401(
-    public val body: Error,
+    override val body: Error,
     @Transient
     override val headers: Headers = Headers.Empty,
-  ) : GetNotificationRequestsResponse()
+  ) : GetNotificationRequestsResponse(),
+      OperationResponseFailure<Error>
 
   @Serializable
   public data class GetNotificationRequestsResponseFailure410(
     @Transient
     override val headers: Headers = Headers.Empty,
-  ) : GetNotificationRequestsResponse()
+  ) : GetNotificationRequestsResponse(),
+      OperationResponseFailure<Unit> {
+    override val body: Unit
+      get() = Unit
+  }
 
   @Serializable
   public data class GetNotificationRequestsResponseFailure(
-    public val body: ValidationError,
+    override val body: ValidationError,
     @Transient
     override val headers: Headers = Headers.Empty,
-  ) : GetNotificationRequestsResponse()
+  ) : GetNotificationRequestsResponse(),
+      OperationResponseFailure<ValidationError>
 
   @Serializable
   public data class GetNotificationRequestsResponseUnknownFailure(
-    public val statusCode: Int,
+    override val statusCode: Int,
     @Transient
     override val headers: Headers = Headers.Empty,
-  ) : GetNotificationRequestsResponse()
+  ) : GetNotificationRequestsResponse(),
+      OperationResponseUnknownFailure
 
   @Serializable
-  public sealed class GetNotificationsRequestsByIdResponse {
-    public abstract val headers: Headers
+  public sealed class GetNotificationsRequestsByIdResponse : OperationResponse<NotificationRequest> {
+    abstract override val headers: Headers
   }
 
   @Serializable
   public data class GetNotificationsRequestsByIdResponseSuccess(
-    public val body: NotificationRequest,
+    override val body: NotificationRequest,
     @Transient
     override val headers: Headers = Headers.Empty,
-  ) : GetNotificationsRequestsByIdResponse() {
+  ) : GetNotificationsRequestsByIdResponse(),
+      OperationResponseSuccess<NotificationRequest> {
     /**
      * Number of requests permitted per time period
      */
@@ -479,41 +527,52 @@ public interface NotificationsClient {
 
   @Serializable
   public data class GetNotificationsRequestsByIdResponseFailure401(
-    public val body: Error,
+    override val body: Error,
     @Transient
     override val headers: Headers = Headers.Empty,
-  ) : GetNotificationsRequestsByIdResponse()
+  ) : GetNotificationsRequestsByIdResponse(),
+      OperationResponseFailure<Error>
 
   @Serializable
   public data class GetNotificationsRequestsByIdResponseFailure410(
     @Transient
     override val headers: Headers = Headers.Empty,
-  ) : GetNotificationsRequestsByIdResponse()
+  ) : GetNotificationsRequestsByIdResponse(),
+      OperationResponseFailure<Unit> {
+    override val body: Unit
+      get() = Unit
+  }
 
   @Serializable
   public data class GetNotificationsRequestsByIdResponseFailure(
-    public val body: ValidationError,
+    override val body: ValidationError,
     @Transient
     override val headers: Headers = Headers.Empty,
-  ) : GetNotificationsRequestsByIdResponse()
+  ) : GetNotificationsRequestsByIdResponse(),
+      OperationResponseFailure<ValidationError>
 
   @Serializable
   public data class GetNotificationsRequestsByIdResponseUnknownFailure(
-    public val statusCode: Int,
+    override val statusCode: Int,
     @Transient
     override val headers: Headers = Headers.Empty,
-  ) : GetNotificationsRequestsByIdResponse()
+  ) : GetNotificationsRequestsByIdResponse(),
+      OperationResponseUnknownFailure
 
   @Serializable
-  public sealed class PostNotificationsRequestsByIdAcceptResponse {
-    public abstract val headers: Headers
+  public sealed class PostNotificationsRequestsByIdAcceptResponse : OperationResponse<Unit> {
+    abstract override val headers: Headers
   }
 
   @Serializable
   public data class PostNotificationsRequestsByIdAcceptResponseSuccess(
     @Transient
     override val headers: Headers = Headers.Empty,
-  ) : PostNotificationsRequestsByIdAcceptResponse() {
+  ) : PostNotificationsRequestsByIdAcceptResponse(),
+      OperationResponseSuccess<Unit> {
+    override val body: Unit
+      get() = Unit
+
     /**
      * Number of requests permitted per time period
      */
@@ -535,41 +594,52 @@ public interface NotificationsClient {
 
   @Serializable
   public data class PostNotificationsRequestsByIdAcceptResponseFailure401(
-    public val body: Error,
+    override val body: Error,
     @Transient
     override val headers: Headers = Headers.Empty,
-  ) : PostNotificationsRequestsByIdAcceptResponse()
+  ) : PostNotificationsRequestsByIdAcceptResponse(),
+      OperationResponseFailure<Error>
 
   @Serializable
   public data class PostNotificationsRequestsByIdAcceptResponseFailure410(
     @Transient
     override val headers: Headers = Headers.Empty,
-  ) : PostNotificationsRequestsByIdAcceptResponse()
+  ) : PostNotificationsRequestsByIdAcceptResponse(),
+      OperationResponseFailure<Unit> {
+    override val body: Unit
+      get() = Unit
+  }
 
   @Serializable
   public data class PostNotificationsRequestsByIdAcceptResponseFailure(
-    public val body: ValidationError,
+    override val body: ValidationError,
     @Transient
     override val headers: Headers = Headers.Empty,
-  ) : PostNotificationsRequestsByIdAcceptResponse()
+  ) : PostNotificationsRequestsByIdAcceptResponse(),
+      OperationResponseFailure<ValidationError>
 
   @Serializable
   public data class PostNotificationsRequestsByIdAcceptResponseUnknownFailure(
-    public val statusCode: Int,
+    override val statusCode: Int,
     @Transient
     override val headers: Headers = Headers.Empty,
-  ) : PostNotificationsRequestsByIdAcceptResponse()
+  ) : PostNotificationsRequestsByIdAcceptResponse(),
+      OperationResponseUnknownFailure
 
   @Serializable
-  public sealed class PostNotificationsRequestsByIdDismissResponse {
-    public abstract val headers: Headers
+  public sealed class PostNotificationsRequestsByIdDismissResponse : OperationResponse<Unit> {
+    abstract override val headers: Headers
   }
 
   @Serializable
   public data class PostNotificationsRequestsByIdDismissResponseSuccess(
     @Transient
     override val headers: Headers = Headers.Empty,
-  ) : PostNotificationsRequestsByIdDismissResponse() {
+  ) : PostNotificationsRequestsByIdDismissResponse(),
+      OperationResponseSuccess<Unit> {
+    override val body: Unit
+      get() = Unit
+
     /**
      * Number of requests permitted per time period
      */
@@ -591,41 +661,52 @@ public interface NotificationsClient {
 
   @Serializable
   public data class PostNotificationsRequestsByIdDismissResponseFailure401(
-    public val body: Error,
+    override val body: Error,
     @Transient
     override val headers: Headers = Headers.Empty,
-  ) : PostNotificationsRequestsByIdDismissResponse()
+  ) : PostNotificationsRequestsByIdDismissResponse(),
+      OperationResponseFailure<Error>
 
   @Serializable
   public data class PostNotificationsRequestsByIdDismissResponseFailure410(
     @Transient
     override val headers: Headers = Headers.Empty,
-  ) : PostNotificationsRequestsByIdDismissResponse()
+  ) : PostNotificationsRequestsByIdDismissResponse(),
+      OperationResponseFailure<Unit> {
+    override val body: Unit
+      get() = Unit
+  }
 
   @Serializable
   public data class PostNotificationsRequestsByIdDismissResponseFailure(
-    public val body: ValidationError,
+    override val body: ValidationError,
     @Transient
     override val headers: Headers = Headers.Empty,
-  ) : PostNotificationsRequestsByIdDismissResponse()
+  ) : PostNotificationsRequestsByIdDismissResponse(),
+      OperationResponseFailure<ValidationError>
 
   @Serializable
   public data class PostNotificationsRequestsByIdDismissResponseUnknownFailure(
-    public val statusCode: Int,
+    override val statusCode: Int,
     @Transient
     override val headers: Headers = Headers.Empty,
-  ) : PostNotificationsRequestsByIdDismissResponse()
+  ) : PostNotificationsRequestsByIdDismissResponse(),
+      OperationResponseUnknownFailure
 
   @Serializable
-  public sealed class CreateNotificationsRequestsAcceptResponse {
-    public abstract val headers: Headers
+  public sealed class CreateNotificationsRequestsAcceptResponse : OperationResponse<Unit> {
+    abstract override val headers: Headers
   }
 
   @Serializable
   public data class CreateNotificationsRequestsAcceptResponseSuccess(
     @Transient
     override val headers: Headers = Headers.Empty,
-  ) : CreateNotificationsRequestsAcceptResponse() {
+  ) : CreateNotificationsRequestsAcceptResponse(),
+      OperationResponseSuccess<Unit> {
+    override val body: Unit
+      get() = Unit
+
     /**
      * Number of requests permitted per time period
      */
@@ -647,41 +728,52 @@ public interface NotificationsClient {
 
   @Serializable
   public data class CreateNotificationsRequestsAcceptResponseFailure401(
-    public val body: Error,
+    override val body: Error,
     @Transient
     override val headers: Headers = Headers.Empty,
-  ) : CreateNotificationsRequestsAcceptResponse()
+  ) : CreateNotificationsRequestsAcceptResponse(),
+      OperationResponseFailure<Error>
 
   @Serializable
   public data class CreateNotificationsRequestsAcceptResponseFailure410(
     @Transient
     override val headers: Headers = Headers.Empty,
-  ) : CreateNotificationsRequestsAcceptResponse()
+  ) : CreateNotificationsRequestsAcceptResponse(),
+      OperationResponseFailure<Unit> {
+    override val body: Unit
+      get() = Unit
+  }
 
   @Serializable
   public data class CreateNotificationsRequestsAcceptResponseFailure(
-    public val body: ValidationError,
+    override val body: ValidationError,
     @Transient
     override val headers: Headers = Headers.Empty,
-  ) : CreateNotificationsRequestsAcceptResponse()
+  ) : CreateNotificationsRequestsAcceptResponse(),
+      OperationResponseFailure<ValidationError>
 
   @Serializable
   public data class CreateNotificationsRequestsAcceptResponseUnknownFailure(
-    public val statusCode: Int,
+    override val statusCode: Int,
     @Transient
     override val headers: Headers = Headers.Empty,
-  ) : CreateNotificationsRequestsAcceptResponse()
+  ) : CreateNotificationsRequestsAcceptResponse(),
+      OperationResponseUnknownFailure
 
   @Serializable
-  public sealed class CreateNotificationsRequestsDismissResponse {
-    public abstract val headers: Headers
+  public sealed class CreateNotificationsRequestsDismissResponse : OperationResponse<Unit> {
+    abstract override val headers: Headers
   }
 
   @Serializable
   public data class CreateNotificationsRequestsDismissResponseSuccess(
     @Transient
     override val headers: Headers = Headers.Empty,
-  ) : CreateNotificationsRequestsDismissResponse() {
+  ) : CreateNotificationsRequestsDismissResponse(),
+      OperationResponseSuccess<Unit> {
+    override val body: Unit
+      get() = Unit
+
     /**
      * Number of requests permitted per time period
      */
@@ -703,42 +795,50 @@ public interface NotificationsClient {
 
   @Serializable
   public data class CreateNotificationsRequestsDismissResponseFailure401(
-    public val body: Error,
+    override val body: Error,
     @Transient
     override val headers: Headers = Headers.Empty,
-  ) : CreateNotificationsRequestsDismissResponse()
+  ) : CreateNotificationsRequestsDismissResponse(),
+      OperationResponseFailure<Error>
 
   @Serializable
   public data class CreateNotificationsRequestsDismissResponseFailure410(
     @Transient
     override val headers: Headers = Headers.Empty,
-  ) : CreateNotificationsRequestsDismissResponse()
+  ) : CreateNotificationsRequestsDismissResponse(),
+      OperationResponseFailure<Unit> {
+    override val body: Unit
+      get() = Unit
+  }
 
   @Serializable
   public data class CreateNotificationsRequestsDismissResponseFailure(
-    public val body: ValidationError,
+    override val body: ValidationError,
     @Transient
     override val headers: Headers = Headers.Empty,
-  ) : CreateNotificationsRequestsDismissResponse()
+  ) : CreateNotificationsRequestsDismissResponse(),
+      OperationResponseFailure<ValidationError>
 
   @Serializable
   public data class CreateNotificationsRequestsDismissResponseUnknownFailure(
-    public val statusCode: Int,
+    override val statusCode: Int,
     @Transient
     override val headers: Headers = Headers.Empty,
-  ) : CreateNotificationsRequestsDismissResponse()
+  ) : CreateNotificationsRequestsDismissResponse(),
+      OperationResponseUnknownFailure
 
   @Serializable
-  public sealed class GetNotificationsRequestsMergedResponse {
-    public abstract val headers: Headers
+  public sealed class GetNotificationsRequestsMergedResponse : OperationResponse<MergedResponse> {
+    abstract override val headers: Headers
   }
 
   @Serializable
   public data class GetNotificationsRequestsMergedResponseSuccess(
-    public val body: MergedResponse,
+    override val body: MergedResponse,
     @Transient
     override val headers: Headers = Headers.Empty,
-  ) : GetNotificationsRequestsMergedResponse() {
+  ) : GetNotificationsRequestsMergedResponse(),
+      OperationResponseSuccess<MergedResponse> {
     /**
      * Number of requests permitted per time period
      */
@@ -760,42 +860,50 @@ public interface NotificationsClient {
 
   @Serializable
   public data class GetNotificationsRequestsMergedResponseFailure401(
-    public val body: Error,
+    override val body: Error,
     @Transient
     override val headers: Headers = Headers.Empty,
-  ) : GetNotificationsRequestsMergedResponse()
+  ) : GetNotificationsRequestsMergedResponse(),
+      OperationResponseFailure<Error>
 
   @Serializable
   public data class GetNotificationsRequestsMergedResponseFailure410(
     @Transient
     override val headers: Headers = Headers.Empty,
-  ) : GetNotificationsRequestsMergedResponse()
+  ) : GetNotificationsRequestsMergedResponse(),
+      OperationResponseFailure<Unit> {
+    override val body: Unit
+      get() = Unit
+  }
 
   @Serializable
   public data class GetNotificationsRequestsMergedResponseFailure(
-    public val body: ValidationError,
+    override val body: ValidationError,
     @Transient
     override val headers: Headers = Headers.Empty,
-  ) : GetNotificationsRequestsMergedResponse()
+  ) : GetNotificationsRequestsMergedResponse(),
+      OperationResponseFailure<ValidationError>
 
   @Serializable
   public data class GetNotificationsRequestsMergedResponseUnknownFailure(
-    public val statusCode: Int,
+    override val statusCode: Int,
     @Transient
     override val headers: Headers = Headers.Empty,
-  ) : GetNotificationsRequestsMergedResponse()
+  ) : GetNotificationsRequestsMergedResponse(),
+      OperationResponseUnknownFailure
 
   @Serializable
-  public sealed class GetNotificationsUnreadCountResponse {
-    public abstract val headers: Headers
+  public sealed class GetNotificationsUnreadCountResponse : OperationResponse<CountResponse> {
+    abstract override val headers: Headers
   }
 
   @Serializable
   public data class GetNotificationsUnreadCountResponseSuccess(
-    public val body: CountResponse,
+    override val body: CountResponse,
     @Transient
     override val headers: Headers = Headers.Empty,
-  ) : GetNotificationsUnreadCountResponse() {
+  ) : GetNotificationsUnreadCountResponse(),
+      OperationResponseSuccess<CountResponse> {
     /**
      * Number of requests permitted per time period
      */
@@ -817,42 +925,50 @@ public interface NotificationsClient {
 
   @Serializable
   public data class GetNotificationsUnreadCountResponseFailure401(
-    public val body: Error,
+    override val body: Error,
     @Transient
     override val headers: Headers = Headers.Empty,
-  ) : GetNotificationsUnreadCountResponse()
+  ) : GetNotificationsUnreadCountResponse(),
+      OperationResponseFailure<Error>
 
   @Serializable
   public data class GetNotificationsUnreadCountResponseFailure410(
     @Transient
     override val headers: Headers = Headers.Empty,
-  ) : GetNotificationsUnreadCountResponse()
+  ) : GetNotificationsUnreadCountResponse(),
+      OperationResponseFailure<Unit> {
+    override val body: Unit
+      get() = Unit
+  }
 
   @Serializable
   public data class GetNotificationsUnreadCountResponseFailure(
-    public val body: ValidationError,
+    override val body: ValidationError,
     @Transient
     override val headers: Headers = Headers.Empty,
-  ) : GetNotificationsUnreadCountResponse()
+  ) : GetNotificationsUnreadCountResponse(),
+      OperationResponseFailure<ValidationError>
 
   @Serializable
   public data class GetNotificationsUnreadCountResponseUnknownFailure(
-    public val statusCode: Int,
+    override val statusCode: Int,
     @Transient
     override val headers: Headers = Headers.Empty,
-  ) : GetNotificationsUnreadCountResponse()
+  ) : GetNotificationsUnreadCountResponse(),
+      OperationResponseUnknownFailure
 
   @Serializable
-  public sealed class GetNotificationsV2Response {
-    public abstract val headers: Headers
+  public sealed class GetNotificationsV2Response : OperationResponse<GroupedNotificationsResults> {
+    abstract override val headers: Headers
   }
 
   @Serializable
   public data class GetNotificationsV2ResponseSuccess(
-    public val body: GroupedNotificationsResults,
+    override val body: GroupedNotificationsResults,
     @Transient
     override val headers: Headers = Headers.Empty,
-  ) : GetNotificationsV2Response() {
+  ) : GetNotificationsV2Response(),
+      OperationResponseSuccess<GroupedNotificationsResults> {
     /**
      * Pagination links for browsing older or newer results. Format: Link: <https://mastodon.example/api/v1/endpoint?max_id=7163058>; rel="next", <https://mastodon.example/api/v1/endpoint?min_id=7275607>; rel="prev". See [RFC 8288](https://www.rfc-editor.org/rfc/rfc8288) for more information.
      */
@@ -880,42 +996,50 @@ public interface NotificationsClient {
 
   @Serializable
   public data class GetNotificationsV2ResponseFailure401(
-    public val body: Error,
+    override val body: Error,
     @Transient
     override val headers: Headers = Headers.Empty,
-  ) : GetNotificationsV2Response()
+  ) : GetNotificationsV2Response(),
+      OperationResponseFailure<Error>
 
   @Serializable
   public data class GetNotificationsV2ResponseFailure410(
     @Transient
     override val headers: Headers = Headers.Empty,
-  ) : GetNotificationsV2Response()
+  ) : GetNotificationsV2Response(),
+      OperationResponseFailure<Unit> {
+    override val body: Unit
+      get() = Unit
+  }
 
   @Serializable
   public data class GetNotificationsV2ResponseFailure(
-    public val body: ValidationError,
+    override val body: ValidationError,
     @Transient
     override val headers: Headers = Headers.Empty,
-  ) : GetNotificationsV2Response()
+  ) : GetNotificationsV2Response(),
+      OperationResponseFailure<ValidationError>
 
   @Serializable
   public data class GetNotificationsV2ResponseUnknownFailure(
-    public val statusCode: Int,
+    override val statusCode: Int,
     @Transient
     override val headers: Headers = Headers.Empty,
-  ) : GetNotificationsV2Response()
+  ) : GetNotificationsV2Response(),
+      OperationResponseUnknownFailure
 
   @Serializable
-  public sealed class GetNotificationsByGroupKeyV2Response {
-    public abstract val headers: Headers
+  public sealed class GetNotificationsByGroupKeyV2Response : OperationResponse<GroupedNotificationsResults> {
+    abstract override val headers: Headers
   }
 
   @Serializable
   public data class GetNotificationsByGroupKeyV2ResponseSuccess(
-    public val body: GroupedNotificationsResults,
+    override val body: GroupedNotificationsResults,
     @Transient
     override val headers: Headers = Headers.Empty,
-  ) : GetNotificationsByGroupKeyV2Response() {
+  ) : GetNotificationsByGroupKeyV2Response(),
+      OperationResponseSuccess<GroupedNotificationsResults> {
     /**
      * Number of requests permitted per time period
      */
@@ -937,42 +1061,50 @@ public interface NotificationsClient {
 
   @Serializable
   public data class GetNotificationsByGroupKeyV2ResponseFailure401(
-    public val body: Error,
+    override val body: Error,
     @Transient
     override val headers: Headers = Headers.Empty,
-  ) : GetNotificationsByGroupKeyV2Response()
+  ) : GetNotificationsByGroupKeyV2Response(),
+      OperationResponseFailure<Error>
 
   @Serializable
   public data class GetNotificationsByGroupKeyV2ResponseFailure410(
     @Transient
     override val headers: Headers = Headers.Empty,
-  ) : GetNotificationsByGroupKeyV2Response()
+  ) : GetNotificationsByGroupKeyV2Response(),
+      OperationResponseFailure<Unit> {
+    override val body: Unit
+      get() = Unit
+  }
 
   @Serializable
   public data class GetNotificationsByGroupKeyV2ResponseFailure(
-    public val body: ValidationError,
+    override val body: ValidationError,
     @Transient
     override val headers: Headers = Headers.Empty,
-  ) : GetNotificationsByGroupKeyV2Response()
+  ) : GetNotificationsByGroupKeyV2Response(),
+      OperationResponseFailure<ValidationError>
 
   @Serializable
   public data class GetNotificationsByGroupKeyV2ResponseUnknownFailure(
-    public val statusCode: Int,
+    override val statusCode: Int,
     @Transient
     override val headers: Headers = Headers.Empty,
-  ) : GetNotificationsByGroupKeyV2Response()
+  ) : GetNotificationsByGroupKeyV2Response(),
+      OperationResponseUnknownFailure
 
   @Serializable
-  public sealed class GetNotificationAccountsV2Response {
-    public abstract val headers: Headers
+  public sealed class GetNotificationAccountsV2Response : OperationResponse<List<Account>> {
+    abstract override val headers: Headers
   }
 
   @Serializable
   public data class GetNotificationAccountsV2ResponseSuccess(
-    public val body: List<Account>,
+    override val body: List<Account>,
     @Transient
     override val headers: Headers = Headers.Empty,
-  ) : GetNotificationAccountsV2Response() {
+  ) : GetNotificationAccountsV2Response(),
+      OperationResponseSuccess<List<Account>> {
     /**
      * Number of requests permitted per time period
      */
@@ -994,41 +1126,52 @@ public interface NotificationsClient {
 
   @Serializable
   public data class GetNotificationAccountsV2ResponseFailure401(
-    public val body: Error,
+    override val body: Error,
     @Transient
     override val headers: Headers = Headers.Empty,
-  ) : GetNotificationAccountsV2Response()
+  ) : GetNotificationAccountsV2Response(),
+      OperationResponseFailure<Error>
 
   @Serializable
   public data class GetNotificationAccountsV2ResponseFailure410(
     @Transient
     override val headers: Headers = Headers.Empty,
-  ) : GetNotificationAccountsV2Response()
+  ) : GetNotificationAccountsV2Response(),
+      OperationResponseFailure<Unit> {
+    override val body: Unit
+      get() = Unit
+  }
 
   @Serializable
   public data class GetNotificationAccountsV2ResponseFailure(
-    public val body: ValidationError,
+    override val body: ValidationError,
     @Transient
     override val headers: Headers = Headers.Empty,
-  ) : GetNotificationAccountsV2Response()
+  ) : GetNotificationAccountsV2Response(),
+      OperationResponseFailure<ValidationError>
 
   @Serializable
   public data class GetNotificationAccountsV2ResponseUnknownFailure(
-    public val statusCode: Int,
+    override val statusCode: Int,
     @Transient
     override val headers: Headers = Headers.Empty,
-  ) : GetNotificationAccountsV2Response()
+  ) : GetNotificationAccountsV2Response(),
+      OperationResponseUnknownFailure
 
   @Serializable
-  public sealed class PostNotificationDismissV2Response {
-    public abstract val headers: Headers
+  public sealed class PostNotificationDismissV2Response : OperationResponse<Unit> {
+    abstract override val headers: Headers
   }
 
   @Serializable
   public data class PostNotificationDismissV2ResponseSuccess(
     @Transient
     override val headers: Headers = Headers.Empty,
-  ) : PostNotificationDismissV2Response() {
+  ) : PostNotificationDismissV2Response(),
+      OperationResponseSuccess<Unit> {
+    override val body: Unit
+      get() = Unit
+
     /**
      * Number of requests permitted per time period
      */
@@ -1050,42 +1193,50 @@ public interface NotificationsClient {
 
   @Serializable
   public data class PostNotificationDismissV2ResponseFailure401(
-    public val body: Error,
+    override val body: Error,
     @Transient
     override val headers: Headers = Headers.Empty,
-  ) : PostNotificationDismissV2Response()
+  ) : PostNotificationDismissV2Response(),
+      OperationResponseFailure<Error>
 
   @Serializable
   public data class PostNotificationDismissV2ResponseFailure410(
     @Transient
     override val headers: Headers = Headers.Empty,
-  ) : PostNotificationDismissV2Response()
+  ) : PostNotificationDismissV2Response(),
+      OperationResponseFailure<Unit> {
+    override val body: Unit
+      get() = Unit
+  }
 
   @Serializable
   public data class PostNotificationDismissV2ResponseFailure(
-    public val body: ValidationError,
+    override val body: ValidationError,
     @Transient
     override val headers: Headers = Headers.Empty,
-  ) : PostNotificationDismissV2Response()
+  ) : PostNotificationDismissV2Response(),
+      OperationResponseFailure<ValidationError>
 
   @Serializable
   public data class PostNotificationDismissV2ResponseUnknownFailure(
-    public val statusCode: Int,
+    override val statusCode: Int,
     @Transient
     override val headers: Headers = Headers.Empty,
-  ) : PostNotificationDismissV2Response()
+  ) : PostNotificationDismissV2Response(),
+      OperationResponseUnknownFailure
 
   @Serializable
-  public sealed class GetNotificationPolicyV2Response {
-    public abstract val headers: Headers
+  public sealed class GetNotificationPolicyV2Response : OperationResponse<NotificationPolicy> {
+    abstract override val headers: Headers
   }
 
   @Serializable
   public data class GetNotificationPolicyV2ResponseSuccess(
-    public val body: NotificationPolicy,
+    override val body: NotificationPolicy,
     @Transient
     override val headers: Headers = Headers.Empty,
-  ) : GetNotificationPolicyV2Response() {
+  ) : GetNotificationPolicyV2Response(),
+      OperationResponseSuccess<NotificationPolicy> {
     /**
      * Number of requests permitted per time period
      */
@@ -1107,42 +1258,50 @@ public interface NotificationsClient {
 
   @Serializable
   public data class GetNotificationPolicyV2ResponseFailure401(
-    public val body: Error,
+    override val body: Error,
     @Transient
     override val headers: Headers = Headers.Empty,
-  ) : GetNotificationPolicyV2Response()
+  ) : GetNotificationPolicyV2Response(),
+      OperationResponseFailure<Error>
 
   @Serializable
   public data class GetNotificationPolicyV2ResponseFailure410(
     @Transient
     override val headers: Headers = Headers.Empty,
-  ) : GetNotificationPolicyV2Response()
+  ) : GetNotificationPolicyV2Response(),
+      OperationResponseFailure<Unit> {
+    override val body: Unit
+      get() = Unit
+  }
 
   @Serializable
   public data class GetNotificationPolicyV2ResponseFailure(
-    public val body: ValidationError,
+    override val body: ValidationError,
     @Transient
     override val headers: Headers = Headers.Empty,
-  ) : GetNotificationPolicyV2Response()
+  ) : GetNotificationPolicyV2Response(),
+      OperationResponseFailure<ValidationError>
 
   @Serializable
   public data class GetNotificationPolicyV2ResponseUnknownFailure(
-    public val statusCode: Int,
+    override val statusCode: Int,
     @Transient
     override val headers: Headers = Headers.Empty,
-  ) : GetNotificationPolicyV2Response()
+  ) : GetNotificationPolicyV2Response(),
+      OperationResponseUnknownFailure
 
   @Serializable
-  public sealed class GetNotificationsUnreadCountV2Response {
-    public abstract val headers: Headers
+  public sealed class GetNotificationsUnreadCountV2Response : OperationResponse<CountResponse> {
+    abstract override val headers: Headers
   }
 
   @Serializable
   public data class GetNotificationsUnreadCountV2ResponseSuccess(
-    public val body: CountResponse,
+    override val body: CountResponse,
     @Transient
     override val headers: Headers = Headers.Empty,
-  ) : GetNotificationsUnreadCountV2Response() {
+  ) : GetNotificationsUnreadCountV2Response(),
+      OperationResponseSuccess<CountResponse> {
     /**
      * Number of requests permitted per time period
      */
@@ -1164,30 +1323,37 @@ public interface NotificationsClient {
 
   @Serializable
   public data class GetNotificationsUnreadCountV2ResponseFailure401(
-    public val body: Error,
+    override val body: Error,
     @Transient
     override val headers: Headers = Headers.Empty,
-  ) : GetNotificationsUnreadCountV2Response()
+  ) : GetNotificationsUnreadCountV2Response(),
+      OperationResponseFailure<Error>
 
   @Serializable
   public data class GetNotificationsUnreadCountV2ResponseFailure410(
     @Transient
     override val headers: Headers = Headers.Empty,
-  ) : GetNotificationsUnreadCountV2Response()
+  ) : GetNotificationsUnreadCountV2Response(),
+      OperationResponseFailure<Unit> {
+    override val body: Unit
+      get() = Unit
+  }
 
   @Serializable
   public data class GetNotificationsUnreadCountV2ResponseFailure(
-    public val body: ValidationError,
+    override val body: ValidationError,
     @Transient
     override val headers: Headers = Headers.Empty,
-  ) : GetNotificationsUnreadCountV2Response()
+  ) : GetNotificationsUnreadCountV2Response(),
+      OperationResponseFailure<ValidationError>
 
   @Serializable
   public data class GetNotificationsUnreadCountV2ResponseUnknownFailure(
-    public val statusCode: Int,
+    override val statusCode: Int,
     @Transient
     override val headers: Headers = Headers.Empty,
-  ) : GetNotificationsUnreadCountV2Response()
+  ) : GetNotificationsUnreadCountV2Response(),
+      OperationResponseUnknownFailure
 }
 
 public fun NotificationsClient(configuration: ClientConfiguration = defaultClientConfiguration): NotificationsClient = DefaultNotificationsClient(configuration)
