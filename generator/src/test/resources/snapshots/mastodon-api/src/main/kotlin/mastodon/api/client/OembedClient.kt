@@ -6,6 +6,7 @@ import io.ktor.http.Headers
 import kotlin.Int
 import kotlin.Long
 import kotlin.String
+import kotlin.Unit
 import kotlin.coroutines.cancellation.CancellationException
 import kotlinx.serialization.Serializable
 import kotlinx.serialization.Transient
@@ -25,16 +26,17 @@ public interface OembedClient {
   ): GetOembedResponse
 
   @Serializable
-  public sealed class GetOembedResponse {
-    public abstract val headers: Headers
+  public sealed class GetOembedResponse : OperationResponse<OEmbedResponse> {
+    abstract override val headers: Headers
   }
 
   @Serializable
   public data class GetOembedResponseSuccess(
-    public val body: OEmbedResponse,
+    override val body: OEmbedResponse,
     @Transient
     override val headers: Headers = Headers.Empty,
-  ) : GetOembedResponse() {
+  ) : GetOembedResponse(),
+      OperationResponseSuccess<OEmbedResponse> {
     /**
      * Number of requests permitted per time period
      */
@@ -56,30 +58,37 @@ public interface OembedClient {
 
   @Serializable
   public data class GetOembedResponseFailure401(
-    public val body: Error,
+    override val body: Error,
     @Transient
     override val headers: Headers = Headers.Empty,
-  ) : GetOembedResponse()
+  ) : GetOembedResponse(),
+      OperationResponseFailure<Error>
 
   @Serializable
   public data class GetOembedResponseFailure410(
     @Transient
     override val headers: Headers = Headers.Empty,
-  ) : GetOembedResponse()
+  ) : GetOembedResponse(),
+      OperationResponseFailure<Unit> {
+    override val body: Unit
+      get() = Unit
+  }
 
   @Serializable
   public data class GetOembedResponseFailure(
-    public val body: ValidationError,
+    override val body: ValidationError,
     @Transient
     override val headers: Headers = Headers.Empty,
-  ) : GetOembedResponse()
+  ) : GetOembedResponse(),
+      OperationResponseFailure<ValidationError>
 
   @Serializable
   public data class GetOembedResponseUnknownFailure(
-    public val statusCode: Int,
+    override val statusCode: Int,
     @Transient
     override val headers: Headers = Headers.Empty,
-  ) : GetOembedResponse()
+  ) : GetOembedResponse(),
+      OperationResponseUnknownFailure
 }
 
 public fun OembedClient(configuration: ClientConfiguration = defaultClientConfiguration): OembedClient = DefaultOembedClient(configuration)

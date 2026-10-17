@@ -6,6 +6,7 @@ import io.ktor.http.Headers
 import kotlin.Int
 import kotlin.Long
 import kotlin.String
+import kotlin.Unit
 import kotlin.collections.List
 import kotlin.coroutines.cancellation.CancellationException
 import kotlinx.serialization.Serializable
@@ -27,16 +28,17 @@ public interface BlocksClient {
   ): GetBlocksResponse
 
   @Serializable
-  public sealed class GetBlocksResponse {
-    public abstract val headers: Headers
+  public sealed class GetBlocksResponse : OperationResponse<List<Account>> {
+    abstract override val headers: Headers
   }
 
   @Serializable
   public data class GetBlocksResponseSuccess(
-    public val body: List<Account>,
+    override val body: List<Account>,
     @Transient
     override val headers: Headers = Headers.Empty,
-  ) : GetBlocksResponse() {
+  ) : GetBlocksResponse(),
+      OperationResponseSuccess<List<Account>> {
     /**
      * Pagination links for browsing older or newer results. Format: Link: <https://mastodon.example/api/v1/endpoint?max_id=7163058>; rel="next", <https://mastodon.example/api/v1/endpoint?min_id=7275607>; rel="prev". See [RFC 8288](https://www.rfc-editor.org/rfc/rfc8288) for more information.
      */
@@ -64,30 +66,37 @@ public interface BlocksClient {
 
   @Serializable
   public data class GetBlocksResponseFailure401(
-    public val body: Error,
+    override val body: Error,
     @Transient
     override val headers: Headers = Headers.Empty,
-  ) : GetBlocksResponse()
+  ) : GetBlocksResponse(),
+      OperationResponseFailure<Error>
 
   @Serializable
   public data class GetBlocksResponseFailure410(
     @Transient
     override val headers: Headers = Headers.Empty,
-  ) : GetBlocksResponse()
+  ) : GetBlocksResponse(),
+      OperationResponseFailure<Unit> {
+    override val body: Unit
+      get() = Unit
+  }
 
   @Serializable
   public data class GetBlocksResponseFailure(
-    public val body: ValidationError,
+    override val body: ValidationError,
     @Transient
     override val headers: Headers = Headers.Empty,
-  ) : GetBlocksResponse()
+  ) : GetBlocksResponse(),
+      OperationResponseFailure<ValidationError>
 
   @Serializable
   public data class GetBlocksResponseUnknownFailure(
-    public val statusCode: Int,
+    override val statusCode: Int,
     @Transient
     override val headers: Headers = Headers.Empty,
-  ) : GetBlocksResponse()
+  ) : GetBlocksResponse(),
+      OperationResponseUnknownFailure
 }
 
 public fun BlocksClient(configuration: ClientConfiguration = defaultClientConfiguration): BlocksClient = DefaultBlocksClient(configuration)

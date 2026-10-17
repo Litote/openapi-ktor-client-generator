@@ -30,125 +30,138 @@ public interface FilesClient {
   public suspend fun getDocument(id: String): GetDocumentResponse
 
   @Serializable
-  public sealed class DownloadFileResponse {
-    public abstract val headers: Headers
+  public sealed class DownloadFileResponse : OperationResponse<ByteArray> {
+    abstract override val headers: Headers
   }
 
   @Serializable
   public data class DownloadFileResponseSuccess(
-    public val body: ByteArray,
+    override val body: ByteArray,
     @Transient
     override val headers: Headers = Headers.Empty,
-  ) : DownloadFileResponse()
+  ) : DownloadFileResponse(),
+      OperationResponseSuccess<ByteArray>
 
   @Serializable
   public data class DownloadFileResponseFailure(
-    public val body: Error,
+    override val body: Error,
     @Transient
     override val headers: Headers = Headers.Empty,
-  ) : DownloadFileResponse()
+  ) : DownloadFileResponse(),
+      OperationResponseFailure<Error>
 
   @Serializable
   public data class DownloadFileResponseUnknownFailure(
-    public val statusCode: Int,
+    override val statusCode: Int,
     @Transient
     override val headers: Headers = Headers.Empty,
-  ) : DownloadFileResponse()
+  ) : DownloadFileResponse(),
+      OperationResponseUnknownFailure
 
   @Serializable
-  public sealed class GetImageResponse {
-    public abstract val headers: Headers
+  public sealed class GetImageResponse : OperationResponse<ByteArray> {
+    abstract override val headers: Headers
   }
 
   @Serializable
   public data class GetImageResponseSuccess(
-    public val body: ByteArray,
+    override val body: ByteArray,
     @Transient
     override val headers: Headers = Headers.Empty,
-  ) : GetImageResponse()
+  ) : GetImageResponse(),
+      OperationResponseSuccess<ByteArray>
 
   @Serializable
   public data class GetImageResponseUnknownFailure(
-    public val statusCode: Int,
+    override val statusCode: Int,
     @Transient
     override val headers: Headers = Headers.Empty,
-  ) : GetImageResponse()
+  ) : GetImageResponse(),
+      OperationResponseUnknownFailure
 
   @Serializable
-  public sealed class GetReportResponse {
-    public abstract val headers: Headers
+  public sealed class GetReportResponse : OperationResponse<String> {
+    abstract override val headers: Headers
   }
 
   @Serializable
   public data class GetReportResponseSuccess(
-    public val body: String,
+    override val body: String,
     @Transient
     override val headers: Headers = Headers.Empty,
-  ) : GetReportResponse()
+  ) : GetReportResponse(),
+      OperationResponseSuccess<String>
 
   @Serializable
   public data class GetReportResponseUnknownFailure(
-    public val statusCode: Int,
+    override val statusCode: Int,
     @Transient
     override val headers: Headers = Headers.Empty,
-  ) : GetReportResponse()
+  ) : GetReportResponse(),
+      OperationResponseUnknownFailure
 
   @Serializable
-  public sealed class ExportCsvResponse {
-    public abstract val headers: Headers
+  public sealed class ExportCsvResponse : OperationResponse<String> {
+    abstract override val headers: Headers
   }
 
   @Serializable
   public data class ExportCsvResponseSuccess(
-    public val body: String,
+    override val body: String,
     @Transient
     override val headers: Headers = Headers.Empty,
-  ) : ExportCsvResponse()
+  ) : ExportCsvResponse(),
+      OperationResponseSuccess<String>
 
   @Serializable
   public data class ExportCsvResponseUnknownFailure(
-    public val statusCode: Int,
+    override val statusCode: Int,
     @Transient
     override val headers: Headers = Headers.Empty,
-  ) : ExportCsvResponse()
+  ) : ExportCsvResponse(),
+      OperationResponseUnknownFailure
 
   @Serializable
-  public sealed class DownloadResponse {
-    public abstract val headers: Headers
+  public sealed class DownloadResponse : OperationResponse<ByteArray> {
+    abstract override val headers: Headers
   }
 
   @Serializable
   public data class DownloadResponseSuccess(
-    public val body: ByteArray,
+    override val body: ByteArray,
     @Transient
     override val headers: Headers = Headers.Empty,
-  ) : DownloadResponse()
+  ) : DownloadResponse(),
+      OperationResponseSuccess<ByteArray>
 
   @Serializable
   public data class DownloadResponseUnknownFailure(
-    public val statusCode: Int,
+    override val statusCode: Int,
     @Transient
     override val headers: Headers = Headers.Empty,
-  ) : DownloadResponse()
+  ) : DownloadResponse(),
+      OperationResponseUnknownFailure
 
   @Serializable
-  public sealed class GetDocumentResponse {
-    public abstract val headers: Headers
+  public sealed class GetDocumentResponse : OperationResponse<Document> {
+    abstract override val headers: Headers
   }
 
   @Serializable
   public data class GetDocumentResponseSuccess(
-    public val body: Document,
+    override val body: Document,
     @Transient
     override val headers: Headers = Headers.Empty,
-  ) : GetDocumentResponse()
+  ) : GetDocumentResponse(),
+      OperationResponseSuccess<Document>
 
   @Serializable
   public data class GetDocumentResponseUnknownFailure(
-    public val statusCode: Int,
+    override val statusCode: Int,
     @Transient
     override val headers: Headers = Headers.Empty,
-  ) : GetDocumentResponse()
+  ) : GetDocumentResponse(),
+      OperationResponseUnknownFailure
 }
 
 public fun FilesClient(configuration: ClientConfiguration = defaultClientConfiguration): FilesClient = DefaultFilesClient(configuration)

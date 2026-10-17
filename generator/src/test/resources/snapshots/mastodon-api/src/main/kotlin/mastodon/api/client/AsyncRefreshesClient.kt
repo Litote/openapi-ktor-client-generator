@@ -6,6 +6,7 @@ import io.ktor.http.Headers
 import io.ktor.http.encodeURLPathPart
 import kotlin.Int
 import kotlin.String
+import kotlin.Unit
 import kotlin.coroutines.cancellation.CancellationException
 import kotlinx.serialization.Serializable
 import kotlinx.serialization.Transient
@@ -21,16 +22,17 @@ public interface AsyncRefreshesClient {
   public suspend fun getAsyncRefreshV1Alpha(id: String): GetAsyncRefreshV1AlphaResponse
 
   @Serializable
-  public sealed class GetAsyncRefreshV1AlphaResponse {
-    public abstract val headers: Headers
+  public sealed class GetAsyncRefreshV1AlphaResponse : OperationResponse<AsyncRefreshResponse> {
+    abstract override val headers: Headers
   }
 
   @Serializable
   public data class GetAsyncRefreshV1AlphaResponseSuccess(
-    public val body: AsyncRefreshResponse,
+    override val body: AsyncRefreshResponse,
     @Transient
     override val headers: Headers = Headers.Empty,
-  ) : GetAsyncRefreshV1AlphaResponse() {
+  ) : GetAsyncRefreshV1AlphaResponse(),
+      OperationResponseSuccess<AsyncRefreshResponse> {
     /**
      * Number of requests permitted per time period
      */
@@ -52,30 +54,37 @@ public interface AsyncRefreshesClient {
 
   @Serializable
   public data class GetAsyncRefreshV1AlphaResponseFailure401(
-    public val body: Error,
+    override val body: Error,
     @Transient
     override val headers: Headers = Headers.Empty,
-  ) : GetAsyncRefreshV1AlphaResponse()
+  ) : GetAsyncRefreshV1AlphaResponse(),
+      OperationResponseFailure<Error>
 
   @Serializable
   public data class GetAsyncRefreshV1AlphaResponseFailure410(
     @Transient
     override val headers: Headers = Headers.Empty,
-  ) : GetAsyncRefreshV1AlphaResponse()
+  ) : GetAsyncRefreshV1AlphaResponse(),
+      OperationResponseFailure<Unit> {
+    override val body: Unit
+      get() = Unit
+  }
 
   @Serializable
   public data class GetAsyncRefreshV1AlphaResponseFailure(
-    public val body: ValidationError,
+    override val body: ValidationError,
     @Transient
     override val headers: Headers = Headers.Empty,
-  ) : GetAsyncRefreshV1AlphaResponse()
+  ) : GetAsyncRefreshV1AlphaResponse(),
+      OperationResponseFailure<ValidationError>
 
   @Serializable
   public data class GetAsyncRefreshV1AlphaResponseUnknownFailure(
-    public val statusCode: Int,
+    override val statusCode: Int,
     @Transient
     override val headers: Headers = Headers.Empty,
-  ) : GetAsyncRefreshV1AlphaResponse()
+  ) : GetAsyncRefreshV1AlphaResponse(),
+      OperationResponseUnknownFailure
 }
 
 public fun AsyncRefreshesClient(configuration: ClientConfiguration = defaultClientConfiguration): AsyncRefreshesClient = DefaultAsyncRefreshesClient(configuration)

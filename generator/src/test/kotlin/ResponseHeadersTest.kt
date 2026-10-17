@@ -107,7 +107,7 @@ class ResponseHeadersTest {
                 .walkTopDown()
                 .first { it.name == "ItemsClient.kt" }
                 .readText()
-        assertTrue("public abstract val headers: Headers" in clientSource, clientSource)
+        assertTrue("abstract override val headers: Headers" in clientSource, clientSource)
         assertTrue("override val headers: Headers = Headers.Empty" in clientSource, clientSource)
         assertTrue("public data class DeleteItemResponseSuccess(" in clientSource, clientSource)
         assertTrue("get() = headers[\"X-Total-Count\"]?.toIntOrNull()" in clientSource, clientSource)

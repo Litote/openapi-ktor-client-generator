@@ -9,6 +9,7 @@ import io.ktor.http.contentType
 import kotlin.Boolean
 import kotlin.Int
 import kotlin.String
+import kotlin.Unit
 import kotlin.collections.List
 import kotlin.coroutines.cancellation.CancellationException
 import kotlinx.serialization.SerialName
@@ -39,16 +40,17 @@ public interface ReportsClient {
   )
 
   @Serializable
-  public sealed class CreateReportResponse {
-    public abstract val headers: Headers
+  public sealed class CreateReportResponse : OperationResponse<Report> {
+    abstract override val headers: Headers
   }
 
   @Serializable
   public data class CreateReportResponseSuccess(
-    public val body: Report,
+    override val body: Report,
     @Transient
     override val headers: Headers = Headers.Empty,
-  ) : CreateReportResponse() {
+  ) : CreateReportResponse(),
+      OperationResponseSuccess<Report> {
     /**
      * Number of requests permitted per time period
      */
@@ -70,23 +72,29 @@ public interface ReportsClient {
 
   @Serializable
   public data class CreateReportResponseFailure401(
-    public val body: Error,
+    override val body: Error,
     @Transient
     override val headers: Headers = Headers.Empty,
-  ) : CreateReportResponse()
+  ) : CreateReportResponse(),
+      OperationResponseFailure<Error>
 
   @Serializable
   public data class CreateReportResponseFailure(
     @Transient
     override val headers: Headers = Headers.Empty,
-  ) : CreateReportResponse()
+  ) : CreateReportResponse(),
+      OperationResponseFailure<Unit> {
+    override val body: Unit
+      get() = Unit
+  }
 
   @Serializable
   public data class CreateReportResponseUnknownFailure(
-    public val statusCode: Int,
+    override val statusCode: Int,
     @Transient
     override val headers: Headers = Headers.Empty,
-  ) : CreateReportResponse()
+  ) : CreateReportResponse(),
+      OperationResponseUnknownFailure
 }
 
 public fun ReportsClient(configuration: ClientConfiguration = defaultClientConfiguration): ReportsClient = DefaultReportsClient(configuration)

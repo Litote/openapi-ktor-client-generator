@@ -10,6 +10,7 @@ import io.ktor.http.Parameters
 import io.ktor.http.encodeURLPathPart
 import kotlin.Int
 import kotlin.String
+import kotlin.Unit
 import kotlin.collections.List
 import kotlin.coroutines.cancellation.CancellationException
 import kotlin.time.Instant
@@ -31,23 +32,25 @@ public interface EventClient {
   public suspend fun createEvent(form: CreateEventForm): CreateEventResponse
 
   @Serializable
-  public sealed class GetEventResponse {
-    public abstract val headers: Headers
+  public sealed class GetEventResponse : OperationResponse<Event> {
+    abstract override val headers: Headers
   }
 
   @Serializable
   public data class GetEventResponseSuccess(
-    public val body: Event,
+    override val body: Event,
     @Transient
     override val headers: Headers = Headers.Empty,
-  ) : GetEventResponse()
+  ) : GetEventResponse(),
+      OperationResponseSuccess<Event>
 
   @Serializable
   public data class GetEventResponseUnknownFailure(
-    public val statusCode: Int,
+    override val statusCode: Int,
     @Transient
     override val headers: Headers = Headers.Empty,
-  ) : GetEventResponse()
+  ) : GetEventResponse(),
+      OperationResponseUnknownFailure
 
   public data class CreateEventForm(
     public val at: Instant,
@@ -55,22 +58,27 @@ public interface EventClient {
   )
 
   @Serializable
-  public sealed class CreateEventResponse {
-    public abstract val headers: Headers
+  public sealed class CreateEventResponse : OperationResponse<Unit> {
+    abstract override val headers: Headers
   }
 
   @Serializable
   public data class CreateEventResponseSuccess(
     @Transient
     override val headers: Headers = Headers.Empty,
-  ) : CreateEventResponse()
+  ) : CreateEventResponse(),
+      OperationResponseSuccess<Unit> {
+    override val body: Unit
+      get() = Unit
+  }
 
   @Serializable
   public data class CreateEventResponseUnknownFailure(
-    public val statusCode: Int,
+    override val statusCode: Int,
     @Transient
     override val headers: Headers = Headers.Empty,
-  ) : CreateEventResponse()
+  ) : CreateEventResponse(),
+      OperationResponseUnknownFailure
 }
 
 public fun EventClient(configuration: ClientConfiguration = defaultClientConfiguration): EventClient = DefaultEventClient(configuration)

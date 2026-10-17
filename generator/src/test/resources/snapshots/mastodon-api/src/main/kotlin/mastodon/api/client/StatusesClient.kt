@@ -14,6 +14,7 @@ import kotlin.Boolean
 import kotlin.Int
 import kotlin.Long
 import kotlin.String
+import kotlin.Unit
 import kotlin.collections.List
 import kotlin.coroutines.cancellation.CancellationException
 import kotlinx.serialization.SerialName
@@ -171,16 +172,17 @@ public interface StatusesClient {
   public suspend fun postStatusUnreblog(id: String): PostStatusUnreblogResponse
 
   @Serializable
-  public sealed class GetStatusesResponse {
-    public abstract val headers: Headers
+  public sealed class GetStatusesResponse : OperationResponse<List<Status>> {
+    abstract override val headers: Headers
   }
 
   @Serializable
   public data class GetStatusesResponseSuccess(
-    public val body: List<Status>,
+    override val body: List<Status>,
     @Transient
     override val headers: Headers = Headers.Empty,
-  ) : GetStatusesResponse() {
+  ) : GetStatusesResponse(),
+      OperationResponseSuccess<List<Status>> {
     /**
      * Number of requests permitted per time period
      */
@@ -202,42 +204,50 @@ public interface StatusesClient {
 
   @Serializable
   public data class GetStatusesResponseFailure401(
-    public val body: Error,
+    override val body: Error,
     @Transient
     override val headers: Headers = Headers.Empty,
-  ) : GetStatusesResponse()
+  ) : GetStatusesResponse(),
+      OperationResponseFailure<Error>
 
   @Serializable
   public data class GetStatusesResponseFailure410(
     @Transient
     override val headers: Headers = Headers.Empty,
-  ) : GetStatusesResponse()
+  ) : GetStatusesResponse(),
+      OperationResponseFailure<Unit> {
+    override val body: Unit
+      get() = Unit
+  }
 
   @Serializable
   public data class GetStatusesResponseFailure(
-    public val body: ValidationError,
+    override val body: ValidationError,
     @Transient
     override val headers: Headers = Headers.Empty,
-  ) : GetStatusesResponse()
+  ) : GetStatusesResponse(),
+      OperationResponseFailure<ValidationError>
 
   @Serializable
   public data class GetStatusesResponseUnknownFailure(
-    public val statusCode: Int,
+    override val statusCode: Int,
     @Transient
     override val headers: Headers = Headers.Empty,
-  ) : GetStatusesResponse()
+  ) : GetStatusesResponse(),
+      OperationResponseUnknownFailure
 
   @Serializable
-  public sealed class CreateStatusResponse {
-    public abstract val headers: Headers
+  public sealed class CreateStatusResponse : OperationResponse<mastodon.api.model.CreateStatusResponse> {
+    abstract override val headers: Headers
   }
 
   @Serializable
   public data class CreateStatusResponseSuccess(
-    public val body: mastodon.api.model.CreateStatusResponse,
+    override val body: mastodon.api.model.CreateStatusResponse,
     @Transient
     override val headers: Headers = Headers.Empty,
-  ) : CreateStatusResponse() {
+  ) : CreateStatusResponse(),
+      OperationResponseSuccess<mastodon.api.model.CreateStatusResponse> {
     /**
      * Number of requests permitted per time period
      */
@@ -259,35 +269,42 @@ public interface StatusesClient {
 
   @Serializable
   public data class CreateStatusResponseFailure401(
-    public val body: Error,
+    override val body: Error,
     @Transient
     override val headers: Headers = Headers.Empty,
-  ) : CreateStatusResponse()
+  ) : CreateStatusResponse(),
+      OperationResponseFailure<Error>
 
   @Serializable
   public data class CreateStatusResponseFailure(
     @Transient
     override val headers: Headers = Headers.Empty,
-  ) : CreateStatusResponse()
+  ) : CreateStatusResponse(),
+      OperationResponseFailure<Unit> {
+    override val body: Unit
+      get() = Unit
+  }
 
   @Serializable
   public data class CreateStatusResponseUnknownFailure(
-    public val statusCode: Int,
+    override val statusCode: Int,
     @Transient
     override val headers: Headers = Headers.Empty,
-  ) : CreateStatusResponse()
+  ) : CreateStatusResponse(),
+      OperationResponseUnknownFailure
 
   @Serializable
-  public sealed class GetStatusResponse {
-    public abstract val headers: Headers
+  public sealed class GetStatusResponse : OperationResponse<Status> {
+    abstract override val headers: Headers
   }
 
   @Serializable
   public data class GetStatusResponseSuccess(
-    public val body: Status,
+    override val body: Status,
     @Transient
     override val headers: Headers = Headers.Empty,
-  ) : GetStatusResponse() {
+  ) : GetStatusResponse(),
+      OperationResponseSuccess<Status> {
     /**
      * Number of requests permitted per time period
      */
@@ -309,30 +326,37 @@ public interface StatusesClient {
 
   @Serializable
   public data class GetStatusResponseFailure401(
-    public val body: Error,
+    override val body: Error,
     @Transient
     override val headers: Headers = Headers.Empty,
-  ) : GetStatusResponse()
+  ) : GetStatusResponse(),
+      OperationResponseFailure<Error>
 
   @Serializable
   public data class GetStatusResponseFailure410(
     @Transient
     override val headers: Headers = Headers.Empty,
-  ) : GetStatusResponse()
+  ) : GetStatusResponse(),
+      OperationResponseFailure<Unit> {
+    override val body: Unit
+      get() = Unit
+  }
 
   @Serializable
   public data class GetStatusResponseFailure(
-    public val body: ValidationError,
+    override val body: ValidationError,
     @Transient
     override val headers: Headers = Headers.Empty,
-  ) : GetStatusResponse()
+  ) : GetStatusResponse(),
+      OperationResponseFailure<ValidationError>
 
   @Serializable
   public data class GetStatusResponseUnknownFailure(
-    public val statusCode: Int,
+    override val statusCode: Int,
     @Transient
     override val headers: Headers = Headers.Empty,
-  ) : GetStatusResponse()
+  ) : GetStatusResponse(),
+      OperationResponseUnknownFailure
 
   @Serializable
   public data class UpdateStatusRequest(
@@ -361,16 +385,17 @@ public interface StatusesClient {
   }
 
   @Serializable
-  public sealed class UpdateStatusResponse {
-    public abstract val headers: Headers
+  public sealed class UpdateStatusResponse : OperationResponse<Status> {
+    abstract override val headers: Headers
   }
 
   @Serializable
   public data class UpdateStatusResponseSuccess(
-    public val body: Status,
+    override val body: Status,
     @Transient
     override val headers: Headers = Headers.Empty,
-  ) : UpdateStatusResponse() {
+  ) : UpdateStatusResponse(),
+      OperationResponseSuccess<Status> {
     /**
      * Number of requests permitted per time period
      */
@@ -392,35 +417,42 @@ public interface StatusesClient {
 
   @Serializable
   public data class UpdateStatusResponseFailure401(
-    public val body: Error,
+    override val body: Error,
     @Transient
     override val headers: Headers = Headers.Empty,
-  ) : UpdateStatusResponse()
+  ) : UpdateStatusResponse(),
+      OperationResponseFailure<Error>
 
   @Serializable
   public data class UpdateStatusResponseFailure(
     @Transient
     override val headers: Headers = Headers.Empty,
-  ) : UpdateStatusResponse()
+  ) : UpdateStatusResponse(),
+      OperationResponseFailure<Unit> {
+    override val body: Unit
+      get() = Unit
+  }
 
   @Serializable
   public data class UpdateStatusResponseUnknownFailure(
-    public val statusCode: Int,
+    override val statusCode: Int,
     @Transient
     override val headers: Headers = Headers.Empty,
-  ) : UpdateStatusResponse()
+  ) : UpdateStatusResponse(),
+      OperationResponseUnknownFailure
 
   @Serializable
-  public sealed class DeleteStatusResponse {
-    public abstract val headers: Headers
+  public sealed class DeleteStatusResponse : OperationResponse<Status> {
+    abstract override val headers: Headers
   }
 
   @Serializable
   public data class DeleteStatusResponseSuccess(
-    public val body: Status,
+    override val body: Status,
     @Transient
     override val headers: Headers = Headers.Empty,
-  ) : DeleteStatusResponse() {
+  ) : DeleteStatusResponse(),
+      OperationResponseSuccess<Status> {
     /**
      * Number of requests permitted per time period
      */
@@ -442,42 +474,50 @@ public interface StatusesClient {
 
   @Serializable
   public data class DeleteStatusResponseFailure401(
-    public val body: Error,
+    override val body: Error,
     @Transient
     override val headers: Headers = Headers.Empty,
-  ) : DeleteStatusResponse()
+  ) : DeleteStatusResponse(),
+      OperationResponseFailure<Error>
 
   @Serializable
   public data class DeleteStatusResponseFailure410(
     @Transient
     override val headers: Headers = Headers.Empty,
-  ) : DeleteStatusResponse()
+  ) : DeleteStatusResponse(),
+      OperationResponseFailure<Unit> {
+    override val body: Unit
+      get() = Unit
+  }
 
   @Serializable
   public data class DeleteStatusResponseFailure(
-    public val body: ValidationError,
+    override val body: ValidationError,
     @Transient
     override val headers: Headers = Headers.Empty,
-  ) : DeleteStatusResponse()
+  ) : DeleteStatusResponse(),
+      OperationResponseFailure<ValidationError>
 
   @Serializable
   public data class DeleteStatusResponseUnknownFailure(
-    public val statusCode: Int,
+    override val statusCode: Int,
     @Transient
     override val headers: Headers = Headers.Empty,
-  ) : DeleteStatusResponse()
+  ) : DeleteStatusResponse(),
+      OperationResponseUnknownFailure
 
   @Serializable
-  public sealed class PostStatusBookmarkResponse {
-    public abstract val headers: Headers
+  public sealed class PostStatusBookmarkResponse : OperationResponse<Status> {
+    abstract override val headers: Headers
   }
 
   @Serializable
   public data class PostStatusBookmarkResponseSuccess(
-    public val body: Status,
+    override val body: Status,
     @Transient
     override val headers: Headers = Headers.Empty,
-  ) : PostStatusBookmarkResponse() {
+  ) : PostStatusBookmarkResponse(),
+      OperationResponseSuccess<Status> {
     /**
      * Number of requests permitted per time period
      */
@@ -499,42 +539,50 @@ public interface StatusesClient {
 
   @Serializable
   public data class PostStatusBookmarkResponseFailure401(
-    public val body: Error,
+    override val body: Error,
     @Transient
     override val headers: Headers = Headers.Empty,
-  ) : PostStatusBookmarkResponse()
+  ) : PostStatusBookmarkResponse(),
+      OperationResponseFailure<Error>
 
   @Serializable
   public data class PostStatusBookmarkResponseFailure410(
     @Transient
     override val headers: Headers = Headers.Empty,
-  ) : PostStatusBookmarkResponse()
+  ) : PostStatusBookmarkResponse(),
+      OperationResponseFailure<Unit> {
+    override val body: Unit
+      get() = Unit
+  }
 
   @Serializable
   public data class PostStatusBookmarkResponseFailure(
-    public val body: ValidationError,
+    override val body: ValidationError,
     @Transient
     override val headers: Headers = Headers.Empty,
-  ) : PostStatusBookmarkResponse()
+  ) : PostStatusBookmarkResponse(),
+      OperationResponseFailure<ValidationError>
 
   @Serializable
   public data class PostStatusBookmarkResponseUnknownFailure(
-    public val statusCode: Int,
+    override val statusCode: Int,
     @Transient
     override val headers: Headers = Headers.Empty,
-  ) : PostStatusBookmarkResponse()
+  ) : PostStatusBookmarkResponse(),
+      OperationResponseUnknownFailure
 
   @Serializable
-  public sealed class GetStatusContextResponse {
-    public abstract val headers: Headers
+  public sealed class GetStatusContextResponse : OperationResponse<Context> {
+    abstract override val headers: Headers
   }
 
   @Serializable
   public data class GetStatusContextResponseSuccess(
-    public val body: Context,
+    override val body: Context,
     @Transient
     override val headers: Headers = Headers.Empty,
-  ) : GetStatusContextResponse() {
+  ) : GetStatusContextResponse(),
+      OperationResponseSuccess<Context> {
     /**
      * Indicates an async refresh is in progress. Format: id="<string>", retry=<int>, result_count=<int>. The retry value indicates seconds to wait before retrying. The result_count is optional and indicates results already fetched.
      */
@@ -562,42 +610,50 @@ public interface StatusesClient {
 
   @Serializable
   public data class GetStatusContextResponseFailure401(
-    public val body: Error,
+    override val body: Error,
     @Transient
     override val headers: Headers = Headers.Empty,
-  ) : GetStatusContextResponse()
+  ) : GetStatusContextResponse(),
+      OperationResponseFailure<Error>
 
   @Serializable
   public data class GetStatusContextResponseFailure410(
     @Transient
     override val headers: Headers = Headers.Empty,
-  ) : GetStatusContextResponse()
+  ) : GetStatusContextResponse(),
+      OperationResponseFailure<Unit> {
+    override val body: Unit
+      get() = Unit
+  }
 
   @Serializable
   public data class GetStatusContextResponseFailure(
-    public val body: ValidationError,
+    override val body: ValidationError,
     @Transient
     override val headers: Headers = Headers.Empty,
-  ) : GetStatusContextResponse()
+  ) : GetStatusContextResponse(),
+      OperationResponseFailure<ValidationError>
 
   @Serializable
   public data class GetStatusContextResponseUnknownFailure(
-    public val statusCode: Int,
+    override val statusCode: Int,
     @Transient
     override val headers: Headers = Headers.Empty,
-  ) : GetStatusContextResponse()
+  ) : GetStatusContextResponse(),
+      OperationResponseUnknownFailure
 
   @Serializable
-  public sealed class PostStatusFavouriteResponse {
-    public abstract val headers: Headers
+  public sealed class PostStatusFavouriteResponse : OperationResponse<Status> {
+    abstract override val headers: Headers
   }
 
   @Serializable
   public data class PostStatusFavouriteResponseSuccess(
-    public val body: Status,
+    override val body: Status,
     @Transient
     override val headers: Headers = Headers.Empty,
-  ) : PostStatusFavouriteResponse() {
+  ) : PostStatusFavouriteResponse(),
+      OperationResponseSuccess<Status> {
     /**
      * Number of requests permitted per time period
      */
@@ -619,42 +675,50 @@ public interface StatusesClient {
 
   @Serializable
   public data class PostStatusFavouriteResponseFailure401(
-    public val body: Error,
+    override val body: Error,
     @Transient
     override val headers: Headers = Headers.Empty,
-  ) : PostStatusFavouriteResponse()
+  ) : PostStatusFavouriteResponse(),
+      OperationResponseFailure<Error>
 
   @Serializable
   public data class PostStatusFavouriteResponseFailure410(
     @Transient
     override val headers: Headers = Headers.Empty,
-  ) : PostStatusFavouriteResponse()
+  ) : PostStatusFavouriteResponse(),
+      OperationResponseFailure<Unit> {
+    override val body: Unit
+      get() = Unit
+  }
 
   @Serializable
   public data class PostStatusFavouriteResponseFailure(
-    public val body: ValidationError,
+    override val body: ValidationError,
     @Transient
     override val headers: Headers = Headers.Empty,
-  ) : PostStatusFavouriteResponse()
+  ) : PostStatusFavouriteResponse(),
+      OperationResponseFailure<ValidationError>
 
   @Serializable
   public data class PostStatusFavouriteResponseUnknownFailure(
-    public val statusCode: Int,
+    override val statusCode: Int,
     @Transient
     override val headers: Headers = Headers.Empty,
-  ) : PostStatusFavouriteResponse()
+  ) : PostStatusFavouriteResponse(),
+      OperationResponseUnknownFailure
 
   @Serializable
-  public sealed class GetStatusFavouritedByResponse {
-    public abstract val headers: Headers
+  public sealed class GetStatusFavouritedByResponse : OperationResponse<List<Account>> {
+    abstract override val headers: Headers
   }
 
   @Serializable
   public data class GetStatusFavouritedByResponseSuccess(
-    public val body: List<Account>,
+    override val body: List<Account>,
     @Transient
     override val headers: Headers = Headers.Empty,
-  ) : GetStatusFavouritedByResponse() {
+  ) : GetStatusFavouritedByResponse(),
+      OperationResponseSuccess<List<Account>> {
     /**
      * Pagination links for browsing older or newer results. Format: Link: <https://mastodon.example/api/v1/endpoint?max_id=7163058>; rel="next", <https://mastodon.example/api/v1/endpoint?min_id=7275607>; rel="prev". See [RFC 8288](https://www.rfc-editor.org/rfc/rfc8288) for more information.
      */
@@ -682,42 +746,50 @@ public interface StatusesClient {
 
   @Serializable
   public data class GetStatusFavouritedByResponseFailure401(
-    public val body: Error,
+    override val body: Error,
     @Transient
     override val headers: Headers = Headers.Empty,
-  ) : GetStatusFavouritedByResponse()
+  ) : GetStatusFavouritedByResponse(),
+      OperationResponseFailure<Error>
 
   @Serializable
   public data class GetStatusFavouritedByResponseFailure410(
     @Transient
     override val headers: Headers = Headers.Empty,
-  ) : GetStatusFavouritedByResponse()
+  ) : GetStatusFavouritedByResponse(),
+      OperationResponseFailure<Unit> {
+    override val body: Unit
+      get() = Unit
+  }
 
   @Serializable
   public data class GetStatusFavouritedByResponseFailure(
-    public val body: ValidationError,
+    override val body: ValidationError,
     @Transient
     override val headers: Headers = Headers.Empty,
-  ) : GetStatusFavouritedByResponse()
+  ) : GetStatusFavouritedByResponse(),
+      OperationResponseFailure<ValidationError>
 
   @Serializable
   public data class GetStatusFavouritedByResponseUnknownFailure(
-    public val statusCode: Int,
+    override val statusCode: Int,
     @Transient
     override val headers: Headers = Headers.Empty,
-  ) : GetStatusFavouritedByResponse()
+  ) : GetStatusFavouritedByResponse(),
+      OperationResponseUnknownFailure
 
   @Serializable
-  public sealed class GetStatusHistoryResponse {
-    public abstract val headers: Headers
+  public sealed class GetStatusHistoryResponse : OperationResponse<List<StatusEdit>> {
+    abstract override val headers: Headers
   }
 
   @Serializable
   public data class GetStatusHistoryResponseSuccess(
-    public val body: List<StatusEdit>,
+    override val body: List<StatusEdit>,
     @Transient
     override val headers: Headers = Headers.Empty,
-  ) : GetStatusHistoryResponse() {
+  ) : GetStatusHistoryResponse(),
+      OperationResponseSuccess<List<StatusEdit>> {
     /**
      * Number of requests permitted per time period
      */
@@ -739,30 +811,37 @@ public interface StatusesClient {
 
   @Serializable
   public data class GetStatusHistoryResponseFailure401(
-    public val body: Error,
+    override val body: Error,
     @Transient
     override val headers: Headers = Headers.Empty,
-  ) : GetStatusHistoryResponse()
+  ) : GetStatusHistoryResponse(),
+      OperationResponseFailure<Error>
 
   @Serializable
   public data class GetStatusHistoryResponseFailure410(
     @Transient
     override val headers: Headers = Headers.Empty,
-  ) : GetStatusHistoryResponse()
+  ) : GetStatusHistoryResponse(),
+      OperationResponseFailure<Unit> {
+    override val body: Unit
+      get() = Unit
+  }
 
   @Serializable
   public data class GetStatusHistoryResponseFailure(
-    public val body: ValidationError,
+    override val body: ValidationError,
     @Transient
     override val headers: Headers = Headers.Empty,
-  ) : GetStatusHistoryResponse()
+  ) : GetStatusHistoryResponse(),
+      OperationResponseFailure<ValidationError>
 
   @Serializable
   public data class GetStatusHistoryResponseUnknownFailure(
-    public val statusCode: Int,
+    override val statusCode: Int,
     @Transient
     override val headers: Headers = Headers.Empty,
-  ) : GetStatusHistoryResponse()
+  ) : GetStatusHistoryResponse(),
+      OperationResponseUnknownFailure
 
   @Serializable
   public data class UpdateStatusInteractionPolicyRequest(
@@ -771,16 +850,17 @@ public interface StatusesClient {
   )
 
   @Serializable
-  public sealed class UpdateStatusInteractionPolicyResponse {
-    public abstract val headers: Headers
+  public sealed class UpdateStatusInteractionPolicyResponse : OperationResponse<Status> {
+    abstract override val headers: Headers
   }
 
   @Serializable
   public data class UpdateStatusInteractionPolicyResponseSuccess(
-    public val body: Status,
+    override val body: Status,
     @Transient
     override val headers: Headers = Headers.Empty,
-  ) : UpdateStatusInteractionPolicyResponse() {
+  ) : UpdateStatusInteractionPolicyResponse(),
+      OperationResponseSuccess<Status> {
     /**
      * Number of requests permitted per time period
      */
@@ -802,42 +882,50 @@ public interface StatusesClient {
 
   @Serializable
   public data class UpdateStatusInteractionPolicyResponseFailure401(
-    public val body: Error,
+    override val body: Error,
     @Transient
     override val headers: Headers = Headers.Empty,
-  ) : UpdateStatusInteractionPolicyResponse()
+  ) : UpdateStatusInteractionPolicyResponse(),
+      OperationResponseFailure<Error>
 
   @Serializable
   public data class UpdateStatusInteractionPolicyResponseFailure410(
     @Transient
     override val headers: Headers = Headers.Empty,
-  ) : UpdateStatusInteractionPolicyResponse()
+  ) : UpdateStatusInteractionPolicyResponse(),
+      OperationResponseFailure<Unit> {
+    override val body: Unit
+      get() = Unit
+  }
 
   @Serializable
   public data class UpdateStatusInteractionPolicyResponseFailure(
-    public val body: ValidationError,
+    override val body: ValidationError,
     @Transient
     override val headers: Headers = Headers.Empty,
-  ) : UpdateStatusInteractionPolicyResponse()
+  ) : UpdateStatusInteractionPolicyResponse(),
+      OperationResponseFailure<ValidationError>
 
   @Serializable
   public data class UpdateStatusInteractionPolicyResponseUnknownFailure(
-    public val statusCode: Int,
+    override val statusCode: Int,
     @Transient
     override val headers: Headers = Headers.Empty,
-  ) : UpdateStatusInteractionPolicyResponse()
+  ) : UpdateStatusInteractionPolicyResponse(),
+      OperationResponseUnknownFailure
 
   @Serializable
-  public sealed class PostStatusMuteResponse {
-    public abstract val headers: Headers
+  public sealed class PostStatusMuteResponse : OperationResponse<Status> {
+    abstract override val headers: Headers
   }
 
   @Serializable
   public data class PostStatusMuteResponseSuccess(
-    public val body: Status,
+    override val body: Status,
     @Transient
     override val headers: Headers = Headers.Empty,
-  ) : PostStatusMuteResponse() {
+  ) : PostStatusMuteResponse(),
+      OperationResponseSuccess<Status> {
     /**
      * Number of requests permitted per time period
      */
@@ -859,42 +947,50 @@ public interface StatusesClient {
 
   @Serializable
   public data class PostStatusMuteResponseFailure401(
-    public val body: Error,
+    override val body: Error,
     @Transient
     override val headers: Headers = Headers.Empty,
-  ) : PostStatusMuteResponse()
+  ) : PostStatusMuteResponse(),
+      OperationResponseFailure<Error>
 
   @Serializable
   public data class PostStatusMuteResponseFailure410(
     @Transient
     override val headers: Headers = Headers.Empty,
-  ) : PostStatusMuteResponse()
+  ) : PostStatusMuteResponse(),
+      OperationResponseFailure<Unit> {
+    override val body: Unit
+      get() = Unit
+  }
 
   @Serializable
   public data class PostStatusMuteResponseFailure(
-    public val body: ValidationError,
+    override val body: ValidationError,
     @Transient
     override val headers: Headers = Headers.Empty,
-  ) : PostStatusMuteResponse()
+  ) : PostStatusMuteResponse(),
+      OperationResponseFailure<ValidationError>
 
   @Serializable
   public data class PostStatusMuteResponseUnknownFailure(
-    public val statusCode: Int,
+    override val statusCode: Int,
     @Transient
     override val headers: Headers = Headers.Empty,
-  ) : PostStatusMuteResponse()
+  ) : PostStatusMuteResponse(),
+      OperationResponseUnknownFailure
 
   @Serializable
-  public sealed class PostStatusPinResponse {
-    public abstract val headers: Headers
+  public sealed class PostStatusPinResponse : OperationResponse<Status> {
+    abstract override val headers: Headers
   }
 
   @Serializable
   public data class PostStatusPinResponseSuccess(
-    public val body: Status,
+    override val body: Status,
     @Transient
     override val headers: Headers = Headers.Empty,
-  ) : PostStatusPinResponse() {
+  ) : PostStatusPinResponse(),
+      OperationResponseSuccess<Status> {
     /**
      * Number of requests permitted per time period
      */
@@ -916,35 +1012,42 @@ public interface StatusesClient {
 
   @Serializable
   public data class PostStatusPinResponseFailure401(
-    public val body: Error,
+    override val body: Error,
     @Transient
     override val headers: Headers = Headers.Empty,
-  ) : PostStatusPinResponse()
+  ) : PostStatusPinResponse(),
+      OperationResponseFailure<Error>
 
   @Serializable
   public data class PostStatusPinResponseFailure(
     @Transient
     override val headers: Headers = Headers.Empty,
-  ) : PostStatusPinResponse()
+  ) : PostStatusPinResponse(),
+      OperationResponseFailure<Unit> {
+    override val body: Unit
+      get() = Unit
+  }
 
   @Serializable
   public data class PostStatusPinResponseUnknownFailure(
-    public val statusCode: Int,
+    override val statusCode: Int,
     @Transient
     override val headers: Headers = Headers.Empty,
-  ) : PostStatusPinResponse()
+  ) : PostStatusPinResponse(),
+      OperationResponseUnknownFailure
 
   @Serializable
-  public sealed class GetStatusQuotesResponse {
-    public abstract val headers: Headers
+  public sealed class GetStatusQuotesResponse : OperationResponse<List<Status>> {
+    abstract override val headers: Headers
   }
 
   @Serializable
   public data class GetStatusQuotesResponseSuccess(
-    public val body: List<Status>,
+    override val body: List<Status>,
     @Transient
     override val headers: Headers = Headers.Empty,
-  ) : GetStatusQuotesResponse() {
+  ) : GetStatusQuotesResponse(),
+      OperationResponseSuccess<List<Status>> {
     /**
      * Pagination links for browsing older or newer results. Format: Link: <https://mastodon.example/api/v1/endpoint?max_id=7163058>; rel="next", <https://mastodon.example/api/v1/endpoint?min_id=7275607>; rel="prev". See [RFC 8288](https://www.rfc-editor.org/rfc/rfc8288) for more information.
      */
@@ -972,42 +1075,50 @@ public interface StatusesClient {
 
   @Serializable
   public data class GetStatusQuotesResponseFailure401(
-    public val body: Error,
+    override val body: Error,
     @Transient
     override val headers: Headers = Headers.Empty,
-  ) : GetStatusQuotesResponse()
+  ) : GetStatusQuotesResponse(),
+      OperationResponseFailure<Error>
 
   @Serializable
   public data class GetStatusQuotesResponseFailure410(
     @Transient
     override val headers: Headers = Headers.Empty,
-  ) : GetStatusQuotesResponse()
+  ) : GetStatusQuotesResponse(),
+      OperationResponseFailure<Unit> {
+    override val body: Unit
+      get() = Unit
+  }
 
   @Serializable
   public data class GetStatusQuotesResponseFailure(
-    public val body: ValidationError,
+    override val body: ValidationError,
     @Transient
     override val headers: Headers = Headers.Empty,
-  ) : GetStatusQuotesResponse()
+  ) : GetStatusQuotesResponse(),
+      OperationResponseFailure<ValidationError>
 
   @Serializable
   public data class GetStatusQuotesResponseUnknownFailure(
-    public val statusCode: Int,
+    override val statusCode: Int,
     @Transient
     override val headers: Headers = Headers.Empty,
-  ) : GetStatusQuotesResponse()
+  ) : GetStatusQuotesResponse(),
+      OperationResponseUnknownFailure
 
   @Serializable
-  public sealed class PostStatusesByIdQuotesByQuotingStatusIdRevokeResponse {
-    public abstract val headers: Headers
+  public sealed class PostStatusesByIdQuotesByQuotingStatusIdRevokeResponse : OperationResponse<Status> {
+    abstract override val headers: Headers
   }
 
   @Serializable
   public data class PostStatusesByIdQuotesByQuotingStatusIdRevokeResponseSuccess(
-    public val body: Status,
+    override val body: Status,
     @Transient
     override val headers: Headers = Headers.Empty,
-  ) : PostStatusesByIdQuotesByQuotingStatusIdRevokeResponse() {
+  ) : PostStatusesByIdQuotesByQuotingStatusIdRevokeResponse(),
+      OperationResponseSuccess<Status> {
     /**
      * Number of requests permitted per time period
      */
@@ -1029,30 +1140,37 @@ public interface StatusesClient {
 
   @Serializable
   public data class PostStatusesByIdQuotesByQuotingStatusIdRevokeResponseFailure401(
-    public val body: Error,
+    override val body: Error,
     @Transient
     override val headers: Headers = Headers.Empty,
-  ) : PostStatusesByIdQuotesByQuotingStatusIdRevokeResponse()
+  ) : PostStatusesByIdQuotesByQuotingStatusIdRevokeResponse(),
+      OperationResponseFailure<Error>
 
   @Serializable
   public data class PostStatusesByIdQuotesByQuotingStatusIdRevokeResponseFailure410(
     @Transient
     override val headers: Headers = Headers.Empty,
-  ) : PostStatusesByIdQuotesByQuotingStatusIdRevokeResponse()
+  ) : PostStatusesByIdQuotesByQuotingStatusIdRevokeResponse(),
+      OperationResponseFailure<Unit> {
+    override val body: Unit
+      get() = Unit
+  }
 
   @Serializable
   public data class PostStatusesByIdQuotesByQuotingStatusIdRevokeResponseFailure(
-    public val body: ValidationError,
+    override val body: ValidationError,
     @Transient
     override val headers: Headers = Headers.Empty,
-  ) : PostStatusesByIdQuotesByQuotingStatusIdRevokeResponse()
+  ) : PostStatusesByIdQuotesByQuotingStatusIdRevokeResponse(),
+      OperationResponseFailure<ValidationError>
 
   @Serializable
   public data class PostStatusesByIdQuotesByQuotingStatusIdRevokeResponseUnknownFailure(
-    public val statusCode: Int,
+    override val statusCode: Int,
     @Transient
     override val headers: Headers = Headers.Empty,
-  ) : PostStatusesByIdQuotesByQuotingStatusIdRevokeResponse()
+  ) : PostStatusesByIdQuotesByQuotingStatusIdRevokeResponse(),
+      OperationResponseUnknownFailure
 
   @Serializable
   public data class PostStatusReblogRequest(
@@ -1060,16 +1178,17 @@ public interface StatusesClient {
   )
 
   @Serializable
-  public sealed class PostStatusReblogResponse {
-    public abstract val headers: Headers
+  public sealed class PostStatusReblogResponse : OperationResponse<Status> {
+    abstract override val headers: Headers
   }
 
   @Serializable
   public data class PostStatusReblogResponseSuccess(
-    public val body: Status,
+    override val body: Status,
     @Transient
     override val headers: Headers = Headers.Empty,
-  ) : PostStatusReblogResponse() {
+  ) : PostStatusReblogResponse(),
+      OperationResponseSuccess<Status> {
     /**
      * Number of requests permitted per time period
      */
@@ -1091,42 +1210,50 @@ public interface StatusesClient {
 
   @Serializable
   public data class PostStatusReblogResponseFailure401(
-    public val body: Error,
+    override val body: Error,
     @Transient
     override val headers: Headers = Headers.Empty,
-  ) : PostStatusReblogResponse()
+  ) : PostStatusReblogResponse(),
+      OperationResponseFailure<Error>
 
   @Serializable
   public data class PostStatusReblogResponseFailure410(
     @Transient
     override val headers: Headers = Headers.Empty,
-  ) : PostStatusReblogResponse()
+  ) : PostStatusReblogResponse(),
+      OperationResponseFailure<Unit> {
+    override val body: Unit
+      get() = Unit
+  }
 
   @Serializable
   public data class PostStatusReblogResponseFailure(
-    public val body: ValidationError,
+    override val body: ValidationError,
     @Transient
     override val headers: Headers = Headers.Empty,
-  ) : PostStatusReblogResponse()
+  ) : PostStatusReblogResponse(),
+      OperationResponseFailure<ValidationError>
 
   @Serializable
   public data class PostStatusReblogResponseUnknownFailure(
-    public val statusCode: Int,
+    override val statusCode: Int,
     @Transient
     override val headers: Headers = Headers.Empty,
-  ) : PostStatusReblogResponse()
+  ) : PostStatusReblogResponse(),
+      OperationResponseUnknownFailure
 
   @Serializable
-  public sealed class GetStatusRebloggedByResponse {
-    public abstract val headers: Headers
+  public sealed class GetStatusRebloggedByResponse : OperationResponse<List<Account>> {
+    abstract override val headers: Headers
   }
 
   @Serializable
   public data class GetStatusRebloggedByResponseSuccess(
-    public val body: List<Account>,
+    override val body: List<Account>,
     @Transient
     override val headers: Headers = Headers.Empty,
-  ) : GetStatusRebloggedByResponse() {
+  ) : GetStatusRebloggedByResponse(),
+      OperationResponseSuccess<List<Account>> {
     /**
      * Pagination links for browsing older or newer results. Format: Link: <https://mastodon.example/api/v1/endpoint?max_id=7163058>; rel="next", <https://mastodon.example/api/v1/endpoint?min_id=7275607>; rel="prev". See [RFC 8288](https://www.rfc-editor.org/rfc/rfc8288) for more information.
      */
@@ -1154,42 +1281,50 @@ public interface StatusesClient {
 
   @Serializable
   public data class GetStatusRebloggedByResponseFailure401(
-    public val body: Error,
+    override val body: Error,
     @Transient
     override val headers: Headers = Headers.Empty,
-  ) : GetStatusRebloggedByResponse()
+  ) : GetStatusRebloggedByResponse(),
+      OperationResponseFailure<Error>
 
   @Serializable
   public data class GetStatusRebloggedByResponseFailure410(
     @Transient
     override val headers: Headers = Headers.Empty,
-  ) : GetStatusRebloggedByResponse()
+  ) : GetStatusRebloggedByResponse(),
+      OperationResponseFailure<Unit> {
+    override val body: Unit
+      get() = Unit
+  }
 
   @Serializable
   public data class GetStatusRebloggedByResponseFailure(
-    public val body: ValidationError,
+    override val body: ValidationError,
     @Transient
     override val headers: Headers = Headers.Empty,
-  ) : GetStatusRebloggedByResponse()
+  ) : GetStatusRebloggedByResponse(),
+      OperationResponseFailure<ValidationError>
 
   @Serializable
   public data class GetStatusRebloggedByResponseUnknownFailure(
-    public val statusCode: Int,
+    override val statusCode: Int,
     @Transient
     override val headers: Headers = Headers.Empty,
-  ) : GetStatusRebloggedByResponse()
+  ) : GetStatusRebloggedByResponse(),
+      OperationResponseUnknownFailure
 
   @Serializable
-  public sealed class GetStatusSourceResponse {
-    public abstract val headers: Headers
+  public sealed class GetStatusSourceResponse : OperationResponse<StatusSource> {
+    abstract override val headers: Headers
   }
 
   @Serializable
   public data class GetStatusSourceResponseSuccess(
-    public val body: StatusSource,
+    override val body: StatusSource,
     @Transient
     override val headers: Headers = Headers.Empty,
-  ) : GetStatusSourceResponse() {
+  ) : GetStatusSourceResponse(),
+      OperationResponseSuccess<StatusSource> {
     /**
      * Number of requests permitted per time period
      */
@@ -1211,30 +1346,37 @@ public interface StatusesClient {
 
   @Serializable
   public data class GetStatusSourceResponseFailure401(
-    public val body: Error,
+    override val body: Error,
     @Transient
     override val headers: Headers = Headers.Empty,
-  ) : GetStatusSourceResponse()
+  ) : GetStatusSourceResponse(),
+      OperationResponseFailure<Error>
 
   @Serializable
   public data class GetStatusSourceResponseFailure410(
     @Transient
     override val headers: Headers = Headers.Empty,
-  ) : GetStatusSourceResponse()
+  ) : GetStatusSourceResponse(),
+      OperationResponseFailure<Unit> {
+    override val body: Unit
+      get() = Unit
+  }
 
   @Serializable
   public data class GetStatusSourceResponseFailure(
-    public val body: ValidationError,
+    override val body: ValidationError,
     @Transient
     override val headers: Headers = Headers.Empty,
-  ) : GetStatusSourceResponse()
+  ) : GetStatusSourceResponse(),
+      OperationResponseFailure<ValidationError>
 
   @Serializable
   public data class GetStatusSourceResponseUnknownFailure(
-    public val statusCode: Int,
+    override val statusCode: Int,
     @Transient
     override val headers: Headers = Headers.Empty,
-  ) : GetStatusSourceResponse()
+  ) : GetStatusSourceResponse(),
+      OperationResponseUnknownFailure
 
   @Serializable
   public data class PostStatusTranslateRequest(
@@ -1242,16 +1384,17 @@ public interface StatusesClient {
   )
 
   @Serializable
-  public sealed class PostStatusTranslateResponse {
-    public abstract val headers: Headers
+  public sealed class PostStatusTranslateResponse : OperationResponse<Translation> {
+    abstract override val headers: Headers
   }
 
   @Serializable
   public data class PostStatusTranslateResponseSuccess(
-    public val body: Translation,
+    override val body: Translation,
     @Transient
     override val headers: Headers = Headers.Empty,
-  ) : PostStatusTranslateResponse() {
+  ) : PostStatusTranslateResponse(),
+      OperationResponseSuccess<Translation> {
     /**
      * Number of requests permitted per time period
      */
@@ -1273,42 +1416,50 @@ public interface StatusesClient {
 
   @Serializable
   public data class PostStatusTranslateResponseFailure401(
-    public val body: Error,
+    override val body: Error,
     @Transient
     override val headers: Headers = Headers.Empty,
-  ) : PostStatusTranslateResponse()
+  ) : PostStatusTranslateResponse(),
+      OperationResponseFailure<Error>
 
   @Serializable
   public data class PostStatusTranslateResponseFailure410(
     @Transient
     override val headers: Headers = Headers.Empty,
-  ) : PostStatusTranslateResponse()
+  ) : PostStatusTranslateResponse(),
+      OperationResponseFailure<Unit> {
+    override val body: Unit
+      get() = Unit
+  }
 
   @Serializable
   public data class PostStatusTranslateResponseFailure(
-    public val body: ValidationError,
+    override val body: ValidationError,
     @Transient
     override val headers: Headers = Headers.Empty,
-  ) : PostStatusTranslateResponse()
+  ) : PostStatusTranslateResponse(),
+      OperationResponseFailure<ValidationError>
 
   @Serializable
   public data class PostStatusTranslateResponseUnknownFailure(
-    public val statusCode: Int,
+    override val statusCode: Int,
     @Transient
     override val headers: Headers = Headers.Empty,
-  ) : PostStatusTranslateResponse()
+  ) : PostStatusTranslateResponse(),
+      OperationResponseUnknownFailure
 
   @Serializable
-  public sealed class PostStatusUnbookmarkResponse {
-    public abstract val headers: Headers
+  public sealed class PostStatusUnbookmarkResponse : OperationResponse<Status> {
+    abstract override val headers: Headers
   }
 
   @Serializable
   public data class PostStatusUnbookmarkResponseSuccess(
-    public val body: Status,
+    override val body: Status,
     @Transient
     override val headers: Headers = Headers.Empty,
-  ) : PostStatusUnbookmarkResponse() {
+  ) : PostStatusUnbookmarkResponse(),
+      OperationResponseSuccess<Status> {
     /**
      * Number of requests permitted per time period
      */
@@ -1330,42 +1481,50 @@ public interface StatusesClient {
 
   @Serializable
   public data class PostStatusUnbookmarkResponseFailure401(
-    public val body: Error,
+    override val body: Error,
     @Transient
     override val headers: Headers = Headers.Empty,
-  ) : PostStatusUnbookmarkResponse()
+  ) : PostStatusUnbookmarkResponse(),
+      OperationResponseFailure<Error>
 
   @Serializable
   public data class PostStatusUnbookmarkResponseFailure410(
     @Transient
     override val headers: Headers = Headers.Empty,
-  ) : PostStatusUnbookmarkResponse()
+  ) : PostStatusUnbookmarkResponse(),
+      OperationResponseFailure<Unit> {
+    override val body: Unit
+      get() = Unit
+  }
 
   @Serializable
   public data class PostStatusUnbookmarkResponseFailure(
-    public val body: ValidationError,
+    override val body: ValidationError,
     @Transient
     override val headers: Headers = Headers.Empty,
-  ) : PostStatusUnbookmarkResponse()
+  ) : PostStatusUnbookmarkResponse(),
+      OperationResponseFailure<ValidationError>
 
   @Serializable
   public data class PostStatusUnbookmarkResponseUnknownFailure(
-    public val statusCode: Int,
+    override val statusCode: Int,
     @Transient
     override val headers: Headers = Headers.Empty,
-  ) : PostStatusUnbookmarkResponse()
+  ) : PostStatusUnbookmarkResponse(),
+      OperationResponseUnknownFailure
 
   @Serializable
-  public sealed class PostStatusUnfavouriteResponse {
-    public abstract val headers: Headers
+  public sealed class PostStatusUnfavouriteResponse : OperationResponse<Status> {
+    abstract override val headers: Headers
   }
 
   @Serializable
   public data class PostStatusUnfavouriteResponseSuccess(
-    public val body: Status,
+    override val body: Status,
     @Transient
     override val headers: Headers = Headers.Empty,
-  ) : PostStatusUnfavouriteResponse() {
+  ) : PostStatusUnfavouriteResponse(),
+      OperationResponseSuccess<Status> {
     /**
      * Number of requests permitted per time period
      */
@@ -1387,42 +1546,50 @@ public interface StatusesClient {
 
   @Serializable
   public data class PostStatusUnfavouriteResponseFailure401(
-    public val body: Error,
+    override val body: Error,
     @Transient
     override val headers: Headers = Headers.Empty,
-  ) : PostStatusUnfavouriteResponse()
+  ) : PostStatusUnfavouriteResponse(),
+      OperationResponseFailure<Error>
 
   @Serializable
   public data class PostStatusUnfavouriteResponseFailure410(
     @Transient
     override val headers: Headers = Headers.Empty,
-  ) : PostStatusUnfavouriteResponse()
+  ) : PostStatusUnfavouriteResponse(),
+      OperationResponseFailure<Unit> {
+    override val body: Unit
+      get() = Unit
+  }
 
   @Serializable
   public data class PostStatusUnfavouriteResponseFailure(
-    public val body: ValidationError,
+    override val body: ValidationError,
     @Transient
     override val headers: Headers = Headers.Empty,
-  ) : PostStatusUnfavouriteResponse()
+  ) : PostStatusUnfavouriteResponse(),
+      OperationResponseFailure<ValidationError>
 
   @Serializable
   public data class PostStatusUnfavouriteResponseUnknownFailure(
-    public val statusCode: Int,
+    override val statusCode: Int,
     @Transient
     override val headers: Headers = Headers.Empty,
-  ) : PostStatusUnfavouriteResponse()
+  ) : PostStatusUnfavouriteResponse(),
+      OperationResponseUnknownFailure
 
   @Serializable
-  public sealed class PostStatusUnmuteResponse {
-    public abstract val headers: Headers
+  public sealed class PostStatusUnmuteResponse : OperationResponse<Status> {
+    abstract override val headers: Headers
   }
 
   @Serializable
   public data class PostStatusUnmuteResponseSuccess(
-    public val body: Status,
+    override val body: Status,
     @Transient
     override val headers: Headers = Headers.Empty,
-  ) : PostStatusUnmuteResponse() {
+  ) : PostStatusUnmuteResponse(),
+      OperationResponseSuccess<Status> {
     /**
      * Number of requests permitted per time period
      */
@@ -1444,42 +1611,50 @@ public interface StatusesClient {
 
   @Serializable
   public data class PostStatusUnmuteResponseFailure401(
-    public val body: Error,
+    override val body: Error,
     @Transient
     override val headers: Headers = Headers.Empty,
-  ) : PostStatusUnmuteResponse()
+  ) : PostStatusUnmuteResponse(),
+      OperationResponseFailure<Error>
 
   @Serializable
   public data class PostStatusUnmuteResponseFailure410(
     @Transient
     override val headers: Headers = Headers.Empty,
-  ) : PostStatusUnmuteResponse()
+  ) : PostStatusUnmuteResponse(),
+      OperationResponseFailure<Unit> {
+    override val body: Unit
+      get() = Unit
+  }
 
   @Serializable
   public data class PostStatusUnmuteResponseFailure(
-    public val body: ValidationError,
+    override val body: ValidationError,
     @Transient
     override val headers: Headers = Headers.Empty,
-  ) : PostStatusUnmuteResponse()
+  ) : PostStatusUnmuteResponse(),
+      OperationResponseFailure<ValidationError>
 
   @Serializable
   public data class PostStatusUnmuteResponseUnknownFailure(
-    public val statusCode: Int,
+    override val statusCode: Int,
     @Transient
     override val headers: Headers = Headers.Empty,
-  ) : PostStatusUnmuteResponse()
+  ) : PostStatusUnmuteResponse(),
+      OperationResponseUnknownFailure
 
   @Serializable
-  public sealed class PostStatusUnpinResponse {
-    public abstract val headers: Headers
+  public sealed class PostStatusUnpinResponse : OperationResponse<Status> {
+    abstract override val headers: Headers
   }
 
   @Serializable
   public data class PostStatusUnpinResponseSuccess(
-    public val body: Status,
+    override val body: Status,
     @Transient
     override val headers: Headers = Headers.Empty,
-  ) : PostStatusUnpinResponse() {
+  ) : PostStatusUnpinResponse(),
+      OperationResponseSuccess<Status> {
     /**
      * Number of requests permitted per time period
      */
@@ -1501,42 +1676,50 @@ public interface StatusesClient {
 
   @Serializable
   public data class PostStatusUnpinResponseFailure401(
-    public val body: Error,
+    override val body: Error,
     @Transient
     override val headers: Headers = Headers.Empty,
-  ) : PostStatusUnpinResponse()
+  ) : PostStatusUnpinResponse(),
+      OperationResponseFailure<Error>
 
   @Serializable
   public data class PostStatusUnpinResponseFailure410(
     @Transient
     override val headers: Headers = Headers.Empty,
-  ) : PostStatusUnpinResponse()
+  ) : PostStatusUnpinResponse(),
+      OperationResponseFailure<Unit> {
+    override val body: Unit
+      get() = Unit
+  }
 
   @Serializable
   public data class PostStatusUnpinResponseFailure(
-    public val body: ValidationError,
+    override val body: ValidationError,
     @Transient
     override val headers: Headers = Headers.Empty,
-  ) : PostStatusUnpinResponse()
+  ) : PostStatusUnpinResponse(),
+      OperationResponseFailure<ValidationError>
 
   @Serializable
   public data class PostStatusUnpinResponseUnknownFailure(
-    public val statusCode: Int,
+    override val statusCode: Int,
     @Transient
     override val headers: Headers = Headers.Empty,
-  ) : PostStatusUnpinResponse()
+  ) : PostStatusUnpinResponse(),
+      OperationResponseUnknownFailure
 
   @Serializable
-  public sealed class PostStatusUnreblogResponse {
-    public abstract val headers: Headers
+  public sealed class PostStatusUnreblogResponse : OperationResponse<Status> {
+    abstract override val headers: Headers
   }
 
   @Serializable
   public data class PostStatusUnreblogResponseSuccess(
-    public val body: Status,
+    override val body: Status,
     @Transient
     override val headers: Headers = Headers.Empty,
-  ) : PostStatusUnreblogResponse() {
+  ) : PostStatusUnreblogResponse(),
+      OperationResponseSuccess<Status> {
     /**
      * Number of requests permitted per time period
      */
@@ -1558,30 +1741,37 @@ public interface StatusesClient {
 
   @Serializable
   public data class PostStatusUnreblogResponseFailure401(
-    public val body: Error,
+    override val body: Error,
     @Transient
     override val headers: Headers = Headers.Empty,
-  ) : PostStatusUnreblogResponse()
+  ) : PostStatusUnreblogResponse(),
+      OperationResponseFailure<Error>
 
   @Serializable
   public data class PostStatusUnreblogResponseFailure410(
     @Transient
     override val headers: Headers = Headers.Empty,
-  ) : PostStatusUnreblogResponse()
+  ) : PostStatusUnreblogResponse(),
+      OperationResponseFailure<Unit> {
+    override val body: Unit
+      get() = Unit
+  }
 
   @Serializable
   public data class PostStatusUnreblogResponseFailure(
-    public val body: ValidationError,
+    override val body: ValidationError,
     @Transient
     override val headers: Headers = Headers.Empty,
-  ) : PostStatusUnreblogResponse()
+  ) : PostStatusUnreblogResponse(),
+      OperationResponseFailure<ValidationError>
 
   @Serializable
   public data class PostStatusUnreblogResponseUnknownFailure(
-    public val statusCode: Int,
+    override val statusCode: Int,
     @Transient
     override val headers: Headers = Headers.Empty,
-  ) : PostStatusUnreblogResponse()
+  ) : PostStatusUnreblogResponse(),
+      OperationResponseUnknownFailure
 }
 
 public fun StatusesClient(configuration: ClientConfiguration = defaultClientConfiguration): StatusesClient = DefaultStatusesClient(configuration)

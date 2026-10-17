@@ -64,23 +64,25 @@ public interface Client {
   )
 
   @Serializable
-  public sealed class GetTestStatusResponse {
-    public abstract val headers: Headers
+  public sealed class GetTestStatusResponse : OperationResponse<TestStatusResponse> {
+    abstract override val headers: Headers
   }
 
   @Serializable
   public data class GetTestStatusResponseSuccess(
-    public val body: TestStatusResponse,
+    override val body: TestStatusResponse,
     @Transient
     override val headers: Headers = Headers.Empty,
-  ) : GetTestStatusResponse()
+  ) : GetTestStatusResponse(),
+      OperationResponseSuccess<TestStatusResponse>
 
   @Serializable
   public data class GetTestStatusResponseUnknownFailure(
-    public val statusCode: Int,
+    override val statusCode: Int,
     @Transient
     override val headers: Headers = Headers.Empty,
-  ) : GetTestStatusResponse()
+  ) : GetTestStatusResponse(),
+      OperationResponseUnknownFailure
 }
 
 public fun Client(configuration: ClientConfiguration = defaultClientConfiguration): Client = DefaultClient(configuration)

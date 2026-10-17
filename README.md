@@ -92,6 +92,9 @@ val client: UserClient = UserClient(config) // factory function returning a Defa
 val users = client.getUsers() // returns a sealed class to manage errors
 ```
 
+The response types of all operations implement common interfaces, generated next to `ClientConfiguration`, so that
+they can be handled generically (see [Common response interfaces](ADVANCED_USAGE.md#common-response-interfaces)).
+
 See [ADVANCED_USAGE.md](ADVANCED_USAGE.md#testing-code-that-uses-a-client) for testing, response body types, response headers and parameter serialization.
 
 ## Gradle task configuration properties

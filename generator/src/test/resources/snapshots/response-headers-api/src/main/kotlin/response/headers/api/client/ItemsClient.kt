@@ -14,6 +14,7 @@ import kotlin.Double
 import kotlin.Int
 import kotlin.Long
 import kotlin.String
+import kotlin.Unit
 import kotlin.collections.List
 import kotlin.coroutines.cancellation.CancellationException
 import kotlinx.serialization.Serializable
@@ -29,16 +30,17 @@ public interface ItemsClient {
   public suspend fun deleteItem(id: String): DeleteItemResponse
 
   @Serializable
-  public sealed class ListItemsResponse {
-    public abstract val headers: Headers
+  public sealed class ListItemsResponse : OperationResponse<List<Item>> {
+    abstract override val headers: Headers
   }
 
   @Serializable
   public data class ListItemsResponseSuccess(
-    public val body: List<Item>,
+    override val body: List<Item>,
     @Transient
     override val headers: Headers = Headers.Empty,
-  ) : ListItemsResponse() {
+  ) : ListItemsResponse(),
+      OperationResponseSuccess<List<Item>> {
     public val bodyHeader: String?
       get() = headers["Body"]
 
@@ -77,29 +79,35 @@ public interface ItemsClient {
   public data class ListItemsResponseFailure(
     @Transient
     override val headers: Headers = Headers.Empty,
-  ) : ListItemsResponse() {
+  ) : ListItemsResponse(),
+      OperationResponseFailure<Unit> {
+    override val body: Unit
+      get() = Unit
+
     public val retryAfter: Int?
       get() = headers["Retry-After"]?.toIntOrNull()
   }
 
   @Serializable
   public data class ListItemsResponseUnknownFailure(
-    public val statusCode: Int,
+    override val statusCode: Int,
     @Transient
     override val headers: Headers = Headers.Empty,
-  ) : ListItemsResponse()
+  ) : ListItemsResponse(),
+      OperationResponseUnknownFailure
 
   @Serializable
-  public sealed class CreateItemResponse {
-    public abstract val headers: Headers
+  public sealed class CreateItemResponse : OperationResponse<Item> {
+    abstract override val headers: Headers
   }
 
   @Serializable
   public data class CreateItemResponseSuccess(
-    public val body: Item,
+    override val body: Item,
     @Transient
     override val headers: Headers = Headers.Empty,
-  ) : CreateItemResponse() {
+  ) : CreateItemResponse(),
+      OperationResponseSuccess<Item> {
     public val eTag: String?
       get() = headers["ETag"]
 
@@ -109,21 +117,26 @@ public interface ItemsClient {
 
   @Serializable
   public data class CreateItemResponseUnknownFailure(
-    public val statusCode: Int,
+    override val statusCode: Int,
     @Transient
     override val headers: Headers = Headers.Empty,
-  ) : CreateItemResponse()
+  ) : CreateItemResponse(),
+      OperationResponseUnknownFailure
 
   @Serializable
-  public sealed class DeleteItemResponse {
-    public abstract val headers: Headers
+  public sealed class DeleteItemResponse : OperationResponse<Unit> {
+    abstract override val headers: Headers
   }
 
   @Serializable
   public data class DeleteItemResponseSuccess(
     @Transient
     override val headers: Headers = Headers.Empty,
-  ) : DeleteItemResponse() {
+  ) : DeleteItemResponse(),
+      OperationResponseSuccess<Unit> {
+    override val body: Unit
+      get() = Unit
+
     public val headersHeader: String?
       get() = headers["Headers"]
 
@@ -133,10 +146,11 @@ public interface ItemsClient {
 
   @Serializable
   public data class DeleteItemResponseUnknownFailure(
-    public val statusCode: Int,
+    override val statusCode: Int,
     @Transient
     override val headers: Headers = Headers.Empty,
-  ) : DeleteItemResponse()
+  ) : DeleteItemResponse(),
+      OperationResponseUnknownFailure
 }
 
 public fun ItemsClient(configuration: ClientConfiguration = defaultClientConfiguration): ItemsClient = DefaultItemsClient(configuration)

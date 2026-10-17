@@ -12,6 +12,7 @@ import io.ktor.http.encodeURLPathPart
 import kotlin.Int
 import kotlin.Long
 import kotlin.String
+import kotlin.Unit
 import kotlin.collections.List
 import kotlin.coroutines.cancellation.CancellationException
 import kotlinx.serialization.SerialName
@@ -49,16 +50,17 @@ public interface ScheduledStatusesClient {
   public suspend fun deleteScheduledStatus(id: String): DeleteScheduledStatusResponse
 
   @Serializable
-  public sealed class GetScheduledStatusesResponse {
-    public abstract val headers: Headers
+  public sealed class GetScheduledStatusesResponse : OperationResponse<List<ScheduledStatus>> {
+    abstract override val headers: Headers
   }
 
   @Serializable
   public data class GetScheduledStatusesResponseSuccess(
-    public val body: List<ScheduledStatus>,
+    override val body: List<ScheduledStatus>,
     @Transient
     override val headers: Headers = Headers.Empty,
-  ) : GetScheduledStatusesResponse() {
+  ) : GetScheduledStatusesResponse(),
+      OperationResponseSuccess<List<ScheduledStatus>> {
     /**
      * Pagination links for browsing older or newer results. Format: Link: <https://mastodon.example/api/v1/endpoint?max_id=7163058>; rel="next", <https://mastodon.example/api/v1/endpoint?min_id=7275607>; rel="prev". See [RFC 8288](https://www.rfc-editor.org/rfc/rfc8288) for more information.
      */
@@ -86,42 +88,50 @@ public interface ScheduledStatusesClient {
 
   @Serializable
   public data class GetScheduledStatusesResponseFailure401(
-    public val body: Error,
+    override val body: Error,
     @Transient
     override val headers: Headers = Headers.Empty,
-  ) : GetScheduledStatusesResponse()
+  ) : GetScheduledStatusesResponse(),
+      OperationResponseFailure<Error>
 
   @Serializable
   public data class GetScheduledStatusesResponseFailure410(
     @Transient
     override val headers: Headers = Headers.Empty,
-  ) : GetScheduledStatusesResponse()
+  ) : GetScheduledStatusesResponse(),
+      OperationResponseFailure<Unit> {
+    override val body: Unit
+      get() = Unit
+  }
 
   @Serializable
   public data class GetScheduledStatusesResponseFailure(
-    public val body: ValidationError,
+    override val body: ValidationError,
     @Transient
     override val headers: Headers = Headers.Empty,
-  ) : GetScheduledStatusesResponse()
+  ) : GetScheduledStatusesResponse(),
+      OperationResponseFailure<ValidationError>
 
   @Serializable
   public data class GetScheduledStatusesResponseUnknownFailure(
-    public val statusCode: Int,
+    override val statusCode: Int,
     @Transient
     override val headers: Headers = Headers.Empty,
-  ) : GetScheduledStatusesResponse()
+  ) : GetScheduledStatusesResponse(),
+      OperationResponseUnknownFailure
 
   @Serializable
-  public sealed class GetScheduledStatusResponse {
-    public abstract val headers: Headers
+  public sealed class GetScheduledStatusResponse : OperationResponse<ScheduledStatus> {
+    abstract override val headers: Headers
   }
 
   @Serializable
   public data class GetScheduledStatusResponseSuccess(
-    public val body: ScheduledStatus,
+    override val body: ScheduledStatus,
     @Transient
     override val headers: Headers = Headers.Empty,
-  ) : GetScheduledStatusResponse() {
+  ) : GetScheduledStatusResponse(),
+      OperationResponseSuccess<ScheduledStatus> {
     /**
      * Number of requests permitted per time period
      */
@@ -143,30 +153,37 @@ public interface ScheduledStatusesClient {
 
   @Serializable
   public data class GetScheduledStatusResponseFailure401(
-    public val body: Error,
+    override val body: Error,
     @Transient
     override val headers: Headers = Headers.Empty,
-  ) : GetScheduledStatusResponse()
+  ) : GetScheduledStatusResponse(),
+      OperationResponseFailure<Error>
 
   @Serializable
   public data class GetScheduledStatusResponseFailure410(
     @Transient
     override val headers: Headers = Headers.Empty,
-  ) : GetScheduledStatusResponse()
+  ) : GetScheduledStatusResponse(),
+      OperationResponseFailure<Unit> {
+    override val body: Unit
+      get() = Unit
+  }
 
   @Serializable
   public data class GetScheduledStatusResponseFailure(
-    public val body: ValidationError,
+    override val body: ValidationError,
     @Transient
     override val headers: Headers = Headers.Empty,
-  ) : GetScheduledStatusResponse()
+  ) : GetScheduledStatusResponse(),
+      OperationResponseFailure<ValidationError>
 
   @Serializable
   public data class GetScheduledStatusResponseUnknownFailure(
-    public val statusCode: Int,
+    override val statusCode: Int,
     @Transient
     override val headers: Headers = Headers.Empty,
-  ) : GetScheduledStatusResponse()
+  ) : GetScheduledStatusResponse(),
+      OperationResponseUnknownFailure
 
   @Serializable
   public data class UpdateScheduledStatusRequest(
@@ -175,16 +192,17 @@ public interface ScheduledStatusesClient {
   )
 
   @Serializable
-  public sealed class UpdateScheduledStatusResponse {
-    public abstract val headers: Headers
+  public sealed class UpdateScheduledStatusResponse : OperationResponse<ScheduledStatus> {
+    abstract override val headers: Headers
   }
 
   @Serializable
   public data class UpdateScheduledStatusResponseSuccess(
-    public val body: ScheduledStatus,
+    override val body: ScheduledStatus,
     @Transient
     override val headers: Headers = Headers.Empty,
-  ) : UpdateScheduledStatusResponse() {
+  ) : UpdateScheduledStatusResponse(),
+      OperationResponseSuccess<ScheduledStatus> {
     /**
      * Number of requests permitted per time period
      */
@@ -206,34 +224,44 @@ public interface ScheduledStatusesClient {
 
   @Serializable
   public data class UpdateScheduledStatusResponseFailure401(
-    public val body: Error,
+    override val body: Error,
     @Transient
     override val headers: Headers = Headers.Empty,
-  ) : UpdateScheduledStatusResponse()
+  ) : UpdateScheduledStatusResponse(),
+      OperationResponseFailure<Error>
 
   @Serializable
   public data class UpdateScheduledStatusResponseFailure(
     @Transient
     override val headers: Headers = Headers.Empty,
-  ) : UpdateScheduledStatusResponse()
+  ) : UpdateScheduledStatusResponse(),
+      OperationResponseFailure<Unit> {
+    override val body: Unit
+      get() = Unit
+  }
 
   @Serializable
   public data class UpdateScheduledStatusResponseUnknownFailure(
-    public val statusCode: Int,
+    override val statusCode: Int,
     @Transient
     override val headers: Headers = Headers.Empty,
-  ) : UpdateScheduledStatusResponse()
+  ) : UpdateScheduledStatusResponse(),
+      OperationResponseUnknownFailure
 
   @Serializable
-  public sealed class DeleteScheduledStatusResponse {
-    public abstract val headers: Headers
+  public sealed class DeleteScheduledStatusResponse : OperationResponse<Unit> {
+    abstract override val headers: Headers
   }
 
   @Serializable
   public data class DeleteScheduledStatusResponseSuccess(
     @Transient
     override val headers: Headers = Headers.Empty,
-  ) : DeleteScheduledStatusResponse() {
+  ) : DeleteScheduledStatusResponse(),
+      OperationResponseSuccess<Unit> {
+    override val body: Unit
+      get() = Unit
+
     /**
      * Number of requests permitted per time period
      */
@@ -255,30 +283,37 @@ public interface ScheduledStatusesClient {
 
   @Serializable
   public data class DeleteScheduledStatusResponseFailure401(
-    public val body: Error,
+    override val body: Error,
     @Transient
     override val headers: Headers = Headers.Empty,
-  ) : DeleteScheduledStatusResponse()
+  ) : DeleteScheduledStatusResponse(),
+      OperationResponseFailure<Error>
 
   @Serializable
   public data class DeleteScheduledStatusResponseFailure410(
     @Transient
     override val headers: Headers = Headers.Empty,
-  ) : DeleteScheduledStatusResponse()
+  ) : DeleteScheduledStatusResponse(),
+      OperationResponseFailure<Unit> {
+    override val body: Unit
+      get() = Unit
+  }
 
   @Serializable
   public data class DeleteScheduledStatusResponseFailure(
-    public val body: ValidationError,
+    override val body: ValidationError,
     @Transient
     override val headers: Headers = Headers.Empty,
-  ) : DeleteScheduledStatusResponse()
+  ) : DeleteScheduledStatusResponse(),
+      OperationResponseFailure<ValidationError>
 
   @Serializable
   public data class DeleteScheduledStatusResponseUnknownFailure(
-    public val statusCode: Int,
+    override val statusCode: Int,
     @Transient
     override val headers: Headers = Headers.Empty,
-  ) : DeleteScheduledStatusResponse()
+  ) : DeleteScheduledStatusResponse(),
+      OperationResponseUnknownFailure
 }
 
 public fun ScheduledStatusesClient(configuration: ClientConfiguration = defaultClientConfiguration): ScheduledStatusesClient = DefaultScheduledStatusesClient(configuration)

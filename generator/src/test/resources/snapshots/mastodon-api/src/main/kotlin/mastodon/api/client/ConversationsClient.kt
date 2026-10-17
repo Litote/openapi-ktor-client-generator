@@ -9,6 +9,7 @@ import io.ktor.http.encodeURLPathPart
 import kotlin.Int
 import kotlin.Long
 import kotlin.String
+import kotlin.Unit
 import kotlin.collections.List
 import kotlin.coroutines.cancellation.CancellationException
 import kotlinx.serialization.Serializable
@@ -40,16 +41,17 @@ public interface ConversationsClient {
   public suspend fun postConversationRead(id: String): PostConversationReadResponse
 
   @Serializable
-  public sealed class GetConversationsResponse {
-    public abstract val headers: Headers
+  public sealed class GetConversationsResponse : OperationResponse<List<Conversation>> {
+    abstract override val headers: Headers
   }
 
   @Serializable
   public data class GetConversationsResponseSuccess(
-    public val body: List<Conversation>,
+    override val body: List<Conversation>,
     @Transient
     override val headers: Headers = Headers.Empty,
-  ) : GetConversationsResponse() {
+  ) : GetConversationsResponse(),
+      OperationResponseSuccess<List<Conversation>> {
     /**
      * Pagination links for browsing older or newer results. Format: Link: <https://mastodon.example/api/v1/endpoint?max_id=7163058>; rel="next", <https://mastodon.example/api/v1/endpoint?min_id=7275607>; rel="prev". See [RFC 8288](https://www.rfc-editor.org/rfc/rfc8288) for more information.
      */
@@ -77,41 +79,52 @@ public interface ConversationsClient {
 
   @Serializable
   public data class GetConversationsResponseFailure401(
-    public val body: Error,
+    override val body: Error,
     @Transient
     override val headers: Headers = Headers.Empty,
-  ) : GetConversationsResponse()
+  ) : GetConversationsResponse(),
+      OperationResponseFailure<Error>
 
   @Serializable
   public data class GetConversationsResponseFailure410(
     @Transient
     override val headers: Headers = Headers.Empty,
-  ) : GetConversationsResponse()
+  ) : GetConversationsResponse(),
+      OperationResponseFailure<Unit> {
+    override val body: Unit
+      get() = Unit
+  }
 
   @Serializable
   public data class GetConversationsResponseFailure(
-    public val body: ValidationError,
+    override val body: ValidationError,
     @Transient
     override val headers: Headers = Headers.Empty,
-  ) : GetConversationsResponse()
+  ) : GetConversationsResponse(),
+      OperationResponseFailure<ValidationError>
 
   @Serializable
   public data class GetConversationsResponseUnknownFailure(
-    public val statusCode: Int,
+    override val statusCode: Int,
     @Transient
     override val headers: Headers = Headers.Empty,
-  ) : GetConversationsResponse()
+  ) : GetConversationsResponse(),
+      OperationResponseUnknownFailure
 
   @Serializable
-  public sealed class DeleteConversationResponse {
-    public abstract val headers: Headers
+  public sealed class DeleteConversationResponse : OperationResponse<Unit> {
+    abstract override val headers: Headers
   }
 
   @Serializable
   public data class DeleteConversationResponseSuccess(
     @Transient
     override val headers: Headers = Headers.Empty,
-  ) : DeleteConversationResponse() {
+  ) : DeleteConversationResponse(),
+      OperationResponseSuccess<Unit> {
+    override val body: Unit
+      get() = Unit
+
     /**
      * Number of requests permitted per time period
      */
@@ -133,42 +146,50 @@ public interface ConversationsClient {
 
   @Serializable
   public data class DeleteConversationResponseFailure401(
-    public val body: Error,
+    override val body: Error,
     @Transient
     override val headers: Headers = Headers.Empty,
-  ) : DeleteConversationResponse()
+  ) : DeleteConversationResponse(),
+      OperationResponseFailure<Error>
 
   @Serializable
   public data class DeleteConversationResponseFailure410(
     @Transient
     override val headers: Headers = Headers.Empty,
-  ) : DeleteConversationResponse()
+  ) : DeleteConversationResponse(),
+      OperationResponseFailure<Unit> {
+    override val body: Unit
+      get() = Unit
+  }
 
   @Serializable
   public data class DeleteConversationResponseFailure(
-    public val body: ValidationError,
+    override val body: ValidationError,
     @Transient
     override val headers: Headers = Headers.Empty,
-  ) : DeleteConversationResponse()
+  ) : DeleteConversationResponse(),
+      OperationResponseFailure<ValidationError>
 
   @Serializable
   public data class DeleteConversationResponseUnknownFailure(
-    public val statusCode: Int,
+    override val statusCode: Int,
     @Transient
     override val headers: Headers = Headers.Empty,
-  ) : DeleteConversationResponse()
+  ) : DeleteConversationResponse(),
+      OperationResponseUnknownFailure
 
   @Serializable
-  public sealed class PostConversationReadResponse {
-    public abstract val headers: Headers
+  public sealed class PostConversationReadResponse : OperationResponse<Conversation> {
+    abstract override val headers: Headers
   }
 
   @Serializable
   public data class PostConversationReadResponseSuccess(
-    public val body: Conversation,
+    override val body: Conversation,
     @Transient
     override val headers: Headers = Headers.Empty,
-  ) : PostConversationReadResponse() {
+  ) : PostConversationReadResponse(),
+      OperationResponseSuccess<Conversation> {
     /**
      * Number of requests permitted per time period
      */
@@ -190,30 +211,37 @@ public interface ConversationsClient {
 
   @Serializable
   public data class PostConversationReadResponseFailure401(
-    public val body: Error,
+    override val body: Error,
     @Transient
     override val headers: Headers = Headers.Empty,
-  ) : PostConversationReadResponse()
+  ) : PostConversationReadResponse(),
+      OperationResponseFailure<Error>
 
   @Serializable
   public data class PostConversationReadResponseFailure410(
     @Transient
     override val headers: Headers = Headers.Empty,
-  ) : PostConversationReadResponse()
+  ) : PostConversationReadResponse(),
+      OperationResponseFailure<Unit> {
+    override val body: Unit
+      get() = Unit
+  }
 
   @Serializable
   public data class PostConversationReadResponseFailure(
-    public val body: ValidationError,
+    override val body: ValidationError,
     @Transient
     override val headers: Headers = Headers.Empty,
-  ) : PostConversationReadResponse()
+  ) : PostConversationReadResponse(),
+      OperationResponseFailure<ValidationError>
 
   @Serializable
   public data class PostConversationReadResponseUnknownFailure(
-    public val statusCode: Int,
+    override val statusCode: Int,
     @Transient
     override val headers: Headers = Headers.Empty,
-  ) : PostConversationReadResponse()
+  ) : PostConversationReadResponse(),
+      OperationResponseUnknownFailure
 }
 
 public fun ConversationsClient(configuration: ClientConfiguration = defaultClientConfiguration): ConversationsClient = DefaultConversationsClient(configuration)

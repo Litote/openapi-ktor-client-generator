@@ -7,6 +7,7 @@ import io.ktor.http.Headers
 import io.ktor.http.encodeURLPathPart
 import kotlin.Int
 import kotlin.String
+import kotlin.Unit
 import kotlin.coroutines.cancellation.CancellationException
 import kotlinx.serialization.Serializable
 import kotlinx.serialization.Transient
@@ -42,16 +43,17 @@ public interface TagsClient {
   public suspend fun postTagUnfollow(name: String): PostTagUnfollowResponse
 
   @Serializable
-  public sealed class PostTagFeatureResponse {
-    public abstract val headers: Headers
+  public sealed class PostTagFeatureResponse : OperationResponse<Tag> {
+    abstract override val headers: Headers
   }
 
   @Serializable
   public data class PostTagFeatureResponseSuccess(
-    public val body: Tag,
+    override val body: Tag,
     @Transient
     override val headers: Headers = Headers.Empty,
-  ) : PostTagFeatureResponse() {
+  ) : PostTagFeatureResponse(),
+      OperationResponseSuccess<Tag> {
     /**
      * Number of requests permitted per time period
      */
@@ -73,42 +75,50 @@ public interface TagsClient {
 
   @Serializable
   public data class PostTagFeatureResponseFailure401(
-    public val body: Error,
+    override val body: Error,
     @Transient
     override val headers: Headers = Headers.Empty,
-  ) : PostTagFeatureResponse()
+  ) : PostTagFeatureResponse(),
+      OperationResponseFailure<Error>
 
   @Serializable
   public data class PostTagFeatureResponseFailure410(
     @Transient
     override val headers: Headers = Headers.Empty,
-  ) : PostTagFeatureResponse()
+  ) : PostTagFeatureResponse(),
+      OperationResponseFailure<Unit> {
+    override val body: Unit
+      get() = Unit
+  }
 
   @Serializable
   public data class PostTagFeatureResponseFailure(
-    public val body: ValidationError,
+    override val body: ValidationError,
     @Transient
     override val headers: Headers = Headers.Empty,
-  ) : PostTagFeatureResponse()
+  ) : PostTagFeatureResponse(),
+      OperationResponseFailure<ValidationError>
 
   @Serializable
   public data class PostTagFeatureResponseUnknownFailure(
-    public val statusCode: Int,
+    override val statusCode: Int,
     @Transient
     override val headers: Headers = Headers.Empty,
-  ) : PostTagFeatureResponse()
+  ) : PostTagFeatureResponse(),
+      OperationResponseUnknownFailure
 
   @Serializable
-  public sealed class PostTagUnfeatureResponse {
-    public abstract val headers: Headers
+  public sealed class PostTagUnfeatureResponse : OperationResponse<Tag> {
+    abstract override val headers: Headers
   }
 
   @Serializable
   public data class PostTagUnfeatureResponseSuccess(
-    public val body: Tag,
+    override val body: Tag,
     @Transient
     override val headers: Headers = Headers.Empty,
-  ) : PostTagUnfeatureResponse() {
+  ) : PostTagUnfeatureResponse(),
+      OperationResponseSuccess<Tag> {
     /**
      * Number of requests permitted per time period
      */
@@ -130,42 +140,50 @@ public interface TagsClient {
 
   @Serializable
   public data class PostTagUnfeatureResponseFailure401(
-    public val body: Error,
+    override val body: Error,
     @Transient
     override val headers: Headers = Headers.Empty,
-  ) : PostTagUnfeatureResponse()
+  ) : PostTagUnfeatureResponse(),
+      OperationResponseFailure<Error>
 
   @Serializable
   public data class PostTagUnfeatureResponseFailure410(
     @Transient
     override val headers: Headers = Headers.Empty,
-  ) : PostTagUnfeatureResponse()
+  ) : PostTagUnfeatureResponse(),
+      OperationResponseFailure<Unit> {
+    override val body: Unit
+      get() = Unit
+  }
 
   @Serializable
   public data class PostTagUnfeatureResponseFailure(
-    public val body: ValidationError,
+    override val body: ValidationError,
     @Transient
     override val headers: Headers = Headers.Empty,
-  ) : PostTagUnfeatureResponse()
+  ) : PostTagUnfeatureResponse(),
+      OperationResponseFailure<ValidationError>
 
   @Serializable
   public data class PostTagUnfeatureResponseUnknownFailure(
-    public val statusCode: Int,
+    override val statusCode: Int,
     @Transient
     override val headers: Headers = Headers.Empty,
-  ) : PostTagUnfeatureResponse()
+  ) : PostTagUnfeatureResponse(),
+      OperationResponseUnknownFailure
 
   @Serializable
-  public sealed class GetTagsByNameResponse {
-    public abstract val headers: Headers
+  public sealed class GetTagsByNameResponse : OperationResponse<Tag> {
+    abstract override val headers: Headers
   }
 
   @Serializable
   public data class GetTagsByNameResponseSuccess(
-    public val body: Tag,
+    override val body: Tag,
     @Transient
     override val headers: Headers = Headers.Empty,
-  ) : GetTagsByNameResponse() {
+  ) : GetTagsByNameResponse(),
+      OperationResponseSuccess<Tag> {
     /**
      * Number of requests permitted per time period
      */
@@ -187,42 +205,50 @@ public interface TagsClient {
 
   @Serializable
   public data class GetTagsByNameResponseFailure401(
-    public val body: Error,
+    override val body: Error,
     @Transient
     override val headers: Headers = Headers.Empty,
-  ) : GetTagsByNameResponse()
+  ) : GetTagsByNameResponse(),
+      OperationResponseFailure<Error>
 
   @Serializable
   public data class GetTagsByNameResponseFailure410(
     @Transient
     override val headers: Headers = Headers.Empty,
-  ) : GetTagsByNameResponse()
+  ) : GetTagsByNameResponse(),
+      OperationResponseFailure<Unit> {
+    override val body: Unit
+      get() = Unit
+  }
 
   @Serializable
   public data class GetTagsByNameResponseFailure(
-    public val body: ValidationError,
+    override val body: ValidationError,
     @Transient
     override val headers: Headers = Headers.Empty,
-  ) : GetTagsByNameResponse()
+  ) : GetTagsByNameResponse(),
+      OperationResponseFailure<ValidationError>
 
   @Serializable
   public data class GetTagsByNameResponseUnknownFailure(
-    public val statusCode: Int,
+    override val statusCode: Int,
     @Transient
     override val headers: Headers = Headers.Empty,
-  ) : GetTagsByNameResponse()
+  ) : GetTagsByNameResponse(),
+      OperationResponseUnknownFailure
 
   @Serializable
-  public sealed class PostTagFollowResponse {
-    public abstract val headers: Headers
+  public sealed class PostTagFollowResponse : OperationResponse<Tag> {
+    abstract override val headers: Headers
   }
 
   @Serializable
   public data class PostTagFollowResponseSuccess(
-    public val body: Tag,
+    override val body: Tag,
     @Transient
     override val headers: Headers = Headers.Empty,
-  ) : PostTagFollowResponse() {
+  ) : PostTagFollowResponse(),
+      OperationResponseSuccess<Tag> {
     /**
      * Number of requests permitted per time period
      */
@@ -244,35 +270,42 @@ public interface TagsClient {
 
   @Serializable
   public data class PostTagFollowResponseFailure401(
-    public val body: Error,
+    override val body: Error,
     @Transient
     override val headers: Headers = Headers.Empty,
-  ) : PostTagFollowResponse()
+  ) : PostTagFollowResponse(),
+      OperationResponseFailure<Error>
 
   @Serializable
   public data class PostTagFollowResponseFailure(
     @Transient
     override val headers: Headers = Headers.Empty,
-  ) : PostTagFollowResponse()
+  ) : PostTagFollowResponse(),
+      OperationResponseFailure<Unit> {
+    override val body: Unit
+      get() = Unit
+  }
 
   @Serializable
   public data class PostTagFollowResponseUnknownFailure(
-    public val statusCode: Int,
+    override val statusCode: Int,
     @Transient
     override val headers: Headers = Headers.Empty,
-  ) : PostTagFollowResponse()
+  ) : PostTagFollowResponse(),
+      OperationResponseUnknownFailure
 
   @Serializable
-  public sealed class PostTagUnfollowResponse {
-    public abstract val headers: Headers
+  public sealed class PostTagUnfollowResponse : OperationResponse<Tag> {
+    abstract override val headers: Headers
   }
 
   @Serializable
   public data class PostTagUnfollowResponseSuccess(
-    public val body: Tag,
+    override val body: Tag,
     @Transient
     override val headers: Headers = Headers.Empty,
-  ) : PostTagUnfollowResponse() {
+  ) : PostTagUnfollowResponse(),
+      OperationResponseSuccess<Tag> {
     /**
      * Number of requests permitted per time period
      */
@@ -294,30 +327,37 @@ public interface TagsClient {
 
   @Serializable
   public data class PostTagUnfollowResponseFailure401(
-    public val body: Error,
+    override val body: Error,
     @Transient
     override val headers: Headers = Headers.Empty,
-  ) : PostTagUnfollowResponse()
+  ) : PostTagUnfollowResponse(),
+      OperationResponseFailure<Error>
 
   @Serializable
   public data class PostTagUnfollowResponseFailure410(
     @Transient
     override val headers: Headers = Headers.Empty,
-  ) : PostTagUnfollowResponse()
+  ) : PostTagUnfollowResponse(),
+      OperationResponseFailure<Unit> {
+    override val body: Unit
+      get() = Unit
+  }
 
   @Serializable
   public data class PostTagUnfollowResponseFailure(
-    public val body: ValidationError,
+    override val body: ValidationError,
     @Transient
     override val headers: Headers = Headers.Empty,
-  ) : PostTagUnfollowResponse()
+  ) : PostTagUnfollowResponse(),
+      OperationResponseFailure<ValidationError>
 
   @Serializable
   public data class PostTagUnfollowResponseUnknownFailure(
-    public val statusCode: Int,
+    override val statusCode: Int,
     @Transient
     override val headers: Headers = Headers.Empty,
-  ) : PostTagUnfollowResponse()
+  ) : PostTagUnfollowResponse(),
+      OperationResponseUnknownFailure
 }
 
 public fun TagsClient(configuration: ClientConfiguration = defaultClientConfiguration): TagsClient = DefaultTagsClient(configuration)

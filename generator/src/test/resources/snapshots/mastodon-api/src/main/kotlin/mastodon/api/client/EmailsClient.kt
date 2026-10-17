@@ -8,6 +8,7 @@ import io.ktor.http.Headers
 import io.ktor.http.contentType
 import kotlin.Int
 import kotlin.String
+import kotlin.Unit
 import kotlin.coroutines.cancellation.CancellationException
 import kotlinx.serialization.Serializable
 import kotlinx.serialization.Transient
@@ -27,15 +28,19 @@ public interface EmailsClient {
   )
 
   @Serializable
-  public sealed class CreateEmailConfirmationsResponse {
-    public abstract val headers: Headers
+  public sealed class CreateEmailConfirmationsResponse : OperationResponse<Unit> {
+    abstract override val headers: Headers
   }
 
   @Serializable
   public data class CreateEmailConfirmationsResponseSuccess(
     @Transient
     override val headers: Headers = Headers.Empty,
-  ) : CreateEmailConfirmationsResponse() {
+  ) : CreateEmailConfirmationsResponse(),
+      OperationResponseSuccess<Unit> {
+    override val body: Unit
+      get() = Unit
+
     /**
      * Number of requests permitted per time period
      */
@@ -57,30 +62,37 @@ public interface EmailsClient {
 
   @Serializable
   public data class CreateEmailConfirmationsResponseFailure401(
-    public val body: Error,
+    override val body: Error,
     @Transient
     override val headers: Headers = Headers.Empty,
-  ) : CreateEmailConfirmationsResponse()
+  ) : CreateEmailConfirmationsResponse(),
+      OperationResponseFailure<Error>
 
   @Serializable
   public data class CreateEmailConfirmationsResponseFailure410(
     @Transient
     override val headers: Headers = Headers.Empty,
-  ) : CreateEmailConfirmationsResponse()
+  ) : CreateEmailConfirmationsResponse(),
+      OperationResponseFailure<Unit> {
+    override val body: Unit
+      get() = Unit
+  }
 
   @Serializable
   public data class CreateEmailConfirmationsResponseFailure(
-    public val body: ValidationError,
+    override val body: ValidationError,
     @Transient
     override val headers: Headers = Headers.Empty,
-  ) : CreateEmailConfirmationsResponse()
+  ) : CreateEmailConfirmationsResponse(),
+      OperationResponseFailure<ValidationError>
 
   @Serializable
   public data class CreateEmailConfirmationsResponseUnknownFailure(
-    public val statusCode: Int,
+    override val statusCode: Int,
     @Transient
     override val headers: Headers = Headers.Empty,
-  ) : CreateEmailConfirmationsResponse()
+  ) : CreateEmailConfirmationsResponse(),
+      OperationResponseUnknownFailure
 }
 
 public fun EmailsClient(configuration: ClientConfiguration = defaultClientConfiguration): EmailsClient = DefaultEmailsClient(configuration)

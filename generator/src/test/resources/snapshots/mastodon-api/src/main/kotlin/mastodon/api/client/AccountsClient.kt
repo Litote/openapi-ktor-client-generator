@@ -13,6 +13,7 @@ import kotlin.Boolean
 import kotlin.Int
 import kotlin.Long
 import kotlin.String
+import kotlin.Unit
 import kotlin.coroutines.cancellation.CancellationException
 import kotlinx.serialization.SerialName
 import kotlinx.serialization.Serializable
@@ -209,16 +210,17 @@ public interface AccountsClient {
   public suspend fun getAccountsVerifyCredentials(): GetAccountsVerifyCredentialsResponse
 
   @Serializable
-  public sealed class GetAccountsResponse {
-    public abstract val headers: Headers
+  public sealed class GetAccountsResponse : OperationResponse<CollectionsList<Account>> {
+    abstract override val headers: Headers
   }
 
   @Serializable
   public data class GetAccountsResponseSuccess(
-    public val body: CollectionsList<Account>,
+    override val body: CollectionsList<Account>,
     @Transient
     override val headers: Headers = Headers.Empty,
-  ) : GetAccountsResponse() {
+  ) : GetAccountsResponse(),
+      OperationResponseSuccess<CollectionsList<Account>> {
     /**
      * Number of requests permitted per time period
      */
@@ -240,30 +242,37 @@ public interface AccountsClient {
 
   @Serializable
   public data class GetAccountsResponseFailure401(
-    public val body: Error,
+    override val body: Error,
     @Transient
     override val headers: Headers = Headers.Empty,
-  ) : GetAccountsResponse()
+  ) : GetAccountsResponse(),
+      OperationResponseFailure<Error>
 
   @Serializable
   public data class GetAccountsResponseFailure410(
     @Transient
     override val headers: Headers = Headers.Empty,
-  ) : GetAccountsResponse()
+  ) : GetAccountsResponse(),
+      OperationResponseFailure<Unit> {
+    override val body: Unit
+      get() = Unit
+  }
 
   @Serializable
   public data class GetAccountsResponseFailure(
-    public val body: ValidationError,
+    override val body: ValidationError,
     @Transient
     override val headers: Headers = Headers.Empty,
-  ) : GetAccountsResponse()
+  ) : GetAccountsResponse(),
+      OperationResponseFailure<ValidationError>
 
   @Serializable
   public data class GetAccountsResponseUnknownFailure(
-    public val statusCode: Int,
+    override val statusCode: Int,
     @Transient
     override val headers: Headers = Headers.Empty,
-  ) : GetAccountsResponse()
+  ) : GetAccountsResponse(),
+      OperationResponseUnknownFailure
 
   @Serializable
   public data class CreateAccountRequest(
@@ -278,16 +287,17 @@ public interface AccountsClient {
   )
 
   @Serializable
-  public sealed class CreateAccountResponse {
-    public abstract val headers: Headers
+  public sealed class CreateAccountResponse : OperationResponse<Token> {
+    abstract override val headers: Headers
   }
 
   @Serializable
   public data class CreateAccountResponseSuccess(
-    public val body: Token,
+    override val body: Token,
     @Transient
     override val headers: Headers = Headers.Empty,
-  ) : CreateAccountResponse() {
+  ) : CreateAccountResponse(),
+      OperationResponseSuccess<Token> {
     /**
      * Number of requests permitted per time period
      */
@@ -309,42 +319,50 @@ public interface AccountsClient {
 
   @Serializable
   public data class CreateAccountResponseFailure401(
-    public val body: Error,
+    override val body: Error,
     @Transient
     override val headers: Headers = Headers.Empty,
-  ) : CreateAccountResponse()
+  ) : CreateAccountResponse(),
+      OperationResponseFailure<Error>
 
   @Serializable
   public data class CreateAccountResponseFailure410(
     @Transient
     override val headers: Headers = Headers.Empty,
-  ) : CreateAccountResponse()
+  ) : CreateAccountResponse(),
+      OperationResponseFailure<Unit> {
+    override val body: Unit
+      get() = Unit
+  }
 
   @Serializable
   public data class CreateAccountResponseFailure(
-    public val body: ValidationError,
+    override val body: ValidationError,
     @Transient
     override val headers: Headers = Headers.Empty,
-  ) : CreateAccountResponse()
+  ) : CreateAccountResponse(),
+      OperationResponseFailure<ValidationError>
 
   @Serializable
   public data class CreateAccountResponseUnknownFailure(
-    public val statusCode: Int,
+    override val statusCode: Int,
     @Transient
     override val headers: Headers = Headers.Empty,
-  ) : CreateAccountResponse()
+  ) : CreateAccountResponse(),
+      OperationResponseUnknownFailure
 
   @Serializable
-  public sealed class GetAccountResponse {
-    public abstract val headers: Headers
+  public sealed class GetAccountResponse : OperationResponse<Account> {
+    abstract override val headers: Headers
   }
 
   @Serializable
   public data class GetAccountResponseSuccess(
-    public val body: Account,
+    override val body: Account,
     @Transient
     override val headers: Headers = Headers.Empty,
-  ) : GetAccountResponse() {
+  ) : GetAccountResponse(),
+      OperationResponseSuccess<Account> {
     /**
      * Number of requests permitted per time period
      */
@@ -366,42 +384,50 @@ public interface AccountsClient {
 
   @Serializable
   public data class GetAccountResponseFailure401(
-    public val body: Error,
+    override val body: Error,
     @Transient
     override val headers: Headers = Headers.Empty,
-  ) : GetAccountResponse()
+  ) : GetAccountResponse(),
+      OperationResponseFailure<Error>
 
   @Serializable
   public data class GetAccountResponseFailure410(
     @Transient
     override val headers: Headers = Headers.Empty,
-  ) : GetAccountResponse()
+  ) : GetAccountResponse(),
+      OperationResponseFailure<Unit> {
+    override val body: Unit
+      get() = Unit
+  }
 
   @Serializable
   public data class GetAccountResponseFailure(
-    public val body: ValidationError,
+    override val body: ValidationError,
     @Transient
     override val headers: Headers = Headers.Empty,
-  ) : GetAccountResponse()
+  ) : GetAccountResponse(),
+      OperationResponseFailure<ValidationError>
 
   @Serializable
   public data class GetAccountResponseUnknownFailure(
-    public val statusCode: Int,
+    override val statusCode: Int,
     @Transient
     override val headers: Headers = Headers.Empty,
-  ) : GetAccountResponse()
+  ) : GetAccountResponse(),
+      OperationResponseUnknownFailure
 
   @Serializable
-  public sealed class PostAccountBlockResponse {
-    public abstract val headers: Headers
+  public sealed class PostAccountBlockResponse : OperationResponse<Relationship> {
+    abstract override val headers: Headers
   }
 
   @Serializable
   public data class PostAccountBlockResponseSuccess(
-    public val body: Relationship,
+    override val body: Relationship,
     @Transient
     override val headers: Headers = Headers.Empty,
-  ) : PostAccountBlockResponse() {
+  ) : PostAccountBlockResponse(),
+      OperationResponseSuccess<Relationship> {
     /**
      * Number of requests permitted per time period
      */
@@ -423,35 +449,42 @@ public interface AccountsClient {
 
   @Serializable
   public data class PostAccountBlockResponseFailure401(
-    public val body: Error,
+    override val body: Error,
     @Transient
     override val headers: Headers = Headers.Empty,
-  ) : PostAccountBlockResponse()
+  ) : PostAccountBlockResponse(),
+      OperationResponseFailure<Error>
 
   @Serializable
   public data class PostAccountBlockResponseFailure(
     @Transient
     override val headers: Headers = Headers.Empty,
-  ) : PostAccountBlockResponse()
+  ) : PostAccountBlockResponse(),
+      OperationResponseFailure<Unit> {
+    override val body: Unit
+      get() = Unit
+  }
 
   @Serializable
   public data class PostAccountBlockResponseUnknownFailure(
-    public val statusCode: Int,
+    override val statusCode: Int,
     @Transient
     override val headers: Headers = Headers.Empty,
-  ) : PostAccountBlockResponse()
+  ) : PostAccountBlockResponse(),
+      OperationResponseUnknownFailure
 
   @Serializable
-  public sealed class PostAccountEndorseResponse {
-    public abstract val headers: Headers
+  public sealed class PostAccountEndorseResponse : OperationResponse<Relationship> {
+    abstract override val headers: Headers
   }
 
   @Serializable
   public data class PostAccountEndorseResponseSuccess(
-    public val body: Relationship,
+    override val body: Relationship,
     @Transient
     override val headers: Headers = Headers.Empty,
-  ) : PostAccountEndorseResponse() {
+  ) : PostAccountEndorseResponse(),
+      OperationResponseSuccess<Relationship> {
     /**
      * Number of requests permitted per time period
      */
@@ -473,35 +506,42 @@ public interface AccountsClient {
 
   @Serializable
   public data class PostAccountEndorseResponseFailure401(
-    public val body: Error,
+    override val body: Error,
     @Transient
     override val headers: Headers = Headers.Empty,
-  ) : PostAccountEndorseResponse()
+  ) : PostAccountEndorseResponse(),
+      OperationResponseFailure<Error>
 
   @Serializable
   public data class PostAccountEndorseResponseFailure(
     @Transient
     override val headers: Headers = Headers.Empty,
-  ) : PostAccountEndorseResponse()
+  ) : PostAccountEndorseResponse(),
+      OperationResponseFailure<Unit> {
+    override val body: Unit
+      get() = Unit
+  }
 
   @Serializable
   public data class PostAccountEndorseResponseUnknownFailure(
-    public val statusCode: Int,
+    override val statusCode: Int,
     @Transient
     override val headers: Headers = Headers.Empty,
-  ) : PostAccountEndorseResponse()
+  ) : PostAccountEndorseResponse(),
+      OperationResponseUnknownFailure
 
   @Serializable
-  public sealed class GetAccountEndorsementsResponse {
-    public abstract val headers: Headers
+  public sealed class GetAccountEndorsementsResponse : OperationResponse<CollectionsList<Account>> {
+    abstract override val headers: Headers
   }
 
   @Serializable
   public data class GetAccountEndorsementsResponseSuccess(
-    public val body: CollectionsList<Account>,
+    override val body: CollectionsList<Account>,
     @Transient
     override val headers: Headers = Headers.Empty,
-  ) : GetAccountEndorsementsResponse() {
+  ) : GetAccountEndorsementsResponse(),
+      OperationResponseSuccess<CollectionsList<Account>> {
     /**
      * Pagination links for browsing older or newer results. Format: Link: <https://mastodon.example/api/v1/endpoint?max_id=7163058>; rel="next", <https://mastodon.example/api/v1/endpoint?min_id=7275607>; rel="prev". See [RFC 8288](https://www.rfc-editor.org/rfc/rfc8288) for more information.
      */
@@ -529,42 +569,50 @@ public interface AccountsClient {
 
   @Serializable
   public data class GetAccountEndorsementsResponseFailure401(
-    public val body: Error,
+    override val body: Error,
     @Transient
     override val headers: Headers = Headers.Empty,
-  ) : GetAccountEndorsementsResponse()
+  ) : GetAccountEndorsementsResponse(),
+      OperationResponseFailure<Error>
 
   @Serializable
   public data class GetAccountEndorsementsResponseFailure410(
     @Transient
     override val headers: Headers = Headers.Empty,
-  ) : GetAccountEndorsementsResponse()
+  ) : GetAccountEndorsementsResponse(),
+      OperationResponseFailure<Unit> {
+    override val body: Unit
+      get() = Unit
+  }
 
   @Serializable
   public data class GetAccountEndorsementsResponseFailure(
-    public val body: ValidationError,
+    override val body: ValidationError,
     @Transient
     override val headers: Headers = Headers.Empty,
-  ) : GetAccountEndorsementsResponse()
+  ) : GetAccountEndorsementsResponse(),
+      OperationResponseFailure<ValidationError>
 
   @Serializable
   public data class GetAccountEndorsementsResponseUnknownFailure(
-    public val statusCode: Int,
+    override val statusCode: Int,
     @Transient
     override val headers: Headers = Headers.Empty,
-  ) : GetAccountEndorsementsResponse()
+  ) : GetAccountEndorsementsResponse(),
+      OperationResponseUnknownFailure
 
   @Serializable
-  public sealed class GetAccountFeaturedTagsResponse {
-    public abstract val headers: Headers
+  public sealed class GetAccountFeaturedTagsResponse : OperationResponse<CollectionsList<FeaturedTag>> {
+    abstract override val headers: Headers
   }
 
   @Serializable
   public data class GetAccountFeaturedTagsResponseSuccess(
-    public val body: CollectionsList<FeaturedTag>,
+    override val body: CollectionsList<FeaturedTag>,
     @Transient
     override val headers: Headers = Headers.Empty,
-  ) : GetAccountFeaturedTagsResponse() {
+  ) : GetAccountFeaturedTagsResponse(),
+      OperationResponseSuccess<CollectionsList<FeaturedTag>> {
     /**
      * Number of requests permitted per time period
      */
@@ -586,30 +634,37 @@ public interface AccountsClient {
 
   @Serializable
   public data class GetAccountFeaturedTagsResponseFailure401(
-    public val body: Error,
+    override val body: Error,
     @Transient
     override val headers: Headers = Headers.Empty,
-  ) : GetAccountFeaturedTagsResponse()
+  ) : GetAccountFeaturedTagsResponse(),
+      OperationResponseFailure<Error>
 
   @Serializable
   public data class GetAccountFeaturedTagsResponseFailure410(
     @Transient
     override val headers: Headers = Headers.Empty,
-  ) : GetAccountFeaturedTagsResponse()
+  ) : GetAccountFeaturedTagsResponse(),
+      OperationResponseFailure<Unit> {
+    override val body: Unit
+      get() = Unit
+  }
 
   @Serializable
   public data class GetAccountFeaturedTagsResponseFailure(
-    public val body: ValidationError,
+    override val body: ValidationError,
     @Transient
     override val headers: Headers = Headers.Empty,
-  ) : GetAccountFeaturedTagsResponse()
+  ) : GetAccountFeaturedTagsResponse(),
+      OperationResponseFailure<ValidationError>
 
   @Serializable
   public data class GetAccountFeaturedTagsResponseUnknownFailure(
-    public val statusCode: Int,
+    override val statusCode: Int,
     @Transient
     override val headers: Headers = Headers.Empty,
-  ) : GetAccountFeaturedTagsResponse()
+  ) : GetAccountFeaturedTagsResponse(),
+      OperationResponseUnknownFailure
 
   @Serializable
   public data class PostAccountFollowRequest(
@@ -619,16 +674,17 @@ public interface AccountsClient {
   )
 
   @Serializable
-  public sealed class PostAccountFollowResponse {
-    public abstract val headers: Headers
+  public sealed class PostAccountFollowResponse : OperationResponse<Relationship> {
+    abstract override val headers: Headers
   }
 
   @Serializable
   public data class PostAccountFollowResponseSuccess(
-    public val body: Relationship,
+    override val body: Relationship,
     @Transient
     override val headers: Headers = Headers.Empty,
-  ) : PostAccountFollowResponse() {
+  ) : PostAccountFollowResponse(),
+      OperationResponseSuccess<Relationship> {
     /**
      * Number of requests permitted per time period
      */
@@ -650,35 +706,42 @@ public interface AccountsClient {
 
   @Serializable
   public data class PostAccountFollowResponseFailure401(
-    public val body: Error,
+    override val body: Error,
     @Transient
     override val headers: Headers = Headers.Empty,
-  ) : PostAccountFollowResponse()
+  ) : PostAccountFollowResponse(),
+      OperationResponseFailure<Error>
 
   @Serializable
   public data class PostAccountFollowResponseFailure(
     @Transient
     override val headers: Headers = Headers.Empty,
-  ) : PostAccountFollowResponse()
+  ) : PostAccountFollowResponse(),
+      OperationResponseFailure<Unit> {
+    override val body: Unit
+      get() = Unit
+  }
 
   @Serializable
   public data class PostAccountFollowResponseUnknownFailure(
-    public val statusCode: Int,
+    override val statusCode: Int,
     @Transient
     override val headers: Headers = Headers.Empty,
-  ) : PostAccountFollowResponse()
+  ) : PostAccountFollowResponse(),
+      OperationResponseUnknownFailure
 
   @Serializable
-  public sealed class GetAccountFollowersResponse {
-    public abstract val headers: Headers
+  public sealed class GetAccountFollowersResponse : OperationResponse<CollectionsList<Account>> {
+    abstract override val headers: Headers
   }
 
   @Serializable
   public data class GetAccountFollowersResponseSuccess(
-    public val body: CollectionsList<Account>,
+    override val body: CollectionsList<Account>,
     @Transient
     override val headers: Headers = Headers.Empty,
-  ) : GetAccountFollowersResponse() {
+  ) : GetAccountFollowersResponse(),
+      OperationResponseSuccess<CollectionsList<Account>> {
     /**
      * Pagination links for browsing older or newer results. Format: Link: <https://mastodon.example/api/v1/endpoint?max_id=7163058>; rel="next", <https://mastodon.example/api/v1/endpoint?min_id=7275607>; rel="prev". See [RFC 8288](https://www.rfc-editor.org/rfc/rfc8288) for more information.
      */
@@ -706,42 +769,50 @@ public interface AccountsClient {
 
   @Serializable
   public data class GetAccountFollowersResponseFailure401(
-    public val body: Error,
+    override val body: Error,
     @Transient
     override val headers: Headers = Headers.Empty,
-  ) : GetAccountFollowersResponse()
+  ) : GetAccountFollowersResponse(),
+      OperationResponseFailure<Error>
 
   @Serializable
   public data class GetAccountFollowersResponseFailure410(
     @Transient
     override val headers: Headers = Headers.Empty,
-  ) : GetAccountFollowersResponse()
+  ) : GetAccountFollowersResponse(),
+      OperationResponseFailure<Unit> {
+    override val body: Unit
+      get() = Unit
+  }
 
   @Serializable
   public data class GetAccountFollowersResponseFailure(
-    public val body: ValidationError,
+    override val body: ValidationError,
     @Transient
     override val headers: Headers = Headers.Empty,
-  ) : GetAccountFollowersResponse()
+  ) : GetAccountFollowersResponse(),
+      OperationResponseFailure<ValidationError>
 
   @Serializable
   public data class GetAccountFollowersResponseUnknownFailure(
-    public val statusCode: Int,
+    override val statusCode: Int,
     @Transient
     override val headers: Headers = Headers.Empty,
-  ) : GetAccountFollowersResponse()
+  ) : GetAccountFollowersResponse(),
+      OperationResponseUnknownFailure
 
   @Serializable
-  public sealed class GetAccountFollowingResponse {
-    public abstract val headers: Headers
+  public sealed class GetAccountFollowingResponse : OperationResponse<CollectionsList<Account>> {
+    abstract override val headers: Headers
   }
 
   @Serializable
   public data class GetAccountFollowingResponseSuccess(
-    public val body: CollectionsList<Account>,
+    override val body: CollectionsList<Account>,
     @Transient
     override val headers: Headers = Headers.Empty,
-  ) : GetAccountFollowingResponse() {
+  ) : GetAccountFollowingResponse(),
+      OperationResponseSuccess<CollectionsList<Account>> {
     /**
      * Pagination links for browsing older or newer results. Format: Link: <https://mastodon.example/api/v1/endpoint?max_id=7163058>; rel="next", <https://mastodon.example/api/v1/endpoint?min_id=7275607>; rel="prev". See [RFC 8288](https://www.rfc-editor.org/rfc/rfc8288) for more information.
      */
@@ -769,42 +840,50 @@ public interface AccountsClient {
 
   @Serializable
   public data class GetAccountFollowingResponseFailure401(
-    public val body: Error,
+    override val body: Error,
     @Transient
     override val headers: Headers = Headers.Empty,
-  ) : GetAccountFollowingResponse()
+  ) : GetAccountFollowingResponse(),
+      OperationResponseFailure<Error>
 
   @Serializable
   public data class GetAccountFollowingResponseFailure410(
     @Transient
     override val headers: Headers = Headers.Empty,
-  ) : GetAccountFollowingResponse()
+  ) : GetAccountFollowingResponse(),
+      OperationResponseFailure<Unit> {
+    override val body: Unit
+      get() = Unit
+  }
 
   @Serializable
   public data class GetAccountFollowingResponseFailure(
-    public val body: ValidationError,
+    override val body: ValidationError,
     @Transient
     override val headers: Headers = Headers.Empty,
-  ) : GetAccountFollowingResponse()
+  ) : GetAccountFollowingResponse(),
+      OperationResponseFailure<ValidationError>
 
   @Serializable
   public data class GetAccountFollowingResponseUnknownFailure(
-    public val statusCode: Int,
+    override val statusCode: Int,
     @Transient
     override val headers: Headers = Headers.Empty,
-  ) : GetAccountFollowingResponse()
+  ) : GetAccountFollowingResponse(),
+      OperationResponseUnknownFailure
 
   @Serializable
-  public sealed class GetAccountIdentityProofsResponse {
-    public abstract val headers: Headers
+  public sealed class GetAccountIdentityProofsResponse : OperationResponse<CollectionsList<IdentityProof>> {
+    abstract override val headers: Headers
   }
 
   @Serializable
   public data class GetAccountIdentityProofsResponseSuccess(
-    public val body: CollectionsList<IdentityProof>,
+    override val body: CollectionsList<IdentityProof>,
     @Transient
     override val headers: Headers = Headers.Empty,
-  ) : GetAccountIdentityProofsResponse() {
+  ) : GetAccountIdentityProofsResponse(),
+      OperationResponseSuccess<CollectionsList<IdentityProof>> {
     /**
      * Number of requests permitted per time period
      */
@@ -826,35 +905,42 @@ public interface AccountsClient {
 
   @Serializable
   public data class GetAccountIdentityProofsResponseFailure401(
-    public val body: Error,
+    override val body: Error,
     @Transient
     override val headers: Headers = Headers.Empty,
-  ) : GetAccountIdentityProofsResponse()
+  ) : GetAccountIdentityProofsResponse(),
+      OperationResponseFailure<Error>
 
   @Serializable
   public data class GetAccountIdentityProofsResponseFailure(
     @Transient
     override val headers: Headers = Headers.Empty,
-  ) : GetAccountIdentityProofsResponse()
+  ) : GetAccountIdentityProofsResponse(),
+      OperationResponseFailure<Unit> {
+    override val body: Unit
+      get() = Unit
+  }
 
   @Serializable
   public data class GetAccountIdentityProofsResponseUnknownFailure(
-    public val statusCode: Int,
+    override val statusCode: Int,
     @Transient
     override val headers: Headers = Headers.Empty,
-  ) : GetAccountIdentityProofsResponse()
+  ) : GetAccountIdentityProofsResponse(),
+      OperationResponseUnknownFailure
 
   @Serializable
-  public sealed class GetAccountListsResponse {
-    public abstract val headers: Headers
+  public sealed class GetAccountListsResponse : OperationResponse<CollectionsList<ModelList>> {
+    abstract override val headers: Headers
   }
 
   @Serializable
   public data class GetAccountListsResponseSuccess(
-    public val body: CollectionsList<ModelList>,
+    override val body: CollectionsList<ModelList>,
     @Transient
     override val headers: Headers = Headers.Empty,
-  ) : GetAccountListsResponse() {
+  ) : GetAccountListsResponse(),
+      OperationResponseSuccess<CollectionsList<ModelList>> {
     /**
      * Number of requests permitted per time period
      */
@@ -876,23 +962,29 @@ public interface AccountsClient {
 
   @Serializable
   public data class GetAccountListsResponseFailure401(
-    public val body: Error,
+    override val body: Error,
     @Transient
     override val headers: Headers = Headers.Empty,
-  ) : GetAccountListsResponse()
+  ) : GetAccountListsResponse(),
+      OperationResponseFailure<Error>
 
   @Serializable
   public data class GetAccountListsResponseFailure(
     @Transient
     override val headers: Headers = Headers.Empty,
-  ) : GetAccountListsResponse()
+  ) : GetAccountListsResponse(),
+      OperationResponseFailure<Unit> {
+    override val body: Unit
+      get() = Unit
+  }
 
   @Serializable
   public data class GetAccountListsResponseUnknownFailure(
-    public val statusCode: Int,
+    override val statusCode: Int,
     @Transient
     override val headers: Headers = Headers.Empty,
-  ) : GetAccountListsResponse()
+  ) : GetAccountListsResponse(),
+      OperationResponseUnknownFailure
 
   @Serializable
   public data class PostAccountMuteRequest(
@@ -901,16 +993,17 @@ public interface AccountsClient {
   )
 
   @Serializable
-  public sealed class PostAccountMuteResponse {
-    public abstract val headers: Headers
+  public sealed class PostAccountMuteResponse : OperationResponse<Relationship> {
+    abstract override val headers: Headers
   }
 
   @Serializable
   public data class PostAccountMuteResponseSuccess(
-    public val body: Relationship,
+    override val body: Relationship,
     @Transient
     override val headers: Headers = Headers.Empty,
-  ) : PostAccountMuteResponse() {
+  ) : PostAccountMuteResponse(),
+      OperationResponseSuccess<Relationship> {
     /**
      * Number of requests permitted per time period
      */
@@ -932,23 +1025,29 @@ public interface AccountsClient {
 
   @Serializable
   public data class PostAccountMuteResponseFailure401(
-    public val body: Error,
+    override val body: Error,
     @Transient
     override val headers: Headers = Headers.Empty,
-  ) : PostAccountMuteResponse()
+  ) : PostAccountMuteResponse(),
+      OperationResponseFailure<Error>
 
   @Serializable
   public data class PostAccountMuteResponseFailure(
     @Transient
     override val headers: Headers = Headers.Empty,
-  ) : PostAccountMuteResponse()
+  ) : PostAccountMuteResponse(),
+      OperationResponseFailure<Unit> {
+    override val body: Unit
+      get() = Unit
+  }
 
   @Serializable
   public data class PostAccountMuteResponseUnknownFailure(
-    public val statusCode: Int,
+    override val statusCode: Int,
     @Transient
     override val headers: Headers = Headers.Empty,
-  ) : PostAccountMuteResponse()
+  ) : PostAccountMuteResponse(),
+      OperationResponseUnknownFailure
 
   @Serializable
   public data class PostAccountNoteRequest(
@@ -956,16 +1055,17 @@ public interface AccountsClient {
   )
 
   @Serializable
-  public sealed class PostAccountNoteResponse {
-    public abstract val headers: Headers
+  public sealed class PostAccountNoteResponse : OperationResponse<Relationship> {
+    abstract override val headers: Headers
   }
 
   @Serializable
   public data class PostAccountNoteResponseSuccess(
-    public val body: Relationship,
+    override val body: Relationship,
     @Transient
     override val headers: Headers = Headers.Empty,
-  ) : PostAccountNoteResponse() {
+  ) : PostAccountNoteResponse(),
+      OperationResponseSuccess<Relationship> {
     /**
      * Number of requests permitted per time period
      */
@@ -987,35 +1087,42 @@ public interface AccountsClient {
 
   @Serializable
   public data class PostAccountNoteResponseFailure401(
-    public val body: Error,
+    override val body: Error,
     @Transient
     override val headers: Headers = Headers.Empty,
-  ) : PostAccountNoteResponse()
+  ) : PostAccountNoteResponse(),
+      OperationResponseFailure<Error>
 
   @Serializable
   public data class PostAccountNoteResponseFailure(
     @Transient
     override val headers: Headers = Headers.Empty,
-  ) : PostAccountNoteResponse()
+  ) : PostAccountNoteResponse(),
+      OperationResponseFailure<Unit> {
+    override val body: Unit
+      get() = Unit
+  }
 
   @Serializable
   public data class PostAccountNoteResponseUnknownFailure(
-    public val statusCode: Int,
+    override val statusCode: Int,
     @Transient
     override val headers: Headers = Headers.Empty,
-  ) : PostAccountNoteResponse()
+  ) : PostAccountNoteResponse(),
+      OperationResponseUnknownFailure
 
   @Serializable
-  public sealed class PostAccountPinResponse {
-    public abstract val headers: Headers
+  public sealed class PostAccountPinResponse : OperationResponse<Relationship> {
+    abstract override val headers: Headers
   }
 
   @Serializable
   public data class PostAccountPinResponseSuccess(
-    public val body: Relationship,
+    override val body: Relationship,
     @Transient
     override val headers: Headers = Headers.Empty,
-  ) : PostAccountPinResponse() {
+  ) : PostAccountPinResponse(),
+      OperationResponseSuccess<Relationship> {
     /**
      * Number of requests permitted per time period
      */
@@ -1037,35 +1144,42 @@ public interface AccountsClient {
 
   @Serializable
   public data class PostAccountPinResponseFailure401(
-    public val body: Error,
+    override val body: Error,
     @Transient
     override val headers: Headers = Headers.Empty,
-  ) : PostAccountPinResponse()
+  ) : PostAccountPinResponse(),
+      OperationResponseFailure<Error>
 
   @Serializable
   public data class PostAccountPinResponseFailure(
     @Transient
     override val headers: Headers = Headers.Empty,
-  ) : PostAccountPinResponse()
+  ) : PostAccountPinResponse(),
+      OperationResponseFailure<Unit> {
+    override val body: Unit
+      get() = Unit
+  }
 
   @Serializable
   public data class PostAccountPinResponseUnknownFailure(
-    public val statusCode: Int,
+    override val statusCode: Int,
     @Transient
     override val headers: Headers = Headers.Empty,
-  ) : PostAccountPinResponse()
+  ) : PostAccountPinResponse(),
+      OperationResponseUnknownFailure
 
   @Serializable
-  public sealed class PostAccountRemoveFromFollowersResponse {
-    public abstract val headers: Headers
+  public sealed class PostAccountRemoveFromFollowersResponse : OperationResponse<Relationship> {
+    abstract override val headers: Headers
   }
 
   @Serializable
   public data class PostAccountRemoveFromFollowersResponseSuccess(
-    public val body: Relationship,
+    override val body: Relationship,
     @Transient
     override val headers: Headers = Headers.Empty,
-  ) : PostAccountRemoveFromFollowersResponse() {
+  ) : PostAccountRemoveFromFollowersResponse(),
+      OperationResponseSuccess<Relationship> {
     /**
      * Number of requests permitted per time period
      */
@@ -1087,35 +1201,42 @@ public interface AccountsClient {
 
   @Serializable
   public data class PostAccountRemoveFromFollowersResponseFailure401(
-    public val body: Error,
+    override val body: Error,
     @Transient
     override val headers: Headers = Headers.Empty,
-  ) : PostAccountRemoveFromFollowersResponse()
+  ) : PostAccountRemoveFromFollowersResponse(),
+      OperationResponseFailure<Error>
 
   @Serializable
   public data class PostAccountRemoveFromFollowersResponseFailure(
     @Transient
     override val headers: Headers = Headers.Empty,
-  ) : PostAccountRemoveFromFollowersResponse()
+  ) : PostAccountRemoveFromFollowersResponse(),
+      OperationResponseFailure<Unit> {
+    override val body: Unit
+      get() = Unit
+  }
 
   @Serializable
   public data class PostAccountRemoveFromFollowersResponseUnknownFailure(
-    public val statusCode: Int,
+    override val statusCode: Int,
     @Transient
     override val headers: Headers = Headers.Empty,
-  ) : PostAccountRemoveFromFollowersResponse()
+  ) : PostAccountRemoveFromFollowersResponse(),
+      OperationResponseUnknownFailure
 
   @Serializable
-  public sealed class GetAccountStatusesResponse {
-    public abstract val headers: Headers
+  public sealed class GetAccountStatusesResponse : OperationResponse<CollectionsList<Status>> {
+    abstract override val headers: Headers
   }
 
   @Serializable
   public data class GetAccountStatusesResponseSuccess(
-    public val body: CollectionsList<Status>,
+    override val body: CollectionsList<Status>,
     @Transient
     override val headers: Headers = Headers.Empty,
-  ) : GetAccountStatusesResponse() {
+  ) : GetAccountStatusesResponse(),
+      OperationResponseSuccess<CollectionsList<Status>> {
     /**
      * Pagination links for browsing older or newer results. Format: Link: <https://mastodon.example/api/v1/endpoint?max_id=7163058>; rel="next", <https://mastodon.example/api/v1/endpoint?min_id=7275607>; rel="prev". See [RFC 8288](https://www.rfc-editor.org/rfc/rfc8288) for more information.
      */
@@ -1143,42 +1264,50 @@ public interface AccountsClient {
 
   @Serializable
   public data class GetAccountStatusesResponseFailure401(
-    public val body: Error,
+    override val body: Error,
     @Transient
     override val headers: Headers = Headers.Empty,
-  ) : GetAccountStatusesResponse()
+  ) : GetAccountStatusesResponse(),
+      OperationResponseFailure<Error>
 
   @Serializable
   public data class GetAccountStatusesResponseFailure410(
     @Transient
     override val headers: Headers = Headers.Empty,
-  ) : GetAccountStatusesResponse()
+  ) : GetAccountStatusesResponse(),
+      OperationResponseFailure<Unit> {
+    override val body: Unit
+      get() = Unit
+  }
 
   @Serializable
   public data class GetAccountStatusesResponseFailure(
-    public val body: ValidationError,
+    override val body: ValidationError,
     @Transient
     override val headers: Headers = Headers.Empty,
-  ) : GetAccountStatusesResponse()
+  ) : GetAccountStatusesResponse(),
+      OperationResponseFailure<ValidationError>
 
   @Serializable
   public data class GetAccountStatusesResponseUnknownFailure(
-    public val statusCode: Int,
+    override val statusCode: Int,
     @Transient
     override val headers: Headers = Headers.Empty,
-  ) : GetAccountStatusesResponse()
+  ) : GetAccountStatusesResponse(),
+      OperationResponseUnknownFailure
 
   @Serializable
-  public sealed class PostAccountUnblockResponse {
-    public abstract val headers: Headers
+  public sealed class PostAccountUnblockResponse : OperationResponse<Relationship> {
+    abstract override val headers: Headers
   }
 
   @Serializable
   public data class PostAccountUnblockResponseSuccess(
-    public val body: Relationship,
+    override val body: Relationship,
     @Transient
     override val headers: Headers = Headers.Empty,
-  ) : PostAccountUnblockResponse() {
+  ) : PostAccountUnblockResponse(),
+      OperationResponseSuccess<Relationship> {
     /**
      * Number of requests permitted per time period
      */
@@ -1200,35 +1329,42 @@ public interface AccountsClient {
 
   @Serializable
   public data class PostAccountUnblockResponseFailure401(
-    public val body: Error,
+    override val body: Error,
     @Transient
     override val headers: Headers = Headers.Empty,
-  ) : PostAccountUnblockResponse()
+  ) : PostAccountUnblockResponse(),
+      OperationResponseFailure<Error>
 
   @Serializable
   public data class PostAccountUnblockResponseFailure(
     @Transient
     override val headers: Headers = Headers.Empty,
-  ) : PostAccountUnblockResponse()
+  ) : PostAccountUnblockResponse(),
+      OperationResponseFailure<Unit> {
+    override val body: Unit
+      get() = Unit
+  }
 
   @Serializable
   public data class PostAccountUnblockResponseUnknownFailure(
-    public val statusCode: Int,
+    override val statusCode: Int,
     @Transient
     override val headers: Headers = Headers.Empty,
-  ) : PostAccountUnblockResponse()
+  ) : PostAccountUnblockResponse(),
+      OperationResponseUnknownFailure
 
   @Serializable
-  public sealed class PostAccountUnendorseResponse {
-    public abstract val headers: Headers
+  public sealed class PostAccountUnendorseResponse : OperationResponse<Relationship> {
+    abstract override val headers: Headers
   }
 
   @Serializable
   public data class PostAccountUnendorseResponseSuccess(
-    public val body: Relationship,
+    override val body: Relationship,
     @Transient
     override val headers: Headers = Headers.Empty,
-  ) : PostAccountUnendorseResponse() {
+  ) : PostAccountUnendorseResponse(),
+      OperationResponseSuccess<Relationship> {
     /**
      * Number of requests permitted per time period
      */
@@ -1250,35 +1386,42 @@ public interface AccountsClient {
 
   @Serializable
   public data class PostAccountUnendorseResponseFailure401(
-    public val body: Error,
+    override val body: Error,
     @Transient
     override val headers: Headers = Headers.Empty,
-  ) : PostAccountUnendorseResponse()
+  ) : PostAccountUnendorseResponse(),
+      OperationResponseFailure<Error>
 
   @Serializable
   public data class PostAccountUnendorseResponseFailure(
     @Transient
     override val headers: Headers = Headers.Empty,
-  ) : PostAccountUnendorseResponse()
+  ) : PostAccountUnendorseResponse(),
+      OperationResponseFailure<Unit> {
+    override val body: Unit
+      get() = Unit
+  }
 
   @Serializable
   public data class PostAccountUnendorseResponseUnknownFailure(
-    public val statusCode: Int,
+    override val statusCode: Int,
     @Transient
     override val headers: Headers = Headers.Empty,
-  ) : PostAccountUnendorseResponse()
+  ) : PostAccountUnendorseResponse(),
+      OperationResponseUnknownFailure
 
   @Serializable
-  public sealed class PostAccountUnfollowResponse {
-    public abstract val headers: Headers
+  public sealed class PostAccountUnfollowResponse : OperationResponse<Relationship> {
+    abstract override val headers: Headers
   }
 
   @Serializable
   public data class PostAccountUnfollowResponseSuccess(
-    public val body: Relationship,
+    override val body: Relationship,
     @Transient
     override val headers: Headers = Headers.Empty,
-  ) : PostAccountUnfollowResponse() {
+  ) : PostAccountUnfollowResponse(),
+      OperationResponseSuccess<Relationship> {
     /**
      * Number of requests permitted per time period
      */
@@ -1300,35 +1443,42 @@ public interface AccountsClient {
 
   @Serializable
   public data class PostAccountUnfollowResponseFailure401(
-    public val body: Error,
+    override val body: Error,
     @Transient
     override val headers: Headers = Headers.Empty,
-  ) : PostAccountUnfollowResponse()
+  ) : PostAccountUnfollowResponse(),
+      OperationResponseFailure<Error>
 
   @Serializable
   public data class PostAccountUnfollowResponseFailure(
     @Transient
     override val headers: Headers = Headers.Empty,
-  ) : PostAccountUnfollowResponse()
+  ) : PostAccountUnfollowResponse(),
+      OperationResponseFailure<Unit> {
+    override val body: Unit
+      get() = Unit
+  }
 
   @Serializable
   public data class PostAccountUnfollowResponseUnknownFailure(
-    public val statusCode: Int,
+    override val statusCode: Int,
     @Transient
     override val headers: Headers = Headers.Empty,
-  ) : PostAccountUnfollowResponse()
+  ) : PostAccountUnfollowResponse(),
+      OperationResponseUnknownFailure
 
   @Serializable
-  public sealed class PostAccountUnmuteResponse {
-    public abstract val headers: Headers
+  public sealed class PostAccountUnmuteResponse : OperationResponse<Relationship> {
+    abstract override val headers: Headers
   }
 
   @Serializable
   public data class PostAccountUnmuteResponseSuccess(
-    public val body: Relationship,
+    override val body: Relationship,
     @Transient
     override val headers: Headers = Headers.Empty,
-  ) : PostAccountUnmuteResponse() {
+  ) : PostAccountUnmuteResponse(),
+      OperationResponseSuccess<Relationship> {
     /**
      * Number of requests permitted per time period
      */
@@ -1350,35 +1500,42 @@ public interface AccountsClient {
 
   @Serializable
   public data class PostAccountUnmuteResponseFailure401(
-    public val body: Error,
+    override val body: Error,
     @Transient
     override val headers: Headers = Headers.Empty,
-  ) : PostAccountUnmuteResponse()
+  ) : PostAccountUnmuteResponse(),
+      OperationResponseFailure<Error>
 
   @Serializable
   public data class PostAccountUnmuteResponseFailure(
     @Transient
     override val headers: Headers = Headers.Empty,
-  ) : PostAccountUnmuteResponse()
+  ) : PostAccountUnmuteResponse(),
+      OperationResponseFailure<Unit> {
+    override val body: Unit
+      get() = Unit
+  }
 
   @Serializable
   public data class PostAccountUnmuteResponseUnknownFailure(
-    public val statusCode: Int,
+    override val statusCode: Int,
     @Transient
     override val headers: Headers = Headers.Empty,
-  ) : PostAccountUnmuteResponse()
+  ) : PostAccountUnmuteResponse(),
+      OperationResponseUnknownFailure
 
   @Serializable
-  public sealed class PostAccountUnpinResponse {
-    public abstract val headers: Headers
+  public sealed class PostAccountUnpinResponse : OperationResponse<Relationship> {
+    abstract override val headers: Headers
   }
 
   @Serializable
   public data class PostAccountUnpinResponseSuccess(
-    public val body: Relationship,
+    override val body: Relationship,
     @Transient
     override val headers: Headers = Headers.Empty,
-  ) : PostAccountUnpinResponse() {
+  ) : PostAccountUnpinResponse(),
+      OperationResponseSuccess<Relationship> {
     /**
      * Number of requests permitted per time period
      */
@@ -1400,35 +1557,42 @@ public interface AccountsClient {
 
   @Serializable
   public data class PostAccountUnpinResponseFailure401(
-    public val body: Error,
+    override val body: Error,
     @Transient
     override val headers: Headers = Headers.Empty,
-  ) : PostAccountUnpinResponse()
+  ) : PostAccountUnpinResponse(),
+      OperationResponseFailure<Error>
 
   @Serializable
   public data class PostAccountUnpinResponseFailure(
     @Transient
     override val headers: Headers = Headers.Empty,
-  ) : PostAccountUnpinResponse()
+  ) : PostAccountUnpinResponse(),
+      OperationResponseFailure<Unit> {
+    override val body: Unit
+      get() = Unit
+  }
 
   @Serializable
   public data class PostAccountUnpinResponseUnknownFailure(
-    public val statusCode: Int,
+    override val statusCode: Int,
     @Transient
     override val headers: Headers = Headers.Empty,
-  ) : PostAccountUnpinResponse()
+  ) : PostAccountUnpinResponse(),
+      OperationResponseUnknownFailure
 
   @Serializable
-  public sealed class GetAccountsFamiliarFollowersResponse {
-    public abstract val headers: Headers
+  public sealed class GetAccountsFamiliarFollowersResponse : OperationResponse<CollectionsList<FamiliarFollowers>> {
+    abstract override val headers: Headers
   }
 
   @Serializable
   public data class GetAccountsFamiliarFollowersResponseSuccess(
-    public val body: CollectionsList<FamiliarFollowers>,
+    override val body: CollectionsList<FamiliarFollowers>,
     @Transient
     override val headers: Headers = Headers.Empty,
-  ) : GetAccountsFamiliarFollowersResponse() {
+  ) : GetAccountsFamiliarFollowersResponse(),
+      OperationResponseSuccess<CollectionsList<FamiliarFollowers>> {
     /**
      * Number of requests permitted per time period
      */
@@ -1450,35 +1614,42 @@ public interface AccountsClient {
 
   @Serializable
   public data class GetAccountsFamiliarFollowersResponseFailure401(
-    public val body: Error,
+    override val body: Error,
     @Transient
     override val headers: Headers = Headers.Empty,
-  ) : GetAccountsFamiliarFollowersResponse()
+  ) : GetAccountsFamiliarFollowersResponse(),
+      OperationResponseFailure<Error>
 
   @Serializable
   public data class GetAccountsFamiliarFollowersResponseFailure(
     @Transient
     override val headers: Headers = Headers.Empty,
-  ) : GetAccountsFamiliarFollowersResponse()
+  ) : GetAccountsFamiliarFollowersResponse(),
+      OperationResponseFailure<Unit> {
+    override val body: Unit
+      get() = Unit
+  }
 
   @Serializable
   public data class GetAccountsFamiliarFollowersResponseUnknownFailure(
-    public val statusCode: Int,
+    override val statusCode: Int,
     @Transient
     override val headers: Headers = Headers.Empty,
-  ) : GetAccountsFamiliarFollowersResponse()
+  ) : GetAccountsFamiliarFollowersResponse(),
+      OperationResponseUnknownFailure
 
   @Serializable
-  public sealed class GetAccountLookupResponse {
-    public abstract val headers: Headers
+  public sealed class GetAccountLookupResponse : OperationResponse<Account> {
+    abstract override val headers: Headers
   }
 
   @Serializable
   public data class GetAccountLookupResponseSuccess(
-    public val body: Account,
+    override val body: Account,
     @Transient
     override val headers: Headers = Headers.Empty,
-  ) : GetAccountLookupResponse() {
+  ) : GetAccountLookupResponse(),
+      OperationResponseSuccess<Account> {
     /**
      * Number of requests permitted per time period
      */
@@ -1500,42 +1671,50 @@ public interface AccountsClient {
 
   @Serializable
   public data class GetAccountLookupResponseFailure401(
-    public val body: Error,
+    override val body: Error,
     @Transient
     override val headers: Headers = Headers.Empty,
-  ) : GetAccountLookupResponse()
+  ) : GetAccountLookupResponse(),
+      OperationResponseFailure<Error>
 
   @Serializable
   public data class GetAccountLookupResponseFailure410(
     @Transient
     override val headers: Headers = Headers.Empty,
-  ) : GetAccountLookupResponse()
+  ) : GetAccountLookupResponse(),
+      OperationResponseFailure<Unit> {
+    override val body: Unit
+      get() = Unit
+  }
 
   @Serializable
   public data class GetAccountLookupResponseFailure(
-    public val body: ValidationError,
+    override val body: ValidationError,
     @Transient
     override val headers: Headers = Headers.Empty,
-  ) : GetAccountLookupResponse()
+  ) : GetAccountLookupResponse(),
+      OperationResponseFailure<ValidationError>
 
   @Serializable
   public data class GetAccountLookupResponseUnknownFailure(
-    public val statusCode: Int,
+    override val statusCode: Int,
     @Transient
     override val headers: Headers = Headers.Empty,
-  ) : GetAccountLookupResponse()
+  ) : GetAccountLookupResponse(),
+      OperationResponseUnknownFailure
 
   @Serializable
-  public sealed class GetAccountRelationshipsResponse {
-    public abstract val headers: Headers
+  public sealed class GetAccountRelationshipsResponse : OperationResponse<CollectionsList<Relationship>> {
+    abstract override val headers: Headers
   }
 
   @Serializable
   public data class GetAccountRelationshipsResponseSuccess(
-    public val body: CollectionsList<Relationship>,
+    override val body: CollectionsList<Relationship>,
     @Transient
     override val headers: Headers = Headers.Empty,
-  ) : GetAccountRelationshipsResponse() {
+  ) : GetAccountRelationshipsResponse(),
+      OperationResponseSuccess<CollectionsList<Relationship>> {
     /**
      * Number of requests permitted per time period
      */
@@ -1557,35 +1736,42 @@ public interface AccountsClient {
 
   @Serializable
   public data class GetAccountRelationshipsResponseFailure401(
-    public val body: Error,
+    override val body: Error,
     @Transient
     override val headers: Headers = Headers.Empty,
-  ) : GetAccountRelationshipsResponse()
+  ) : GetAccountRelationshipsResponse(),
+      OperationResponseFailure<Error>
 
   @Serializable
   public data class GetAccountRelationshipsResponseFailure(
     @Transient
     override val headers: Headers = Headers.Empty,
-  ) : GetAccountRelationshipsResponse()
+  ) : GetAccountRelationshipsResponse(),
+      OperationResponseFailure<Unit> {
+    override val body: Unit
+      get() = Unit
+  }
 
   @Serializable
   public data class GetAccountRelationshipsResponseUnknownFailure(
-    public val statusCode: Int,
+    override val statusCode: Int,
     @Transient
     override val headers: Headers = Headers.Empty,
-  ) : GetAccountRelationshipsResponse()
+  ) : GetAccountRelationshipsResponse(),
+      OperationResponseUnknownFailure
 
   @Serializable
-  public sealed class GetAccountSearchResponse {
-    public abstract val headers: Headers
+  public sealed class GetAccountSearchResponse : OperationResponse<CollectionsList<Account>> {
+    abstract override val headers: Headers
   }
 
   @Serializable
   public data class GetAccountSearchResponseSuccess(
-    public val body: CollectionsList<Account>,
+    override val body: CollectionsList<Account>,
     @Transient
     override val headers: Headers = Headers.Empty,
-  ) : GetAccountSearchResponse() {
+  ) : GetAccountSearchResponse(),
+      OperationResponseSuccess<CollectionsList<Account>> {
     /**
      * Number of requests permitted per time period
      */
@@ -1607,30 +1793,37 @@ public interface AccountsClient {
 
   @Serializable
   public data class GetAccountSearchResponseFailure401(
-    public val body: Error,
+    override val body: Error,
     @Transient
     override val headers: Headers = Headers.Empty,
-  ) : GetAccountSearchResponse()
+  ) : GetAccountSearchResponse(),
+      OperationResponseFailure<Error>
 
   @Serializable
   public data class GetAccountSearchResponseFailure410(
     @Transient
     override val headers: Headers = Headers.Empty,
-  ) : GetAccountSearchResponse()
+  ) : GetAccountSearchResponse(),
+      OperationResponseFailure<Unit> {
+    override val body: Unit
+      get() = Unit
+  }
 
   @Serializable
   public data class GetAccountSearchResponseFailure(
-    public val body: ValidationError,
+    override val body: ValidationError,
     @Transient
     override val headers: Headers = Headers.Empty,
-  ) : GetAccountSearchResponse()
+  ) : GetAccountSearchResponse(),
+      OperationResponseFailure<ValidationError>
 
   @Serializable
   public data class GetAccountSearchResponseUnknownFailure(
-    public val statusCode: Int,
+    override val statusCode: Int,
     @Transient
     override val headers: Headers = Headers.Empty,
-  ) : GetAccountSearchResponse()
+  ) : GetAccountSearchResponse(),
+      OperationResponseUnknownFailure
 
   @Serializable
   public data class PatchAccountsUpdateCredentialsRequest(
@@ -1662,16 +1855,17 @@ public interface AccountsClient {
   }
 
   @Serializable
-  public sealed class PatchAccountsUpdateCredentialsResponse {
-    public abstract val headers: Headers
+  public sealed class PatchAccountsUpdateCredentialsResponse : OperationResponse<CredentialAccount> {
+    abstract override val headers: Headers
   }
 
   @Serializable
   public data class PatchAccountsUpdateCredentialsResponseSuccess(
-    public val body: CredentialAccount,
+    override val body: CredentialAccount,
     @Transient
     override val headers: Headers = Headers.Empty,
-  ) : PatchAccountsUpdateCredentialsResponse() {
+  ) : PatchAccountsUpdateCredentialsResponse(),
+      OperationResponseSuccess<CredentialAccount> {
     /**
      * Number of requests permitted per time period
      */
@@ -1693,35 +1887,42 @@ public interface AccountsClient {
 
   @Serializable
   public data class PatchAccountsUpdateCredentialsResponseFailure401(
-    public val body: Error,
+    override val body: Error,
     @Transient
     override val headers: Headers = Headers.Empty,
-  ) : PatchAccountsUpdateCredentialsResponse()
+  ) : PatchAccountsUpdateCredentialsResponse(),
+      OperationResponseFailure<Error>
 
   @Serializable
   public data class PatchAccountsUpdateCredentialsResponseFailure(
     @Transient
     override val headers: Headers = Headers.Empty,
-  ) : PatchAccountsUpdateCredentialsResponse()
+  ) : PatchAccountsUpdateCredentialsResponse(),
+      OperationResponseFailure<Unit> {
+    override val body: Unit
+      get() = Unit
+  }
 
   @Serializable
   public data class PatchAccountsUpdateCredentialsResponseUnknownFailure(
-    public val statusCode: Int,
+    override val statusCode: Int,
     @Transient
     override val headers: Headers = Headers.Empty,
-  ) : PatchAccountsUpdateCredentialsResponse()
+  ) : PatchAccountsUpdateCredentialsResponse(),
+      OperationResponseUnknownFailure
 
   @Serializable
-  public sealed class GetAccountsVerifyCredentialsResponse {
-    public abstract val headers: Headers
+  public sealed class GetAccountsVerifyCredentialsResponse : OperationResponse<CredentialAccount> {
+    abstract override val headers: Headers
   }
 
   @Serializable
   public data class GetAccountsVerifyCredentialsResponseSuccess(
-    public val body: CredentialAccount,
+    override val body: CredentialAccount,
     @Transient
     override val headers: Headers = Headers.Empty,
-  ) : GetAccountsVerifyCredentialsResponse() {
+  ) : GetAccountsVerifyCredentialsResponse(),
+      OperationResponseSuccess<CredentialAccount> {
     /**
      * Number of requests permitted per time period
      */
@@ -1743,23 +1944,29 @@ public interface AccountsClient {
 
   @Serializable
   public data class GetAccountsVerifyCredentialsResponseFailure401(
-    public val body: Error,
+    override val body: Error,
     @Transient
     override val headers: Headers = Headers.Empty,
-  ) : GetAccountsVerifyCredentialsResponse()
+  ) : GetAccountsVerifyCredentialsResponse(),
+      OperationResponseFailure<Error>
 
   @Serializable
   public data class GetAccountsVerifyCredentialsResponseFailure(
     @Transient
     override val headers: Headers = Headers.Empty,
-  ) : GetAccountsVerifyCredentialsResponse()
+  ) : GetAccountsVerifyCredentialsResponse(),
+      OperationResponseFailure<Unit> {
+    override val body: Unit
+      get() = Unit
+  }
 
   @Serializable
   public data class GetAccountsVerifyCredentialsResponseUnknownFailure(
-    public val statusCode: Int,
+    override val statusCode: Int,
     @Transient
     override val headers: Headers = Headers.Empty,
-  ) : GetAccountsVerifyCredentialsResponse()
+  ) : GetAccountsVerifyCredentialsResponse(),
+      OperationResponseUnknownFailure
 }
 
 public fun AccountsClient(configuration: ClientConfiguration = defaultClientConfiguration): AccountsClient = DefaultAccountsClient(configuration)

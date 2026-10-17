@@ -103,7 +103,7 @@ class InlineResponseTest {
         assertTrue(client.contains("public data class PlanResponseBody("), client)
         assertTrue(client.contains("public val itineraries: List<Itinerary>"), client)
         assertTrue(client.contains("public val nextPageCursor: String"), client)
-        assertTrue(client.contains("public val body: PlanResponseBody,"), client)
+        assertTrue(client.contains("override val body: PlanResponseBody,"), client)
         assertTrue(client.contains("response.body<RoutingClient.PlanResponseBody>()"), client)
     }
 

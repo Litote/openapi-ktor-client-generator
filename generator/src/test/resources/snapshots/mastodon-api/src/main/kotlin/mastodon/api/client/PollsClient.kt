@@ -11,6 +11,7 @@ import io.ktor.http.encodeURLPathPart
 import kotlin.Int
 import kotlin.Long
 import kotlin.String
+import kotlin.Unit
 import kotlin.collections.List
 import kotlin.coroutines.cancellation.CancellationException
 import kotlinx.serialization.Serializable
@@ -32,16 +33,17 @@ public interface PollsClient {
   public suspend fun postPollVotes(request: PostPollVotesRequest, id: String): PostPollVotesResponse
 
   @Serializable
-  public sealed class GetPollResponse {
-    public abstract val headers: Headers
+  public sealed class GetPollResponse : OperationResponse<Poll> {
+    abstract override val headers: Headers
   }
 
   @Serializable
   public data class GetPollResponseSuccess(
-    public val body: Poll,
+    override val body: Poll,
     @Transient
     override val headers: Headers = Headers.Empty,
-  ) : GetPollResponse() {
+  ) : GetPollResponse(),
+      OperationResponseSuccess<Poll> {
     /**
      * Number of requests permitted per time period
      */
@@ -63,30 +65,37 @@ public interface PollsClient {
 
   @Serializable
   public data class GetPollResponseFailure401(
-    public val body: Error,
+    override val body: Error,
     @Transient
     override val headers: Headers = Headers.Empty,
-  ) : GetPollResponse()
+  ) : GetPollResponse(),
+      OperationResponseFailure<Error>
 
   @Serializable
   public data class GetPollResponseFailure410(
     @Transient
     override val headers: Headers = Headers.Empty,
-  ) : GetPollResponse()
+  ) : GetPollResponse(),
+      OperationResponseFailure<Unit> {
+    override val body: Unit
+      get() = Unit
+  }
 
   @Serializable
   public data class GetPollResponseFailure(
-    public val body: ValidationError,
+    override val body: ValidationError,
     @Transient
     override val headers: Headers = Headers.Empty,
-  ) : GetPollResponse()
+  ) : GetPollResponse(),
+      OperationResponseFailure<ValidationError>
 
   @Serializable
   public data class GetPollResponseUnknownFailure(
-    public val statusCode: Int,
+    override val statusCode: Int,
     @Transient
     override val headers: Headers = Headers.Empty,
-  ) : GetPollResponse()
+  ) : GetPollResponse(),
+      OperationResponseUnknownFailure
 
   @Serializable
   public data class PostPollVotesRequest(
@@ -94,16 +103,17 @@ public interface PollsClient {
   )
 
   @Serializable
-  public sealed class PostPollVotesResponse {
-    public abstract val headers: Headers
+  public sealed class PostPollVotesResponse : OperationResponse<Poll> {
+    abstract override val headers: Headers
   }
 
   @Serializable
   public data class PostPollVotesResponseSuccess(
-    public val body: Poll,
+    override val body: Poll,
     @Transient
     override val headers: Headers = Headers.Empty,
-  ) : PostPollVotesResponse() {
+  ) : PostPollVotesResponse(),
+      OperationResponseSuccess<Poll> {
     /**
      * Number of requests permitted per time period
      */
@@ -125,23 +135,29 @@ public interface PollsClient {
 
   @Serializable
   public data class PostPollVotesResponseFailure401(
-    public val body: Error,
+    override val body: Error,
     @Transient
     override val headers: Headers = Headers.Empty,
-  ) : PostPollVotesResponse()
+  ) : PostPollVotesResponse(),
+      OperationResponseFailure<Error>
 
   @Serializable
   public data class PostPollVotesResponseFailure(
     @Transient
     override val headers: Headers = Headers.Empty,
-  ) : PostPollVotesResponse()
+  ) : PostPollVotesResponse(),
+      OperationResponseFailure<Unit> {
+    override val body: Unit
+      get() = Unit
+  }
 
   @Serializable
   public data class PostPollVotesResponseUnknownFailure(
-    public val statusCode: Int,
+    override val statusCode: Int,
     @Transient
     override val headers: Headers = Headers.Empty,
-  ) : PostPollVotesResponse()
+  ) : PostPollVotesResponse(),
+      OperationResponseUnknownFailure
 }
 
 public fun PollsClient(configuration: ClientConfiguration = defaultClientConfiguration): PollsClient = DefaultPollsClient(configuration)

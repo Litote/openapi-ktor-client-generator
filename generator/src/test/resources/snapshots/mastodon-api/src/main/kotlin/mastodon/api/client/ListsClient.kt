@@ -14,6 +14,7 @@ import kotlin.Boolean
 import kotlin.Int
 import kotlin.Long
 import kotlin.String
+import kotlin.Unit
 import kotlin.coroutines.cancellation.CancellationException
 import kotlinx.serialization.SerialName
 import kotlinx.serialization.Serializable
@@ -74,16 +75,17 @@ public interface ListsClient {
   public suspend fun deleteListAccounts(request: DeleteListAccountsRequest, id: String): DeleteListAccountsResponse
 
   @Serializable
-  public sealed class GetListsResponse {
-    public abstract val headers: Headers
+  public sealed class GetListsResponse : OperationResponse<CollectionsList<ModelList>> {
+    abstract override val headers: Headers
   }
 
   @Serializable
   public data class GetListsResponseSuccess(
-    public val body: CollectionsList<ModelList>,
+    override val body: CollectionsList<ModelList>,
     @Transient
     override val headers: Headers = Headers.Empty,
-  ) : GetListsResponse() {
+  ) : GetListsResponse(),
+      OperationResponseSuccess<CollectionsList<ModelList>> {
     /**
      * Number of requests permitted per time period
      */
@@ -105,30 +107,37 @@ public interface ListsClient {
 
   @Serializable
   public data class GetListsResponseFailure401(
-    public val body: Error,
+    override val body: Error,
     @Transient
     override val headers: Headers = Headers.Empty,
-  ) : GetListsResponse()
+  ) : GetListsResponse(),
+      OperationResponseFailure<Error>
 
   @Serializable
   public data class GetListsResponseFailure410(
     @Transient
     override val headers: Headers = Headers.Empty,
-  ) : GetListsResponse()
+  ) : GetListsResponse(),
+      OperationResponseFailure<Unit> {
+    override val body: Unit
+      get() = Unit
+  }
 
   @Serializable
   public data class GetListsResponseFailure(
-    public val body: ValidationError,
+    override val body: ValidationError,
     @Transient
     override val headers: Headers = Headers.Empty,
-  ) : GetListsResponse()
+  ) : GetListsResponse(),
+      OperationResponseFailure<ValidationError>
 
   @Serializable
   public data class GetListsResponseUnknownFailure(
-    public val statusCode: Int,
+    override val statusCode: Int,
     @Transient
     override val headers: Headers = Headers.Empty,
-  ) : GetListsResponse()
+  ) : GetListsResponse(),
+      OperationResponseUnknownFailure
 
   @Serializable
   public data class CreateListRequest(
@@ -139,16 +148,17 @@ public interface ListsClient {
   )
 
   @Serializable
-  public sealed class CreateListResponse {
-    public abstract val headers: Headers
+  public sealed class CreateListResponse : OperationResponse<ModelList> {
+    abstract override val headers: Headers
   }
 
   @Serializable
   public data class CreateListResponseSuccess(
-    public val body: ModelList,
+    override val body: ModelList,
     @Transient
     override val headers: Headers = Headers.Empty,
-  ) : CreateListResponse() {
+  ) : CreateListResponse(),
+      OperationResponseSuccess<ModelList> {
     /**
      * Number of requests permitted per time period
      */
@@ -170,35 +180,42 @@ public interface ListsClient {
 
   @Serializable
   public data class CreateListResponseFailure401(
-    public val body: Error,
+    override val body: Error,
     @Transient
     override val headers: Headers = Headers.Empty,
-  ) : CreateListResponse()
+  ) : CreateListResponse(),
+      OperationResponseFailure<Error>
 
   @Serializable
   public data class CreateListResponseFailure(
     @Transient
     override val headers: Headers = Headers.Empty,
-  ) : CreateListResponse()
+  ) : CreateListResponse(),
+      OperationResponseFailure<Unit> {
+    override val body: Unit
+      get() = Unit
+  }
 
   @Serializable
   public data class CreateListResponseUnknownFailure(
-    public val statusCode: Int,
+    override val statusCode: Int,
     @Transient
     override val headers: Headers = Headers.Empty,
-  ) : CreateListResponse()
+  ) : CreateListResponse(),
+      OperationResponseUnknownFailure
 
   @Serializable
-  public sealed class GetListResponse {
-    public abstract val headers: Headers
+  public sealed class GetListResponse : OperationResponse<ModelList> {
+    abstract override val headers: Headers
   }
 
   @Serializable
   public data class GetListResponseSuccess(
-    public val body: ModelList,
+    override val body: ModelList,
     @Transient
     override val headers: Headers = Headers.Empty,
-  ) : GetListResponse() {
+  ) : GetListResponse(),
+      OperationResponseSuccess<ModelList> {
     /**
      * Number of requests permitted per time period
      */
@@ -220,30 +237,37 @@ public interface ListsClient {
 
   @Serializable
   public data class GetListResponseFailure401(
-    public val body: Error,
+    override val body: Error,
     @Transient
     override val headers: Headers = Headers.Empty,
-  ) : GetListResponse()
+  ) : GetListResponse(),
+      OperationResponseFailure<Error>
 
   @Serializable
   public data class GetListResponseFailure410(
     @Transient
     override val headers: Headers = Headers.Empty,
-  ) : GetListResponse()
+  ) : GetListResponse(),
+      OperationResponseFailure<Unit> {
+    override val body: Unit
+      get() = Unit
+  }
 
   @Serializable
   public data class GetListResponseFailure(
-    public val body: ValidationError,
+    override val body: ValidationError,
     @Transient
     override val headers: Headers = Headers.Empty,
-  ) : GetListResponse()
+  ) : GetListResponse(),
+      OperationResponseFailure<ValidationError>
 
   @Serializable
   public data class GetListResponseUnknownFailure(
-    public val statusCode: Int,
+    override val statusCode: Int,
     @Transient
     override val headers: Headers = Headers.Empty,
-  ) : GetListResponse()
+  ) : GetListResponse(),
+      OperationResponseUnknownFailure
 
   @Serializable
   public data class UpdateListRequest(
@@ -254,16 +278,17 @@ public interface ListsClient {
   )
 
   @Serializable
-  public sealed class UpdateListResponse {
-    public abstract val headers: Headers
+  public sealed class UpdateListResponse : OperationResponse<ModelList> {
+    abstract override val headers: Headers
   }
 
   @Serializable
   public data class UpdateListResponseSuccess(
-    public val body: ModelList,
+    override val body: ModelList,
     @Transient
     override val headers: Headers = Headers.Empty,
-  ) : UpdateListResponse() {
+  ) : UpdateListResponse(),
+      OperationResponseSuccess<ModelList> {
     /**
      * Number of requests permitted per time period
      */
@@ -285,34 +310,44 @@ public interface ListsClient {
 
   @Serializable
   public data class UpdateListResponseFailure401(
-    public val body: Error,
+    override val body: Error,
     @Transient
     override val headers: Headers = Headers.Empty,
-  ) : UpdateListResponse()
+  ) : UpdateListResponse(),
+      OperationResponseFailure<Error>
 
   @Serializable
   public data class UpdateListResponseFailure(
     @Transient
     override val headers: Headers = Headers.Empty,
-  ) : UpdateListResponse()
+  ) : UpdateListResponse(),
+      OperationResponseFailure<Unit> {
+    override val body: Unit
+      get() = Unit
+  }
 
   @Serializable
   public data class UpdateListResponseUnknownFailure(
-    public val statusCode: Int,
+    override val statusCode: Int,
     @Transient
     override val headers: Headers = Headers.Empty,
-  ) : UpdateListResponse()
+  ) : UpdateListResponse(),
+      OperationResponseUnknownFailure
 
   @Serializable
-  public sealed class DeleteListResponse {
-    public abstract val headers: Headers
+  public sealed class DeleteListResponse : OperationResponse<Unit> {
+    abstract override val headers: Headers
   }
 
   @Serializable
   public data class DeleteListResponseSuccess(
     @Transient
     override val headers: Headers = Headers.Empty,
-  ) : DeleteListResponse() {
+  ) : DeleteListResponse(),
+      OperationResponseSuccess<Unit> {
+    override val body: Unit
+      get() = Unit
+
     /**
      * Number of requests permitted per time period
      */
@@ -334,42 +369,50 @@ public interface ListsClient {
 
   @Serializable
   public data class DeleteListResponseFailure401(
-    public val body: Error,
+    override val body: Error,
     @Transient
     override val headers: Headers = Headers.Empty,
-  ) : DeleteListResponse()
+  ) : DeleteListResponse(),
+      OperationResponseFailure<Error>
 
   @Serializable
   public data class DeleteListResponseFailure410(
     @Transient
     override val headers: Headers = Headers.Empty,
-  ) : DeleteListResponse()
+  ) : DeleteListResponse(),
+      OperationResponseFailure<Unit> {
+    override val body: Unit
+      get() = Unit
+  }
 
   @Serializable
   public data class DeleteListResponseFailure(
-    public val body: ValidationError,
+    override val body: ValidationError,
     @Transient
     override val headers: Headers = Headers.Empty,
-  ) : DeleteListResponse()
+  ) : DeleteListResponse(),
+      OperationResponseFailure<ValidationError>
 
   @Serializable
   public data class DeleteListResponseUnknownFailure(
-    public val statusCode: Int,
+    override val statusCode: Int,
     @Transient
     override val headers: Headers = Headers.Empty,
-  ) : DeleteListResponse()
+  ) : DeleteListResponse(),
+      OperationResponseUnknownFailure
 
   @Serializable
-  public sealed class GetListAccountsResponse {
-    public abstract val headers: Headers
+  public sealed class GetListAccountsResponse : OperationResponse<CollectionsList<Account>> {
+    abstract override val headers: Headers
   }
 
   @Serializable
   public data class GetListAccountsResponseSuccess(
-    public val body: CollectionsList<Account>,
+    override val body: CollectionsList<Account>,
     @Transient
     override val headers: Headers = Headers.Empty,
-  ) : GetListAccountsResponse() {
+  ) : GetListAccountsResponse(),
+      OperationResponseSuccess<CollectionsList<Account>> {
     /**
      * Pagination links for browsing older or newer results. Format: Link: <https://mastodon.example/api/v1/endpoint?max_id=7163058>; rel="next", <https://mastodon.example/api/v1/endpoint?min_id=7275607>; rel="prev". See [RFC 8288](https://www.rfc-editor.org/rfc/rfc8288) for more information.
      */
@@ -397,30 +440,37 @@ public interface ListsClient {
 
   @Serializable
   public data class GetListAccountsResponseFailure401(
-    public val body: Error,
+    override val body: Error,
     @Transient
     override val headers: Headers = Headers.Empty,
-  ) : GetListAccountsResponse()
+  ) : GetListAccountsResponse(),
+      OperationResponseFailure<Error>
 
   @Serializable
   public data class GetListAccountsResponseFailure410(
     @Transient
     override val headers: Headers = Headers.Empty,
-  ) : GetListAccountsResponse()
+  ) : GetListAccountsResponse(),
+      OperationResponseFailure<Unit> {
+    override val body: Unit
+      get() = Unit
+  }
 
   @Serializable
   public data class GetListAccountsResponseFailure(
-    public val body: ValidationError,
+    override val body: ValidationError,
     @Transient
     override val headers: Headers = Headers.Empty,
-  ) : GetListAccountsResponse()
+  ) : GetListAccountsResponse(),
+      OperationResponseFailure<ValidationError>
 
   @Serializable
   public data class GetListAccountsResponseUnknownFailure(
-    public val statusCode: Int,
+    override val statusCode: Int,
     @Transient
     override val headers: Headers = Headers.Empty,
-  ) : GetListAccountsResponse()
+  ) : GetListAccountsResponse(),
+      OperationResponseUnknownFailure
 
   @Serializable
   public data class PostListAccountsRequest(
@@ -429,15 +479,19 @@ public interface ListsClient {
   )
 
   @Serializable
-  public sealed class PostListAccountsResponse {
-    public abstract val headers: Headers
+  public sealed class PostListAccountsResponse : OperationResponse<Unit> {
+    abstract override val headers: Headers
   }
 
   @Serializable
   public data class PostListAccountsResponseSuccess(
     @Transient
     override val headers: Headers = Headers.Empty,
-  ) : PostListAccountsResponse() {
+  ) : PostListAccountsResponse(),
+      OperationResponseSuccess<Unit> {
+    override val body: Unit
+      get() = Unit
+
     /**
      * Number of requests permitted per time period
      */
@@ -459,23 +513,29 @@ public interface ListsClient {
 
   @Serializable
   public data class PostListAccountsResponseFailure401(
-    public val body: Error,
+    override val body: Error,
     @Transient
     override val headers: Headers = Headers.Empty,
-  ) : PostListAccountsResponse()
+  ) : PostListAccountsResponse(),
+      OperationResponseFailure<Error>
 
   @Serializable
   public data class PostListAccountsResponseFailure(
     @Transient
     override val headers: Headers = Headers.Empty,
-  ) : PostListAccountsResponse()
+  ) : PostListAccountsResponse(),
+      OperationResponseFailure<Unit> {
+    override val body: Unit
+      get() = Unit
+  }
 
   @Serializable
   public data class PostListAccountsResponseUnknownFailure(
-    public val statusCode: Int,
+    override val statusCode: Int,
     @Transient
     override val headers: Headers = Headers.Empty,
-  ) : PostListAccountsResponse()
+  ) : PostListAccountsResponse(),
+      OperationResponseUnknownFailure
 
   @Serializable
   public data class DeleteListAccountsRequest(
@@ -484,15 +544,19 @@ public interface ListsClient {
   )
 
   @Serializable
-  public sealed class DeleteListAccountsResponse {
-    public abstract val headers: Headers
+  public sealed class DeleteListAccountsResponse : OperationResponse<Unit> {
+    abstract override val headers: Headers
   }
 
   @Serializable
   public data class DeleteListAccountsResponseSuccess(
     @Transient
     override val headers: Headers = Headers.Empty,
-  ) : DeleteListAccountsResponse() {
+  ) : DeleteListAccountsResponse(),
+      OperationResponseSuccess<Unit> {
+    override val body: Unit
+      get() = Unit
+
     /**
      * Number of requests permitted per time period
      */
@@ -514,30 +578,37 @@ public interface ListsClient {
 
   @Serializable
   public data class DeleteListAccountsResponseFailure401(
-    public val body: Error,
+    override val body: Error,
     @Transient
     override val headers: Headers = Headers.Empty,
-  ) : DeleteListAccountsResponse()
+  ) : DeleteListAccountsResponse(),
+      OperationResponseFailure<Error>
 
   @Serializable
   public data class DeleteListAccountsResponseFailure410(
     @Transient
     override val headers: Headers = Headers.Empty,
-  ) : DeleteListAccountsResponse()
+  ) : DeleteListAccountsResponse(),
+      OperationResponseFailure<Unit> {
+    override val body: Unit
+      get() = Unit
+  }
 
   @Serializable
   public data class DeleteListAccountsResponseFailure(
-    public val body: ValidationError,
+    override val body: ValidationError,
     @Transient
     override val headers: Headers = Headers.Empty,
-  ) : DeleteListAccountsResponse()
+  ) : DeleteListAccountsResponse(),
+      OperationResponseFailure<ValidationError>
 
   @Serializable
   public data class DeleteListAccountsResponseUnknownFailure(
-    public val statusCode: Int,
+    override val statusCode: Int,
     @Transient
     override val headers: Headers = Headers.Empty,
-  ) : DeleteListAccountsResponse()
+  ) : DeleteListAccountsResponse(),
+      OperationResponseUnknownFailure
 }
 
 public fun ListsClient(configuration: ClientConfiguration = defaultClientConfiguration): ListsClient = DefaultListsClient(configuration)

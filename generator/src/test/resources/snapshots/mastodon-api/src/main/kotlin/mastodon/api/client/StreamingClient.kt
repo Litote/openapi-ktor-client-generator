@@ -68,15 +68,19 @@ public interface StreamingClient {
   public suspend fun getStreamingUserNotification(block: suspend ClientSSESession.() -> Unit)
 
   @Serializable
-  public sealed class GetStreamingHealthResponse {
-    public abstract val headers: Headers
+  public sealed class GetStreamingHealthResponse : OperationResponse<Unit> {
+    abstract override val headers: Headers
   }
 
   @Serializable
   public data class GetStreamingHealthResponseSuccess(
     @Transient
     override val headers: Headers = Headers.Empty,
-  ) : GetStreamingHealthResponse() {
+  ) : GetStreamingHealthResponse(),
+      OperationResponseSuccess<Unit> {
+    override val body: Unit
+      get() = Unit
+
     /**
      * Number of requests permitted per time period
      */
@@ -98,30 +102,37 @@ public interface StreamingClient {
 
   @Serializable
   public data class GetStreamingHealthResponseFailure401(
-    public val body: Error,
+    override val body: Error,
     @Transient
     override val headers: Headers = Headers.Empty,
-  ) : GetStreamingHealthResponse()
+  ) : GetStreamingHealthResponse(),
+      OperationResponseFailure<Error>
 
   @Serializable
   public data class GetStreamingHealthResponseFailure410(
     @Transient
     override val headers: Headers = Headers.Empty,
-  ) : GetStreamingHealthResponse()
+  ) : GetStreamingHealthResponse(),
+      OperationResponseFailure<Unit> {
+    override val body: Unit
+      get() = Unit
+  }
 
   @Serializable
   public data class GetStreamingHealthResponseFailure(
-    public val body: ValidationError,
+    override val body: ValidationError,
     @Transient
     override val headers: Headers = Headers.Empty,
-  ) : GetStreamingHealthResponse()
+  ) : GetStreamingHealthResponse(),
+      OperationResponseFailure<ValidationError>
 
   @Serializable
   public data class GetStreamingHealthResponseUnknownFailure(
-    public val statusCode: Int,
+    override val statusCode: Int,
     @Transient
     override val headers: Headers = Headers.Empty,
-  ) : GetStreamingHealthResponse()
+  ) : GetStreamingHealthResponse(),
+      OperationResponseUnknownFailure
 }
 
 public fun StreamingClient(configuration: ClientConfiguration = defaultClientConfiguration): StreamingClient = DefaultStreamingClient(configuration)

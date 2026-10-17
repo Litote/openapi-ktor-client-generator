@@ -99,7 +99,7 @@ public class ApiClientGenerator public constructor(
         val operationBuilder =
             OperationBuilder(
                 modelGenerator = modelGenerator,
-                responseBuilder = ResponseBuilder(stringFormatTypes),
+                responseBuilder = ResponseBuilder(OperationResponseTypes(configuration.configPackage), stringFormatTypes),
                 clientConfigurationClass = clientConfigurationClass,
                 modelPackage = configuration.resolvedModelPackage,
                 clientPackage = configuration.clientPackage,

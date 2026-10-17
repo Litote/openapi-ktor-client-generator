@@ -143,7 +143,6 @@ internal class OperationBuilder(
 
         val responseSealedName = "${responseBaseName}Response"
         val responseSealedClass = interfaceClass.nestedClass(responseSealedName)
-        interfaceBuilder.addType(responseBuilder.createSealedResponseClass(responseSealedName))
         val responseEntries =
             responseBuilder.buildResponseTypes(
                 operationInfo.responses,

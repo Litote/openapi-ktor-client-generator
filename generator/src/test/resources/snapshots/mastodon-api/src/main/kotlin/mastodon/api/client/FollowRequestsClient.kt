@@ -8,6 +8,7 @@ import io.ktor.http.encodeURLPathPart
 import kotlin.Int
 import kotlin.Long
 import kotlin.String
+import kotlin.Unit
 import kotlin.collections.List
 import kotlin.coroutines.cancellation.CancellationException
 import kotlinx.serialization.Serializable
@@ -39,16 +40,17 @@ public interface FollowRequestsClient {
   public suspend fun postFollowRequestReject(accountId: String): PostFollowRequestRejectResponse
 
   @Serializable
-  public sealed class GetFollowRequestsResponse {
-    public abstract val headers: Headers
+  public sealed class GetFollowRequestsResponse : OperationResponse<List<Account>> {
+    abstract override val headers: Headers
   }
 
   @Serializable
   public data class GetFollowRequestsResponseSuccess(
-    public val body: List<Account>,
+    override val body: List<Account>,
     @Transient
     override val headers: Headers = Headers.Empty,
-  ) : GetFollowRequestsResponse() {
+  ) : GetFollowRequestsResponse(),
+      OperationResponseSuccess<List<Account>> {
     /**
      * Pagination links for browsing older or newer results. Format: Link: <https://mastodon.example/api/v1/endpoint?max_id=7163058>; rel="next", <https://mastodon.example/api/v1/endpoint?min_id=7275607>; rel="prev". See [RFC 8288](https://www.rfc-editor.org/rfc/rfc8288) for more information.
      */
@@ -76,42 +78,50 @@ public interface FollowRequestsClient {
 
   @Serializable
   public data class GetFollowRequestsResponseFailure401(
-    public val body: Error,
+    override val body: Error,
     @Transient
     override val headers: Headers = Headers.Empty,
-  ) : GetFollowRequestsResponse()
+  ) : GetFollowRequestsResponse(),
+      OperationResponseFailure<Error>
 
   @Serializable
   public data class GetFollowRequestsResponseFailure410(
     @Transient
     override val headers: Headers = Headers.Empty,
-  ) : GetFollowRequestsResponse()
+  ) : GetFollowRequestsResponse(),
+      OperationResponseFailure<Unit> {
+    override val body: Unit
+      get() = Unit
+  }
 
   @Serializable
   public data class GetFollowRequestsResponseFailure(
-    public val body: ValidationError,
+    override val body: ValidationError,
     @Transient
     override val headers: Headers = Headers.Empty,
-  ) : GetFollowRequestsResponse()
+  ) : GetFollowRequestsResponse(),
+      OperationResponseFailure<ValidationError>
 
   @Serializable
   public data class GetFollowRequestsResponseUnknownFailure(
-    public val statusCode: Int,
+    override val statusCode: Int,
     @Transient
     override val headers: Headers = Headers.Empty,
-  ) : GetFollowRequestsResponse()
+  ) : GetFollowRequestsResponse(),
+      OperationResponseUnknownFailure
 
   @Serializable
-  public sealed class PostFollowRequestAuthorizeResponse {
-    public abstract val headers: Headers
+  public sealed class PostFollowRequestAuthorizeResponse : OperationResponse<Relationship> {
+    abstract override val headers: Headers
   }
 
   @Serializable
   public data class PostFollowRequestAuthorizeResponseSuccess(
-    public val body: Relationship,
+    override val body: Relationship,
     @Transient
     override val headers: Headers = Headers.Empty,
-  ) : PostFollowRequestAuthorizeResponse() {
+  ) : PostFollowRequestAuthorizeResponse(),
+      OperationResponseSuccess<Relationship> {
     /**
      * Number of requests permitted per time period
      */
@@ -133,42 +143,50 @@ public interface FollowRequestsClient {
 
   @Serializable
   public data class PostFollowRequestAuthorizeResponseFailure401(
-    public val body: Error,
+    override val body: Error,
     @Transient
     override val headers: Headers = Headers.Empty,
-  ) : PostFollowRequestAuthorizeResponse()
+  ) : PostFollowRequestAuthorizeResponse(),
+      OperationResponseFailure<Error>
 
   @Serializable
   public data class PostFollowRequestAuthorizeResponseFailure410(
     @Transient
     override val headers: Headers = Headers.Empty,
-  ) : PostFollowRequestAuthorizeResponse()
+  ) : PostFollowRequestAuthorizeResponse(),
+      OperationResponseFailure<Unit> {
+    override val body: Unit
+      get() = Unit
+  }
 
   @Serializable
   public data class PostFollowRequestAuthorizeResponseFailure(
-    public val body: ValidationError,
+    override val body: ValidationError,
     @Transient
     override val headers: Headers = Headers.Empty,
-  ) : PostFollowRequestAuthorizeResponse()
+  ) : PostFollowRequestAuthorizeResponse(),
+      OperationResponseFailure<ValidationError>
 
   @Serializable
   public data class PostFollowRequestAuthorizeResponseUnknownFailure(
-    public val statusCode: Int,
+    override val statusCode: Int,
     @Transient
     override val headers: Headers = Headers.Empty,
-  ) : PostFollowRequestAuthorizeResponse()
+  ) : PostFollowRequestAuthorizeResponse(),
+      OperationResponseUnknownFailure
 
   @Serializable
-  public sealed class PostFollowRequestRejectResponse {
-    public abstract val headers: Headers
+  public sealed class PostFollowRequestRejectResponse : OperationResponse<Relationship> {
+    abstract override val headers: Headers
   }
 
   @Serializable
   public data class PostFollowRequestRejectResponseSuccess(
-    public val body: Relationship,
+    override val body: Relationship,
     @Transient
     override val headers: Headers = Headers.Empty,
-  ) : PostFollowRequestRejectResponse() {
+  ) : PostFollowRequestRejectResponse(),
+      OperationResponseSuccess<Relationship> {
     /**
      * Number of requests permitted per time period
      */
@@ -190,30 +208,37 @@ public interface FollowRequestsClient {
 
   @Serializable
   public data class PostFollowRequestRejectResponseFailure401(
-    public val body: Error,
+    override val body: Error,
     @Transient
     override val headers: Headers = Headers.Empty,
-  ) : PostFollowRequestRejectResponse()
+  ) : PostFollowRequestRejectResponse(),
+      OperationResponseFailure<Error>
 
   @Serializable
   public data class PostFollowRequestRejectResponseFailure410(
     @Transient
     override val headers: Headers = Headers.Empty,
-  ) : PostFollowRequestRejectResponse()
+  ) : PostFollowRequestRejectResponse(),
+      OperationResponseFailure<Unit> {
+    override val body: Unit
+      get() = Unit
+  }
 
   @Serializable
   public data class PostFollowRequestRejectResponseFailure(
-    public val body: ValidationError,
+    override val body: ValidationError,
     @Transient
     override val headers: Headers = Headers.Empty,
-  ) : PostFollowRequestRejectResponse()
+  ) : PostFollowRequestRejectResponse(),
+      OperationResponseFailure<ValidationError>
 
   @Serializable
   public data class PostFollowRequestRejectResponseUnknownFailure(
-    public val statusCode: Int,
+    override val statusCode: Int,
     @Transient
     override val headers: Headers = Headers.Empty,
-  ) : PostFollowRequestRejectResponse()
+  ) : PostFollowRequestRejectResponse(),
+      OperationResponseUnknownFailure
 }
 
 public fun FollowRequestsClient(configuration: ClientConfiguration = defaultClientConfiguration): FollowRequestsClient = DefaultFollowRequestsClient(configuration)

@@ -4,10 +4,12 @@ import io.ktor.client.call.body
 import io.ktor.client.request.`get`
 import io.ktor.http.Headers
 import io.ktor.http.encodeURLPathPart
+import kotlin.Any
 import kotlin.Boolean
 import kotlin.Int
 import kotlin.Long
 import kotlin.String
+import kotlin.Unit
 import kotlin.collections.List
 import kotlin.coroutines.cancellation.CancellationException
 import kotlinx.serialization.Serializable
@@ -91,16 +93,17 @@ public interface TimelinesClient {
   ): GetTimelinesTagByHashtagResponse
 
   @Serializable
-  public sealed class GetTimelineDirectResponse {
-    public abstract val headers: Headers
+  public sealed class GetTimelineDirectResponse : OperationResponse<List<Status>> {
+    abstract override val headers: Headers
   }
 
   @Serializable
   public data class GetTimelineDirectResponseSuccess(
-    public val body: List<Status>,
+    override val body: List<Status>,
     @Transient
     override val headers: Headers = Headers.Empty,
-  ) : GetTimelineDirectResponse() {
+  ) : GetTimelineDirectResponse(),
+      OperationResponseSuccess<List<Status>> {
     /**
      * Pagination links for browsing older or newer results. Format: Link: <https://mastodon.example/api/v1/endpoint?max_id=7163058>; rel="next", <https://mastodon.example/api/v1/endpoint?min_id=7275607>; rel="prev". See [RFC 8288](https://www.rfc-editor.org/rfc/rfc8288) for more information.
      */
@@ -128,42 +131,50 @@ public interface TimelinesClient {
 
   @Serializable
   public data class GetTimelineDirectResponseFailure401(
-    public val body: Error,
+    override val body: Error,
     @Transient
     override val headers: Headers = Headers.Empty,
-  ) : GetTimelineDirectResponse()
+  ) : GetTimelineDirectResponse(),
+      OperationResponseFailure<Error>
 
   @Serializable
   public data class GetTimelineDirectResponseFailure410(
     @Transient
     override val headers: Headers = Headers.Empty,
-  ) : GetTimelineDirectResponse()
+  ) : GetTimelineDirectResponse(),
+      OperationResponseFailure<Unit> {
+    override val body: Unit
+      get() = Unit
+  }
 
   @Serializable
   public data class GetTimelineDirectResponseFailure(
-    public val body: ValidationError,
+    override val body: ValidationError,
     @Transient
     override val headers: Headers = Headers.Empty,
-  ) : GetTimelineDirectResponse()
+  ) : GetTimelineDirectResponse(),
+      OperationResponseFailure<ValidationError>
 
   @Serializable
   public data class GetTimelineDirectResponseUnknownFailure(
-    public val statusCode: Int,
+    override val statusCode: Int,
     @Transient
     override val headers: Headers = Headers.Empty,
-  ) : GetTimelineDirectResponse()
+  ) : GetTimelineDirectResponse(),
+      OperationResponseUnknownFailure
 
   @Serializable
-  public sealed class GetTimelineHomeResponse {
-    public abstract val headers: Headers
+  public sealed class GetTimelineHomeResponse : OperationResponse<Any?> {
+    abstract override val headers: Headers
   }
 
   @Serializable
   public data class GetTimelineHomeResponseSuccess200(
-    public val body: List<Status>,
+    override val body: List<Status>,
     @Transient
     override val headers: Headers = Headers.Empty,
-  ) : GetTimelineHomeResponse() {
+  ) : GetTimelineHomeResponse(),
+      OperationResponseSuccess<Any?> {
     /**
      * Pagination links for browsing older or newer results. Format: Link: <https://mastodon.example/api/v1/endpoint?max_id=7163058>; rel="next", <https://mastodon.example/api/v1/endpoint?min_id=7275607>; rel="prev". See [RFC 8288](https://www.rfc-editor.org/rfc/rfc8288) for more information.
      */
@@ -193,7 +204,11 @@ public interface TimelinesClient {
   public data class GetTimelineHomeResponseSuccess(
     @Transient
     override val headers: Headers = Headers.Empty,
-  ) : GetTimelineHomeResponse() {
+  ) : GetTimelineHomeResponse(),
+      OperationResponseSuccess<Any?> {
+    override val body: Unit
+      get() = Unit
+
     /**
      * Pagination links for browsing older or newer results. Format: Link: <https://mastodon.example/api/v1/endpoint?max_id=7163058>; rel="next", <https://mastodon.example/api/v1/endpoint?min_id=7275607>; rel="prev". See [RFC 8288](https://www.rfc-editor.org/rfc/rfc8288) for more information.
      */
@@ -221,42 +236,50 @@ public interface TimelinesClient {
 
   @Serializable
   public data class GetTimelineHomeResponseFailure401(
-    public val body: Error,
+    override val body: Error,
     @Transient
     override val headers: Headers = Headers.Empty,
-  ) : GetTimelineHomeResponse()
+  ) : GetTimelineHomeResponse(),
+      OperationResponseFailure<Error>
 
   @Serializable
   public data class GetTimelineHomeResponseFailure410(
     @Transient
     override val headers: Headers = Headers.Empty,
-  ) : GetTimelineHomeResponse()
+  ) : GetTimelineHomeResponse(),
+      OperationResponseFailure<Unit> {
+    override val body: Unit
+      get() = Unit
+  }
 
   @Serializable
   public data class GetTimelineHomeResponseFailure(
-    public val body: ValidationError,
+    override val body: ValidationError,
     @Transient
     override val headers: Headers = Headers.Empty,
-  ) : GetTimelineHomeResponse()
+  ) : GetTimelineHomeResponse(),
+      OperationResponseFailure<ValidationError>
 
   @Serializable
   public data class GetTimelineHomeResponseUnknownFailure(
-    public val statusCode: Int,
+    override val statusCode: Int,
     @Transient
     override val headers: Headers = Headers.Empty,
-  ) : GetTimelineHomeResponse()
+  ) : GetTimelineHomeResponse(),
+      OperationResponseUnknownFailure
 
   @Serializable
-  public sealed class GetTimelineLinkResponse {
-    public abstract val headers: Headers
+  public sealed class GetTimelineLinkResponse : OperationResponse<List<Status>> {
+    abstract override val headers: Headers
   }
 
   @Serializable
   public data class GetTimelineLinkResponseSuccess(
-    public val body: List<Status>,
+    override val body: List<Status>,
     @Transient
     override val headers: Headers = Headers.Empty,
-  ) : GetTimelineLinkResponse() {
+  ) : GetTimelineLinkResponse(),
+      OperationResponseSuccess<List<Status>> {
     /**
      * Pagination links for browsing older or newer results. Format: Link: <https://mastodon.example/api/v1/endpoint?max_id=7163058>; rel="next", <https://mastodon.example/api/v1/endpoint?min_id=7275607>; rel="prev". See [RFC 8288](https://www.rfc-editor.org/rfc/rfc8288) for more information.
      */
@@ -284,42 +307,50 @@ public interface TimelinesClient {
 
   @Serializable
   public data class GetTimelineLinkResponseFailure401(
-    public val body: Error,
+    override val body: Error,
     @Transient
     override val headers: Headers = Headers.Empty,
-  ) : GetTimelineLinkResponse()
+  ) : GetTimelineLinkResponse(),
+      OperationResponseFailure<Error>
 
   @Serializable
   public data class GetTimelineLinkResponseFailure410(
     @Transient
     override val headers: Headers = Headers.Empty,
-  ) : GetTimelineLinkResponse()
+  ) : GetTimelineLinkResponse(),
+      OperationResponseFailure<Unit> {
+    override val body: Unit
+      get() = Unit
+  }
 
   @Serializable
   public data class GetTimelineLinkResponseFailure(
-    public val body: ValidationError,
+    override val body: ValidationError,
     @Transient
     override val headers: Headers = Headers.Empty,
-  ) : GetTimelineLinkResponse()
+  ) : GetTimelineLinkResponse(),
+      OperationResponseFailure<ValidationError>
 
   @Serializable
   public data class GetTimelineLinkResponseUnknownFailure(
-    public val statusCode: Int,
+    override val statusCode: Int,
     @Transient
     override val headers: Headers = Headers.Empty,
-  ) : GetTimelineLinkResponse()
+  ) : GetTimelineLinkResponse(),
+      OperationResponseUnknownFailure
 
   @Serializable
-  public sealed class GetTimelinesListByListIdResponse {
-    public abstract val headers: Headers
+  public sealed class GetTimelinesListByListIdResponse : OperationResponse<List<Status>> {
+    abstract override val headers: Headers
   }
 
   @Serializable
   public data class GetTimelinesListByListIdResponseSuccess(
-    public val body: List<Status>,
+    override val body: List<Status>,
     @Transient
     override val headers: Headers = Headers.Empty,
-  ) : GetTimelinesListByListIdResponse() {
+  ) : GetTimelinesListByListIdResponse(),
+      OperationResponseSuccess<List<Status>> {
     /**
      * Pagination links for browsing older or newer results. Format: Link: <https://mastodon.example/api/v1/endpoint?max_id=7163058>; rel="next", <https://mastodon.example/api/v1/endpoint?min_id=7275607>; rel="prev". See [RFC 8288](https://www.rfc-editor.org/rfc/rfc8288) for more information.
      */
@@ -347,42 +378,50 @@ public interface TimelinesClient {
 
   @Serializable
   public data class GetTimelinesListByListIdResponseFailure401(
-    public val body: Error,
+    override val body: Error,
     @Transient
     override val headers: Headers = Headers.Empty,
-  ) : GetTimelinesListByListIdResponse()
+  ) : GetTimelinesListByListIdResponse(),
+      OperationResponseFailure<Error>
 
   @Serializable
   public data class GetTimelinesListByListIdResponseFailure410(
     @Transient
     override val headers: Headers = Headers.Empty,
-  ) : GetTimelinesListByListIdResponse()
+  ) : GetTimelinesListByListIdResponse(),
+      OperationResponseFailure<Unit> {
+    override val body: Unit
+      get() = Unit
+  }
 
   @Serializable
   public data class GetTimelinesListByListIdResponseFailure(
-    public val body: ValidationError,
+    override val body: ValidationError,
     @Transient
     override val headers: Headers = Headers.Empty,
-  ) : GetTimelinesListByListIdResponse()
+  ) : GetTimelinesListByListIdResponse(),
+      OperationResponseFailure<ValidationError>
 
   @Serializable
   public data class GetTimelinesListByListIdResponseUnknownFailure(
-    public val statusCode: Int,
+    override val statusCode: Int,
     @Transient
     override val headers: Headers = Headers.Empty,
-  ) : GetTimelinesListByListIdResponse()
+  ) : GetTimelinesListByListIdResponse(),
+      OperationResponseUnknownFailure
 
   @Serializable
-  public sealed class GetTimelinePublicResponse {
-    public abstract val headers: Headers
+  public sealed class GetTimelinePublicResponse : OperationResponse<List<Status>> {
+    abstract override val headers: Headers
   }
 
   @Serializable
   public data class GetTimelinePublicResponseSuccess(
-    public val body: List<Status>,
+    override val body: List<Status>,
     @Transient
     override val headers: Headers = Headers.Empty,
-  ) : GetTimelinePublicResponse() {
+  ) : GetTimelinePublicResponse(),
+      OperationResponseSuccess<List<Status>> {
     /**
      * Pagination links for browsing older or newer results. Format: Link: <https://mastodon.example/api/v1/endpoint?max_id=7163058>; rel="next", <https://mastodon.example/api/v1/endpoint?min_id=7275607>; rel="prev". See [RFC 8288](https://www.rfc-editor.org/rfc/rfc8288) for more information.
      */
@@ -410,42 +449,50 @@ public interface TimelinesClient {
 
   @Serializable
   public data class GetTimelinePublicResponseFailure401(
-    public val body: Error,
+    override val body: Error,
     @Transient
     override val headers: Headers = Headers.Empty,
-  ) : GetTimelinePublicResponse()
+  ) : GetTimelinePublicResponse(),
+      OperationResponseFailure<Error>
 
   @Serializable
   public data class GetTimelinePublicResponseFailure410(
     @Transient
     override val headers: Headers = Headers.Empty,
-  ) : GetTimelinePublicResponse()
+  ) : GetTimelinePublicResponse(),
+      OperationResponseFailure<Unit> {
+    override val body: Unit
+      get() = Unit
+  }
 
   @Serializable
   public data class GetTimelinePublicResponseFailure(
-    public val body: ValidationError,
+    override val body: ValidationError,
     @Transient
     override val headers: Headers = Headers.Empty,
-  ) : GetTimelinePublicResponse()
+  ) : GetTimelinePublicResponse(),
+      OperationResponseFailure<ValidationError>
 
   @Serializable
   public data class GetTimelinePublicResponseUnknownFailure(
-    public val statusCode: Int,
+    override val statusCode: Int,
     @Transient
     override val headers: Headers = Headers.Empty,
-  ) : GetTimelinePublicResponse()
+  ) : GetTimelinePublicResponse(),
+      OperationResponseUnknownFailure
 
   @Serializable
-  public sealed class GetTimelinesTagByHashtagResponse {
-    public abstract val headers: Headers
+  public sealed class GetTimelinesTagByHashtagResponse : OperationResponse<List<Status>> {
+    abstract override val headers: Headers
   }
 
   @Serializable
   public data class GetTimelinesTagByHashtagResponseSuccess(
-    public val body: List<Status>,
+    override val body: List<Status>,
     @Transient
     override val headers: Headers = Headers.Empty,
-  ) : GetTimelinesTagByHashtagResponse() {
+  ) : GetTimelinesTagByHashtagResponse(),
+      OperationResponseSuccess<List<Status>> {
     /**
      * Pagination links for browsing older or newer results. Format: Link: <https://mastodon.example/api/v1/endpoint?max_id=7163058>; rel="next", <https://mastodon.example/api/v1/endpoint?min_id=7275607>; rel="prev". See [RFC 8288](https://www.rfc-editor.org/rfc/rfc8288) for more information.
      */
@@ -473,30 +520,37 @@ public interface TimelinesClient {
 
   @Serializable
   public data class GetTimelinesTagByHashtagResponseFailure401(
-    public val body: Error,
+    override val body: Error,
     @Transient
     override val headers: Headers = Headers.Empty,
-  ) : GetTimelinesTagByHashtagResponse()
+  ) : GetTimelinesTagByHashtagResponse(),
+      OperationResponseFailure<Error>
 
   @Serializable
   public data class GetTimelinesTagByHashtagResponseFailure410(
     @Transient
     override val headers: Headers = Headers.Empty,
-  ) : GetTimelinesTagByHashtagResponse()
+  ) : GetTimelinesTagByHashtagResponse(),
+      OperationResponseFailure<Unit> {
+    override val body: Unit
+      get() = Unit
+  }
 
   @Serializable
   public data class GetTimelinesTagByHashtagResponseFailure(
-    public val body: ValidationError,
+    override val body: ValidationError,
     @Transient
     override val headers: Headers = Headers.Empty,
-  ) : GetTimelinesTagByHashtagResponse()
+  ) : GetTimelinesTagByHashtagResponse(),
+      OperationResponseFailure<ValidationError>
 
   @Serializable
   public data class GetTimelinesTagByHashtagResponseUnknownFailure(
-    public val statusCode: Int,
+    override val statusCode: Int,
     @Transient
     override val headers: Headers = Headers.Empty,
-  ) : GetTimelinesTagByHashtagResponse()
+  ) : GetTimelinesTagByHashtagResponse(),
+      OperationResponseUnknownFailure
 }
 
 public fun TimelinesClient(configuration: ClientConfiguration = defaultClientConfiguration): TimelinesClient = DefaultTimelinesClient(configuration)

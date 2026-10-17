@@ -1,0 +1,74 @@
+{
+  "openapi": "3.0.3",
+  "info": {
+    "title": "Operation responses API",
+    "version": "1.0.0"
+  },
+  "paths": {
+    "/items/{id}": {
+      "get": {
+        "tags": ["items"],
+        "operationId": "getItem",
+        "parameters": [{ "name": "id", "in": "path", "required": true, "schema": { "type": "string" } }],
+        "responses": {
+          "200": {
+            "description": "Item",
+            "content": { "application/json": { "schema": { "$ref": "#/components/schemas/Item" } } }
+          },
+          "404": {
+            "description": "Not found",
+            "content": { "application/json": { "schema": { "$ref": "#/components/schemas/Error" } } }
+          }
+        }
+      },
+      "delete": {
+        "tags": ["items"],
+        "operationId": "deleteItem",
+        "parameters": [{ "name": "id", "in": "path", "required": true, "schema": { "type": "string" } }],
+        "responses": {
+          "204": { "description": "Deleted" },
+          "409": { "description": "Conflict" }
+        }
+      }
+    },
+    "/items": {
+      "post": {
+        "tags": ["items"],
+        "operationId": "createItem",
+        "requestBody": {
+          "required": true,
+          "content": { "application/json": { "schema": { "$ref": "#/components/schemas/Item" } } }
+        },
+        "responses": {
+          "201": {
+            "description": "Created",
+            "content": { "application/json": { "schema": { "$ref": "#/components/schemas/Item" } } }
+          },
+          "202": {
+            "description": "Accepted",
+            "content": { "application/json": { "schema": { "$ref": "#/components/schemas/Job" } } }
+          }
+        }
+      }
+    }
+  },
+  "components": {
+    "schemas": {
+      "Item": {
+        "type": "object",
+        "required": ["id"],
+        "properties": { "id": { "type": "string" } }
+      },
+      "Job": {
+        "type": "object",
+        "required": ["jobId"],
+        "properties": { "jobId": { "type": "string" } }
+      },
+      "Error": {
+        "type": "object",
+        "required": ["message"],
+        "properties": { "message": { "type": "string" } }
+      }
+    }
+  }
+}

@@ -18,23 +18,25 @@ public interface Client {
   public suspend fun createStatus(request: Status): CreateStatusResponse
 
   @Serializable
-  public sealed class CreateStatusResponse {
-    public abstract val headers: Headers
+  public sealed class CreateStatusResponse : OperationResponse<StatusCreated> {
+    abstract override val headers: Headers
   }
 
   @Serializable
   public data class CreateStatusResponseSuccess(
-    public val body: StatusCreated,
+    override val body: StatusCreated,
     @Transient
     override val headers: Headers = Headers.Empty,
-  ) : CreateStatusResponse()
+  ) : CreateStatusResponse(),
+      OperationResponseSuccess<StatusCreated>
 
   @Serializable
   public data class CreateStatusResponseUnknownFailure(
-    public val statusCode: Int,
+    override val statusCode: Int,
     @Transient
     override val headers: Headers = Headers.Empty,
-  ) : CreateStatusResponse()
+  ) : CreateStatusResponse(),
+      OperationResponseUnknownFailure
 }
 
 public fun Client(configuration: ClientConfiguration = defaultClientConfiguration): Client = DefaultClient(configuration)

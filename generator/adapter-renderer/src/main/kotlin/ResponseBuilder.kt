@@ -1,14 +1,18 @@
 package org.litote.openapi.ktor.client.generator.adapter.renderer
 
+import com.squareup.kotlinpoet.ANY
 import com.squareup.kotlinpoet.AnnotationSpec
 import com.squareup.kotlinpoet.ClassName
 import com.squareup.kotlinpoet.FunSpec
 import com.squareup.kotlinpoet.INT
 import com.squareup.kotlinpoet.KModifier
+import com.squareup.kotlinpoet.NOTHING
 import com.squareup.kotlinpoet.ParameterSpec
+import com.squareup.kotlinpoet.ParameterizedTypeName.Companion.parameterizedBy
 import com.squareup.kotlinpoet.PropertySpec
 import com.squareup.kotlinpoet.TypeName
 import com.squareup.kotlinpoet.TypeSpec
+import com.squareup.kotlinpoet.UNIT
 import kotlinx.serialization.Serializable
 import kotlinx.serialization.Transient
 import org.litote.openapi.ktor.client.generator.domain.DomainTypeSpec.PrimitiveSpec.KindSpec
@@ -18,8 +22,13 @@ import org.litote.openapi.ktor.client.generator.domain.ResponseEntrySpec as Doma
 
 /**
  * Builds response types for API operations.
+ *
+ * The response types implement the common interfaces of [responseTypes]: the sealed class of an operation is an
+ * `OperationResponse<T>`, `T` being the body type of its successful responses (`Unit` without body, `Any?` when they
+ * differ, `Nothing` without successful response).
  */
 internal class ResponseBuilder(
+    private val responseTypes: OperationResponseTypes,
     private val stringFormatTypes: Map<String, StringFormatType> = emptyMap(),
 ) {
     private companion object {
@@ -27,6 +36,7 @@ internal class ResponseBuilder(
         val transientAnnotation: AnnotationSpec = AnnotationSpec.builder(Transient::class).build()
         val headersClass: ClassName = ClassName("io.ktor.http", "Headers")
         const val HEADERS_PROPERTY = "headers"
+        const val BODY_PROPERTY = "body"
     }
 
     private data class ResponseGroup(
@@ -47,28 +57,41 @@ internal class ResponseBuilder(
         modelPackage: String,
         modelPackageOverrides: Map<String, String> = emptyMap(),
     ): List<RenderedResponseEntry> {
-        val entries =
-            buildResponseEntries(responses, clientBuilder, responseBaseName, responseSealedClass, modelPackage, modelPackageOverrides)
+        val grouped = groupResponses(responses, responseSealedClass, modelPackage, modelPackageOverrides)
+        val successType = successType(grouped)
+        clientBuilder.addType(createSealedResponseClass(responseSealedClass.simpleName, successType))
+        val entries = buildResponseEntries(grouped, clientBuilder, responseBaseName, responseSealedClass, successType)
         addUnknownFailureType(clientBuilder, responseBaseName, responseSealedClass)
         return entries
     }
 
-    fun createSealedResponseClass(responseSealedName: String): TypeSpec =
+    private fun successType(grouped: List<ResponseGroup>): TypeName {
+        val bodyTypes = grouped.filter { it.isSuccess }.map { it.typeName ?: UNIT }.distinct()
+        return when (bodyTypes.size) {
+            0 -> NOTHING
+            1 -> bodyTypes.single()
+            else -> ANY.copy(nullable = true)
+        }
+    }
+
+    private fun createSealedResponseClass(
+        responseSealedName: String,
+        successType: TypeName,
+    ): TypeSpec =
         TypeSpec
             .classBuilder(responseSealedName)
             .addModifiers(KModifier.SEALED)
             .addAnnotation(serializableAnnotation)
-            .addProperty(PropertySpec.builder(HEADERS_PROPERTY, headersClass, KModifier.ABSTRACT).build())
+            .addSuperinterface(responseTypes.response.parameterizedBy(successType))
+            .addProperty(PropertySpec.builder(HEADERS_PROPERTY, headersClass, KModifier.ABSTRACT, KModifier.OVERRIDE).build())
             .build()
 
-    private fun buildResponseEntries(
+    private fun groupResponses(
         responses: List<DomainResponseEntry>,
-        clientBuilder: TypeSpec.Builder,
-        responseBaseName: String,
         responseSealedClass: ClassName,
         modelPackage: String,
-        modelPackageOverrides: Map<String, String> = emptyMap(),
-    ): List<RenderedResponseEntry> {
+        modelPackageOverrides: Map<String, String>,
+    ): List<ResponseGroup> {
         val grouped: List<ResponseGroup> =
             responses.map { entry ->
                 ResponseGroup(
@@ -88,14 +111,22 @@ internal class ResponseBuilder(
         if (grouped.isEmpty()) {
             error("no response specified")
         }
+        return grouped
+    }
 
-        return grouped.mapIndexed { index, group ->
+    private fun buildResponseEntries(
+        grouped: List<ResponseGroup>,
+        clientBuilder: TypeSpec.Builder,
+        responseBaseName: String,
+        responseSealedClass: ClassName,
+        successType: TypeName,
+    ): List<RenderedResponseEntry> =
+        grouped.mapIndexed { index, group ->
             val suffix = determineClassNameSuffix(index, group.isSuccess, group.statusCodes, grouped)
             val responseTypeName = "${responseBaseName}Response$suffix"
-            clientBuilder.addType(createResponseType(responseTypeName, group, responseSealedClass))
+            clientBuilder.addType(createResponseType(responseTypeName, group, responseSealedClass, successType))
             RenderedResponseEntry(group.statusCodes, group.typeName, responseSealedClass.peerClass(responseTypeName))
         }
-    }
 
     private fun determineClassNameSuffix(
         index: Int,
@@ -113,6 +144,7 @@ internal class ResponseBuilder(
         name: String,
         group: ResponseGroup,
         superclass: ClassName,
+        successType: TypeName,
     ): TypeSpec {
         val constructorBuilder = FunSpec.constructorBuilder()
         val typeBuilder =
@@ -121,9 +153,24 @@ internal class ResponseBuilder(
                 .addModifiers(KModifier.DATA)
                 .addAnnotation(serializableAnnotation)
                 .superclass(superclass)
-        group.typeName?.let { typeName ->
-            constructorBuilder.addParameter("body", typeName)
-            typeBuilder.addProperty(PropertySpec.builder("body", typeName).initializer("body").build())
+                .addSuperinterface(
+                    if (group.isSuccess) {
+                        responseTypes.success.parameterizedBy(successType)
+                    } else {
+                        responseTypes.failure.parameterizedBy(group.typeName ?: UNIT)
+                    },
+                )
+        val typeName = group.typeName
+        if (typeName != null) {
+            constructorBuilder.addParameter(BODY_PROPERTY, typeName)
+            typeBuilder.addProperty(PropertySpec.builder(BODY_PROPERTY, typeName, KModifier.OVERRIDE).initializer(BODY_PROPERTY).build())
+        } else {
+            typeBuilder.addProperty(
+                PropertySpec
+                    .builder(BODY_PROPERTY, UNIT, KModifier.OVERRIDE)
+                    .getter(FunSpec.getterBuilder().addStatement("return %T", UNIT).build())
+                    .build(),
+            )
         }
         addHeadersProperty(constructorBuilder, typeBuilder)
         group.headers.forEach { typeBuilder.addProperty(buildTypedHeaderProperty(it)) }
@@ -182,8 +229,9 @@ internal class ResponseBuilder(
                 .classBuilder("${responseBaseName}ResponseUnknownFailure")
                 .addModifiers(KModifier.DATA)
                 .addAnnotation(serializableAnnotation)
-                .addProperty(PropertySpec.builder("statusCode", INT).initializer("statusCode").build())
+                .addProperty(PropertySpec.builder("statusCode", INT, KModifier.OVERRIDE).initializer("statusCode").build())
                 .superclass(superclass)
+                .addSuperinterface(responseTypes.unknownFailure)
                 .apply {
                     val constructorBuilder = FunSpec.constructorBuilder().addParameter("statusCode", INT)
                     addHeadersProperty(constructorBuilder, this)

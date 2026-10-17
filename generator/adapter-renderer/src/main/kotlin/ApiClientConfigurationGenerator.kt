@@ -473,6 +473,13 @@ public class ApiClientConfigurationGenerator public constructor(
         val companion = buildCompanion()
         val clientConfiguration = buildClientConfiguration(constructor, companion)
         writeFile(clientConfiguration)
+        OperationResponseGenerator(
+            clientPackage = configuration.clientPackage,
+            outputDirectory = configuration.outputDirectory,
+            // a sealed type requires its implementations in the same module and package
+            sealed = !configuration.splitByClient && configuration.configPackage == configuration.clientPackage,
+            fileSystemWriter = fileSystemWriter,
+        ).render()
         StringFormatSerializersGenerator(
             clientPackage = configuration.clientPackage,
             outputDirectory = configuration.outputDirectory,

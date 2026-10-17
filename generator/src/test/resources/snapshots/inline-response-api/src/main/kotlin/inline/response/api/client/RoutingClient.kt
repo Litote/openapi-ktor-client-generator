@@ -35,30 +35,33 @@ public interface RoutingClient {
   }
 
   @Serializable
-  public sealed class PlanResponse {
-    public abstract val headers: Headers
+  public sealed class PlanResponse : OperationResponse<PlanResponseBody> {
+    abstract override val headers: Headers
   }
 
   @Serializable
   public data class PlanResponseSuccess(
-    public val body: PlanResponseBody,
+    override val body: PlanResponseBody,
     @Transient
     override val headers: Headers = Headers.Empty,
-  ) : PlanResponse()
+  ) : PlanResponse(),
+      OperationResponseSuccess<PlanResponseBody>
 
   @Serializable
   public data class PlanResponseFailure(
-    public val body: Error,
+    override val body: Error,
     @Transient
     override val headers: Headers = Headers.Empty,
-  ) : PlanResponse()
+  ) : PlanResponse(),
+      OperationResponseFailure<Error>
 
   @Serializable
   public data class PlanResponseUnknownFailure(
-    public val statusCode: Int,
+    override val statusCode: Int,
     @Transient
     override val headers: Headers = Headers.Empty,
-  ) : PlanResponse()
+  ) : PlanResponse(),
+      OperationResponseUnknownFailure
 
   @Serializable
   public data class StopsResponse200Body(
@@ -71,49 +74,54 @@ public interface RoutingClient {
   )
 
   @Serializable
-  public sealed class StopsResponse {
-    public abstract val headers: Headers
+  public sealed class StopsResponse : OperationResponse<StopsResponse200Body> {
+    abstract override val headers: Headers
   }
 
   @Serializable
   public data class StopsResponseSuccess(
-    public val body: StopsResponse200Body,
+    override val body: StopsResponse200Body,
     @Transient
     override val headers: Headers = Headers.Empty,
-  ) : StopsResponse()
+  ) : StopsResponse(),
+      OperationResponseSuccess<StopsResponse200Body>
 
   @Serializable
   public data class StopsResponseFailure(
-    public val body: StopsResponse404Body,
+    override val body: StopsResponse404Body,
     @Transient
     override val headers: Headers = Headers.Empty,
-  ) : StopsResponse()
+  ) : StopsResponse(),
+      OperationResponseFailure<StopsResponse404Body>
 
   @Serializable
   public data class StopsResponseUnknownFailure(
-    public val statusCode: Int,
+    override val statusCode: Int,
     @Transient
     override val headers: Headers = Headers.Empty,
-  ) : StopsResponse()
+  ) : StopsResponse(),
+      OperationResponseUnknownFailure
 
   @Serializable
-  public sealed class RawResponse {
-    public abstract val headers: Headers
+  public sealed class RawResponse : OperationResponse<JsonElement> {
+    abstract override val headers: Headers
   }
 
   @Serializable
   public data class RawResponseSuccess(
-    public val body: JsonElement,
+    override val body: JsonElement,
     @Transient
     override val headers: Headers = Headers.Empty,
-  ) : RawResponse()
+  ) : RawResponse(),
+      OperationResponseSuccess<JsonElement>
 
   @Serializable
   public data class RawResponseUnknownFailure(
-    public val statusCode: Int,
+    override val statusCode: Int,
     @Transient
     override val headers: Headers = Headers.Empty,
-  ) : RawResponse()
+  ) : RawResponse(),
+      OperationResponseUnknownFailure
 }
 
 public fun RoutingClient(configuration: ClientConfiguration = defaultClientConfiguration): RoutingClient = DefaultRoutingClient(configuration)
