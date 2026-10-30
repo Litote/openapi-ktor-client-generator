@@ -1,5 +1,12 @@
 # Changelog
 
+## [0.10.0](https://github.com/Litote/openapi-ktor-client-generator/compare/v0.9.0...v0.10.0) (2026-10-30)
+
+
+### Features
+
+* generate common interfaces for the operation responses ([#97](https://github.com/Litote/openapi-ktor-client-generator/issues/97)) ([b761084](https://github.com/Litote/openapi-ktor-client-generator/commit/b761084e74b78ae590b55e35049e8d65bdac19dc))
+
 ## [0.9.0](https://github.com/Litote/openapi-ktor-client-generator/compare/v0.8.0...v0.9.0) (2026-10-09)
 
 
