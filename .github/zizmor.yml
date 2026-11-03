@@ -3,6 +3,8 @@ rules:
     ignore:
       # pull_request_target is intentional: both workflows check out the base
       # branch and only cherry-pick safe version files from the PR branch.
+      # dependabot-auto-merge.yml checks out nothing.
+      - dependabot-auto-merge.yml:3
       - dependabot-gradle-verification.yml:3
       - dependabot-yarn-lock.yml:3
 
