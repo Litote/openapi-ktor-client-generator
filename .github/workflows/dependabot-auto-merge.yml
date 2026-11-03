@@ -1,0 +1,50 @@
+name: Dependabot auto-merge
+
+on:
+  # pull_request_target gives access to the GitHub App secrets, which pull_request
+  # events from Dependabot do not. No PR code is checked out or executed here.
+  pull_request_target:
+    branches: [ main ]
+    types: [ opened, reopened ]
+
+jobs:
+  auto-merge:
+    name: Enable auto-merge
+    if: github.event.pull_request.user.login == 'dependabot[bot]'
+    runs-on: ubuntu-latest
+    permissions:
+      contents: read
+      pull-requests: read
+
+    steps:
+      # Also checks that the first commit of the PR is a signed Dependabot commit.
+      - uses: dependabot/fetch-metadata@25dd0e34f4fe68f24cc83900b1fe3fe149efef98 # v3.1.0
+        id: metadata
+
+      # A GitHub App token rather than GITHUB_TOKEN: a merge made with GITHUB_TOKEN does
+      # not trigger the push workflows of main (CI, SNAPSHOT publication, release-please).
+      # github-actions updates are excluded: they stay reviewed by hand, as they change
+      # code that runs in CI with the repository secrets.
+      - uses: actions/create-github-app-token@64ab729a6294000f5aa4a4bc0b73d1f32bc45510 # v3.3.0
+        id: app-token
+        if: >-
+          steps.metadata.outputs.package-ecosystem == 'gradle' && (
+          steps.metadata.outputs.update-type == 'version-update:semver-minor' ||
+          steps.metadata.outputs.update-type == 'version-update:semver-patch')
+        with:
+          app-id: ${{ secrets.RELEASE_PLEASE_APP_ID }}
+          private-key: ${{ secrets.RELEASE_PLEASE_APP_PRIVATE_KEY }}
+          repositories: ${{ github.event.repository.name }}
+          permission-contents: write
+          permission-pull-requests: write
+
+      # The merge happens only once the required checks of the ruleset pass on the PR
+      # head, so it waits for the commits pushed by the dependabot-* workflows.
+      - name: Approve and enable auto-merge
+        if: steps.app-token.outcome == 'success'
+        env:
+          GH_TOKEN: ${{ steps.app-token.outputs.token }}
+          PR_URL: ${{ github.event.pull_request.html_url }}
+        run: |
+          gh pr review --approve "$PR_URL"
+          gh pr merge --auto --squash "$PR_URL"
