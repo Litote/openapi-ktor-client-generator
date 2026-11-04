@@ -10,7 +10,7 @@ on:
 jobs:
   update-verification-metadata:
     name: Regenerate verification metadata
-    if: github.actor == 'dependabot[bot]'
+    if: github.event.pull_request.user.login == 'dependabot[bot]' && github.event.pull_request.head.repo.full_name == github.repository
     # Shared with the other dependabot workflow: both push a commit to the PR branch
     # on top of its current HEAD, so running them in parallel makes the second ref
     # update fail with "Update is not a fast forward". Declared at job level so that
