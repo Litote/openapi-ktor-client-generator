@@ -43,13 +43,15 @@ jobs:
           token: ${{ steps.app-token.outputs.token }}
 
       - name: Apply dependabot version changes
+        id: pr-head
         env:
           HEAD_REF: ${{ github.head_ref }}
         run: |
           git fetch origin "$HEAD_REF"
+          echo "sha=$(git rev-parse FETCH_HEAD)" >> "$GITHUB_OUTPUT"
           git checkout FETCH_HEAD -- gradle/libs.versions.toml
 
-      - uses: Litote/ci/.github/actions/setup-gradle@bacd1e203a986488b089b784a496612740920599 # v0.3.0
+      - uses: Litote/ci/.github/actions/setup-gradle@66e5eaaa94a847335a56427b1e165aa4385b0f83 # v0.4.1
 
       # Publishing builds the plugin with the bumped Kotlin version (PluginVersion.kt is
       # regenerated from libs.versions.toml), so the generated subproject and its yarn
@@ -77,9 +79,10 @@ jobs:
         working-directory: e2e-split
         run: ./gradlew kotlinUpgradeYarnLock kotlinWasmUpgradeYarnLock
 
-      - uses: Litote/ci/.github/actions/commit-via-api@bacd1e203a986488b089b784a496612740920599 # v0.3.0
+      - uses: Litote/ci/.github/actions/commit-via-api@66e5eaaa94a847335a56427b1e165aa4385b0f83 # v0.4.1
         with:
           token: ${{ steps.app-token.outputs.token }}
           branch: ${{ github.head_ref }}
           paths: e2e-split/kotlin-js-store/yarn.lock e2e-split/kotlin-js-store/wasm/yarn.lock
           message: 'chore: update Kotlin yarn lock'
+          expected-head: ${{ steps.pr-head.outputs.sha }}
