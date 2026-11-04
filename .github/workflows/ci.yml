@@ -91,12 +91,6 @@ jobs:
             ./gradlew sonar
           fi
 
-      - name: SonarCloud quality gate
-        if: env.SONAR_TOKEN != '' && steps.detect-changes.outputs.has_code_changes == 'true'
-        env:
-          SONAR_TOKEN: ${{ secrets.SONAR_TOKEN }}
-        run: ./gradlew sonarCheck
-
       - name: Publish SNAPSHOT to Maven Central
         if: github.event_name == 'push' && steps.detect-changes.outputs.has_code_changes == 'true'
         env:

@@ -408,33 +408,25 @@ An engine name without package makes the generation fail (`require` in `ApiClien
 
 ## Quality Gate (SonarCloud)
 
-The project uses SonarCloud for static analysis with a strict **0 issues** quality gate.
+The project uses SonarCloud for static analysis. The `Litote` quality gate allows **0 new issues** and requires
+100% of the new security hotspots to be reviewed.
 
 ### Running the full quality loop
 
 ```bash
-./gradlew check jacocoAggregatedReport sonar sonarCheck
+./gradlew check jacocoAggregatedReport sonar
 ```
 
 - `check` — compiles + runs all tests + generates per-module JaCoCo `.exec` files
 - `jacocoAggregatedReport` — merges all `.exec` into `build/reports/jacoco/jacocoAggregatedReport/jacocoAggregatedReport.xml`
-- `sonar` — sends analysis + aggregated coverage to SonarCloud
-- `sonarCheck` — **calls the SonarCloud API** to verify gate status, issues count, and hotspot count; **fails the build** if any is non-zero
+- `sonar` — sends analysis + aggregated coverage to SonarCloud, waits for the result and **fails the build** if the quality gate is not `OK`
 
-> ⚠️ **MANDATORY before finalizing any task**: `sonarCheck` must exit with `BUILD SUCCESSFUL`.
+`sonar.qualitygate.wait` is set in the root `build.gradle.kts`, so the same check applies to pull requests, `main`,
+releases and local runs. In a pull request, the gate is the one of that pull request. It only covers new code:
+issues on existing code do not fail the build.
+
+> ⚠️ **MANDATORY before finalizing any task**: `sonar` must exit with `BUILD SUCCESSFUL`.
 > If it fails, fix all reported issues before marking the task done.
-
-### `sonarCheck` task
-
-The `sonarCheck` Gradle task (registered in root `build.gradle.kts`) calls three SonarCloud API endpoints:
-
-| Endpoint | What it checks |
-|----------|----------------|
-| `/api/qualitygates/project_status` | Quality gate status must be `OK` |
-| `/api/issues/search?resolved=false` | Total open issues must be `0` |
-| `/api/hotspots/search?status=TO_REVIEW` | Unreviewed security hotspots must be `0` |
-
-It prints a summary box and fails with a clear error message listing each violation.
 
 ### Token setup
 

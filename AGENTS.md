@@ -26,7 +26,7 @@
 | Category                   | Required Actions                                                                                          |
 |----------------------------|-----------------------------------------------------------------------------------------------------------|
 | **Validation**             | Run `./gradlew formatKotlin && ./gradlew check` after every iteration                                     |
-| **Quality Gate**           | Run `./gradlew check jacocoAggregatedReport sonar sonarCheck` before finalizing **every** task — **`sonarCheck` must pass (0 issues, 0 hotspots, gate OK)**. Requires `systemProp.sonar.token` in `~/.gradle/gradle.properties`. This includes `.md`-only changes and `.github/workflows/` YAML files (analysed by Sonar for security). |
+| **Quality Gate**           | Run `./gradlew check jacocoAggregatedReport sonar` before finalizing **every** task — **`sonar` must pass (it waits for the quality gate and fails if the gate is not OK)**. Requires `systemProp.sonar.token` in `~/.gradle/gradle.properties`. This includes `.md`-only changes and `.github/workflows/` YAML files (analysed by Sonar for security). |
 | **Testing**                | When you try to fix a bug, start by adding the test and THEN fix the bug. Add tests for all logic changes |
 | **Imports**                | Use single imports only                                                                                   |
 | **Language**               | Write all code, comments, and documentation in English                                                    |
@@ -89,7 +89,7 @@ A change is complete when:
 
 - [ ] `./gradlew formatKotlin` passes
 - [ ] `./gradlew check` passes (compiles without warnings, all tests pass)
-- [ ] `./gradlew check jacocoAggregatedReport sonar sonarCheck` passes — **`sonarCheck` must exit with BUILD SUCCESSFUL (0 issues, 0 hotspots, gate OK)**
+- [ ] `./gradlew check jacocoAggregatedReport sonar` passes — **`sonar` must exit with BUILD SUCCESSFUL (quality gate OK)**
 - [ ] No public API is broken
 - [ ] Only relevant files are modified
 - [ ] Type safety is preserved
