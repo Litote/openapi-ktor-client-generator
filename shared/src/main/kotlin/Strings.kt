@@ -1,5 +1,7 @@
 package org.litote.openapi.ktor.client.generator.shared
 
+// TODO trial of sonar.qualitygate.wait: intentional Sonar issue, never merge
+
 /**
  * Returns a capitalized string.
  */
