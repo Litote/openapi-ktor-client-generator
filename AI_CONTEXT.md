@@ -408,8 +408,8 @@ An engine name without package makes the generation fail (`require` in `ApiClien
 
 ## Quality Gate (SonarCloud)
 
-The project uses SonarCloud for static analysis. The `Litote` quality gate allows **0 new issues** and requires
-100% of the new security hotspots to be reviewed.
+The project uses SonarCloud for static analysis. The `Litote` quality gate allows **0 issues** and requires 100% of
+the security hotspots to be reviewed.
 
 ### Running the full quality loop
 
@@ -422,8 +422,9 @@ The project uses SonarCloud for static analysis. The `Litote` quality gate allow
 - `sonar` — sends analysis + aggregated coverage to SonarCloud, waits for the result and **fails the build** if the quality gate is not `OK`
 
 `sonar.qualitygate.wait` is set in the root `build.gradle.kts`, so the same check applies to pull requests, `main`,
-releases and local runs. In a pull request, the gate is the one of that pull request. It only covers new code:
-issues on existing code do not fail the build.
+releases and local runs. In a pull request, the gate is the one of that pull request, and only its conditions on new
+code apply: issues on existing code do not fail it. On `main` and for releases, its conditions on overall code apply
+too: any open issue or unreviewed hotspot fails the build.
 
 > ⚠️ **MANDATORY before finalizing any task**: `sonar` must exit with `BUILD SUCCESSFUL`.
 > If it fails, fix all reported issues before marking the task done.
