@@ -12,7 +12,7 @@ jobs:
     if: github.event.pull_request.user.login == 'dependabot[bot]' && github.event.pull_request.head.repo.full_name == github.repository
     permissions:
       contents: write
-    uses: Litote/ci/.github/workflows/gradle-verification.yml@bacd1e203a986488b089b784a496612740920599 # v0.3.0
+    uses: Litote/ci/.github/workflows/gradle-verification.yml@66e5eaaa94a847335a56427b1e165aa4385b0f83 # v0.4.1
     secrets:
       RELEASE_PLEASE_APP_ID: ${{ secrets.RELEASE_PLEASE_APP_ID }}
       RELEASE_PLEASE_APP_PRIVATE_KEY: ${{ secrets.RELEASE_PLEASE_APP_PRIVATE_KEY }}
