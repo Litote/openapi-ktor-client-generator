@@ -75,9 +75,14 @@ jobs:
           -PsharedModelGranularity=SHARED_PER_GROUP
           -PsubprojectRootDirectory=client
 
+      # kotlinUpgradeYarnLock starts from the stored locks (kotlinRestoreYarnLock) and keeps
+      # their resolved versions, so transitive security fixes would never be picked up.
+      # Removing the locks forces a full resolution.
       - name: Regenerate Kotlin yarn lock
         working-directory: e2e-split
-        run: ./gradlew kotlinUpgradeYarnLock kotlinWasmUpgradeYarnLock
+        run: |
+          rm -f kotlin-js-store/yarn.lock kotlin-js-store/wasm/yarn.lock
+          ./gradlew kotlinUpgradeYarnLock kotlinWasmUpgradeYarnLock
 
       - uses: Litote/ci/.github/actions/commit-via-api@731f25b65744afb6ed50783472a6746193353272 # v0.6.0
         with:

@@ -47,7 +47,11 @@ split-by-client mode with `SHARED_PER_GROUP` granularity.
   the `initApiClientSubproject` task. Also declares `alias(e2e.plugins.kotlin.jvm) apply false`
   and `alias(e2e.plugins.kotlin.multiplatform) apply false` to register Kotlin plugin versions
   for subprojects (avoids classpath conflict in multi-project builds). Versions come from the
-  version catalog defined in `settings.gradle.kts`.
+  version catalog defined in `settings.gradle.kts`. It also forces `ws` through a Yarn resolution
+  (JS and Wasm), because `ktor-client-core` pins a vulnerable version.
+- `kotlin-js-store/yarn.lock` and `kotlin-js-store/wasm/yarn.lock` — `kotlinUpgradeYarnLock` restores the stored
+  lock first and keeps its resolved versions, so delete both files before running it to pick up transitive
+  fixes (the `dependabot-yarn-lock.yml` workflow does this).
 
 **How to run locally:**
 ```bash
