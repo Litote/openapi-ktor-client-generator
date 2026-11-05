@@ -1,3 +1,8 @@
+import org.jetbrains.kotlin.gradle.targets.js.yarn.YarnPlugin
+import org.jetbrains.kotlin.gradle.targets.js.yarn.YarnRootExtension
+import org.jetbrains.kotlin.gradle.targets.wasm.yarn.WasmYarnPlugin
+import org.jetbrains.kotlin.gradle.targets.wasm.yarn.WasmYarnRootExtension
+
 plugins {
     // Declare Kotlin plugin versions so subprojects can use them without classpath conflict.
     // These versions must match DEFAULT_KOTLIN_VERSION baked into the generator plugin.
@@ -34,4 +39,14 @@ apiClientGenerator {
         )
         additionalDependencies.add("io.github.oshai:kotlin-logging:${e2e.versions.logging.get()}")
     }
+}
+
+// ktor-client-core pins ws to a version affected by GHSA-96hv-2xvq-fx4p.
+// Remove these resolutions once Ktor depends on ws >= 8.21.0.
+val wsVersion = "8.21.3"
+plugins.withType<YarnPlugin> {
+    the<YarnRootExtension>().resolution("ws", wsVersion)
+}
+plugins.withType<WasmYarnPlugin> {
+    the<WasmYarnRootExtension>().resolution("ws", wsVersion)
 }
