@@ -12,6 +12,6 @@ jobs:
   zizmor:
     permissions:
       contents: read
-    uses: Litote/ci/.github/workflows/zizmor.yml@b9071d15015f6816259c2170baae5aed063414a8 # v0.1.0
+    uses: Litote/ci/.github/workflows/zizmor.yml@731f25b65744afb6ed50783472a6746193353272 # v0.6.0
     with:
       config: .github/zizmor.yml
