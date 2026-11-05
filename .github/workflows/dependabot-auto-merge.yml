@@ -13,7 +13,7 @@ jobs:
     permissions:
       contents: read
       pull-requests: read
-    uses: Litote/ci/.github/workflows/dependabot-auto-merge.yml@1938d48c237ff5f1b81afbf547bf4f5608588776 # v0.4.0
+    uses: Litote/ci/.github/workflows/dependabot-auto-merge.yml@731f25b65744afb6ed50783472a6746193353272 # v0.6.0
     with:
       ecosystems: gradle
     secrets:

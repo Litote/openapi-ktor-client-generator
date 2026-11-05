@@ -51,7 +51,7 @@ jobs:
           echo "sha=$(git rev-parse FETCH_HEAD)" >> "$GITHUB_OUTPUT"
           git checkout FETCH_HEAD -- gradle/libs.versions.toml
 
-      - uses: Litote/ci/.github/actions/setup-gradle@66e5eaaa94a847335a56427b1e165aa4385b0f83 # v0.4.1
+      - uses: Litote/ci/.github/actions/setup-gradle@731f25b65744afb6ed50783472a6746193353272 # v0.6.0
 
       # Publishing builds the plugin with the bumped Kotlin version (PluginVersion.kt is
       # regenerated from libs.versions.toml), so the generated subproject and its yarn
@@ -79,7 +79,7 @@ jobs:
         working-directory: e2e-split
         run: ./gradlew kotlinUpgradeYarnLock kotlinWasmUpgradeYarnLock
 
-      - uses: Litote/ci/.github/actions/commit-via-api@66e5eaaa94a847335a56427b1e165aa4385b0f83 # v0.4.1
+      - uses: Litote/ci/.github/actions/commit-via-api@731f25b65744afb6ed50783472a6746193353272 # v0.6.0
         with:
           token: ${{ steps.app-token.outputs.token }}
           branch: ${{ github.head_ref }}
