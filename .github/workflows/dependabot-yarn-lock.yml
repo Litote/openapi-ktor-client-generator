@@ -7,51 +7,37 @@ on:
       - 'gradle/libs.versions.toml'
 
 jobs:
+  # A version bump is a code change: this job runs the code of the new versions, as soon as
+  # the pull request opens and before any review. So it has no secret and no write access:
+  # the commit job holds the GitHub App token and executes nothing from this one.
   update-yarn-lock:
     name: Regenerate Kotlin yarn lock
     if: github.event.pull_request.user.login == 'dependabot[bot]' && github.event.pull_request.head.repo.full_name == github.repository
-    # Shared with the other dependabot workflow: both push a commit to the PR branch
-    # on top of its current HEAD, so running them in parallel makes the second ref
-    # update fail with "Update is not a fast forward". Declared at job level so that
-    # runs skipped by the `if` above (triggered by our own bot commits) stay out of
-    # the group; `queue: max` keeps every pending job instead of replacing it.
-    concurrency:
-      group: dependabot-branch-update-${{ github.head_ref }}
-      cancel-in-progress: false
-      queue: max
     runs-on: ubuntu-latest
     permissions:
-      contents: write
+      contents: read
 
     steps:
-      - uses: actions/create-github-app-token@64ab729a6294000f5aa4a4bc0b73d1f32bc45510 # v3.3.0
-        id: app-token
-        with:
-          app-id: ${{ secrets.RELEASE_PLEASE_APP_ID }}
-          private-key: ${{ secrets.RELEASE_PLEASE_APP_PRIVATE_KEY }}
-          repositories: ${{ github.event.repository.name }}
-          permission-contents: write
-
-      # Checkout the base branch (trusted code) to avoid executing untrusted build scripts.
-      # Only the version catalog is then fetched from the PR branch — it has safe,
-      # predictable content from dependabot. The Kotlin version it carries drives the
-      # regenerated yarn locks.
+      # Checkout the base branch to avoid executing the build scripts of the pull request.
+      # Only the version catalog is then taken from it. The Kotlin version it carries drives
+      # the regenerated yarn locks.
       - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
         with:
           persist-credentials: false
           ref: ${{ github.base_ref }}
-          token: ${{ steps.app-token.outputs.token }}
 
       - name: Apply dependabot version changes
-        id: pr-head
         env:
-          HEAD_REF: ${{ github.head_ref }}
+          HEAD_SHA: ${{ github.event.pull_request.head.sha }}
         run: |
-          git fetch origin "$HEAD_REF"
-          echo "sha=$(git rev-parse FETCH_HEAD)" >> "$GITHUB_OUTPUT"
+          git fetch origin "$HEAD_SHA"
           git checkout FETCH_HEAD -- gradle/libs.versions.toml
 
-      - uses: Litote/ci/.github/actions/setup-gradle@731f25b65744afb6ed50783472a6746193353272 # v0.6.0
+      - uses: Litote/ci/.github/actions/setup-gradle@27a178b4699243bc39482a3e41c05b1ca91dc9a6 # v0.8.0
+        with:
+          # Jobs that hold secrets restore this cache. GitHub already gives this event
+          # read-only access to it.
+          cache-read-only: 'true'
 
       # Publishing builds the plugin with the bumped Kotlin version (PluginVersion.kt is
       # regenerated from libs.versions.toml), so the generated subproject and its yarn
@@ -60,7 +46,7 @@ jobs:
       # the PR (not the regenerated verification-metadata.xml, which is owned by the
       # gradle-verification workflow), so the bumped artifacts are not yet listed. The
       # yarn lock content does not depend on artifact checksums, so skipping verification
-      # here is safe and decouples this job from the verification-metadata workflow.
+      # here does not change the result and decouples this job from that workflow.
       - name: Publish plugin to Maven Local
         run: ./gradlew publishToMavenLocal --dependency-verification off
 
@@ -84,10 +70,56 @@ jobs:
           rm -f kotlin-js-store/yarn.lock kotlin-js-store/wasm/yarn.lock
           ./gradlew kotlinUpgradeYarnLock kotlinWasmUpgradeYarnLock
 
-      - uses: Litote/ci/.github/actions/commit-via-api@731f25b65744afb6ed50783472a6746193353272 # v0.6.0
+      - uses: Litote/ci/.github/actions/upload-regenerated-files@27a178b4699243bc39482a3e41c05b1ca91dc9a6 # v0.8.0
+        with:
+          paths: e2e-split/kotlin-js-store/yarn.lock e2e-split/kotlin-js-store/wasm/yarn.lock
+
+  commit-yarn-lock:
+    name: Commit Kotlin yarn lock
+    needs: update-yarn-lock
+    # Shared with the other dependabot workflow: both push a commit to the PR branch
+    # on top of its current HEAD, so running them in parallel makes the second ref
+    # update fail with "Update is not a fast forward". `queue: max` keeps every pending
+    # job instead of replacing it.
+    concurrency:
+      group: dependabot-branch-update-${{ github.head_ref }}
+      cancel-in-progress: false
+      queue: max
+    runs-on: ubuntu-latest
+    permissions:
+      contents: read
+
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+        with:
+          persist-credentials: false
+          ref: ${{ github.base_ref }}
+
+      # Only the index moves to the PR head: commit-via-api sees the changes relative to it,
+      # and this job, which holds the App token, keeps the files of the PR off the disk.
+      - name: Compare with the pull request head
+        env:
+          HEAD_SHA: ${{ github.event.pull_request.head.sha }}
+        run: |
+          git fetch --depth 1 origin "$HEAD_SHA"
+          git reset --quiet FETCH_HEAD
+
+      - uses: Litote/ci/.github/actions/apply-regenerated-files@27a178b4699243bc39482a3e41c05b1ca91dc9a6 # v0.8.0
+        with:
+          paths: e2e-split/kotlin-js-store/yarn.lock e2e-split/kotlin-js-store/wasm/yarn.lock
+
+      - uses: actions/create-github-app-token@64ab729a6294000f5aa4a4bc0b73d1f32bc45510 # v3.3.0
+        id: app-token
+        with:
+          app-id: ${{ secrets.RELEASE_PLEASE_APP_ID }}
+          private-key: ${{ secrets.RELEASE_PLEASE_APP_PRIVATE_KEY }}
+          repositories: ${{ github.event.repository.name }}
+          permission-contents: write
+
+      - uses: Litote/ci/.github/actions/commit-via-api@27a178b4699243bc39482a3e41c05b1ca91dc9a6 # v0.8.0
         with:
           token: ${{ steps.app-token.outputs.token }}
           branch: ${{ github.head_ref }}
           paths: e2e-split/kotlin-js-store/yarn.lock e2e-split/kotlin-js-store/wasm/yarn.lock
           message: 'chore: update Kotlin yarn lock'
-          expected-head: ${{ steps.pr-head.outputs.sha }}
+          expected-head: ${{ github.event.pull_request.head.sha }}

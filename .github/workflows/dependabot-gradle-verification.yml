@@ -11,8 +11,8 @@ jobs:
   update-verification-metadata:
     if: github.event.pull_request.user.login == 'dependabot[bot]' && github.event.pull_request.head.repo.full_name == github.repository
     permissions:
-      contents: write
-    uses: Litote/ci/.github/workflows/gradle-verification.yml@731f25b65744afb6ed50783472a6746193353272 # v0.6.0
+      contents: read
+    uses: Litote/ci/.github/workflows/gradle-verification.yml@27a178b4699243bc39482a3e41c05b1ca91dc9a6 # v0.8.0
     secrets:
       RELEASE_PLEASE_APP_ID: ${{ secrets.RELEASE_PLEASE_APP_ID }}
       RELEASE_PLEASE_APP_PRIVATE_KEY: ${{ secrets.RELEASE_PLEASE_APP_PRIVATE_KEY }}
