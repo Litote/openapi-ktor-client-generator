@@ -39,7 +39,7 @@ internal class OperationBuilder(
         val queryParameters: List<OperationParameterSpec>,
         val headerParameters: List<OperationParameterSpec>,
         val cookieParameters: List<OperationParameterSpec>,
-        val trimmedPath: String,
+        val trimmedPath: CodeBlock,
     )
 
     private data class RequestBodyContext(
@@ -540,18 +540,20 @@ internal class OperationBuilder(
     private fun buildPathExpression(
         path: String,
         pathParameters: List<OperationParameterSpec>,
-    ): String {
-        var result = "\"${path.trimStart('/')}\""
+    ): CodeBlock {
+        val builder = CodeBlock.builder().add("%S", path.trimStart('/'))
         pathParameters.forEach { param ->
             val suffix = param.toStringSuffix(stringFormatTypes)
-            result +=
-                if (param.isOptional) {
-                    ".replace(\"/{${param.originalName}}\", if(${param.camelCaseName} == null) \"\" else \"/\${${param.camelCaseName}$suffix.encodeURLPathPart()}\")"
-                } else {
-                    ".replace(\"/{${param.originalName}}\", \"/\${${param.camelCaseName}$suffix.encodeURLPathPart()}\")"
-                }
+            val value = "\"/\${${param.camelCaseName}$suffix.encodeURLPathPart()}\""
+            builder.add(".replace(%S, ", "/{${param.originalName}}")
+            if (param.isOptional) {
+                builder.add("%L", "if(${param.camelCaseName} == null) \"\" else $value")
+            } else {
+                builder.add("%L", value)
+            }
+            builder.add(")")
         }
-        return result
+        return builder.build()
     }
 
     private fun buildFunctionBody(
@@ -704,10 +706,14 @@ internal class OperationBuilder(
                 .indent()
                 .addStatement("append(%T.ContentType, %L.contentType.toString())", httpHeadersClass, valueReference)
                 .addStatement(
-                    "append(%T.ContentDisposition, %S + %L.filename + %S)",
+                    "append(%T.ContentDisposition, %S + %L.filename.replace(%S, %S).replace(%S, %S) + %S)",
                     httpHeadersClass,
                     "form-data; name=\"${field.originalName}\"; filename=\"",
                     valueReference,
+                    "\\",
+                    "\\\\",
+                    "\"",
+                    "\\\"",
                     "\"",
                 ).unindent()
                 .add("})\n")

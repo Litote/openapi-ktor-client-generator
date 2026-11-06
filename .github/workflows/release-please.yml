@@ -47,7 +47,8 @@ jobs:
       - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
         with:
           persist-credentials: false
-          ref: ${{ needs.release-please.outputs.tag_name || inputs.tag }}
+          # refs/tags/: a manual run cannot publish a branch
+          ref: refs/tags/${{ needs.release-please.outputs.tag_name || inputs.tag }}
 
       - uses: Litote/ci/.github/actions/setup-gradle@5f7a96295fbcd88179faba3ac78685a78b7b6c84 # v0.8.1
         with:
@@ -83,8 +84,6 @@ jobs:
           ORG_GRADLE_PROJECT_signingInMemoryKeyPassword: ${{ secrets.SIGNING_IN_MEMORY_KEY_PASSWORD }}
           GRADLE_PUBLISH_KEY: ${{ secrets.GRADLE_PUBLISH_KEY }}
           GRADLE_PUBLISH_SECRET: ${{ secrets.GRADLE_PUBLISH_SECRET }}
-        run: >
-          ./gradlew publishPlugins
-          -Pgradle.publish.key=$GRADLE_PUBLISH_KEY
-          -Pgradle.publish.secret=$GRADLE_PUBLISH_SECRET
+        # the plugin reads GRADLE_PUBLISH_KEY and GRADLE_PUBLISH_SECRET: no secret on the command line
+        run: ./gradlew publishPlugins
 

@@ -48,14 +48,21 @@ internal fun parameterDefaultLiteral(
 /**
  * Raw default value of a model property, converted to a valid Kotlin literal for numeric types
  * (e.g. `default: 25` on a `number` property becomes `25.0`). Other values are returned as declared.
+ * A string default of an enum becomes the name of its constant. On a number or a boolean, it has no value: `null`,
+ * since it would otherwise be rendered as code.
  */
 internal fun propertyDefaultLiteral(
     defaultValue: JsonPrimitive,
     typeName: TypeName,
-): String =
+    isEnum: Boolean,
+): String? =
     when {
-        defaultValue.isString -> null
-        typeName.isDouble() -> defaultValue.doubleOrNull?.toString()
-        typeName.isFloat() -> defaultValue.floatOrNull?.let { "${it}F" }
-        else -> null
-    } ?: defaultValue.content
+        defaultValue.isString && isEnum -> defaultValue.content.enumFieldName
+        defaultValue.isString && (typeName.isNumeric() || typeName.isBoolean()) -> null
+        defaultValue.isString -> defaultValue.content
+        typeName.isDouble() -> defaultValue.doubleOrNull?.toString() ?: defaultValue.content
+        typeName.isFloat() -> defaultValue.floatOrNull?.let { "${it}F" } ?: defaultValue.content
+        else -> defaultValue.content
+    }
+
+private fun TypeName.isNumeric(): Boolean = isInt() || isLong() || isDouble() || isFloat()

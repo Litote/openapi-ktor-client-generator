@@ -16,6 +16,7 @@ import com.squareup.kotlinpoet.TypeName
 import com.squareup.kotlinpoet.TypeSpec
 import com.squareup.kotlinpoet.UNIT
 import com.squareup.kotlinpoet.asTypeName
+import com.squareup.kotlinpoet.joinToCode
 import io.ktor.client.HttpClient
 import io.ktor.client.HttpClientConfig
 import io.ktor.client.engine.HttpClientEngineFactory
@@ -84,6 +85,15 @@ public class ApiClientConfigurationGenerator public constructor(
             it.location == SecuritySchemeLocationSpec.QUERY
         }
 
+    /** Lowercase names of the headers that carry credentials: masked in the logs. */
+    private val sensitiveHeaders: List<String> =
+        (
+            listOf("authorization", "cookie", "set-cookie") +
+                clientConfiguration.apiKeySchemes
+                    .filter { it.location == SecuritySchemeLocationSpec.HEADER }
+                    .map { it.keyName.lowercase() }
+        ).distinct()
+
     private fun buildDefaultConfigLambda(): CodeBlock {
         val builder =
             CodeBlock
@@ -91,7 +101,10 @@ public class ApiClientConfigurationGenerator public constructor(
                 .beginControlFlow("{")
                 .beginControlFlow("install(%T)", loggingClass)
                 .addStatement("level = %N", "logLevel")
-                .endControlFlow()
+                .addStatement(
+                    "sanitizeHeader { header -> header.lowercase() in setOf(%L) }",
+                    sensitiveHeaders.map { CodeBlock.of("%S", it) }.joinToCode(),
+                ).endControlFlow()
                 .beginControlFlow("install(%T)", contentNegotiationClass)
                 .addStatement("%M(%N)", jsonMember, "json")
 

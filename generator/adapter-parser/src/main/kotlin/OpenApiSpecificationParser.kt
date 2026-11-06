@@ -960,7 +960,7 @@ public class OpenApiSpecificationParser(
 
             val schemaDefaultValue =
                 propSchema?.default?.let { default ->
-                    (default as? JsonPrimitive)?.let { propertyDefaultLiteral(it, property.type) }
+                    (default as? JsonPrimitive)?.let { propertyDefaultLiteral(it, property.type, isEnum) }
                 }
 
             ModelPropertySpec(
