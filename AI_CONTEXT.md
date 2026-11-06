@@ -401,6 +401,9 @@ Hooks are declared on `ApiConfigurationGeneratorConfig`, `ApiClientGeneratorConf
 `ApiGeneratorConfiguration.userAgent` (Gradle DSL `userAgent`). `defaultHttpClientConfig(..., userAgent: String? = null, httpClientAuthorization)`
 installs the Ktor `UserAgent` plugin when it is not null, before calling `httpClientAuthorization()`.
 
+`defaultHttpClientConfig` masks in the logs the headers that carry credentials (`sanitizeHeader`): `Authorization`, `Cookie`,
+`Set-Cookie` and the `header` API keys of the spec. An API key `in: query` stays visible in the logged URL.
+
 `ClientConfiguration.engine` defaults to `ApiGeneratorConfiguration.engine` (Gradle DSL `engine`, default `CIO_ENGINE`), rendered as an imported
 `MemberName`. With `PLATFORM_ENGINE` (`"platform"`), `engine` is `HttpClientEngineFactory<*>? = null` and `client` defaults to
 `engine?.let { HttpClient(it) { … } } ?: HttpClient { … }` so Ktor selects the platform engine (e.g. `ktor-client-engine-defaults`).
@@ -487,7 +490,7 @@ When a multipart form field has type `string/binary` (i.e. a file upload), the g
 ```kotlin
 append("file", form.file.bytes, Headers.build {
   append(HttpHeaders.ContentType, form.file.contentType.toString())
-  append(HttpHeaders.ContentDisposition, "form-data; name=\"file\"; filename=\"" + form.file.filename + "\"")
+  append(HttpHeaders.ContentDisposition, "form-data; name=\"file\"; filename=\"" + form.file.filename.replace("\\", "\\\\").replace("\"", "\\\"") + "\"")
 })
 ```
 
@@ -545,6 +548,10 @@ excluded and keep the previous behavior. Recursive definitions stop on the model
 
 **Model property defaults**: `propertyDefaultLiteral` (`ParserNames.kt`) converts numeric defaults to the property
 type (`default: 25` on a `number` → `25.0`, on a `float` → `25.0F`), like `parameterDefaultLiteral` does for parameters.
+A string default of an enum becomes the name of its constant (`enumFieldName`). On a number or a boolean, it is ignored.
+
+**Spec values in generated code**: never render a value of the spec with `%L` or inside a raw string: use `%S`, `%N` or a
+sanitized name. `GeneratedCodeSafetyTest` covers the paths, the defaults and the multipart filename.
 
 ### Response media type resolution (`OpenApiSpecificationParser.resolveResponseBody`)
 

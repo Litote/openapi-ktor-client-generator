@@ -1,0 +1,57 @@
+{
+  "openapi": "3.0.3",
+  "info": { "title": "Unsafe values", "version": "1.0.0" },
+  "components": {
+    "securitySchemes": {
+      "key": { "type": "apiKey", "in": "header", "name": "X-Secret-Token" }
+    },
+    "schemas": {
+      "Item": {
+        "type": "object",
+        "properties": {
+          "count": { "type": "integer", "default": "1 + evil()" },
+          "ratio": { "type": "number", "default": "evil()" },
+          "enabled": { "type": "boolean", "default": "evil()" },
+          "size": { "type": "integer", "default": 3 },
+          "status": { "type": "string", "enum": ["ON", "OFF"], "default": "ON.also { evil() }" },
+          "mode": { "type": "string", "enum": ["fast", "slow"], "default": "slow" },
+          "label": { "type": "string", "default": "a \"quoted\" $value" }
+        }
+      }
+    }
+  },
+  "paths": {
+    "/items\"); evil(\"/$x/{id}": {
+      "get": {
+        "tags": ["unsafe"],
+        "operationId": "getItem",
+        "parameters": [
+          { "name": "id", "in": "path", "required": true, "schema": { "type": "string" } }
+        ],
+        "responses": {
+          "200": {
+            "description": "ok",
+            "content": { "application/json": { "schema": { "$ref": "#/components/schemas/Item" } } }
+          }
+        }
+      }
+    },
+    "/upload": {
+      "post": {
+        "tags": ["unsafe"],
+        "operationId": "upload",
+        "requestBody": {
+          "content": {
+            "multipart/form-data": {
+              "schema": {
+                "type": "object",
+                "properties": { "file": { "type": "string", "format": "binary" } }
+              }
+            }
+          }
+        },
+        "responses": { "200": { "description": "ok" } }
+      }
+    }
+  }
+}

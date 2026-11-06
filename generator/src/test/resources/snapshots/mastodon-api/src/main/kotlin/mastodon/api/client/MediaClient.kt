@@ -424,7 +424,7 @@ public class DefaultMediaClient(
         setBody(MultiPartFormDataContent(formData {
         append("file", form.file.bytes, Headers.build {
           append(HttpHeaders.ContentType, form.file.contentType.toString())
-          append(HttpHeaders.ContentDisposition, "form-data; name=\"file\"; filename=\"" + form.file.filename + "\"")
+          append(HttpHeaders.ContentDisposition, "form-data; name=\"file\"; filename=\"" + form.file.filename.replace("\\", "\\\\").replace("\"", "\\\"") + "\"")
         })
         form.description?.let { value ->
           append("description", value)
@@ -435,7 +435,7 @@ public class DefaultMediaClient(
         form.thumbnail?.let { value ->
           append("thumbnail", value.bytes, Headers.build {
             append(HttpHeaders.ContentType, value.contentType.toString())
-            append(HttpHeaders.ContentDisposition, "form-data; name=\"thumbnail\"; filename=\"" + value.filename + "\"")
+            append(HttpHeaders.ContentDisposition, "form-data; name=\"thumbnail\"; filename=\"" + value.filename.replace("\\", "\\\\").replace("\"", "\\\"") + "\"")
           })
         }
         }))
@@ -490,7 +490,7 @@ public class DefaultMediaClient(
         form.thumbnail?.let { value ->
           append("thumbnail", value.bytes, Headers.build {
             append(HttpHeaders.ContentType, value.contentType.toString())
-            append(HttpHeaders.ContentDisposition, "form-data; name=\"thumbnail\"; filename=\"" + value.filename + "\"")
+            append(HttpHeaders.ContentDisposition, "form-data; name=\"thumbnail\"; filename=\"" + value.filename.replace("\\", "\\\\").replace("\"", "\\\"") + "\"")
           })
         }
         }))
@@ -538,7 +538,7 @@ public class DefaultMediaClient(
         setBody(MultiPartFormDataContent(formData {
         append("file", form.file.bytes, Headers.build {
           append(HttpHeaders.ContentType, form.file.contentType.toString())
-          append(HttpHeaders.ContentDisposition, "form-data; name=\"file\"; filename=\"" + form.file.filename + "\"")
+          append(HttpHeaders.ContentDisposition, "form-data; name=\"file\"; filename=\"" + form.file.filename.replace("\\", "\\\\").replace("\"", "\\\"") + "\"")
         })
         form.description?.let { value ->
           append("description", value)
@@ -549,7 +549,7 @@ public class DefaultMediaClient(
         form.thumbnail?.let { value ->
           append("thumbnail", value.bytes, Headers.build {
             append(HttpHeaders.ContentType, value.contentType.toString())
-            append(HttpHeaders.ContentDisposition, "form-data; name=\"thumbnail\"; filename=\"" + value.filename + "\"")
+            append(HttpHeaders.ContentDisposition, "form-data; name=\"thumbnail\"; filename=\"" + value.filename.replace("\\", "\\\\").replace("\"", "\\\"") + "\"")
           })
         }
         }))

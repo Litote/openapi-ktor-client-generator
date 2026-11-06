@@ -8,7 +8,7 @@ All parameters have sensible defaults — only override what you need.
 | Parameter | Type | Default | Description |
 |---|---|---|---|
 | `baseUrl` | `String` | value from spec | Base URL prepended to every request |
-| `logLevel` | `LogLevel` | `LogLevel.HEADERS` | Ktor logging verbosity (`ALL`, `HEADERS`, `BODY`, `INFO`, `NONE`) |
+| `logLevel` | `LogLevel` | `LogLevel.HEADERS` | Ktor logging verbosity (`ALL`, `HEADERS`, `BODY`, `INFO`, `NONE`). `Authorization`, `Cookie`, `Set-Cookie` and the header API keys are masked. An API key sent in the query stays visible in the logged URL |
 | `userAgent` | `String?` | `userAgent` generator property, or `null` | `User-Agent` header sent with every request (see [User-Agent](#user-agent)). `null` keeps the Ktor default |
 | `engine` | `HttpClientEngineFactory<*>` (`HttpClientEngineFactory<*>?` with `engine = "platform"`) | `engine` generator property (`CIO`) | Ktor engine (swap for `MockEngine` in tests, `OkHttp` on Android, etc.), see [HTTP engine](#http-engine) |
 | `json` | `Json` | `Json { ignoreUnknownKeys = true }` | kotlinx.serialization `Json` instance |

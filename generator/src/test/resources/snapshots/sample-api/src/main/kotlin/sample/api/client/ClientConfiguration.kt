@@ -46,6 +46,7 @@ public class ClientConfiguration(
     ): HttpClientConfig<*>.() -> Unit = {
       install(Logging) {
         level = logLevel
+        sanitizeHeader { header -> header.lowercase() in setOf("authorization", "cookie", "set-cookie", "x-api-key") }
       }
       install(ContentNegotiation) {
         json(json)
