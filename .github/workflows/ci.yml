@@ -15,7 +15,7 @@ jobs:
     if: github.event_name == 'pull_request'
     permissions:
       pull-requests: read
-    uses: Litote/ci/.github/workflows/pr-title.yml@27a178b4699243bc39482a3e41c05b1ca91dc9a6 # v0.8.0
+    uses: Litote/ci/.github/workflows/pr-title.yml@5f7a96295fbcd88179faba3ac78685a78b7b6c84 # v0.8.1
 
   check:
     name: Check
@@ -29,11 +29,11 @@ jobs:
           persist-credentials: false
           fetch-depth: 0
 
-      - uses: Litote/ci/.github/actions/setup-gradle@27a178b4699243bc39482a3e41c05b1ca91dc9a6 # v0.8.0
+      - uses: Litote/ci/.github/actions/setup-gradle@5f7a96295fbcd88179faba3ac78685a78b7b6c84 # v0.8.1
         with:
           cache-encryption-key: ${{ secrets.GRADLE_ENCRYPTION_KEY }}
 
-      - uses: Litote/ci/.github/actions/detect-changes@27a178b4699243bc39482a3e41c05b1ca91dc9a6 # v0.8.0
+      - uses: Litote/ci/.github/actions/detect-changes@5f7a96295fbcd88179faba3ac78685a78b7b6c84 # v0.8.1
         id: detect-changes
 
       - name: Warm up convention build
@@ -42,7 +42,7 @@ jobs:
       - name: Build & test
         run: ./gradlew check
 
-      - uses: Litote/ci/.github/actions/sonar-gradle@27a178b4699243bc39482a3e41c05b1ca91dc9a6 # v0.8.0
+      - uses: Litote/ci/.github/actions/sonar-gradle@5f7a96295fbcd88179faba3ac78685a78b7b6c84 # v0.8.1
         if: steps.detect-changes.outputs.has-code-changes == 'true'
         with:
           sonar-token: ${{ secrets.SONAR_TOKEN }}
@@ -69,11 +69,11 @@ jobs:
           persist-credentials: false
           fetch-depth: 0
 
-      - uses: Litote/ci/.github/actions/setup-gradle@27a178b4699243bc39482a3e41c05b1ca91dc9a6 # v0.8.0
+      - uses: Litote/ci/.github/actions/setup-gradle@5f7a96295fbcd88179faba3ac78685a78b7b6c84 # v0.8.1
         with:
           cache-encryption-key: ${{ secrets.GRADLE_ENCRYPTION_KEY }}
 
-      - uses: Litote/ci/.github/actions/detect-changes@27a178b4699243bc39482a3e41c05b1ca91dc9a6 # v0.8.0
+      - uses: Litote/ci/.github/actions/detect-changes@5f7a96295fbcd88179faba3ac78685a78b7b6c84 # v0.8.1
         id: detect-changes
 
       - name: Publish plugin to Maven Local
@@ -141,11 +141,11 @@ jobs:
           persist-credentials: false
           fetch-depth: 0
 
-      - uses: Litote/ci/.github/actions/setup-gradle@27a178b4699243bc39482a3e41c05b1ca91dc9a6 # v0.8.0
+      - uses: Litote/ci/.github/actions/setup-gradle@5f7a96295fbcd88179faba3ac78685a78b7b6c84 # v0.8.1
         with:
           cache-encryption-key: ${{ secrets.GRADLE_ENCRYPTION_KEY }}
 
-      - uses: Litote/ci/.github/actions/detect-changes@27a178b4699243bc39482a3e41c05b1ca91dc9a6 # v0.8.0
+      - uses: Litote/ci/.github/actions/detect-changes@5f7a96295fbcd88179faba3ac78685a78b7b6c84 # v0.8.1
         id: detect-changes
 
       - name: Publish plugin to Maven Local
