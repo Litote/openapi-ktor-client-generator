@@ -15,7 +15,7 @@ jobs:
     if: github.event_name == 'pull_request'
     permissions:
       pull-requests: read
-    uses: Litote/ci/.github/workflows/pr-title.yml@5f7a96295fbcd88179faba3ac78685a78b7b6c84 # v0.8.1
+    uses: Litote/ci/.github/workflows/pr-title.yml@c111317515db0963d8dfebb7821cefbc92d34897 # v0.9.0
 
   check:
     name: Check
@@ -29,11 +29,11 @@ jobs:
           persist-credentials: false
           fetch-depth: 0
 
-      - uses: Litote/ci/.github/actions/setup-gradle@5f7a96295fbcd88179faba3ac78685a78b7b6c84 # v0.8.1
+      - uses: Litote/ci/.github/actions/setup-gradle@c111317515db0963d8dfebb7821cefbc92d34897 # v0.9.0
         with:
           cache-encryption-key: ${{ secrets.GRADLE_ENCRYPTION_KEY }}
 
-      - uses: Litote/ci/.github/actions/detect-changes@5f7a96295fbcd88179faba3ac78685a78b7b6c84 # v0.8.1
+      - uses: Litote/ci/.github/actions/detect-changes@c111317515db0963d8dfebb7821cefbc92d34897 # v0.9.0
         id: detect-changes
 
       - name: Warm up convention build
@@ -42,7 +42,7 @@ jobs:
       - name: Build & test
         run: ./gradlew check
 
-      - uses: Litote/ci/.github/actions/sonar-gradle@5f7a96295fbcd88179faba3ac78685a78b7b6c84 # v0.8.1
+      - uses: Litote/ci/.github/actions/sonar-gradle@c111317515db0963d8dfebb7821cefbc92d34897 # v0.9.0
         if: steps.detect-changes.outputs.has-code-changes == 'true'
         with:
           sonar-token: ${{ secrets.SONAR_TOKEN }}
@@ -70,11 +70,11 @@ jobs:
           persist-credentials: false
           fetch-depth: 0
 
-      - uses: Litote/ci/.github/actions/setup-gradle@5f7a96295fbcd88179faba3ac78685a78b7b6c84 # v0.8.1
+      - uses: Litote/ci/.github/actions/setup-gradle@c111317515db0963d8dfebb7821cefbc92d34897 # v0.9.0
         with:
           cache-encryption-key: ${{ secrets.GRADLE_ENCRYPTION_KEY }}
 
-      - uses: Litote/ci/.github/actions/detect-changes@5f7a96295fbcd88179faba3ac78685a78b7b6c84 # v0.8.1
+      - uses: Litote/ci/.github/actions/detect-changes@c111317515db0963d8dfebb7821cefbc92d34897 # v0.9.0
         id: detect-changes
 
       - name: Publish plugin to Maven Local
@@ -142,11 +142,11 @@ jobs:
           persist-credentials: false
           fetch-depth: 0
 
-      - uses: Litote/ci/.github/actions/setup-gradle@5f7a96295fbcd88179faba3ac78685a78b7b6c84 # v0.8.1
+      - uses: Litote/ci/.github/actions/setup-gradle@c111317515db0963d8dfebb7821cefbc92d34897 # v0.9.0
         with:
           cache-encryption-key: ${{ secrets.GRADLE_ENCRYPTION_KEY }}
 
-      - uses: Litote/ci/.github/actions/detect-changes@5f7a96295fbcd88179faba3ac78685a78b7b6c84 # v0.8.1
+      - uses: Litote/ci/.github/actions/detect-changes@c111317515db0963d8dfebb7821cefbc92d34897 # v0.9.0
         id: detect-changes
 
       - name: Publish plugin to Maven Local
@@ -167,3 +167,12 @@ jobs:
             exit 1
           }
 
+  # Called on every pull request: a required check of a job skipped here would stay pending
+  commit-guard:
+    if: github.event_name == 'pull_request'
+    permissions:
+      contents: read
+      pull-requests: read
+    uses: Litote/ci/.github/workflows/dependabot-commit-guard.yml@c111317515db0963d8dfebb7821cefbc92d34897 # v0.9.0
+    with:
+      allowed-paths: ^(gradle/verification-metadata\.xml|e2e-split/kotlin-js-store/(wasm/)?yarn\.lock)$
