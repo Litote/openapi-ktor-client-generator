@@ -418,8 +418,10 @@ the security hotspots to be reviewed.
 ### Running the full quality loop
 
 ```bash
-./gradlew check jacocoAggregatedReport sonar
+./gradlew check jacocoAggregatedReport sonar -Dsonar.branch.name=$(git branch --show-current)
 ```
+
+Run it from a feature branch. Without `-Dsonar.branch.name`, a local analysis is recorded on `main` in SonarCloud, even for an unmerged commit.
 
 - `check` — compiles + runs all tests + generates per-module JaCoCo `.exec` files
 - `jacocoAggregatedReport` — merges all `.exec` into `build/reports/jacoco/jacocoAggregatedReport/jacocoAggregatedReport.xml`

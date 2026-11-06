@@ -26,7 +26,7 @@
 | Category                   | Required Actions                                                                                          |
 |----------------------------|-----------------------------------------------------------------------------------------------------------|
 | **Validation**             | Run `./gradlew formatKotlin && ./gradlew check` after every iteration                                     |
-| **Quality Gate**           | Run `./gradlew check jacocoAggregatedReport sonar` before finalizing **every** task — **`sonar` must pass (it waits for the quality gate and fails if the gate is not OK)**. Requires `systemProp.sonar.token` in `~/.gradle/gradle.properties`. This includes `.md`-only changes and `.github/workflows/` YAML files (analysed by Sonar for security). |
+| **Quality Gate**           | Run `./gradlew check jacocoAggregatedReport sonar -Dsonar.branch.name=$(git branch --show-current)` from a feature branch before finalizing **every** task — **`sonar` must pass (it waits for the quality gate and fails if the gate is not OK)**. **Never omit `-Dsonar.branch.name`: without it, the analysis is recorded on `main` in SonarCloud, even for an unmerged commit, and can turn its quality gate red.** Requires `systemProp.sonar.token` in `~/.gradle/gradle.properties`. This includes `.md`-only changes and `.github/workflows/` YAML files (analysed by Sonar for security). |
 | **Testing**                | When you try to fix a bug, start by adding the test and THEN fix the bug. Add tests for all logic changes |
 | **Imports**                | Use single imports only                                                                                   |
 | **Language**               | Write all code, comments, and documentation in English                                                    |
@@ -89,7 +89,7 @@ A change is complete when:
 
 - [ ] `./gradlew formatKotlin` passes
 - [ ] `./gradlew check` passes (compiles without warnings, all tests pass)
-- [ ] `./gradlew check jacocoAggregatedReport sonar` passes — **`sonar` must exit with BUILD SUCCESSFUL (quality gate OK)**
+- [ ] `./gradlew check jacocoAggregatedReport sonar -Dsonar.branch.name=$(git branch --show-current)` passes — **`sonar` must exit with BUILD SUCCESSFUL (quality gate OK)**
 - [ ] No public API is broken
 - [ ] Only relevant files are modified
 - [ ] Type safety is preserved
