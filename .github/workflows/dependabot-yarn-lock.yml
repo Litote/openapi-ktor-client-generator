@@ -77,6 +77,7 @@ jobs:
   commit-yarn-lock:
     name: Commit Kotlin yarn lock
     needs: update-yarn-lock
+    if: github.event.pull_request.user.login == 'dependabot[bot]' && github.event.pull_request.head.repo.full_name == github.repository
     # Shared with the other dependabot workflow: both push a commit to the PR branch
     # on top of its current HEAD, so running them in parallel makes the second ref
     # update fail with "Update is not a fast forward". `queue: max` keeps every pending
