@@ -16,6 +16,20 @@ jobs:
     uses: Litote/ci/.github/workflows/dependabot-auto-merge.yml@5f7a96295fbcd88179faba3ac78685a78b7b6c84 # v0.8.1
     with:
       ecosystems: gradle
+      # Gradle plugins and the build tools run in the build without being called: they stay manual.
+      exclude-dependencies: >-
+        org.jetbrains.kotlin.*,
+        com.gradle.plugin-publish*,
+        com.vanniktech.maven.publish*,
+        nl.littlerobots.version-catalog-update*,
+        org.jmailen.kotlinter*,
+        org.sonarqube*,
+        gradle-publish,
+        kotlin,
+        ktlint,
+        maven-publish,
+        sonarqube,
+        version-catalog-update
     secrets:
       RELEASE_PLEASE_APP_ID: ${{ secrets.RELEASE_PLEASE_APP_ID }}
       RELEASE_PLEASE_APP_PRIVATE_KEY: ${{ secrets.RELEASE_PLEASE_APP_PRIVATE_KEY }}

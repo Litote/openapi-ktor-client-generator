@@ -47,8 +47,9 @@ jobs:
         with:
           sonar-token: ${{ secrets.SONAR_TOKEN }}
 
+      # Not on a Dependabot commit: a dependency merged without a review does not reach the publication credentials at once
       - name: Publish SNAPSHOT to Maven Central
-        if: github.event_name == 'push' && steps.detect-changes.outputs.has-code-changes == 'true'
+        if: github.event_name == 'push' && steps.detect-changes.outputs.has-code-changes == 'true' && github.event.head_commit.author.name != 'dependabot[bot]'
         env:
           ORG_GRADLE_PROJECT_mavenCentralUsername: ${{ secrets.MAVEN_CENTRAL_USERNAME }}
           ORG_GRADLE_PROJECT_mavenCentralPassword: ${{ secrets.MAVEN_CENTRAL_PASSWORD }}
