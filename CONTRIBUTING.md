@@ -353,6 +353,8 @@ The main GitHub Actions workflows are defined under `.github/workflows/`:
 | `release-please.yml` | Push → `main` | Runs release-please: creates/updates the Release PR (CHANGELOG + manifest bump), then creates the GitHub Release + tag when the Release PR is merged. On release created, chains to the `publish` job |
 | `release-please.yml` (`publish` job) | After release-please creates a release (or `workflow_dispatch`) | Checks out tag, sets `VERSION_NAME` locally, runs full QA, publishes to Maven Central + Gradle Plugin Portal (no commit) |
 | `dependabot-auto-merge.yml` | Dependabot PR opened or reopened → `main` | For minor and patch Gradle updates, approves the PR and enables squash auto-merge with the GitHub App token. GitHub merges once the required checks pass. Major and `github-actions` updates stay manual |
+| `dependabot-gradle-verification.yml` | Dependabot PR on the version catalog or the wrapper → `main` | Regenerates `gradle/verification-metadata.xml` and commits it to the PR branch |
+| `dependabot-yarn-lock.yml` | Dependabot PR on the version catalog → `main` | Regenerates the `e2e-split` yarn locks and commits them to the PR branch. Like the previous workflow, it runs the build in a job with no secret and no write access, because a version bump changes the code that the build runs. A second job, which runs no build, commits the result with the GitHub App token |
 
 ### Release flow (automated)
 
