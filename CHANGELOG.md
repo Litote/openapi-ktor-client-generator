@@ -1,5 +1,12 @@
 # Changelog
 
+## [0.10.1](https://github.com/Litote/openapi-ktor-client-generator/compare/v0.10.0...v0.10.1) (2026-11-09)
+
+
+### Bug Fixes
+
+* mask credentials in logs and escape spec values in generated code ([#127](https://github.com/Litote/openapi-ktor-client-generator/issues/127)) ([5391477](https://github.com/Litote/openapi-ktor-client-generator/commit/539147718ac90c404bce367082af3171e53f108c))
+
 ## [0.10.0](https://github.com/Litote/openapi-ktor-client-generator/compare/v0.9.0...v0.10.0) (2026-11-05)
 
 
