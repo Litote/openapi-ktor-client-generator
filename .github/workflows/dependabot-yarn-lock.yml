@@ -33,7 +33,7 @@ jobs:
           git fetch origin "$HEAD_SHA"
           git checkout FETCH_HEAD -- gradle/libs.versions.toml
 
-      - uses: Litote/ci/.github/actions/setup-gradle@c111317515db0963d8dfebb7821cefbc92d34897 # v0.9.0
+      - uses: Litote/ci/.github/actions/setup-gradle@510461dc1f569a7c12735a6cad12e88a6cb533ad # v0.10.0
         with:
           # Jobs that hold secrets restore this cache. GitHub already gives this event
           # read-only access to it.
@@ -70,7 +70,7 @@ jobs:
           rm -f kotlin-js-store/yarn.lock kotlin-js-store/wasm/yarn.lock
           ./gradlew kotlinUpgradeYarnLock kotlinWasmUpgradeYarnLock
 
-      - uses: Litote/ci/.github/actions/upload-regenerated-files@c111317515db0963d8dfebb7821cefbc92d34897 # v0.9.0
+      - uses: Litote/ci/.github/actions/upload-regenerated-files@510461dc1f569a7c12735a6cad12e88a6cb533ad # v0.10.0
         with:
           paths: e2e-split/kotlin-js-store/yarn.lock e2e-split/kotlin-js-store/wasm/yarn.lock
 
@@ -105,7 +105,7 @@ jobs:
           git fetch --depth 1 origin "$HEAD_SHA"
           git reset --quiet FETCH_HEAD
 
-      - uses: Litote/ci/.github/actions/apply-regenerated-files@c111317515db0963d8dfebb7821cefbc92d34897 # v0.9.0
+      - uses: Litote/ci/.github/actions/apply-regenerated-files@510461dc1f569a7c12735a6cad12e88a6cb533ad # v0.10.0
         with:
           paths: e2e-split/kotlin-js-store/yarn.lock e2e-split/kotlin-js-store/wasm/yarn.lock
 
@@ -117,7 +117,7 @@ jobs:
           repositories: ${{ github.event.repository.name }}
           permission-contents: write
 
-      - uses: Litote/ci/.github/actions/commit-via-api@c111317515db0963d8dfebb7821cefbc92d34897 # v0.9.0
+      - uses: Litote/ci/.github/actions/commit-via-api@510461dc1f569a7c12735a6cad12e88a6cb533ad # v0.10.0
         with:
           token: ${{ steps.app-token.outputs.token }}
           branch: ${{ github.head_ref }}
