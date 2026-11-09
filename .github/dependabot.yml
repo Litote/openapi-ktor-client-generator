@@ -8,6 +8,11 @@ updates:
       default-days: 7
       exclude:
         - "Litote/*"
+    groups:
+      # A release of Litote/ci updates several workflows and actions: bump them in a single PR
+      litote-ci:
+        patterns:
+          - "Litote/ci/*"
 
   - package-ecosystem: "gradle"
     directory: "/"
