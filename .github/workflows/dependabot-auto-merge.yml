@@ -13,7 +13,7 @@ jobs:
     permissions:
       contents: read
       pull-requests: read
-    uses: Litote/ci/.github/workflows/dependabot-auto-merge.yml@510461dc1f569a7c12735a6cad12e88a6cb533ad # v0.10.0
+    uses: Litote/ci/.github/workflows/dependabot-auto-merge.yml@ec46616b182954a0aa8013241b8d4565760db8de # v0.11.0
     with:
       ecosystems: gradle
       # Gradle plugins and the build tools run in the build without being called: they stay manual.
