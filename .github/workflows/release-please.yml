@@ -28,7 +28,7 @@ jobs:
       release_created: ${{ steps.release-please.outputs.release_created }}
       tag_name: ${{ steps.release-please.outputs.tag_name }}
     steps:
-      - uses: Litote/ci/.github/actions/release-please@ec46616b182954a0aa8013241b8d4565760db8de # v0.11.0
+      - uses: Litote/ci/.github/actions/release-please@63a67e7add1b9fde6396c84399f90c9252f7b8e6 # v0.15.0
         id: release-please
         if: github.event_name == 'push'
         with:
@@ -50,11 +50,11 @@ jobs:
           # refs/tags/: a manual run cannot publish a branch
           ref: refs/tags/${{ needs.release-please.outputs.tag_name || inputs.tag }}
 
-      - uses: Litote/ci/.github/actions/setup-gradle@ec46616b182954a0aa8013241b8d4565760db8de # v0.11.0
+      - uses: Litote/ci/.github/actions/setup-gradle@63a67e7add1b9fde6396c84399f90c9252f7b8e6 # v0.15.0
         with:
           cache-encryption-key: ${{ secrets.GRADLE_ENCRYPTION_KEY }}
 
-      - uses: Litote/ci/.github/actions/set-release-version@ec46616b182954a0aa8013241b8d4565760db8de # v0.11.0
+      - uses: Litote/ci/.github/actions/set-release-version@63a67e7add1b9fde6396c84399f90c9252f7b8e6 # v0.15.0
         with:
           tag: ${{ needs.release-please.outputs.tag_name || inputs.tag }}
 
@@ -69,7 +69,7 @@ jobs:
           SONAR_TOKEN: ${{ secrets.SONAR_TOKEN }}
         run: ./gradlew sonar
 
-      - uses: Litote/ci/.github/actions/maven-central-publish@ec46616b182954a0aa8013241b8d4565760db8de # v0.11.0
+      - uses: Litote/ci/.github/actions/maven-central-publish@63a67e7add1b9fde6396c84399f90c9252f7b8e6 # v0.15.0
         with:
           maven-central-username: ${{ secrets.MAVEN_CENTRAL_USERNAME }}
           maven-central-password: ${{ secrets.MAVEN_CENTRAL_PASSWORD }}
