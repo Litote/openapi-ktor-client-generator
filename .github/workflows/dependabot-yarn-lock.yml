@@ -109,12 +109,11 @@ jobs:
         with:
           paths: e2e-split/kotlin-js-store/yarn.lock e2e-split/kotlin-js-store/wasm/yarn.lock
 
-      - uses: actions/create-github-app-token@64ab729a6294000f5aa4a4bc0b73d1f32bc45510 # v3.3.0
+      - uses: Litote/ci/.github/actions/app-token@63a67e7add1b9fde6396c84399f90c9252f7b8e6 # v0.15.0
         id: app-token
         with:
           app-id: ${{ secrets.RELEASE_PLEASE_APP_ID }}
           private-key: ${{ secrets.RELEASE_PLEASE_APP_PRIVATE_KEY }}
-          repositories: ${{ github.event.repository.name }}
           permission-contents: write
 
       - uses: Litote/ci/.github/actions/commit-via-api@63a67e7add1b9fde6396c84399f90c9252f7b8e6 # v0.15.0
